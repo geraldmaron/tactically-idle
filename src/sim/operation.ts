@@ -78,6 +78,7 @@ import { vantageZones } from './sightlines';
 import { sightings } from './sightings';
 import { postFunding } from './ledger';
 import { postureOf, recordPosture } from './reputation';
+import type { TimerSetting } from './timer-setting';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -247,7 +248,7 @@ export interface StartCheck {
 type StartCmd = Extract<Command, { type: 'startOperation' }>;
 
 /** Everything startOperation validates, without mutating. Selectors reuse it. */
-export function checkStart(state: GameState, now: number, cmd: StartCmd): StartCheck {
+export function checkStart(state: GameState, now: number, cmd: StartCmd, timer: TimerSetting = 'off'): StartCheck {
   const issues: string[] = [];
   const warnings: string[] = [];
   const scenario = getScenario(cmd.scenarioId);
@@ -321,11 +322,11 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now, upkeep);
   if (!r.ok) issues.push(r.reason);
 
-  if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
+  if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd, timer));
   return { issues, warnings, scenario, built };
 }
 
-function startWarnings(state: GameState, now: number, scenario: ScenarioDefinition, built: BuiltLocation, cmd: StartCmd): string[] {
+function startWarnings(state: GameState, now: number, scenario: ScenarioDefinition, built: BuiltLocation, cmd: StartCmd, timer: TimerSetting): string[] {
   const out: string[] = [];
   const probe = structuredClone(state);
   const unitOverride = {} as Record<SquadId, ItemUnit[]>;
@@ -333,7 +334,7 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
   for (const sid of cmd.squadIds) unitOverride[sid] = squadUnits(probe, 'preview', sid);
   // The probe sends who Deploy would send, so the preview's odds use who goes (runRoster).
   for (const sid of cmd.squadIds) for (const oid of deployRoster(probe, sid, now).goes) probe.officers[oid].assignment = { kind: 'operation', runId: 'preview' };
-  const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0);
+  const run = makeRun(state, built, scenario, cmd, 'preview', 0, 0, timer);
   // The probe is mid-run, as the run it previews will be: equipment qualification reads the run's roster.
   probe.activeRun = run;
   for (const a of scenarioActions(scenario)) {
@@ -371,9 +372,9 @@ function resolveStart(built: BuiltLocation, cmd: StartCmd, sid: SquadId): { posi
   return sp ? { positionId: pos, stagingId: sp.id, at: sp.at } : { positionId: pos, stagingId: null, at: centroidOf(built, pos) };
 }
 
-function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefinition, cmd: StartCmd, runId: Id, rngState: number, now: number): OperationRun {
+function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefinition, cmd: StartCmd, runId: Id, rngState: number, now: number, timer: TimerSetting): OperationRun {
   // The department's name and habits move where the pressure sources start (sim/player-profile.ts).
-  const sourceStart = sourceStarts(scenario, playerProfile(state));
+  const sourceStart = sourceStarts(scenario, playerProfile(state), timer);
   return {
     id: runId,
     scenarioId: scenario.id,
@@ -920,7 +921,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
     const upkeep = departmentUpkeep(draft);
     cmd = { ...cmd, ...withoutBasicKit(draft, cmd.loadouts, cmd.units) };
-    const chk = checkStart(draft, ctx.now, cmd);
+    const chk = checkStart(draft, ctx.now, cmd, ctx.timer ?? 'off');
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
     const scenario = chk.scenario;
 
@@ -928,7 +929,7 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const d = next(draft.rngState);
     draft.rngState = d.state;
     const rngState = (hashSeed(`${scenario.id}:${scenario.locationSeed}`) ^ Math.floor(d.value * 4294967296)) >>> 0;
-    const run = makeRun(draft, chk.built!, scenario, cmd, runId, rngState, ctx.now);
+    const run = makeRun(draft, chk.built!, scenario, cmd, runId, rngState, ctx.now, ctx.timer ?? 'off');
 
     const before = draft.reservations.length;
     const r = reserveLoadouts(draft, runId, cmd.loadouts, cmd.units, ctx.now, upkeep);

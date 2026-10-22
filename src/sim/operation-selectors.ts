@@ -40,6 +40,7 @@ import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
 import { CERT_HOLDER } from '../content/certs';
 import { LEAD_PREFIX } from './crew-flags';
+import type { TimerSetting } from './timer-setting';
 
 export interface ScenarioCard {
   id: Id;
@@ -560,8 +561,8 @@ export function previewAction(
 
 // ---------------------------------------------------------------- prep and debrief
 
-export function prepCheck(state: GameState, now: number, cmd: StartOperationCommand): PrepCheck {
-  const c = checkStart(state, now, cmd);
+export function prepCheck(state: GameState, now: number, cmd: StartOperationCommand, timer: TimerSetting = 'off'): PrepCheck {
+  const c = checkStart(state, now, cmd, timer);
   return { ok: c.issues.length === 0, issues: c.issues, warnings: c.warnings };
 }
 

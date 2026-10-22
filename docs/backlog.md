@@ -216,6 +216,9 @@ Needs: start=none; integrate=none; ship=none
 A short HQ panel names the department's name (posture), its habit on the clock (stall), its spend mix
 and its form, each with the one thing it changes (`docs/player-profile.md`). An eased card says
 "a quieter call while the team recovers" (`IncidentCard.eased`).
+The stall line says it raises starting pressure only on the Standard timer, and shows nothing
+extra on Off or Relaxed. The eased mark renders on the call card (comebackTier saves it today and
+nothing in `src/ui/` shows it).
 
 ### lab-flow-timeouts: The Lab's Flow draws where a threat runs out to
 Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling

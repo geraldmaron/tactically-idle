@@ -49,7 +49,7 @@ engagement over fairness.
 | Reader | Effect | Cap | Where |
 |---|---|---|---|
 | Comeback pacing | after 3 bad results in a row, the next call is drawn a tier lower and its card is marked `eased` | one tier | `comebackTier`, `src/sim/incidents.ts` |
-| Source starts | a hard name and a stalling habit start each pressure source higher: people have heard of the team, and know these stand-offs run long | below the source's first cue | `sourceStarts`, saved as `OperationRun.sourceStart` so replays agree |
+| Source starts | a hard name starts each pressure source higher on every timer; a stalling habit adds to it only on the Standard timer (owner, 2026-10-21), so a player who chose Off or Relaxed is never pressed for taking time | below the source's first cue | `sourceStarts`, saved as `OperationRun.sourceStart` so replays agree |
 | Reputation | the named contributor on contact, pressure and execution checks, and the board tilt | ±6 points, ±50% weight | `src/sim/reputation.ts` |
 | Officer history | calls of this type each officer has worked (`career.byType`) | 4 points at the first seat | `TYPE_HISTORY`, `src/content/traits.ts` |
 

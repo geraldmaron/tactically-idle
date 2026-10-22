@@ -9,6 +9,7 @@ import { effectiveLean } from './reputation';
 import type { ScenarioDefinition } from './scenario-types';
 import type { Department, GameState, Id, LedgerKind } from './types';
 import { tunable } from './tuning';
+import type { TimerSetting } from './timer-setting';
 
 /** Tunable (sim/tuning.ts). */
 export const PROFILE_TUNING = tunable('PROFILE_TUNING', {
@@ -94,9 +95,12 @@ export function comebackTier(profile: Pick<PlayerProfile, 'adverseStreak'>, tier
 
 /** Where each pressure source starts on this department's call (OperationRun.sourceStart): higher
  * for a department known to go in hard and for one known to let stand-offs run, never at or past
- * its first cue. Undefined when nothing moves, so a call reads exactly as authored. */
-export function sourceStarts(scenario: Pick<ScenarioDefinition, 'clocks'>, profile: Pick<PlayerProfile, 'posture' | 'stall'>): Record<Id, number> | undefined {
-  const lift = Math.max(0, profile.posture) * PROFILE_TUNING.sourceStart.hardName + profile.stall * PROFILE_TUNING.sourceStart.stallHabit;
+ * its first cue. Undefined when nothing moves, so a call reads exactly as authored. The stall habit
+ * lifts only on the Standard timer (owner, 2026-10-21): a player who chose Off or Relaxed asked for
+ * time to read, and that choice never follows them into later calls. */
+export function sourceStarts(scenario: Pick<ScenarioDefinition, 'clocks'>, profile: Pick<PlayerProfile, 'posture' | 'stall'>, timer: TimerSetting): Record<Id, number> | undefined {
+  const stall = timer === 'standard' ? profile.stall : 0;
+  const lift = Math.max(0, profile.posture) * PROFILE_TUNING.sourceStart.hardName + stall * PROFILE_TUNING.sourceStart.stallHabit;
   if (!(lift >= 0.5)) return undefined;
   const out: Record<Id, number> = {};
   for (const def of scenario.clocks ?? []) {

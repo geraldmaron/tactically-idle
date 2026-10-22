@@ -48,12 +48,21 @@ describe('what reads it', () => {
 
   it('starts a pressure source higher for a hard name and a stalling habit, short of its first cue', () => {
     const scenario = getScenario(testCallId('hostage'))!;
-    expect(sourceStarts(scenario, { posture: 0, stall: 0 })).toBeUndefined();
-    expect(sourceStarts(scenario, { posture: -1, stall: 0 }), 'a name for talking draws no crowd').toBeUndefined();
-    const lifted = sourceStarts(scenario, { posture: 1, stall: 1 })!;
+    expect(sourceStarts(scenario, { posture: 0, stall: 0 }, 'standard')).toBeUndefined();
+    expect(sourceStarts(scenario, { posture: -1, stall: 0 }, 'standard'), 'a name for talking draws no crowd').toBeUndefined();
+    const lifted = sourceStarts(scenario, { posture: 1, stall: 1 }, 'standard')!;
     for (const def of scenario.clocks!.filter((clock) => clock.source)) {
       expect(lifted[def.id]).toBeGreaterThan(def.start);
       expect(lifted[def.id]).toBeLessThan(def.cues[0].at);
     }
+  });
+
+  it('lifts pressure from the stalling habit only on the Standard timer', () => {
+    const scenario = getScenario(testCallId('hostage'))!;
+    for (const timer of ['off', 'relaxed'] as const) {
+      expect(sourceStarts(scenario, { posture: 0, stall: 1 }, timer), `${timer}: slow decisions don't follow the player`).toBeUndefined();
+      expect(sourceStarts(scenario, { posture: 1, stall: 1 }, timer), `${timer}: the hard name still lifts`).toEqual(sourceStarts(scenario, { posture: 1, stall: 0 }, 'standard'));
+    }
+    expect(sourceStarts(scenario, { posture: 0, stall: 1 }, 'standard')).toBeDefined();
   });
 });

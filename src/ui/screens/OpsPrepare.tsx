@@ -49,6 +49,7 @@ import './operation-squads.css';
 import './ops-visual.css';
 import { departmentUpkeep } from '../../sim/equipment-manager-policy';
 import { Disclosure } from '../components/Disclosure';
+import { timerSetting } from '../timer';
 
 /** `initialStep` opens on the team step, for tests and a return from the Lab; players start on the briefing. */
 export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { scenarioId: Id; onCancel: () => void; initialStep?: 'brief' | 'team' }) {
@@ -168,7 +169,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
       ...(supportUnitId ? { supportUnitIds: [supportUnitId] } : {}),
     };
   }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built]);
-  const check = prepCheck(g, now, cmd);
+  const check = prepCheck(g, now, cmd, timerSetting());
 
   const toggleSquad = (id: SquadId) => {
     setAutoUndo(null);
