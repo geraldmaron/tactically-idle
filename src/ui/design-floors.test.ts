@@ -26,7 +26,7 @@ const SVG_UNITS = { file: '/src/ui/blueprint/blueprint.css', under: 6 };
 const FLOOR_PX = 12;
 const SMALL_PX = 14;
 /** Declarations under 14px, counted 2026-10-21 after the ui-system pass. Only falls. */
-const SMALL_TEXT_CEILING = 403;
+const SMALL_TEXT_CEILING = 377;
 const TOUCH_PX = 44;
 const BUTTON_CLASS = /\.(btn|pill|icon-btn|stepper-btn|navbtn|hud-btn|linkbtn|live-cancel)(?![\w-])/;
 

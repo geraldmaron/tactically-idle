@@ -23,8 +23,9 @@ export function BottomNav() {
   const dot: Partial<Record<TopTab, string>> = {
     ...(affordable ? { build: 'An upgrade is ready to buy' } : {}),
   };
+  // A dot opens the segment it is about: an upgrade ready to buy opens Upgrades.
   const open = (id: TopTab) => {
-    if (id === 'build') nav.go(nav.buildSegment);
+    if (id === 'build') nav.go(dot.build ? 'develop' : nav.buildSegment);
     else nav.go(id);
   };
   return (

@@ -30,7 +30,7 @@ import { officerStatus } from './squad-model';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, ratePerMinute, relativeTime, signedMoney, yearsText } from '../format';
+import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
 
@@ -166,7 +166,7 @@ function CareerTab({ o }: { o: Officer }) {
       <div><dt>Went well</dt><dd className="tone-mint">{o.career.favorable}</dd></div>
       <div><dt>Went badly</dt><dd className="tone-danger">{o.career.adverse}</dd></div>
       <div><dt>Brought in</dt><dd>{money(o.career.earned ?? 0)}</dd></div>
-      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(net)}</dd></div>
+      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(net)}</dd></div>
     </dl>
     {ret && <div className="note note-warn career-retire"><Icon name="retire" size={16} /><span>Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.</span></div>}
     {ret && retainable && !confirm && <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}</Button>}

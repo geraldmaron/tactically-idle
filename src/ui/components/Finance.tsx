@@ -8,7 +8,7 @@ import { budget } from '../../sim/department-selectors';
 import { ECONOMY_TUNING, HOUR_MS, officerRates } from '../../sim/economy';
 import { fullName } from '../../sim/officer';
 import { Icon, type IconName } from '../icons';
-import { duration, money, moneyFull, perHour, rate, ratePerMinute, relativeTime, signedMoney } from '../format';
+import { duration, money, moneyFull, perHour, rate, relativeTime, signedMoney } from '../format';
 import './finance.css';
 
 const reducedMotion = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -101,7 +101,7 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
   return <div className="finance">
     <div className="finance-hero">
       <p className="finance-balance">{moneyFull(liveFunding(g, now))}</p>
-      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} />{ratePerMinute(b.net)}<small>{rate(b.net)}</small></span>
+      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} />{rate(b.net)}</span>
     </div>
     {left <= 0 ? <p className="note note-warn finance-window"><Icon name="clock" size={14} />Hourly income and costs are paused. They resume with your next order.</p>
       : left < 6 * HOUR_MS && <p className="dim finance-window"><Icon name="clock" size={14} />Hourly income and costs stop in {duration(left)} unless you give an order.</p>}
@@ -127,7 +127,7 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
 
 const DUTY_LABEL: Record<SquadDuty, string> = { patrol: 'On patrol', standby: 'On standby', rest: 'Resting' };
 
-/** Each officer's net a minute, best first: patrol pay or a detail's fee, less their wage. */
+/** Each officer's net an hour, best first: patrol pay or a detail's fee, less their wage. */
 export function OfficerMoney({ g, now = Date.now() }: { g: GameState; now?: number }) {
   const per = officerRates(g, Math.max(now, g.department.lastSettledAt));
   const squadDuty = new Map(g.squads.flatMap((s) => s.officerIds.map((id) => [id, s.duty] as const)));
@@ -145,7 +145,7 @@ export function OfficerMoney({ g, now = Date.now() }: { g: GameState; now?: numb
     <h3 className="finance-head">By officer</h3>
     <ul className="finance-officer-list">{rows.map(({ o, r }) => <li key={o.id}>
       <span className="finance-activity-main"><strong>{fullName(o)}</strong><span className="dim">{doing(o, r)} · wage {perHour(r.wage)}{o.career.earned ? ` · brought in ${money(o.career.earned)}` : ''}</span></span>
-      <b className={r.net < 0 ? 'tone-danger' : 'tone-mint'}>{ratePerMinute(r.net)}</b>
+      <b className={r.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(r.net)}</b>
     </li>)}</ul>
   </section>;
 }

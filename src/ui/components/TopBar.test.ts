@@ -31,7 +31,7 @@ describe('department status explanations', () => {
     expect(html).toContain(`>Level ${state.department.level}</button>`);
     expect(html).not.toContain('/min');
     expect(html).toContain('Funding: $12,400. Show explanation');
-    expect(html).toContain(`Income after costs: ${rate(budget(state).net)}, ${moneyFull(budget(state).net)} an hour. Show explanation`);
+    expect(html).toContain(`Income after costs: ${budget(state).net < 0 ? "minus " : ""}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);
     expect(html).toContain(`Department level: ${state.department.level}. Show explanation`);
     expect(html.match(/<button/g)).toHaveLength(4);

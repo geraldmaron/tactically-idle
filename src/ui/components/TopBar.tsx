@@ -93,7 +93,7 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, liv
           <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
-        <li><button className={`stat stat-rate${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${rate(b.net)}, ${moneyFull(b.net)} an hour`)}>
+        <li><button className={`stat stat-rate${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
           {rate(b.net)}
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
