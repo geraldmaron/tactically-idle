@@ -1,0 +1,61 @@
+{
+  "_scratch": "Pilot only, never imported. Pass 1 (cast slice) and pass 2 (stage spine) of the depth mesh method for Going Live stage 2, node on_air. Author: lead tier (Opus 5.5), 2026-10-22. The prose pass writes pilot/on-air-node.json against this contract; docs/calls/depth-mesh-method.md describes the passes.",
+  "node": "on_air",
+  "stage": "adapt",
+  "keeps": {
+    "why": "The rest of Going Live compiles unchanged around this node, so every mark a later node reads must still be written by some path here.",
+    "entry_marks_read_here": ["terms", "glance", "looked"],
+    "marks_downstream_reads": {
+      "admitted": "way_out.promptIf[0], out_on_camera/out_quiet epilogueIf",
+      "exposed": "way_out.promptIf[1], out_on_camera epilogueIf",
+      "phone_wall": "way_out.walk_live and walk_dark modifiers, stream rateFlags",
+      "performing": "way_out.walk_dark modifier",
+      "turned_chat": "way_out.promptIf[5] (also set by this node's threat)",
+      "team_close": "threat.go_in modifier",
+      "knows_truth": "threat.talk_down modifier",
+      "cut": "off_air.promptIf[0], way_out.walk_live onlyIf"
+    },
+    "routes_allowed": ["way_out", "cornered", "off_air", "threat"],
+    "threat_kept": "on_air.threat (The comments turn) and its timeout to chat_turned are unchanged; the pilot rewrites the prompt, exchange, promptIf and choices only."
+  },
+  "cast_slice": {
+    "rider": {
+      "want_here": "One sentence from the manager, on the stream, in front of the people who believe the rider.",
+      "fear_here": "Being made to look like a liar to the only people still on the rider's side.",
+      "self_lie": "s1: the stream is proof. s2: the stream is proof, and if enough people believe it, it becomes true.",
+      "breaking_point_here": "The audience is taken away, or the audience turns. Withdrawal, not rage, is the s1 break; s2 adds the handgun on the manager when refused on camera (raised).",
+      "voice": ["Talks to the phone, not the room", "Repeats one fact as a chant, never the whole story twice", "Short questions to the chat"],
+      "already_spent_on_this_path": "The 11:40 red light and the Hotbag timestamp were told in going_live.on_stream.favorable when terms is set. Do not retell them; refer to them at most by one word."
+    },
+    "manager": {
+      "want_here": "s1: keep the clerk's name out of it. s2: say what the store camera shows without being shot for it.",
+      "wound": "Six years running the night shift; got the clerk the job.",
+      "self_lie": "s1: blaming a courier who would get another account protected a nineteen-year-old who had nothing else. s2: telling the truth is always safe in the end.",
+      "visible_tell": "Looks at the stockroom door, not the handgun (planted in going_live.prompt). This node must pay it off on at least two of four options, not only on manager_speaks.",
+      "voice": ["Calls the rider by first name, like a coworker", "Practical words: shift, rent, register, camera", "Never says the clerk's name on camera in s1"]
+    },
+    "clerk": {
+      "presence_here": "Inside the stockroom doorway on most paths (notSafe), outside behind the patrol car if clerk_out ran. The clerk is never a free exit here: no line in this node moves the clerk out."
+    }
+  },
+  "dilemma": {
+    "goods": ["The truth said where the rider asked for it (public, irreversible)", "A smaller, calmer room (fewer eyes, less to perform for)"],
+    "two_player_argument": "One player lets the manager answer on camera because the rider came for exactly that and nobody can take it back afterward. Another turns the camera to the wall because two thousand strangers are what keeps the rider from backing down, and the truth can be told to one person instead.",
+    "options": [
+      { "id": "manager_speaks", "verb_family": "truth_in_public", "protects": "the rider's demand, met as asked", "costs": "whatever the manager says is permanent and public; in s2 it turns the audience", "turn": "reveals rider_clear to the stream (admitted | exposed)", "difficulty": "TALK +4", "minutes": 3, "adverse_mechanism": "shame spiral (the manager's answer, on camera, wounds the rider in front of everyone); s2 only, the handgun on the manager, to threat. The node's only handgun beat." },
+      { "id": "camera_wall", "verb_family": "shrink_the_audience", "protects": "a quieter room, and the question asked off camera", "costs": "the chat watches a wall and decides the rider is hiding something (turned_chat); the rider does not get the public sentence, so the demand comes back at way_out", "turn": "favorable: the rider lets the manager answer the negotiator on the line, off camera; reveal rider_clear, mark knows_truth and phone_wall. The team knows; the stream does not.", "difficulty": "TALK +6 (was +2; must not beat manager_speaks on odds by more than 5 points on squad A, seed 7)", "minutes": 4, "adverse_mechanism": "the crowd (a viewer drawn by the posted address films at the front glass; the rider turns the phone to the street to show them). No handgun." },
+      { "id": "cut_feed", "verb_family": "take_the_audience", "protects": "an end to the audience nobody inside chose to end", "costs": "the rider learns the police can take things away; off_air opens on that", "turn": "none here; off_air carries the question", "difficulty": "PRESS +2", "minutes": 6, "adverse_mechanism": "withdrawal (E4 sign: the rider sits down and says it does not matter now who took the bag). No handgun. Routes to off_air, whose own_it answers it." },
+      { "id": "team_glass", "gate": "notMarks looked", "verb_family": "close_distance", "protects": "reach: officers a few steps from the manager", "costs": "helmets on the stream; the rider knows where the team is", "turn": "favorable pays off the stockroom glance from closer than the corner: the lead officer sees the manager look at the stockroom door each time the rider faces the phone (glance is not set here: it is the stage 1 mark; set team_close only).", "difficulty": "MOVE 0", "minutes": 3, "adverse_mechanism": "lost control (the rider switches off the front lights so the street cannot see in, taking the view the team came for). No handgun." }
+    ]
+  },
+  "rules_for_the_prose_pass": [
+    "Stage prompt opens on what changed since stage 1, never on the count (the strip shows the count) and never on 'still'.",
+    "Every mixed band changes who is talking, what is known, where a person is or what a later option costs. No mixed band adds only time.",
+    "Every adverse preview names its mechanism's visible act, not 'may come up at'. Only manager_speaks may mention the handgun in a preview.",
+    "No result in this node retells 11:40, the red light or the timestamp.",
+    "No sentence opens with {rider.first} more than twice per choice.",
+    "No 3-word run from the spent ledger (pilot/spent-ledger.json) unless it is a fixed noun phrase that has no other name (the stockroom door, the register phone).",
+    "{lead} does the risky part in at least two summaries.",
+    "Pronoun tokens for every person; no gendered words; curly apostrophes; no dashes; colons only where none are needed (so none)."
+  ]
+}

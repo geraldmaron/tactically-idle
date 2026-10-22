@@ -1,0 +1,320 @@
+{
+  "id": "on_air",
+  "stage": "adapt",
+  "prompt": "{rider.first} carries the phone to the drinks cooler and holds the lens on {manager.first}’s face. {rider.He} {rider~wants|want} one sentence from {manager.him}, said to the strangers watching and not to the police.",
+  "exchange": [
+    { "by": "rider", "line": "Say it to them, {manager.first}. Not to me. To them." },
+    { "by": "manager", "line": "Six years on this shift, {rider.first}. I don’t talk to cameras." },
+    { "by": "rider", "line": "Then start. They’re all watching." }
+  ],
+  "promptIf": [
+    {
+      "when": { "marks": ["terms"] },
+      "prompt": "{rider.first} has named the price, and {manager.first} is the one who has to pay it. {rider.He} {rider~crouches|crouch} at the cooler with the phone, waiting for one sentence.",
+      "exchange": [
+        { "by": "rider", "line": "You heard what I told them. One sentence." },
+        { "by": "manager", "line": "I heard you, {rider.first}. I’m working out what I can say." },
+        { "by": "rider", "line": "It’s one sentence. It’s one." }
+      ]
+    },
+    {
+      "when": { "marks": ["glance"] },
+      "prompt": "{rider.first} walks the phone up close to {manager.first}. The lens is level with {manager.his} face. At the corner you watch {manager.him} look toward the stockroom door every time the phone comes up."
+    }
+  ],
+  "choices": [
+    {
+      "id": "manager_speaks",
+      "title": "Let {manager.first} answer on camera",
+      "icon": "radio",
+      "talksTo": "manager",
+      "check": { "kind": "contact", "ratings": [{ "key": "communication", "weight": 0.75 }, { "key": "composure", "weight": 0.25 }], "difficulty": 4 },
+      "minutes": 3,
+      "consequenceLevel": "high",
+      "modifiers": [{ "label": "You saw who {manager.he} {manager~watches|watch}", "mark": "glance", "value": 6 }],
+      "summary": "{lead} offers {rider.first} what {rider.he} came for, in {manager.first}’s own voice and on camera. You don’t know what the answer is, and the handgun stays in {rider.his} hand.",
+      "pull": "The sentence {rider.first} came for, from the one person who can say it.",
+      "cost": "Every word {manager.first} says goes out live, and none of it can be taken back.",
+      "preview": {
+        "favorable": "{manager.first} stands at the cooler and answers into the lens, and {rider.first} hears it with every viewer.",
+        "mixed": "A few words come out of {manager.first} before {rider.first} cuts in and aims the lens at the chat.",
+        "adverse": "{manager.first} tells the stream why the account closed, a viewer types thief, and {rider.first} may level the handgun at {manager.him}."
+      },
+      "outcomes": {
+        "favorable": [
+          {
+            "if": { "fact": "rider_clear", "is": true },
+            "text": "{manager.first} stands with a hand on the cooler and says the sentence to the lens, not to {rider.first}. {manager.He} {manager~glances|glance} twice at the stockroom door while the viewers read it.",
+            "exchange": [
+              { "by": "manager", "line": "You didn’t take that bag, {rider.first}. I wrote the report and I knew it." },
+              { "by": "rider", "line": "{manager.He} said it. Did you see? {manager.He} said it." }
+            ],
+            "reveal": ["rider_clear"],
+            "mark": ["admitted"],
+            "moves": { "rider": "honest" },
+            "next": { "node": "way_out" },
+            "objective": 20,
+            "pressure": -6
+          },
+          {
+            "if": { "fact": "rider_clear", "is": false },
+            "text": "{manager.first} gets to {manager.his} feet and tells the lens what the register camera recorded. The comments freeze, then the word thief runs down the screen faster than {rider.first} can read.",
+            "exchange": [
+              { "by": "manager", "line": "It’s on the register camera, {rider.first}. I watched it twice." },
+              { "by": "rider", "line": "I didn’t take it. I didn’t take it." }
+            ],
+            "reveal": ["rider_clear"],
+            "mark": ["exposed"],
+            "moves": { "rider": "provoked" },
+            "bump": { "stream": 15 },
+            "next": { "node": "cornered" },
+            "objective": 10
+          }
+        ],
+        "mixed": [
+          {
+            "text": "{manager.first} says {rider.first}’s name and half a sentence about the night shift. Then {rider.first} talks over {manager.him}, swings the lens to the chat and asks who believes {rider.him}.",
+            "exchange": [
+              { "by": "rider", "line": "Who believes me? Type it. Who believes me?" }
+            ],
+            "mark": ["performing"],
+            "moves": { "rider": "heard" },
+            "bump": { "stream": 8 },
+            "next": { "node": "way_out" },
+            "objective": 8
+          }
+        ],
+        "adverse": [
+          {
+            "text": "{manager.first} stands and tells the phone that {rider.first} lost the account over a bag that never reached its customer. A viewer types the word thief, and the replies pile up under it.",
+            "exchange": [
+              { "by": "manager", "line": "The order never got delivered, {rider.first}. That’s why the app closed you." }
+            ],
+            "mark": ["turned_chat"],
+            "moves": { "rider": "provoked" },
+            "bump": { "stream": 18 },
+            "pressure": 10
+          },
+          {
+            "if": { "fact": "raised", "is": true },
+            "text": "{rider.first} stands the phone upright on the register so it sees both of them. Then {rider.he} {rider~lifts|lift} the handgun to the height of {manager.first}’s face.",
+            "exchange": [
+              { "by": "rider", "line": "Now say the rest. Say it to the lens." }
+            ],
+            "reveal": ["raised"],
+            "next": { "node": "threat" }
+          },
+          {
+            "if": { "fact": "raised", "is": false },
+            "text": "{rider.first} stops mid-word. The phone sinks to {rider.his} hip, lens down at the floor. {rider.He} {rider~answers|answer} nobody in the room or on the line.",
+            "reveal": ["raised"],
+            "next": { "node": "way_out" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "camera_wall",
+      "title": "Turn the camera to the wall",
+      "icon": "radio",
+      "talksTo": "rider",
+      "check": { "kind": "contact", "ratings": [{ "key": "communication", "weight": 0.75 }, { "key": "composure", "weight": 0.25 }], "difficulty": 6 },
+      "minutes": 4,
+      "certBonus": { "cert": "crisis_negotiation", "value": 6, "label": "Negotiation training" },
+      "favors": [{ "trait": "steady", "value": 4, "label": "doesn’t speed up for the camera" }],
+      "summary": "{lead} requests that {rider.first} point the phone at the plaster and leave the sound on. The viewers get a wall, and {rider.first} gets only the negotiator’s word that it helps.",
+      "pull": "A quieter room, and a question {manager.first} can answer with no lens on {manager.him}.",
+      "cost": "The chat watches a wall and decides {rider.first} is hiding something.",
+      "preview": {
+        "favorable": "The camera faces the plaster with the sound on, and {rider.first} hands {manager.first} the receiver.",
+        "mixed": "The camera turns to the plaster, a viewer types that {rider.first} has something to hide, and {rider.first} wheels it round.",
+        "adverse": "A viewer reaches the front glass and films in, and {rider.first} swings the camera onto the street to show the chat."
+      },
+      "outcomes": {
+        "favorable": [
+          {
+            "text": "The phone now faces the plaster, sound on. The comments scroll past and nobody reads them out. {rider.first} passes the receiver to {manager.first} on its cord.",
+            "mark": ["phone_wall"],
+            "moves": { "rider": "contact" },
+            "objective": 15,
+            "pressure": -5
+          },
+          {
+            "if": { "fact": "rider_clear", "is": true },
+            "text": "{manager.first} takes the receiver and drops {manager.his} voice. {manager.He} {manager~tells|tell} the negotiator that {rider.first} never touched the bag. {manager.His} gaze stays on the stockroom door.",
+            "exchange": [
+              { "by": "rider", "line": "Okay. Okay. Now tell them too." }
+            ],
+            "reveal": ["rider_clear"],
+            "mark": ["knows_truth"],
+            "next": { "node": "way_out" }
+          },
+          {
+            "if": { "fact": "rider_clear", "is": false },
+            "text": "{manager.first} cups the receiver in both hands and speaks low. {manager.He} {manager~says|say} the register camera shows {rider.first} lifting the bag. {rider.first} hears every word.",
+            "exchange": [
+              { "by": "rider", "line": "Don’t tell them that. Nobody tells them that." }
+            ],
+            "reveal": ["rider_clear"],
+            "mark": ["knows_truth"],
+            "next": { "node": "way_out" }
+          },
+          {
+            "when": { "lead": ["steady"] },
+            "text": "{lead} keeps the same slow pace while the comments run through the speaker."
+          }
+        ],
+        "mixed": [
+          {
+            "text": "The wall lasts until a comment says nobody hides a camera without a reason. Then {rider.first} swings it back to the counter and answers the commenter, not the negotiator.",
+            "exchange": [
+              { "by": "rider", "line": "I’m not hiding anything. I’m not hiding anything." }
+            ],
+            "mark": ["turned_chat", "performing"],
+            "moves": { "rider": "heard" },
+            "bump": { "stream": 6 },
+            "next": { "node": "way_out" },
+            "objective": 6
+          }
+        ],
+        "adverse": [
+          {
+            "text": "A viewer on foot slips past the tape and films the lit front glass. Then {rider.first} points the lens toward the window, so the chat can see {rider.his} audience.",
+            "exchange": [
+              { "by": "rider", "line": "Somebody came. Somebody actually came for me." }
+            ],
+            "mark": ["performing"],
+            "moves": { "rider": "provoked" },
+            "bump": { "stream": 14 },
+            "pressure": 8,
+            "next": { "node": "way_out" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cut_feed",
+      "title": "Have command take the stream down",
+      "icon": "handover",
+      "check": { "kind": "pressure", "ratings": [{ "key": "composure", "weight": 0.5 }, { "key": "coordination", "weight": 0.5 }], "difficulty": 2 },
+      "minutes": 6,
+      "tempo": "waiting",
+      "consequenceLevel": "moderate",
+      "summary": "Your squad holds position while command calls {stream_app} and has the stream ended. The picture goes black on {rider.first}’s phone, mid-sentence.",
+      "pull": "The audience goes, and the negotiator is the only voice left on the line.",
+      "cost": "The police can switch off what {rider.first} built, and {rider.he} {rider~knows|know} who did it.",
+      "preview": {
+        "favorable": "The screen in {rider.first}’s hand goes dark, and {rider.first} crosses to the register phone to ask for it back.",
+        "mixed": "A second stream goes up on {manager.first}’s phone before command is done with the first.",
+        "adverse": "With the stream dead, {rider.first} sits against the cooler and tells you the bag no longer matters."
+      },
+      "outcomes": {
+        "favorable": [
+          {
+            "text": "The picture freezes, then goes black, and the count under it drops to nothing. The register phone rings, and {rider.he} {rider~answers|answer} on the first ring.",
+            "exchange": [
+              { "by": "rider", "line": "Turn them back on. Then I’ll answer you." }
+            ],
+            "mark": ["cut"],
+            "stabilize": ["stream"],
+            "bump": { "stream": -100 },
+            "moves": { "rider": "provoked" },
+            "next": { "node": "off_air" },
+            "objective": 10,
+            "pressure": 4
+          }
+        ],
+        "mixed": [
+          {
+            "text": "The stream drops. {rider.first} takes {manager.first}’s phone off the tile and starts a second one. The old viewers find it within minutes.",
+            "exchange": [
+              { "by": "rider", "line": "You cut one. Go ahead, cut this one." }
+            ],
+            "mark": ["performing"],
+            "bump": { "stream": -30 },
+            "moves": { "rider": "provoked" },
+            "next": { "node": "way_out" },
+            "objective": 4,
+            "pressure": 6
+          }
+        ],
+        "adverse": [
+          {
+            "text": "The stream ends and the phone slides out of {rider.first}’s hand onto the tile. {rider.He} {rider~sits|sit} down against the cooler, a body’s length from {manager.first}, and stops asking questions.",
+            "exchange": [
+              { "by": "rider", "line": "It doesn’t matter now whose hands the bag was in. Nobody’s watching." }
+            ],
+            "mark": ["cut"],
+            "stabilize": ["stream"],
+            "bump": { "stream": -100 },
+            "moves": { "rider": "provoked" },
+            "pressure": 10,
+            "next": { "node": "off_air" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "team_glass",
+      "title": "Move your squad up to the glass",
+      "icon": "perimeter",
+      "team": { "to": { "vantage": "scene" }, "signal": { "channel": "visual", "to": "rider" } },
+      "check": { "kind": "coordination", "ratings": [{ "key": "coordination", "weight": 0.6 }, { "key": "composure", "weight": 0.4 }], "difficulty": 0 },
+      "minutes": 3,
+      "consequenceLevel": "moderate",
+      "onlyIf": { "notMarks": ["looked"] },
+      "certBonus": { "cert": "surveillance", "value": 6, "label": "Surveillance training" },
+      "summary": "{lead} walks two officers along the storefront to the front glass, a few steps from {manager.first}. The phone is aimed across the store, and the glass sits at the edge of its picture.",
+      "pull": "Close enough to reach {manager.first}, and to see who looks where.",
+      "cost": "Officers show on the stream, and {rider.first} learns where they stand.",
+      "preview": {
+        "favorable": "{lead} reaches the glass unseen and can watch {manager.first} while {rider.first} talks into the lens.",
+        "mixed": "Your officers get to the glass, but a helmet shows in the picture, and {rider.first} moves to {manager.first}.",
+        "adverse": "Helmets show on the screen, {rider.first} kills the front lights, and your officers lose sight of the counter."
+      },
+      "outcomes": {
+        "favorable": [
+          {
+            "text": "{lead} settles at the glass beside a second officer, below the window line. The handgun hangs low in {rider.first}’s right hand. {manager.first} keeps glancing to the stockroom door whenever {rider.first} faces the phone.",
+            "reveal": ["handgun"],
+            "mark": ["team_close"],
+            "next": { "node": "way_out" },
+            "objective": 10
+          },
+          {
+            "when": { "lead": ["observant"] },
+            "text": "{lead} counts the steps from the cooler to the door and finds nothing in the way."
+          }
+        ],
+        "mixed": [
+          {
+            "text": "The chat spots a helmet at the corner of the frame before the officers are set. {rider.first} steps over to {manager.first} and asks the line how many are outside.",
+            "exchange": [
+              { "by": "rider", "line": "Who is at my window? Who?" }
+            ],
+            "reveal": ["handgun"],
+            "mark": ["team_close", "performing"],
+            "moves": { "rider": "team_seen" },
+            "bump": { "stream": 12 },
+            "next": { "node": "way_out" },
+            "objective": 6,
+            "pressure": 4
+          }
+        ],
+        "adverse": [
+          {
+            "text": "{rider.first} sees two helmets in the phone’s picture and flicks off the front lights. The glass goes dark for the street and for {lead}, who came to watch the counter.",
+            "exchange": [
+              { "by": "rider", "line": "Lights off. Let them look at nothing." }
+            ],
+            "mark": ["team_close", "performing"],
+            "moves": { "rider": "team_seen" },
+            "bump": { "stream": 16 },
+            "pressure": 8,
+            "next": { "node": "way_out" }
+          }
+        ]
+      }
+    }
+  ]
+}
