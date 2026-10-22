@@ -204,7 +204,7 @@ new offer and needs conditions 1 to 7 again, so it counts against the gap and ca
 
 ## 5. The ad reader (D5, D6)
 
-A pure function of saved state, like `playerProfile`, in its own module (`src/sim/ad-reader.ts`), not a field
+A pure function of saved state, like `playerProfile`, in its own module (a new ad reader module under `src/sim/`), not a field
 of `PlayerProfile` (section 8).
 
 **Input:** the last 10 offer outcomes inside 14 days, each `watched` (rewarded event fired), `declined`
@@ -456,7 +456,7 @@ you in a call.
   rest bonus and following the officer across squads (the rule in section 3), with the rotation test. Blocks `tap-multiplier-content` (beyond the base), `rewarded-ads` and `real-purchases`
   until the owner picks B.
 - `rewarded-ads`: reward is `ad-overtime` +0.5 for 10 minutes; offer gates in section 4; reader in
-  `src/sim/ad-reader.ts` with `AD_TUNING`; local log outside the save; probe `new:ad-history-blind` plus the
+  a new ad reader module under `src/sim/` with `AD_TUNING`; local log outside the save; probe `new:ad-history-blind` plus the
   draw-blind test; confirm whether a live call pauses desk time; expose a runtime content fingerprint; consent
   entry state; the offer shows the real before and after.
 - `real-purchases`: two entitlements with the ids and factors in section 7; the `VerifiedEntitlements` branded
