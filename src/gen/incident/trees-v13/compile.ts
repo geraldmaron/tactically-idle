@@ -245,6 +245,11 @@ export function deceptionErrors(tree: CallTree): string[] {
     }
     if (choice.deceives && !made) errors.push(`${tree.type}: ${node.id}.${choice.id} is marked deceives but makes no lie promise`);
   }
+  // A threat's run-out can find a lie out too (TreeTimeout.breaks); its `text` is the line the player reads.
+  for (const node of tree.nodes) for (const id of node.threat?.timeout?.breaks ?? []) {
+    broken.add(id);
+    if (!node.threat!.timeout!.text.trim()) errors.push(`${tree.type}: ${node.id} timeout: breaking ${id} needs text that says the person found out`);
+  }
   for (const id of lies) if (!broken.has(id)) errors.push(`${tree.type}: the lie ${id} is never found out; add an outcome that breaks it`);
   for (const id of broken) if (!promises.has(id)) errors.push(`${tree.type}: an outcome breaks ${id}, which no outcome promises`);
   return errors;
@@ -1238,7 +1243,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
       if ('ending' in target && !tree.endings[target.ending] && target.ending !== 'handed_over') throw new Error(`${node.id}: a threat's timeout ends the call at unknown ending ${target.ending}`);
       const go = routing(node, entry.next);
       const when = 'when' in entry ? stateCondition(trim(entry.when), groups) : undefined;
-      return { text: timeout.text, ...go, ...(when && (when.flags || when.notFlags) ? { when } : {}) };
+      return { text: timeout.text, ...go, ...(timeout.breaks?.length ? { breaks: [...timeout.breaks] } : {}), ...(when && (when.flags || when.notFlags) ? { when } : {}) };
     });
   };
 

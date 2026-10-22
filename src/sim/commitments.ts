@@ -6,7 +6,8 @@
 //   statement, a message, surrender terms) commits on a favorable or mixed result.
 // - Broken if, while it is open, the team takes an entry choice, or uses force on that person, or
 //   an outcome names it in `breaks` (the person learns a promise was empty: a lie, dilemma pattern
-//   15, owner 2026-10-19).
+//   15, owner 2026-10-19), or a threat's run-out route names it (breakCommitments: the same discovery
+//   when nobody chose).
 // - Kept when that person comes out while it is open.
 // - Still open at the end of the call stays open.
 //
@@ -57,6 +58,26 @@ export function applyCommitments(run: CommitmentRun, scenario: ScenarioDefinitio
     run.commitments = { ...run.commitments, [id]: { ...commitment, status } };
     changed.push({ id, status });
   }
-  if (changed.length) applyMoves(run, scenario, changed.map(({ id, status }) => ({ moves: [{ personId: run.commitments![id].personId, event: status === 'kept' ? 'promise_kept' as const : 'promise_broken' as const }] })));
+  moveMeters(run, scenario, changed);
   return changed;
+}
+
+/** Break the open commitments a threat's run-out route names (TreeTimeout.breaks): nobody chose, so
+ * only the discovery applies, never an entry, force or a person coming out. A name with no open
+ * commitment behind it (the promise was never made, or is already settled) changes nothing. */
+export function breakCommitments(run: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>>, scenario: ScenarioDefinition,
+  effects: readonly OutcomeEffect[]): { id: Id; status: 'broken' }[] {
+  const changed: { id: Id; status: 'broken' }[] = [];
+  for (const id of new Set(effects.flatMap(effect => effect.breaks ?? []))) {
+    const commitment = run.commitments?.[id];
+    if (commitment?.status !== 'open') continue;
+    run.commitments = { ...run.commitments, [id]: { ...commitment, status: 'broken' } };
+    changed.push({ id, status: 'broken' });
+  }
+  moveMeters(run, scenario, changed);
+  return changed;
+}
+
+function moveMeters(run: Pick<OperationRun, 'meters'> & Partial<Pick<OperationRun, 'commitments'>>, scenario: ScenarioDefinition, changed: { id: Id; status: 'kept' | 'broken' }[]) {
+  if (changed.length) applyMoves(run, scenario, changed.map(({ id, status }) => ({ moves: [{ personId: run.commitments![id].personId, event: status === 'kept' ? 'promise_kept' as const : 'promise_broken' as const }] })));
 }
