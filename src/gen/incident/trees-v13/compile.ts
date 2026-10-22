@@ -813,7 +813,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.summary = tree.summary;
   s.pressureLabel = tree.pressureLabel;
   s.pressure = { ...tree.pressure };
-  const profiles = tree.roles.filter(role => role.profile?.trim()).map(role => ({ personId: role.id, name: `{${role.id}}`, text: role.profile! }));
+  const profiles = tree.roles.filter(role => role.profile?.trim()).map(role => ({ personId: role.id, name: `{${role.id}}`, role: role.label, text: role.profile! }));
   s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities],
     ...(profiles.length ? { people: profiles } : {}) };
   if (tree.coldOpen) s.coldOpen = tree.coldOpen;

@@ -36,7 +36,7 @@ describe('labels', () => {
     expect(anchorLabel('call', bound, hostage.tree, deps)).toBe('The whole call');
     expect(anchorLabel('choice:going_live/on_stream', bound, hostage.tree, deps)).toBe(`Going live › ${bound.choice('going_live', 'on_stream')}`);
     expect(anchorLabel('band:going_live/on_stream/mixed', bound, hostage.tree, deps)).toMatch(/· complications$/);
-    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The delivery rider turned the handgun on the night manager');
+    expect(anchorLabel('key:mark:turned', bound, hostage.tree, deps)).toBe('The delivery courier turned the handgun on the night manager');
     expect(anchorLabel('string:going_live.prompt', bound, hostage.tree, deps)).toBe('Going live · prompt');
   });
 

@@ -93,25 +93,25 @@ export const HOSTAGE_LIVE: CallTree = {
   type: 'hostage_crisis',
   title: 'Going Live',
   roles: [
-    { id: 'rider', label: 'delivery rider', pronouns: 'he', kind: 'subject',
-      profile: '{rider.first} picked up from {place} five nights a week for two years. {delivery_app} cut {rider.him} off on Tuesday over an order that never arrived. {rider.His} {stream_app} channel has four hundred followers, most of them other riders, and {rider.he} {rider~posts|post} to it from a phone mount on the handlebars.',
+    { id: 'rider', label: 'delivery courier', pronouns: 'he', kind: 'subject',
+      profile: '{rider.first} has carried takeout for {delivery_app} for two years, five nights a week out of {place}. {delivery_app} closed {rider.his} courier account on Tuesday. {rider.His} {stream_app} channel has four hundred followers, most of them other couriers, and {rider.he} {rider~posts|post} to it from a phone mount on the handlebars.',
       carries: { label: 'Handgun', glyph: 'weapon', knownFrom: 'handgun' } },
     { id: 'manager', label: 'night manager', pronouns: 'she', kind: 'civilian',
-      profile: '{manager.first} has run the night shift at {place} for six years and filed the complaint that got {rider.first} cut off. Every pickup time on the whiteboard by the register is in {manager.his} handwriting.' },
-    { id: 'clerk', label: 'clerk', pronouns: 'he', kind: 'civilian',
-      profile: '{clerk.first} is nineteen and stocks the coolers on the night shift. {manager.first} got {clerk.him} the job. {clerk.He} worked the register the night the order went missing.' },
-    { id: 'friend', label: 'rider friend', pronouns: 'he', kind: 'bystander', place: 'outside',
-      profile: '{friend.first} rides the same zone as {rider.first} and came straight from a drop when the stream started. {friend.He} {friend~stands|stand} at the patrol line with {friend.his} delivery bag on {friend.his} back, typing into the comments.' },
+      profile: '{manager.first} is the night manager at {place} and has run the shift for six years. {manager.He} filed the complaint that got {rider.first} cut off. Every pickup time on the whiteboard by the register is in {manager.his} handwriting.' },
+    { id: 'clerk', label: 'night clerk', pronouns: 'he', kind: 'civilian',
+      profile: '{clerk.first} is nineteen and works the night shift as a clerk, stocking the coolers. {manager.first} got {clerk.him} the job. {clerk.He} worked the register the night the order went missing.' },
+    { id: 'friend', label: 'fellow courier', pronouns: 'he', kind: 'bystander', place: 'outside',
+      profile: '{friend.first} is another {delivery_app} courier and rides the same zone as {rider.first}. {friend.He} came straight from a drop when the stream started and {friend~stands|stand} at the patrol line with {friend.his} delivery bag on {friend.his} back, typing into the comments.' },
   ],
   // A pickup counter: a shop floor, a sales floor or a bar.
   families: ['market_row', 'corner_store_flat_g2', 'bar_restaurant_g2'],
   scene: { setting: 'business', rooms: ['retail'], crowd: 2, timeOfDay: 'night' },
-  summary: '{rider.first} wants one sentence said on {rider.his} stream. The night manager is on the floor behind the counter, and {rider.first} has a handgun.',
-  coldOpen: 'On Tuesday {delivery_app} sent {rider.first} one line. Account deactivated after a customer complaint. The complaint came from {place}. It said {rider.first} picked up an order at 11:40 that never reached the door it was paid for. {rider.first} stopped riding after that. Tonight {rider.he} walked in at the end of the shift, propped {rider.his} phone against the register with the stream running and asked {manager.first} to say {rider.he} didn’t take the bag. {manager.first} said no. {rider.first} took a handgun out of {rider.his} jacket. {clerk.first} was coming out of the stockroom with a case of water and stopped in the doorway.',
+  summary: '{rider.first}, a {delivery_app} courier, wants one sentence said on {rider.his} stream. The night manager is on the floor by the counter, and {rider.first} has a handgun.',
+  coldOpen: '{rider.first} was a courier for {delivery_app}, a food delivery app, and picked up orders at {place} most nights. On Tuesday {delivery_app} closed {rider.his} account. {manager.first}, the night manager, had reported that a bag {rider.first} picked up at 11:40 never reached the customer. Without the account {rider.first} had no work. Tonight {rider.he} walked in at the end of the shift and propped {rider.his} phone against the register, streaming live on {stream_app}. {rider.He} asked {manager.first} to say {rider.he} didn’t take the bag. {manager.first} said no. {rider.first} took a handgun out of {rider.his} jacket. {clerk.first}, the night clerk, was coming out of the stockroom with a case of water and stopped in the doorway.',
   pressureLabel: '{manager.first} on camera',
   pressure: { start: 18, perMinute: 0.15, threshold: 85, civilianPerMinute: 0.5 },
   briefing: {
-    dispatchReason: '{clerk.first} called 911 from the stockroom, keeping {clerk.his} voice down. A rider the store got cut off is back with a handgun and won’t let {manager.first} or {clerk.first} leave.',
+    dispatchReason: '{clerk.first}, the night clerk, called 911 from the stockroom, keeping {clerk.his} voice down. A courier the store reported to {delivery_app} is back with a handgun and won’t let {manager.first} or {clerk.first} leave.',
     known: [
       '{clerk.first} told the dispatcher, “{rider.He} {rider~wants|want} {manager.first} to say it on the stream.”',
       'Patrol counts more than four hundred people watching {rider.first}’s stream on {stream_app}.',
@@ -159,7 +159,7 @@ export const HOSTAGE_LIVE: CallTree = {
           { id: 'cross_streets', at: 6.8, by: 'radio', line: 'Comments guessing cross streets. One is right.', bump: { stream: 6 } },
         ],
         timeout: { text: 'The register phone stays silent. {rider.first} stops waiting for the police and asks the comments what to do.', next: { node: 'address_out' } } },
-      prompt: 'The negotiator’s callback rings beside the register, and {rider.first} lets it ring with the stream running. {manager.first} sits on the floor by the drinks cooler. {manager.His} eyes go to the stockroom door, where {clerk.first} is standing, and not to the handgun.',
+      prompt: 'The negotiator is calling the register phone. {rider.first} lets it ring and {rider~keeps|keep} streaming. {manager.first} sits on the floor by the drinks cooler. {manager.He} {manager~keeps|keep} looking at the stockroom door, where {clerk.first} stands, and never at the handgun.',
       exchange: [{ by: 'rider', line: 'Four hundred people know I didn’t take the bag.' }, { by: 'radio', line: 'Callback ringing. Subject at counter, handgun out.' }],
       choices: [
         { id: 'on_stream', title: 'Talk to {rider.him} on the stream', icon: 'radio', talksTo: 'rider', check: check(TALK), minutes: 4, certBonus: NEGOTIATOR, favors: [CALM_ON_CAMERA],
@@ -170,7 +170,7 @@ export const HOSTAGE_LIVE: CallTree = {
           outcomes: {
             favorable: [{ text: '{rider.first} answers the negotiator facing the phone, not the window. At 11:40, {rider.he} {rider~says|say}, {rider.he} {rider~was|were} at a red light two blocks away, and {delivery_app} has the timestamp. {rider.He} {rider~says|say} {rider.he} will walk out once {manager.first} says it on camera.',
               exchange: [{ by: 'rider', line: 'One sentence. Then I walk.' }], mark: ['terms'], moves: { rider: 'heard' }, bump: { stream: 10 }, next: { node: 'on_air' }, objective: 15 }],
-            mixed: [{ text: '{rider.first} reads each question to the comments and answers them, not the negotiator. A rider in the chat types that the police are stalling, and {rider.first} asks the negotiator if that’s true.',
+            mixed: [{ text: '{rider.first} reads each question to the comments and answers them, not the negotiator. A courier in the chat types that the police are stalling, and {rider.first} asks the negotiator if that’s true.',
               mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 14 }, next: { node: 'on_air' }, objective: 8 }],
             adverse: escalate({
               lead: '{rider.first} lifts the phone off the register and holds the camera on {manager.first}’s face while the negotiator talks.',
@@ -394,8 +394,8 @@ export const HOSTAGE_LIVE: CallTree = {
           preview: { favorable: 'You hear what {clerk.first} saw at the register.', mixed: '{clerk.first} starts to answer and asks for {manager.first} instead.', adverse: '{clerk.first} stops talking, and inside the count keeps climbing.' },
           outcomes: {
             favorable: [
-              { if: CLEAR, text: '{clerk.first} answers looking at the ground. {clerk.He} {clerk~says|say} {clerk.he} took the bag off the counter before the rider got there, because {clerk.he} {clerk~was|were} hungry and the order had sat for twenty minutes. {manager.first} found the receipt in {clerk.his} apron the next day and called {delivery_app} about the rider.',
-                exchange: [{ by: 'clerk', line: '{manager.He} said they’d never fire me if it was the rider.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'way_out' }, objective: 15 },
+              { if: CLEAR, text: '{clerk.first} answers looking at the ground. {clerk.He} {clerk~says|say} {clerk.he} took the bag off the counter before the courier got there, because {clerk.he} {clerk~was|were} hungry and the order had sat for twenty minutes. {manager.first} found the receipt in {clerk.his} apron the next day and called {delivery_app} about {rider.first}.',
+                exchange: [{ by: 'clerk', line: '{manager.He} said they’d never fire me if it was the courier.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'way_out' }, objective: 15 },
               { if: TOOK, text: '{clerk.first} says {rider.first} picked the bag up at 11:40 like any other night. The customer called later to say it never came, though {delivery_app} showed it delivered. {clerk.He} saw the pickup on the store camera, and {manager.first} kept the clip.',
                 exchange: [{ by: 'clerk', line: 'I didn’t say anything. I didn’t want {rider.him} to get in trouble.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'way_out' }, objective: 12 },
             ],
@@ -1037,7 +1037,7 @@ export const HOSTAGE_LIVE: CallTree = {
 
     // stage 3: the clip goes around, and nobody reached the rider
     { id: 'clip_going', stage: 'resolve',
-      threat: { label: '{rider.first} stops answering', minutes: 12, text: 'The clip reaches {delivery_app}’s own account, reposted with a line about rider safety. {rider.first} reads it once, puts the phone face down and stops answering to {rider.his} name.', pressure: 6, moves: { rider: 'provoked' },
+      threat: { label: '{rider.first} stops answering', minutes: 12, text: 'The clip reaches {delivery_app}’s own account, reposted with a line about courier safety. {rider.first} reads it once, puts the phone face down and stops answering to {rider.his} name.', pressure: 6, moves: { rider: 'provoked' },
         beats: [
           { id: 'sitting', at: 3.0, by: 'radio', line: 'Subject sitting. Handgun up top, in reach.' },
           { id: 'still_here', at: 6.4, by: 'negotiator', line: '{rider.first}, I can hear the clip playing. Turn it down so I can hear you.' },

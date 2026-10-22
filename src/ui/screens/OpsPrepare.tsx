@@ -14,7 +14,7 @@ import { standardRadioPlan, STANDARD_RADIO } from '../../sim/standard-kit';
 import { deployRoster } from '../../sim/squads';
 import { projectedCondition } from '../../sim/equipment';
 import { stagingPointsIn } from '../../sim/spatial';
-import { spaceLabel } from '../../sim/spatial-factors';
+import { defaultStagingFor, spaceLabel } from '../../sim/spatial-factors';
 import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
@@ -22,7 +22,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { Button, Card, Chip, Section, Stepper, SubHead } from '../components/ui';
+import { Button, Card, Section, Stepper, SubHead } from '../components/ui';
 import { familyBlurb, incidentMeta } from '../components/incident';
 import { PlateArt, sceneFor } from '../art/Plates';
 import { Portrait } from '../portraits/Portrait';
@@ -281,7 +281,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
       ? { text: check.issues.length === 1 && check.issues[0].length <= 48 ? check.issues[0] : `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix before deploying`, tone: 'warn', icon: 'lock' }
       : visibleWarnings.length > 0
         ? { text: `Ready · ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'} to review`, tone: 'amber', icon: 'warning' }
-        : { text: `Ready · ${chosen.map((sid) => `Squad ${sid}`).join(' + ')}`, tone: 'mint', icon: 'check' };
+        : { text: `Ready · ${chosen.map(squadName).join(' + ')}`, tone: 'mint', icon: 'check' };
 
   const screen = (
     <div className="page prepare" ref={pageRef}>
@@ -362,13 +362,6 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                 );
               })}
             </div>
-            <div className="prep-auto">
-              <Button block icon="wand" disabled={chosen.length === 0} onClick={() => runAuto()}>
-                Auto-equip {chosen.length === 1 ? `squad ${chosen[0]}` : 'selected squads'}
-              </Button>
-              {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
-            </div>
-            <p className="dim autohint">{chosen.length === 0 ? 'Choose squads first. ' : ''}Fills gear from owned stock and keeps quantities you set. One radio per officer is included. Nothing is bought.</p>
             {autoWarnings.length > 0 && (
               <div className="autowarn" aria-live="polite">
                 {autoWarnings.map((w, i) => (
@@ -398,7 +391,12 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
         const visible = store.filter((o: StoreOption) => !o.item.supportOnly
           && (o.item.id === STANDARD_RADIO || o.owned > 0 || brief.usefulItemIds.includes(o.item.id)));
         const points = pointsFor(sid);
+        const position = positions[sid] ?? defaultEntry;
+        const nearest = position ? defaultStagingFor(built, position) : null;
         const chosenPoint = cmd.staging?.[sid] ?? null;
+        const pickedPoint = chosenPoint ?? nearest?.id ?? null;
+        // A new starting position drops a staging point chosen for the old one.
+        const pickPosition = (id: Id) => { setPositions((p) => ({ ...p, [sid]: id })); setStaging((st) => omit(st, sid)); };
         const note = autoNote[sid];
         const unreliable = Object.values(picks[sid] ?? {})
           .flat()
@@ -408,9 +406,12 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
             <div className="prepsquad-head">
               <span className="squad-badge">{sid}</span>
               <strong>{squad.name}</strong>
-              <Button size="sm" icon="wand" className="prepsquad-auto" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`}>
-                Auto-equip
-              </Button>
+              <span className="prepsquad-auto">
+                {autoUndo && <Button size="sm" onClick={undoAuto}>Undo auto-equip</Button>}
+                <Button size="sm" icon="wand" onClick={() => runAuto(sid)} aria-label={`Auto-equip squad ${sid}`} title="Fills gear from stock you own. Nothing is bought.">
+                  Auto-equip
+                </Button>
+              </span>
             </div>
             {note && (
               <Disclosure name="autoequip-notes" className="autonote" icon="wand" summary="Auto-equip notes" count={note.lines.length} hint={note.edited ? 'You changed this' : undefined}>
@@ -432,13 +433,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
               </span>
               <select
                 value={positions[sid] ?? defaultEntry ?? ''}
-                onChange={(e) => {
-                  setPositions((p) => ({ ...p, [sid]: e.target.value }));
-                  setStaging((st) => {
-                    const { [sid]: _drop, ...rest } = st;
-                    return rest;
-                  });
-                }}
+                onChange={(e) => pickPosition(e.target.value)}
                 disabled={brief.entries.length === 0}
               >
                 {brief.entries.length === 0 && <option value="">No entries listed</option>}
@@ -449,6 +444,10 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                 ))}
               </select>
             </label>
+            {brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Starting positions on the building map">
+              <Blueprint built={built} spaces={spaces} squadTasks={[]} selectedSpaceId={position ?? null} focusSquadId={null}
+                highlightSpaceIds={brief.entries.map((entry) => entry.id)} onSelectSpace={(id) => { if (brief.entries.some((entry) => entry.id === id)) pickPosition(id); }} {...blueprintExtras} />
+            </div>}
             {points.length > 0 && (
               <div className="field">
                 <span className="field-label" id={`stage-${sid}`}>
@@ -456,9 +455,9 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                   Staging point
                 </span>
                 <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
-                  <StageOption on={chosenPoint === null} icon="pin" title="Default" sub="This zone's usual point" onPick={() => setStaging((st) => omit(st, sid))} />
-                  {stageLabels(built, points).map(({ point, title, sub, icon }) => (
-                    <StageOption key={point.id} on={chosenPoint === point.id} icon={icon} title={title} sub={sub} onPick={() => setStaging((st) => ({ ...st, [sid]: point.id }))} />
+                  {stageLabels(built, points, position).map(({ point, title, sub, icon }) => (
+                    <StageOption key={point.id} on={pickedPoint === point.id} icon={icon} title={title} sub={point.id === nearest?.id ? 'Nearest door' : sub}
+                      onPick={() => setStaging((st) => point.id === nearest?.id ? omit(st, sid) : ({ ...st, [sid]: point.id }))} />
                   ))}
                 </div>
               </div>
@@ -486,19 +485,18 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                     <li key={o.item.id} className={`lo prep-item${useful ? ' lo-useful' : ''}${standard ? ' prep-item-standard' : ''}${qty > 0 ? ' prep-item-on' : ''}`}>
                       <span className="prep-item-art" aria-hidden="true">
                         <GearArt itemId={o.item.id} size={34} />
-                        {qty > 0 && <b className="prep-item-qty">×{qty}</b>}
+                        {qty > 0 && !standard && <b className="prep-item-qty">×{qty}</b>}
                       </span>
                       <span className="prep-item-main">
                         <strong>{o.item.name}</strong>
                         <span className="prep-item-sub">
-                          {standard ? `${units.length}/${qty} ready · one each` : `${free} free${others ? ` · ${others} with other squads` : ''}`}
+                          {standard ? `One per officer · ${units.length} of ${qty} ready` : `${free} free${others ? ` · ${others} with other squads` : ''}`}
                           {useful && !standard && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}
                         </span>
                       </span>
-                      <span className="prep-item-ctl">
-                        {standard ? <Chip tone={units.length === qty ? 'mint' : 'amber'} icon="radio">Standard kit</Chip>
-                          : <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />}
-                      </span>
+                      {!standard && <span className="prep-item-ctl">
+                        <Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} />
+                      </span>}
                       {standard && units.length < qty && <div className="prep-item-buy">
                         <Button size="sm" icon="plus" disabled={g.department.funding < radioPlan.shortage * o.item.cost}
                           onClick={() => act({ type: 'buyItem', itemId: STANDARD_RADIO, qty: radioPlan.shortage }, `Bought ${radioPlan.shortage} standard radio${radioPlan.shortage === 1 ? '' : 's'}`)}>
@@ -506,7 +504,7 @@ export function OpsPrepare({ scenarioId, onCancel, initialStep = 'brief' }: { sc
                         </Button>
                         {g.department.funding < radioPlan.shortage * o.item.cost && <span className="dim">Needs {moneyFull(radioPlan.shortage * o.item.cost - g.department.funding)} more funding, or deploy fewer officers.</span>}
                       </div>}
-                      {(units.length > 0 || (standard && units.length < qty) || units.length < qty) && (
+                      {(units.length > 0 || units.length < qty) && (!standard || units.length < qty || units.some((u) => UNIT_STATE_META[unitStateOf(u.condition, o.item.wear)].tone === 'bad')) && (
                         <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
                           {units.map((u) => {
                             const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
@@ -608,19 +606,20 @@ function StageOption({ on, icon, title, sub, onPick }: { on: boolean; icon: Icon
       <Icon name={icon} size={20} />
       <span className="stageopt-main">
         <strong>{title}</strong>
-        <span className="dim">{sub}</span>
+        {sub && <span className="dim">{sub}</span>}
       </span>
       <span className="stageopt-check">{on && <Icon name="check" size={18} />}</span>
     </button>
   );
 }
 
-/** 'Hall door', 'East bedroom window': what the point faces plus how the squad gets there. Duplicates get a number. */
-function stageLabels(built: ReturnType<typeof builtForScenario>, points: StagingPoint[]): { point: StagingPoint; title: string; sub: string; icon: IconName }[] {
+/** 'Hall door', 'East bedroom window': what the point faces, plus the zone the squad crosses to reach it when that
+ * isn't the starting position. Duplicates get a number. */
+function stageLabels(built: ReturnType<typeof builtForScenario>, points: StagingPoint[], position?: Id): { point: StagingPoint; title: string; sub: string; icon: IconName }[] {
   const base = points.map((p) => {
     const faces = spaceLabel(built, p.facesId);
     const kind = p.kind === 'window' ? 'window' : p.kind === 'doorway' ? 'doorway' : 'door';
-    return { point: p, title: `${faces} ${kind}`, sub: `From ${spaceLabel(built, p.spaceId)}`, icon: (p.kind === 'window' ? 'window' : 'door') as IconName };
+    return { point: p, title: `${faces} ${kind}`, sub: p.spaceId === position ? '' : `From ${spaceLabel(built, p.spaceId)}`, icon: (p.kind === 'window' ? 'window' : 'door') as IconName };
   });
   const seen = new Map<string, number>();
   const total = new Map<string, number>();

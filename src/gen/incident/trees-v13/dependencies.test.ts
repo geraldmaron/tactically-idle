@@ -59,8 +59,8 @@ describe('dependency index', () => {
       expect(label, key).not.toMatch(/[{}]/);
       expect(label, key).toMatch(/^[A-Z]/);
     }
-    expect(entry('hostage_crisis', 'mark:turned')!.label).toBe('The delivery rider turned the handgun on the night manager');
-    expect(roleNoun(template('hostage_crisis').tree, 'clerk')).toBe('clerk');
+    expect(entry('hostage_crisis', 'mark:turned')!.label).toBe('The delivery courier turned the handgun on the night manager');
+    expect(roleNoun(template('hostage_crisis').tree, 'clerk')).toBe('night clerk');
     expect(plainTokens('{rider.He} {rider~keeps|keep} {manager.first} in the {scene}', template('hostage_crisis').tree)).toBe('They keep the night manager in the scene');
   });
 

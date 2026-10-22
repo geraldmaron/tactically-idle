@@ -580,8 +580,9 @@ export interface ScenarioDefinition {
   pressureLabel: string;
   squadRange: { min: number; max: number };
   briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[];
-    /** V13: who the key people are before today (the briefing's "Who they are"). `name` is bound. */
-    people?: { personId: Id; name: string; text: string }[] };
+    /** V13: who the key people are before today (the briefing's "Who they are"). `name` is bound;
+     * `role` is the person's job or place in the story, said plainly ("night manager"). */
+    people?: { personId: Id; name: string; role?: string; text: string }[] };
   /** V13: the scene before the call, read once before the briefing. */
   coldOpen?: string;
   /** V5 archetype bindings share the generated world with narrative, actions and map views. */

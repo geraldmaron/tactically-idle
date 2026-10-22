@@ -27,7 +27,7 @@ describe('conditions', () => {
     expect(conditionChip(ctx, { kind: 'clock', clock: clock.id, when: 'out', is: true })[0].text).toMatch(/^if .+ runs out$/);
     expect(conditionChip(ctx, { kind: 'clock', clock: clock.id, when: 'low', is: false })[0].text).toMatch(/is not low yet$/);
     const meter = conditionChip(ctx, { kind: 'meter', role: 'rider', stance: ['breaking'], is: false })[0].text;
-    expect(meter).toBe('unless the delivery rider is breaking');
+    expect(meter).toBe('unless the delivery courier is breaking');
     expect(stateChips(ctx, { count: { role: 'others', min: 1 } })).toEqual([{ text: 'others ≥ 1', kind: 'count' }]);
     expect(stateChips(ctx, { marks: ['turned'], notSafe: ['manager'] }).map(c => c.text)).toEqual([ctx.deps.keys.get('mark:turned')!.label, expect.stringMatching(/night manager.* still inside$/)]);
     expect(drawnWords({ via: 'cascade', drawn: 'none' })).toBe('nobody follows');

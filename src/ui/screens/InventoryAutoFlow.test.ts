@@ -149,11 +149,10 @@ describe('Auto-equip squad inventory controls', () => {
     expect(act).not.toHaveBeenCalled();
   });
 
-  it('does nothing with no selected squads', () => {
-    const all = find(render(), (element) => element.type === Button && element.props.block && element.props.icon === 'wand').props;
-    expect(all.disabled).toBe(true);
-    all.onClick();
-    expect(command().squadIds).toEqual([]);
+  it('offers auto-equip only on a chosen squad’s card', () => {
+    expect(nodes(render()).some((element) => element.type === Button && element.props.icon === 'wand')).toBe(false);
+    toggleSquad('A');
+    expect(auto('A').children).toBe('Auto-equip');
     expect(act).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
   };
   const lines = (list: { speaker: string; line: string }[] | undefined) => { for (const line of list ?? []) fields(line, ['speaker', 'line']); };
   fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel', 'coldOpen']);
-  for (const person of s.briefing.people ?? []) fields(person, ['name', 'text']);
+  for (const person of s.briefing.people ?? []) fields(person, ['name', 'role', 'text']);
   s.briefing.known = s.briefing.known.map(text); s.briefing.unknown = s.briefing.unknown.map(text);
   fields(s.briefing, ['dispatchReason']);
   if (s.briefing.teamResponsibilities) s.briefing.teamResponsibilities = s.briefing.teamResponsibilities.map(text);

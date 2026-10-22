@@ -19,7 +19,7 @@ const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: '
   rateFlags: [{ flag: 'mark:phone_wall', ratePerMin: 0.2 }],
   cues: [
     { at: 22, text: 'A viewer types, “Is that handgun real?”', moves: [{ personId: 'rider', event: 'watched' }] },
-    { at: 48, text: 'Another rider shares the stream to a drivers’ group with a few thousand members. The count doubles in a minute.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 48, text: 'Another courier shares the stream to a couriers’ group with a few thousand members. The count doubles in a minute.', moves: [{ personId: 'rider', event: 'watched' }] },
     { at: 76, text: '{outlet} reposts the stream from its own account, and {rider.first} reads the {outlet_short} name out to the viewers.', mark: 'news_on', moves: [{ personId: 'rider', event: 'watched' }] },
   ],
   source: {
@@ -60,7 +60,7 @@ const HANDGUN: Weapon = { kind: 'handgun', real: 'real', where: 'in_hand', visib
 
 /** The rider in every situation: the handgun, the stream, and what patrol and the 911 call said. */
 const RIDER: Partial<PersonSpec> = {
-  label: 'delivery rider',
+  label: 'delivery courier',
   weapons: [HANDGUN],
   // Two years on a scooter, not a range: mostly untrained.
   proficiency: { pick: [['untrained', 65], ['some', 30], ['trained', 5]] },
@@ -80,7 +80,7 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
   tree,
   cast: [
     { id: 'subjects', kind: 'subject', count: { min: 1, max: 1 }, keyRoles: ['rider'], person: {
-      label: 'delivery rider', age: 'adult', activity: 'holding',
+      label: 'delivery courier', age: 'adult', activity: 'holding',
       threat: { disposition: 'agitated', intent: 'barricade', awareness: 'aware', readiness: 'brandished' },
       record: { warrant: 'unknown', priorViolence: 'unknown' },
       // The self-harm screen applies to the rider (E4).
@@ -88,7 +88,7 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
       knowledge: { presence: { status: 'confirmed', source: 'The stream' } },
     } },
     { id: 'hostages', kind: 'hostage', count: { min: 1, max: 1 }, keyRoles: ['clerk'], person: {
-      label: 'clerk', age: 'adult',
+      label: 'night clerk', age: 'adult',
       hold: { by: 'rider', kind: 'incidental', restraint: 'watched', relationship: 'stranger' },
       relationshipToSubject: 'stranger', meters: { condition: 100, composure: 45 },
       knowledge: { presence: { status: 'reported', source: 'The 911 call' }, position: { status: 'reported', source: 'The 911 call', value: 'by the stockroom door' } },
@@ -101,7 +101,7 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
     } },
     // At the patrol line, typing in the comments. Can speak on the line as a gamble, once the stream turns.
     { id: 'kin', kind: 'bystander', count: { min: 1, max: 1 }, keyRoles: ['friend'], person: {
-      label: 'rider friend', age: 'adult', relationshipToSubject: 'coworker',
+      label: 'fellow courier', age: 'adult', relationshipToSubject: 'coworker',
       knowledge: { presence: { status: 'confirmed', source: 'At the patrol line' } },
     } },
   ],

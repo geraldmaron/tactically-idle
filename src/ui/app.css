@@ -3399,9 +3399,6 @@ button.ocard {
 }
 
 /* auto-equip */
-.autohint {
-  margin: 0;
-}
 .autowarn {
   display: flex;
   flex-direction: column;

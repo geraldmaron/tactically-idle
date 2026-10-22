@@ -1,6 +1,6 @@
 // The prepare screen's briefing, rebuilt (owner 2026-10-20) around what a player needs before
 // choosing a team, in the order they need it: who is inside, what the threat is, what the team must
-// do, and what nobody knows yet. Rendered from props alone so the Scenario Lab shows the player's
+// do, and what is still unknown. Rendered from props alone so the Scenario Lab shows the player's
 // real briefing. Only what the player is told at dispatch: intel.ts never reads truth. Store-free.
 import type { JSX } from 'react';
 import { FactStatusChip } from '../components/FactStatusChip';
@@ -22,7 +22,7 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
   // A person report is the person's location fact; the story binding says whose.
   const personOf = new Map(Object.values(scenario?.story?.bindings.people ?? {}).map((person) => [person.locationFactId, person.id]));
-  const whoText = new Map((scenario?.briefing.people ?? []).map((person) => [person.personId, person.text]));
+  const whoText = new Map((scenario?.briefing.people ?? []).map((person) => [person.personId, person]));
   // People the dispatch names but no location report covers still belong on the card list.
   const reported = new Set(intel.people.map((line) => personOf.get(line.id) ?? line.id));
   const unplaced = (scenario?.briefing.people ?? []).filter((person) => !reported.has(person.personId));
@@ -36,8 +36,8 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
       {(intel.people.length > 0 || unplaced.length > 0) && <section className="pb-block" aria-labelledby="pb-people-h">
         <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={15} />Who’s inside</h3>
         <ul className="pb-people">
-          {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} who={whoText.get(id)} status={line.status} where={line.where} />; })}
-          {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} who={person.text} />)}
+          {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} role={whoText.get(id)?.role} who={whoText.get(id)?.text} status={line.status} where={line.where} />; })}
+          {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
         </ul>
       </section>}
 
@@ -47,8 +47,8 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
       </section>
 
       {brief.unknown.length > 0 && <section className="pb-block pb-unknown" aria-labelledby="pb-unknown-h">
-        <h3 id="pb-unknown-h" className="pb-h"><Icon name="question" size={15} />Nobody knows yet</h3>
-        <ul>{brief.unknown.map((text, index) => <li key={index}><Icon name="question" size={14} className="pb-unknown-icon" /><span><PeopleText text={text} /></span></li>)}</ul>
+        <h3 id="pb-unknown-h" className="pb-h"><Icon name="search" size={15} />Still unknown</h3>
+        <ul>{brief.unknown.map((text, index) => <li key={index}><PeopleText text={text} /></li>)}</ul>
       </section>}
 
       {(intel.difficulty || intel.environment) && <section className="pb-block pb-conditions" aria-label="Conditions">
@@ -71,13 +71,14 @@ export function PrepBriefing({ scenario, brief, intel }: { scenario: ScenarioDef
   );
 }
 
-/** One person on scene as a card: who they are, and where the team thinks they are. */
-function PersonCard({ personId, name, who, status, where }: { personId: string; name: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
+/** One person on scene as a card: who they are, their role, and where the team thinks they are. */
+function PersonCard({ personId, name, role, who, status, where }: { personId: string; name: string; role?: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
   return <li className="pb-person" data-kind={entry?.kind}>
     <span className="pb-avatar" aria-hidden="true" title={entry ? peopleLabel(entry.kind, entry.squad) : undefined}>{personInitials(name)}</span>
     <div className="pb-person-text">
       <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
+      {role && <span className="pb-role">{role}</span>}
       {who && <p><PeopleText text={who} /></p>}
       {status && <span className="pb-where"><FactStatusChip status={status} />{where && <span className="pb-where-place"><Icon name="pin" size={12} />{where}</span>}</span>}
     </div>

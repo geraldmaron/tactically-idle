@@ -142,7 +142,7 @@ describe('conditions in words', () => {
     const index = dependencyIndex(template);
     const read = (text: string) => humanizeCondition(text, template.tree, index, t => t.replace(/\{(\w+)\.first\}/g, (_m, id: string) => id.toUpperCase()), () => 'The stream’s count');
     expect(read('rider_clear = true and stream out')).toBe('Who took the bag: true and the stream’s count has run out');
-    expect(read('raised = false and rider breaking')).toBe('The view of the counter: false and the delivery rider is breaking');
+    expect(read('raised = false and rider breaking')).toBe('The view of the counter: false and the delivery courier is breaking');
     // A mark by name, read from an owned fixture so a content change can't remove it.
     const fixture = clockFixtureTemplate();
     expect(humanizeCondition(`no mark ${CLOCK_FIXTURE_IDS.outMark}`, fixture.tree, dependencyIndex(fixture), t => t, () => '')).toBe('not: courier bolts');
