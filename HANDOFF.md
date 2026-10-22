@@ -39,7 +39,12 @@ Also running (owner requests, 2026-10-22):
 | going-live-teardown | Opus | hostile teardown of Going Live and a multi-pass depth method | `docs/calls/notes/going-live-teardown.md`, `docs/calls/depth-mesh-method.md`, `docs/calls/notes/pilot/` |
 | live-chat-immersion | Sonnet | chat keyed to each pressure source's drain, reading like a real live | `docs/call-pressure.md`, `.agents/skills/swat-call-prose/` references, chat and pressure lines in `src/content/call-trees/hostage-live.ts`; after visual merges, `src/ui/screens/LiveFeed.tsx`, `live-chat.ts` and their tests |
 
-Merged so far in wave 1: engine (702fc5c), the design note (500bc16), tooling (9497b63).
+Wave 1 is merged and checked (2026-10-22): engine (702fc5c), the design note (500bc16), tooling
+(9497b63), visual (97b0ba3). On the merged tip `npm run verify` passed (2,966 tests), the e2e passed
+6 calls at 390 and 320, the lead played First Run to a live call at 390 and 320, and Codex's
+adversarial review of the integrated diff approved with no findings. The owner's plate and serif
+compare page: https://claude.ai/artifact/9ZsHsUNZGRo3KFpqvaAxs6. Wave 1 session branches are merged;
+their sessions wait for the owner's go-ahead to archive.
 
 Wave 2 after the merge: `squad-names` (needs `visual-story`), `owner-visual-picks` once the owner
 picks, then `rewarded-ads` and `real-purchases` from the design note.
