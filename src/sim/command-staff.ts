@@ -559,7 +559,7 @@ export function fillOpenPosts(d: GameState): void {
 export function staffHireCheck(state: GameState, managerId: ManagerId, candidateId: Id): string | null {
   if (!isManagerId(managerId)) return 'Unknown manager';
   const profile = MANAGERS[managerId];
-  if (!postOpen(state, managerId)) return `Open the ${profile.title} post in Develop first.`;
+  if (!postOpen(state, managerId)) return `Open the ${profile.title} post in Build, Upgrades first.`;
   const post = staffPostOf(state, managerId);
   if (post.holder) return `Replace ${post.holder.person.firstName} ${post.holder.person.surname} first.`;
   const candidate = post.pool.find((c) => c.id === candidateId);
@@ -615,7 +615,7 @@ export function staffRefreshAt(state: GameState, managerId: ManagerId): number {
 
 export function refreshStaffPool(d: GameState, managerId: ManagerId): HandlerResult {
   if (!isManagerId(managerId)) return refusal('Unknown manager');
-  if (!postOpen(d, managerId)) return refusal(`Open the ${MANAGERS[managerId].title} post in Develop first.`);
+  if (!postOpen(d, managerId)) return refusal(`Open the ${MANAGERS[managerId].title} post in Build, Upgrades first.`);
   if (staffPostOf(d, managerId).holder) return refusal('The post is filled.');
   const t = simNow(d);
   if (t < staffRefreshAt(d, managerId)) return refusal(`Next search in ${Math.ceil((staffRefreshAt(d, managerId) - t) / HOUR_MS)}h`);
@@ -700,7 +700,7 @@ export function managerView(state: GameState, id: ManagerId): ManagerView {
     activity: hired ? activityOf(state, id, on) : open ? `${staffPostOf(state, id).pool.length} candidates to choose from`
       : quote?.missingPrerequisites.length
         ? `Needs ${quote.missingPrerequisites.map((nodeId) => DEV_NODES[nodeId]?.name ?? nodeId).join(', ')} first`
-        : cost ? `Open the post in Develop for ${money(cost.funding)}, or reach ${milestoneView(state, DEV_NODES[profile.nodeId].grant).label.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}` : 'Not open',
+        : cost ? `Open the post in Build, Upgrades for ${money(cost.funding)}, or reach ${milestoneView(state, DEV_NODES[profile.nodeId].grant).label.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}` : 'Not open',
     hire: open || !cost ? null : { ...cost, reason: quote?.reason ?? null },
   };
 }

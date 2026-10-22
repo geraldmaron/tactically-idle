@@ -145,7 +145,7 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).toContain('aria-label="Show equipment"');
     expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid"'));
     expect(html).toContain('class="ui-row qm-row qm-row-not_hired"');
-    expect(html).toContain('Open the post in Develop');
+    expect(html).toContain('Open the post in Build, Upgrades');
     // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
     expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
     expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Restock rules/);
@@ -162,7 +162,7 @@ describe('rendered player destinations and persistent drafts', () => {
     const html = markup(createElement(GearScreen));
     expect(html).toContain('class="ui-row qm-row qm-row-off"');
     expect(html).toContain('Tier 3 · 45% cheaper service, 40% less wear');
-    expect(html).not.toContain('Open the post in Develop');
+    expect(html).not.toContain('Open the post in Build, Upgrades');
     // The budget control lives once, in the Quartermaster's Command Staff sheet.
     const sheet = markup(createElement(ManagerSheet, { id: 'quartermaster', g: state, now: NOW, onClose: () => {}, inGear: true }));
     expect(sheet).toContain('Tier 3: 45% cheaper servicing and 40% less wear');
