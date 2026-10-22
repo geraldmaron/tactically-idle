@@ -15,6 +15,7 @@ import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { COMMAND_STAFF_HANDLERS, createCommandStaff } from './command-staff';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { startDetail } from './detail';
+import { createTapState, tapEarn } from './department-taps';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
@@ -89,6 +90,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId, netRate),
   startDetail: (d, c) => startDetail(d, c.officerId),
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
+  tapEarn: (d, c) => tapEarn(d.department, c.count, d.department.clockHighWater),
   setManagerEnabled: (d, c) => COMMAND_STAFF_HANDLERS.setManagerEnabled(d, c.managerId, c.enabled),
   setManagerPolicy: (d, c) => COMMAND_STAFF_HANDLERS.setManagerPolicy(d, c.patch),
   hireStaff: (d, c) => COMMAND_STAFF_HANDLERS.hireStaff(d, c.managerId, c.candidateId),
@@ -121,6 +123,7 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
       clockHighWater: now,
       // Game day 0 (1 Jan 2026) is the moment the department is created.
       calendarEpoch: now,
+      taps: createTapState(now),
     },
     officers,
     squads: startingSquads(),

@@ -39,7 +39,8 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
 
   useEffect(() => {
     if (lastSeq <= seen.current) { seen.current = lastSeq; return; }
-    const fresh = ledger.filter((e) => e.seq > seen.current);
+    // Desk taps float their own chip at the desk (TapEarn.tsx); the balance doesn't repeat them.
+    const fresh = ledger.filter((e) => e.seq > seen.current && e.kind !== 'tap');
     seen.current = lastSeq;
     if (reducedMotion() || !fresh.length) return;
     // One chip per frame of news: several events at once read as their sum.
@@ -85,7 +86,7 @@ export function FundingDeltas({ deltas }: { deltas: FundingDelta[] }) {
 
 const KIND_ICON: Record<LedgerKind, IconName> = {
   payout: 'checkcircle', signing: 'user', severance: 'user', purchase: 'box', training: 'mortarboard', development: 'sprout',
-  service: 'wrench', salvage: 'refresh', restock: 'refresh', staff: 'people', detail: 'medal',
+  service: 'wrench', salvage: 'refresh', restock: 'refresh', staff: 'people', detail: 'medal', tap: 'edit',
 };
 
 /** The hourly rate as two bars on one scale, the line items, and recent events. */

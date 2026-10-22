@@ -26,6 +26,7 @@ import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { postFunding } from './ledger';
 import { completeDetails } from './detail';
+import { dropExpiredMultipliers } from './department-taps';
 
 export const HOUR_MS = 3_600_000;
 
@@ -354,8 +355,9 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     t = e;
   }
 
-  // Unshortlisted candidates who have waited too long leave the pool.
+  // Unshortlisted candidates who have waited too long leave the pool, and spent power-ups stop counting.
   d.candidates = d.candidates.filter((c) => c.shortlisted || c.expiresAt > T);
+  dropExpiredMultipliers(dep, T);
   dep.lastSettledAt = T;
 
   // A short settlement is not worth a report unless something happened that the player should see.

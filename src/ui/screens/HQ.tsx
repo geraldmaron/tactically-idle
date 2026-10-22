@@ -22,6 +22,7 @@ import { ScoreRing } from '../components/DebriefResults';
 import { CommandStaff } from '../components/CommandStaff';
 import { Hub } from '../components/Hub';
 import { ShiftReportCard } from '../components/ShiftReport';
+import { TapEarn } from '../components/TapEarn';
 
 export function HQ() {
   const g = useGame();
@@ -59,6 +60,7 @@ export function HQ() {
       <section className="hq-identity" aria-label="Department at a glance">
         <RosterSummary g={g} overview={overview} />
         <HeaderBudget g={g} b={b} />
+        <TapEarn />
       </section>
       <CommandStaff />
       <DutySection squads={g.squads} g={g} />

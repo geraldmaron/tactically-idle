@@ -8,14 +8,20 @@ export const LEDGER_TUNING = { keep: 60, hourMs: 3_600_000 } as const;
 
 /** Change funding by `amount` and record it. A repeat of the same kind and label in the same clock
  * hour folds into the previous entry only when nothing else moved the balance in between, so every
- * entry's before + amount = after; `latest` keeps the newest posting so a viewer announces only it. */
-export function postFunding(dep: Department, amount: number, kind: LedgerKind, label: string, at: number): void {
+ * entry's before + amount = after; `latest` keeps the newest posting so a viewer announces only it.
+ *
+ * `foldAcrossAccrual` is for a line posted many times a minute (desk taps): it also folds when only
+ * hourly accrual moved the balance since the previous entry, which is still the newest one, and moves
+ * that entry's `before` by the accrual so before + amount = after holds. Without it, every batch of
+ * taps between two ticks would push a real event out of the capped history. */
+export function postFunding(dep: Department, amount: number, kind: LedgerKind, label: string, at: number, opts: { foldAcrossAccrual?: boolean } = {}): void {
   if (!Number.isFinite(amount) || amount === 0) return;
   const before = dep.funding;
   dep.funding = before + amount;
   const ledger = (dep.ledger ??= []);
   const last = ledger.at(-1);
-  if (last && last.kind === kind && last.label === label && last.after === before && Math.floor(last.at / LEDGER_TUNING.hourMs) === Math.floor(at / LEDGER_TUNING.hourMs)) {
+  if (last && last.kind === kind && last.label === label && (last.after === before || opts.foldAcrossAccrual) && Math.floor(last.at / LEDGER_TUNING.hourMs) === Math.floor(at / LEDGER_TUNING.hourMs)) {
+    last.before += before - last.after;
     last.amount += amount;
     last.latest = amount;
     last.after = dep.funding;

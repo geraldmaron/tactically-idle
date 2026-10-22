@@ -26,6 +26,7 @@ import './player-profile';
 import './economy';
 import './equipment';
 import './detail';
+import './department-taps';
 import './reputation';
 import '../content/recruits';
 import '../content/ranks';
@@ -36,6 +37,6 @@ export const TUNED_TABLES = [
   'FORCE_RISK_V1', 'CAREER_TUNING', 'LEARNING_MULTIPLIER', 'DEVELOP_TUNING', 'THREAT_TUNING', 'ENV_TUNING',
   'OUTCOME_SCORE_V1', 'AUTHORIZATION_V1', 'INCIDENT_CLASS_V1', 'INTEL_V1', 'INCOMING_FIRE_V1', 'TEAM_FORCE_V1', 'CASCADE_V1',
   'METERS_V1', 'ECONOMY_TUNING', 'EQUIPMENT_TUNING', 'RECRUIT_TUNING', 'LEARNING_APTITUDE', 'DETAIL_TUNING', 'REPUTATION_TUNING',
-  'RANK_TUNING', 'PROFILE_TUNING',
+  'RANK_TUNING', 'PROFILE_TUNING', 'TAP_TUNING',
 ] as const;
 export type TunedTable = typeof TUNED_TABLES[number];
