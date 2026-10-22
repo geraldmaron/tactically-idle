@@ -207,7 +207,7 @@ the new file with it.
 | Half | Run | What it does |
 | --- | --- | --- |
 | Static | `npm test` (`src/ui/ui-gates-static.test.ts`) or `npx vitest run src/ui/ui-gates-static.test.ts` | Reads `src/ui` CSS and TSX (`scripts/ui-gates/`), counts each rule, compares with the baseline. Each detector also has a negative control in the test: a fixture that must trip it and one that must not. |
-| Rendered | `npm run check:ui` (starts a dev server on 5174 if none is up) or `npm run check:ui -- http://localhost:5174/` | Runs the 40 rendered controls (a page per rule that must fail it), then walks every registered state at each width (`--widths 390` for one), probes each scroll segment, and compares with the baseline. Needs Chrome (`CHROME_PATH` overrides the Mac default). |
+| Rendered | `npm run check:ui` (starts a dev server on 5174 if none is up) or `npm run check:ui -- http://localhost:5174/` | Runs the rendered controls (a page per rule that must fail it, and one that must pass), then walks every registered state at each width (`--widths 390` for one), probes each scroll segment, and compares with the baseline. Needs Chrome (`CHROME_PATH` overrides the Mac default). |
 | Baseline | `npm run ui:baseline` | Rewrites `src/ui/ui-debt.json` (static and rendered). `--widths 390` rewrites only that width's rendered entries. |
 
 The probe (`scripts/ui-gates/probe.mjs`) measures the active surface only: the open sheet, else the screen
@@ -224,7 +224,7 @@ and where a new surface or state is registered (R17).
 | R3 | static | `gap` declarations off the 4/8/12/16/24/32 scale (a subset of R1). The rendered sibling-gap check is not built |
 | R4 | static, rendered | headings that do not open with a picture, `<Section>` without `icon`, shared `<Row>` without `lead`, rules that hide a glyph (`R4.*`); headings in the DOM (`R4.rendered`) |
 | R5 | static | "Basic kit" without the basicKit glyph, officer status or outcome drawn by hand instead of `StatusMark` and `OutcomeMark` |
-| R6 | rendered | targets whose effective hit region, found by `elementFromPoint` including labels, is under 44px either way |
+| R6 | rendered | targets whose effective hit region, found by `elementFromPoint` including labels, is under 44px either way, or that a pinned bar covers at every scroll position |
 | R7 | static, rendered | CSS text under 14px (`R7.sub14`), under 12px (`R7.floor`), inline `fontSize` formulas (`R7.dynamic`); rendered text under 12px, and under 14px inside a control |
 | R8 | static | literal colors (hex, color functions, names) in CSS and TS outside `theme.css`; `R8.mask` counts the alpha-only mask exception |
 | R9 | static, rendered | `<Icon>` sizes outside 16/20/24, stroke other than 1.75, dynamic sizes, CSS that sizes an icon off the grid; rendered icons off the grid |

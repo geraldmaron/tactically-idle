@@ -235,6 +235,13 @@
     "src/ui/screens/Recruit.tsx": 1
    }
   },
+  "R5.forecast": {
+   "target": 0,
+   "total": 1,
+   "counts": {
+    "src/ui/screens/OperationFeedback.tsx": 1
+   }
+  },
   "R5.status": {
    "target": 0,
    "total": 1,
@@ -414,7 +421,7 @@
   },
   "R13": {
    "target": 0,
-   "total": 3185,
+   "total": 3274,
    "counts": {
     "01-first-run@320": 26,
     "01-first-run@390": 22,
@@ -491,6 +498,9 @@
     "19-prepare-brief@320": 39,
     "19-prepare-brief@390": 29,
     "19-prepare-brief@430": 29,
+    "19b-brief-map-sheet@320": 12,
+    "19b-brief-map-sheet@390": 7,
+    "19b-brief-map-sheet@430": 7,
     "20-prepare-team-empty@320": 21,
     "20-prepare-team-empty@390": 21,
     "20-prepare-team-empty@430": 21,
@@ -500,6 +510,9 @@
     "22-live-decide-1@320": 37,
     "22-live-decide-1@390": 33,
     "22-live-decide-1@430": 32,
+    "22b-live-full-map@320": 21,
+    "22b-live-full-map@390": 21,
+    "22b-live-full-map@430": 20,
     "23-review-sheet@320": 56,
     "23-review-sheet@390": 52,
     "23-review-sheet@430": 47,
@@ -528,7 +541,7 @@
     "30-presets-unlocked-sheet@390": 12,
     "30-presets-unlocked-sheet@430": 12,
     "31-saves-error@320": 32,
-    "31-saves-error@390": 28,
+    "31-saves-error@390": 29,
     "31-saves-error@430": 29
    }
   },
@@ -558,7 +571,7 @@
   },
   "R15": {
    "target": 0,
-   "total": 147,
+   "total": 153,
    "counts": {
     "02-hq@320": 3,
     "02-hq@390": 3,
@@ -590,12 +603,18 @@
     "18-board@320": 1,
     "18-board@390": 1,
     "18-board@430": 1,
+    "19b-brief-map-sheet@320": 1,
+    "19b-brief-map-sheet@390": 1,
+    "19b-brief-map-sheet@430": 1,
     "21-prepare-team-picked@320": 1,
     "21-prepare-team-picked@390": 1,
     "21-prepare-team-picked@430": 1,
     "22-live-decide-1@320": 4,
     "22-live-decide-1@390": 3,
     "22-live-decide-1@430": 3,
+    "22b-live-full-map@320": 1,
+    "22b-live-full-map@390": 1,
+    "22b-live-full-map@430": 1,
     "23-review-sheet@320": 1,
     "23-review-sheet@390": 1,
     "23-review-sheet@430": 1,
@@ -795,7 +814,7 @@
   },
   "R9.rendered": {
    "target": 0,
-   "total": 612,
+   "total": 615,
    "counts": {
     "02-hq@320": 2,
     "02-hq@390": 2,
@@ -857,6 +876,9 @@
     "22-live-decide-1@320": 8,
     "22-live-decide-1@390": 8,
     "22-live-decide-1@430": 8,
+    "22b-live-full-map@320": 1,
+    "22b-live-full-map@390": 1,
+    "22b-live-full-map@430": 1,
     "23-review-sheet@320": 4,
     "23-review-sheet@390": 4,
     "23-review-sheet@430": 4,

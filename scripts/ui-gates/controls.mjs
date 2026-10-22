@@ -2,7 +2,7 @@
 // and a sibling page that must not. `npm run check:ui` runs them first, so a probe that has gone blind
 // fails before it is allowed to say the UI is clean.
 import { PROBE_CFG } from './manifest.mjs';
-import { coverage, firstChoiceVerdict } from './evaluate.mjs';
+import { aggregate, coverage, firstChoiceVerdict } from './evaluate.mjs';
 import { probe } from './probe.mjs';
 
 const BASE = `<style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#e8eef5;font:14px/1.3 system-ui}</style>`;
@@ -52,6 +52,8 @@ const pure = [
   ['R16', false, 'first choice title visible at 390', () => firstChoiceVerdict(390, { present: true, titleVisible: true, titleTop: 500, affordance: false, viewportHeight: 844, chromeHeight: 100 }).ok],
   ['R16', false, 'an affordance stands in for the title at 320', () => firstChoiceVerdict(320, { present: true, titleVisible: false, titleTop: 700, affordance: true, viewportHeight: 568, chromeHeight: 100 }).ok],
   ['R16', true, 'no affordance at 320', () => !firstChoiceVerdict(320, { present: true, titleVisible: false, titleTop: 700, affordance: false, viewportHeight: 568, chromeHeight: 100 }).ok],
+  ['R6', true, 'a button a pinned bar covers at every scroll position', () => aggregate([{ name: 's', width: 390, probe: { findings: [], pinned: ['b'], tested: [] }, insets: {} }, { name: 's', width: 390, probe: { findings: [], pinned: ['b'], tested: [] }, insets: {} }]).R6?.['s@390']?.size === 1],
+  ['R6', false, 'a button a pinned bar covers until the page scrolls', () => aggregate([{ name: 's', width: 390, probe: { findings: [], pinned: ['b'], tested: [] }, insets: {} }, { name: 's', width: 390, probe: { findings: [], pinned: [], tested: ['b'] }, insets: {} }]).R6 === undefined],
   ['R17', true, 'a registered state that was not captured', () => coverage({ 390: { errors: [] } }, [390]).size > 0],
   ['R17', true, 'a scrollable state never scrolled to its end', () => coverage({ 390: { '02-hq': { scrollHeight: 2000, clientHeight: 700, segments: [{ atEnd: false, probe: { errors: [] } }] }, errors: [] } }, [390]).has('02-hq@390')],
   ['R17', true, 'a failed walk step', () => coverage({ 390: { errors: [] } }, [390], ['390 board']).has('step 390 board')],

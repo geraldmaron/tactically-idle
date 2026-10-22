@@ -28,11 +28,17 @@ export const RENDERED_RULES = {
 export function aggregate(frames) {
   const out = {};
   const put = (rule, key, id, detail) => { ((out[rule] ??= {})[key] ??= new Map()).set(id, detail); };
+  // A target a pinned bar covers at every scroll position cannot be tapped there: it never clears the bar.
+  const tested = new Map(), covered = new Map();
   for (const f of frames) {
     const key = `${f.name}@${f.width}`;
-    for (const x of f.probe.findings) put(x.rule === 'R12.document' ? 'R12.document' : x.rule, key, x.id, x.detail);
+    if (!tested.has(key)) { tested.set(key, new Set()); covered.set(key, new Map()); }
+    for (const id of f.probe.tested ?? []) tested.get(key).add(id);
+    for (const id of f.probe.pinned ?? []) covered.get(key).set(id, 'covered by a pinned bar at every scroll position');
+    for (const x of f.probe.findings) put(x.rule, key, x.id, x.detail);
     for (const [fixture, list] of Object.entries(f.insets ?? {})) for (const x of list) put('R13', `${key}`, `${fixture}|${x.id}`, x.detail);
   }
+  for (const [key, ids] of covered) for (const [id, detail] of ids) if (!tested.get(key).has(id)) put('R6', key, id, detail);
   return out;
 }
 

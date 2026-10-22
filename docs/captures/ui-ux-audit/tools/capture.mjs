@@ -98,7 +98,9 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
           }
           await setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
           const frame = { width, name, segment: i, scrollTop, atEnd, probe: base, insets };
-          entry.segments.push({ file, scrollTop, atEnd, probe: base, insets });
+          // The id lists feed R6's pinned-bar check in memory; they are too long to keep in probe.json.
+          const { tested, pinned, paintedTexts, ...slim } = base;
+          entry.segments.push({ file, scrollTop, atEnd, probe: slim, insets });
           onFrame(frame);
           if (i >= pages - 1 && atEnd) break;
         }

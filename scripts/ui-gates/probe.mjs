@@ -13,6 +13,7 @@ export async function probe(cfg) {
   const vw = innerWidth, vh = innerHeight;
   const findings = [];
   const errors = [];
+  const tested = [], pinned = [];
   const stats = { texts: 0, targets: 0, targetsTested: 0, targetsPartial: 0, chips: 0, images: 0 };
   const add = (rule, id, detail) => findings.push({ rule, id, detail });
   const guard = (name, fn) => { if (cfg.only && cfg.only !== name) return; try { return fn(); } catch (e) { errors.push(`${name}: ${String(e).slice(0, 120)}`); } };
@@ -138,6 +139,7 @@ export async function probe(cfg) {
       const r = rectOf(el);
       if (!fully(el)) { stats.targetsPartial++; continue; }
       stats.targetsTested++;
+      tested.push(idOf(el));
       const labels = el.labels ? [...el.labels] : [];
       const own = (hit) => !!hit && (hit === el || el.contains(hit) || labels.some((l) => l === hit || l.contains(hit)));
       const hitAt = (x, y) => { const h = document.elementFromPoint(x, y); return own(h); };
@@ -146,8 +148,8 @@ export async function probe(cfg) {
         // Scrolling content that sits under a bar fixed to the screen is not lost: it clears the bar at
         // another scroll position, where it is tested. Anything else covering the centre is a finding.
         const top = document.elementFromPoint(cx, cy);
-        const pinned = top && (['fixed', 'sticky'].includes(cs(top).position) || top.closest('.chrome-foot, .chrome-head, .sheet-foot, .live-continue, .sticky-foot'));
-        if (pinned && !el.closest('.chrome-foot, .chrome-head, .sheet-foot')) { stats.targetsPartial++; continue; }
+        const isPinned = top && (['fixed', 'sticky'].includes(cs(top).position) || top.closest('.chrome-foot, .chrome-head, .sheet-foot, .live-continue, .sticky-foot'));
+        if (isPinned && !el.closest('.chrome-foot, .chrome-head, .sheet-foot')) { stats.targetsPartial++; pinned.push(idOf(el)); continue; }
         add('R6', idOf(el), `covered at its centre (${Math.round(r.width)}x${Math.round(r.height)})`); continue;
       }
       let ew = r.width, eh = r.height;
@@ -418,7 +420,7 @@ export async function probe(cfg) {
     };
   })();
   return {
-    paintedTexts, legacy, surface, viewport: `${vw}x${vh}`, root: root.className || root.tagName.toLowerCase(),
+    tested, pinned, paintedTexts, legacy, surface, viewport: `${vw}x${vh}`, root: root.className || root.tagName.toLowerCase(),
     findings, decision, errors, stats,
     textHash: (() => { let h = 2166136261; for (const ch of root.innerText ?? '') h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h.toString(16); })(),
   };
