@@ -292,7 +292,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     const nearest = position ? defaultStagingFor(built, position) : null;
     const pickedId = cmd.staging?.[sid] ?? nearest?.id ?? null;
     const label = stageLabels(built, points, position).find(({ point }) => point.id === pickedId);
-    return { position, entry, points, nearest, pickedId, title: entry?.label ?? 'No way in listed', detail: label ? `${label.title}${pickedId === nearest?.id ? ', nearest door' : ''}` : null };
+    return { position, entry, points, nearest, pickedId, title: entry?.label ?? 'No way in listed', detail: label ? `${label.title}${pickedId === nearest?.id ? ', the nearest' : ''}` : null };
   };
 
   const briefStep = <>

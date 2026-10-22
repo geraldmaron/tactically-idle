@@ -99,3 +99,8 @@
 .live-scene-where .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
 .assignment-choice strong { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); }
 .assignment-choice .squad-badge { width: 24px; height: 24px; font-size: var(--s14); }
+/* The review sheet reads as a decision, not a peek (docs/ui-ux-audit.md, Review): it rises to just
+   under the strip's threat, so at 320x568 the body between its head and Confirm keeps at least 248px. */
+.sheet.sheet-short.operation-action-sheet { max-height: min(78%, var(--sheet-available-height)); }
+.operation-action-sheet .operation-commit { display: grid; gap: var(--sp2); }
+.operation-action-sheet .operation-commit-meta { margin: 0; }
