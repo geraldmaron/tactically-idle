@@ -103,3 +103,11 @@
 .staff-replace { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid rgba(255, 159, 67, 0.45); border-radius: var(--radius); background: rgba(255, 159, 67, 0.06); }
 .staff-replace p { margin: 0; font-size: 13.5px; }
 .staff-replace .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Command Staff rows on HQ (docs/ui-ux-audit.md, "HQ"). */
+.command-staff .staff-list { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.staff-row .ui-row-lead > * { border-radius: 50%; overflow: hidden; }
+.staff-row .ui-row-trail { color: var(--t3); }
+.staff-row-not_hired .ui-row-title { color: var(--t2); }
+.staff-more { min-height: 44px; margin-top: var(--sp1); padding: 0; border: 0; background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; cursor: pointer; text-align: left; }
+.staff-more:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
