@@ -209,9 +209,15 @@ one hidden fact (`rider_clear`), one exit decision, the lie charged in both situ
 mechanisms, stage 3 threats as external events. `npm run check:paths -- hostage_crisis`, re-run by the lead:
 `rider_clear` settled for random 78%, best_odds 95%, patient 93%, fast 96% (owner target 50% in every
 style, 2026-10-22), dominance flags 10 to 0, cross-stage echo on played paths 60 to 85% down to 0 to 1%.
-Left, in order:
-1. Codex's second read of the fixed spine (the first rejected it; all 12 findings were fixed in data and
-   not re-read).
+Codex's second read (2026-10-22, on 123efc8, `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine-codex-round2.md`):
+rejected again. Turn reach holds (78/95/93/96, no strict dominance, all 15 endings reachable in both
+situations), but of the first 12 fixes only #4, #10, #11 and #12 hold. Left, in order:
+1. A second structure pass on the call's own data: `clerk_out` still sells a back-door extraction the engine
+   walks out the front (block); the clerk's pickup testimony settles `rider_clear` as disproved though it only
+   shows the bag left with the courier (block); the `clip_out` entry bonus lands only with the threat that ends
+   the decision; eight legal dither minutes still give three crowd escalations (count dither crossings in the
+   mechanism walk); `phone_wall` is shadowed by `address_up` on every route into `camera_wall`; shared ending
+   summaries claim steps the route never took (`out_quiet`, `out_at_glass`). Then a third Codex read.
 2. Situation 2 draws the rider volatile and situation 1 steady, so the agitation trace before the turn
    tells the situations apart (Codex measured -4.1 against -9.3); the draw is in
    `src/content/incidents/hostage.ts`.
@@ -220,7 +226,8 @@ Left, in order:
    and `swat-writing-review` by a separate reader.
 4. The tests that pin the old call's ids, fingerprints and snapshots (53 failures in 27 files on the
    branch), recaptured or rewritten on purpose, and the `wiring` probe "door and window states" for the
-   hostage call, which reads 0.25 against its 0.27 floor: floors never fall, so the rebuild raises it back.
+   hostage call, which reads 0.25 (6 of 24 choices) against its 0.27 floor: floors never fall, so the rebuild
+   raises it back with choices that really read the building state (Codex: prose cannot fix it).
 Done: the teardown's blocks closed as data with the `npm run check:paths` report attached, `npm run verify`
 green, and a separate review.
 

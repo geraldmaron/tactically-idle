@@ -100,7 +100,10 @@ lead re-ran `check:paths` there and every style clears the 50% target. Next step
 | timeout-commitment (local_b934b3d8) | Sonnet | `timeout-breaks-commitment` | `src/content/call-trees/types.ts` (`TreeTimeout.breaks`, lead-approved, Codex review owed), `src/sim/`, `src/gen/` except gates, existing trees-v13 tests and `balance.ts`; never `hostage-live.ts` |
 | Codex (lead's background run) | default model | `going-live-spine` step 1, second read of 123efc8 | read-only; output `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine-codex-round2.md` |
 
-Held until the weekly reset (2026-10-23 07:00 UTC): the spine's s2 agitation draw and its prose passes.
+Codex's second read finished: rejected (10 findings, 5 block; three of the blocks are the known requests
+outside the call's files). Backlog `going-live-spine` step 1 is now a second structure pass, then a third
+read. Held until the weekly reset (2026-10-23 07:00 UTC) and the owner's go: that pass, the s2 agitation
+draw, and the prose passes after both.
 
 ## Locks outside normal ownership
 
