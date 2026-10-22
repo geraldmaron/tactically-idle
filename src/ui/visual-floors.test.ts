@@ -248,6 +248,22 @@ const OBLIGATIONS: Obligation[] = [
     return heads.length < 3 ? [`expected at least 3 category heads, found ${heads.length}`] : heads.flatMap((head) => leadOf(head) === 'visual' ? [] : [`category "${words(head)}" has no icon`]);
   } },
   { id: 'rows-calls-cards', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => rowsLeadWithVisual(mount(createElement(OpsBoard, { onOpen: () => {} })), 'cl-card', 4) },
+  { id: 'art-calls-scenes', screen: 'OpsBoard', fixture: 'one call of each type on the board', check: () => {
+    const cards = byClass(mount(createElement(OpsBoard, { onOpen: () => {} })), 'cl-card');
+    const types = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'];
+    const missing = types.filter((type) => !plateUrl(`scene_${type}`) || !cards.some((card) => find(card, (n) => n.tag === 'img' && (n.attrs.src ?? '').includes(`scene_${type}.webp`)).length === 1));
+    return cards.length < 4 ? [`expected 4 call cards, found ${cards.length}`] : missing.map((type) => `no scene_${type} painting on its call card`);
+  } },
+  { id: 'art-hq-cutaway', screen: 'HQ', fixture: 'department with a board', check: () => {
+    const hub = byClass(mount(createElement(HQ)), 'hub');
+    return hub.length === 1 && find(hub[0], (n) => n.tag === 'img' && (n.attrs.src ?? '').includes('hub_hq.webp')).length === 1 ? [] : ['the HQ cutaway painting (hub_hq) is missing'];
+  } },
+  { id: 'art-debrief-scene', screen: 'DebriefContents', fixture: 'a call played to its debrief', check: () => {
+    const { id, debrief, pending } = playedCall();
+    state = pending;
+    const hero = byClass(mount(createElement(DebriefContents, { result: debrief, officers: pending.officers, scenario: getScenario(id) ?? undefined })), 'debrief-hero');
+    return hero.length === 1 && find(hero[0], (n) => n.tag === 'img' && (n.attrs.src ?? '').includes('scene_hostage_crisis.webp')).length === 1 ? [] : ['the debrief hero has no scene painting'];
+  } },
   { id: 'rows-calls-casebook', screen: 'OpsBoard (Casebook)', fixture: 'four calls on the board', check: () => rowsLeadWithVisual(mount(createElement(OpsBoard, { onOpen: () => {} })), 'casebook-row', Math.max(1, casebookRows(state).length)) },
   { id: 'rows-debrief-tiles', screen: 'HQ (Recent results)', fixture: 'a call played to its debrief and closed', check: () => {
     state = playedCall().after;
@@ -320,7 +336,7 @@ function deployPage(): El {
 }
 
 /** Counted when this ratchet was written (2026-10-22). It only rises. */
-const OBLIGATION_FLOOR = 37;
+const OBLIGATION_FLOOR = 40;
 
 describe('visual floors: every screen keeps the pictures it is owed', () => {
   it('lists each obligation once, with its screen and fixture', () => {
