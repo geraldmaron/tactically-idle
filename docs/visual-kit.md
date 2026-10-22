@@ -191,3 +191,54 @@ Still open: `HQ` duty rows lead with a squad letter, not a picture.
 Painted call-type discs matching the scene plates, delivered 2026-10-22: see
 [art/medallions/README.md](art/medallions/README.md). The SVG badges remain the small-size and
 fallback form.
+
+## UI gates
+
+Code-level checks for visual antipatterns on every surface, at 320, 390 and 430 wide (backlog `ui-gates`,
+rules R1 to R18 from the 2026-10-22 audit). Two halves share one baseline.
+
+**Debt is a ratchet.** `src/ui/ui-debt.json` holds every rule's count, by file for source rules and by
+`state@width` for rendered rules. A gate fails when a count **rises** (new debt) and when it **falls**
+without the file being regenerated (debt paid stays paid). Every rule is flagged `target: 0`; a rule with
+no entry is already at zero. Nobody edits the file: `npm run ui:baseline` writes it from today's source and
+UI, and the lead reads the diff at each merge. A change that pays debt runs `npm run ui:baseline` and commits
+the new file with it.
+
+| Half | Run | What it does |
+| --- | --- | --- |
+| Static | `npm test` (`src/ui/ui-gates-static.test.ts`) or `npx vitest run src/ui/ui-gates-static.test.ts` | Reads `src/ui` CSS and TSX (`scripts/ui-gates/`), counts each rule, compares with the baseline. Each detector also has a negative control in the test: a fixture that must trip it and one that must not. |
+| Rendered | `npm run check:ui` (starts a dev server on 5174 if none is up) or `npm run check:ui -- http://localhost:5174/` | Runs the rendered controls (a page per rule that must fail it, and one that must pass), then walks every registered state at each width (`--widths 390` for one), probes each scroll segment, and compares with the baseline. Needs Chrome (`CHROME_PATH` overrides the Mac default). |
+| Baseline | `npm run ui:baseline` | Rewrites `src/ui/ui-debt.json` (static and rendered). `--widths 390` rewrites only that width's rendered entries. |
+
+The probe (`scripts/ui-gates/probe.mjs`) measures the active surface only: the open sheet, else the screen
+with its chrome, so text behind a sheet is not counted. It follows ancestor clipping, gives each element a
+stable id, and hit-tests targets. `docs/captures/ui-ux-audit/tools/capture.mjs` is the same walk with
+screenshots (`node capture.mjs <repo> <outDir> <baseURL> [widths]`). The thresholds and the list of
+states are in `scripts/ui-gates/manifest.mjs`: that is where the owner tunes the first-choice budget (R16)
+and where a new surface or state is registered (R17).
+
+| Rule | Where | What it counts |
+| --- | --- | --- |
+| R1 | static | `padding`, `margin` and `gap` declarations with a raw px or rem length instead of an `--sp` token; inline style spacing in TSX (`R1.tsx`) |
+| R2 | rendered | content blocks that miss the surface gutter (`R2.gutter`); content flush against the border of its card (`R2.flush`) |
+| R3 | static | `gap` declarations off the 4/8/12/16/24/32 scale (a subset of R1). The rendered sibling-gap check is not built |
+| R4 | static, rendered | headings that do not open with a picture, `<Section>` without `icon`, shared `<Row>` without `lead`, rules that hide a glyph (`R4.*`); headings in the DOM (`R4.rendered`) |
+| R5 | static | "Basic kit" without the basicKit glyph, officer status or outcome drawn by hand instead of `StatusMark` and `OutcomeMark` |
+| R6 | rendered | targets whose effective hit region, found by `elementFromPoint` including labels, is under 44px either way, or that a pinned bar covers at every scroll position |
+| R7 | static, rendered | CSS text under 14px (`R7.sub14`), under 12px (`R7.floor`), inline `fontSize` formulas (`R7.dynamic`); rendered text under 12px, and under 14px inside a control |
+| R8 | static | literal colors (hex, color functions, names) in CSS and TS outside `theme.css`; `R8.mask` counts the alpha-only mask exception |
+| R9 | static, rendered | `<Icon>` sizes outside 16/20/24, stroke other than 1.75, dynamic sizes, CSS that sizes an icon off the grid; rendered icons off the grid |
+| R10 | static | rules outside `app.css` that set a shared family's look, badge-shaped rules outside the chip family, switches built by hand |
+| R11 | static | bespoke "No ..." empty states and hand-built error messages outside `EmptyState` |
+| R12 | rendered | sideways page or surface overflow, text or controls cut off sideways, essential copy cut by a clamp, ellipsis or clip |
+| R13 | rendered | content inside the safe-area insets, under a bottom fixture (47 top, 34 bottom) and a side fixture (44 each side), set with `Emulation.setSafeAreaInsetsOverride`. Scrolling content may pass under the top and bottom insets; it has to clear them where the scroll starts and ends |
+| R14 | rendered | text under 4.5:1 (3:1 large text and icon-only controls), composited through ancestor fills and opacity. `R14.painted` counts text with art behind it that already fails on its base fill; the pixels behind it are not gated (`UI_GATES_SAMPLE_ART=1` prints a sampled report, `R14.sampled`, for a human to read) |
+| R15 | rendered | chips with under 4px between their text and border, top or bottom |
+| R16 | rendered | live stages whose first choice title is not in the first viewport (320 may show a `data-choices-below` affordance instead) |
+| R17 | rendered | registered states the walk did not capture, never scrolled to the end of, or that raised a probe or page error; failed walk steps |
+| R18 | rendered | visible images and CSS background images that did not decode |
+
+Gaps, stated plainly: R3's rendered sibling-gap check is not built; R5's forecast rows are not yet checked in
+the DOM; R14 does not gate the pixels behind art; R4 and R11 judge source and headings, not every row and
+every state; the walk reaches the states listed in the manifest and nothing else (no loading state exists
+to capture).
