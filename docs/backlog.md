@@ -209,29 +209,37 @@ one hidden fact (`rider_clear`), one exit decision, the lie charged in both situ
 mechanisms, stage 3 threats as external events. `npm run check:paths -- hostage_crisis`, re-run by the lead:
 `rider_clear` settled for random 78%, best_odds 95%, patient 93%, fast 96% (owner target 50% in every
 style, 2026-10-22), dominance flags 10 to 0, cross-stage echo on played paths 60 to 85% down to 0 to 1%.
-Codex's second read (2026-10-22, on 123efc8, `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine-codex-round2.md`):
-rejected again. Turn reach holds (78/95/93/96, no strict dominance, all 15 endings reachable in both
-situations), but of the first 12 fixes only #4, #10, #11 and #12 hold. Left, in order:
-1. A second structure pass on the call's own data: `clerk_out` still sells a back-door extraction the engine
-   walks out the front (block); the clerk's pickup testimony settles `rider_clear` as disproved though it only
-   shows the bag left with the courier (block); the `clip_out` entry bonus lands only with the threat that ends
-   the decision; eight legal dither minutes still give three crowd escalations (count dither crossings in the
-   mechanism walk); `phone_wall` is shadowed by `address_up` on every route into `camera_wall`; shared ending
-   summaries claim steps the route never took (`out_quiet`, `out_at_glass`). Then a third Codex read.
-2. Situation 2 draws the rider volatile and situation 1 steady, so the agitation trace before the turn
-   tells the situations apart (Codex measured -4.1 against -9.3); the draw is in
-   `src/content/incidents/hostage.ts`.
-   A run-out can now break a commitment (`TreeTimeout.breaks`, 2026-10-22): `way_out`'s timeout names the
-   lie, and the lie still needs its outcome breaker.
-3. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
+Codex's second read rejected 123efc8; structure pass 2 (`claude/spine-pass2-363cdf`, tip 44f5470, 2026-10-22)
+fixed it as data: the front release, s2 evidence of non-delivery and retention, the lie broken on the
+`way_out` run-out (`held_found_out`), one rider temper in both situations (pre-turn agitation 69.6 against
+69.4), the repost cue true whoever is inside, a reachable `clip_out` beat, the wall prompt, honest ending
+summaries, and the door and window probe back to 12 of 24. `check:paths` holds (turn reach 78/95/93/96).
+Codex's third read (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/going-live-spine-codex-round3.md`):
+9 of 10 hold, three medium findings, no block. Left, in order:
+1. The three findings, as data: `walk_live` adverse is tagged shame but still reads as crowd, so eight dither
+   minutes still give three crowd escalations; the minute-3 channel cut sets rate 0, which leaves the stream
+   "live, slowed" with chat still running, and the clock keeps advancing past the cut (engine side in
+   `beat-marks-before-clocks`). The pass proposes making the beat a warning, not a cut, and dropping the rate flag.
+   Also asked (spine sheet row O): `way_out`'s run-out text cannot differ by `nextIf` route; per-route text
+   would change `TreeTimeout`, an interface file, so it waits for a lead decision.
+2. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
    consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
    and `swat-writing-review` by a separate reader.
-4. The tests that pin the old call's ids, fingerprints and snapshots (53 failures in 27 files on the
+3. The tests that pin the old call's ids, fingerprints and snapshots (53 failures in 27 files on the
    branch), recaptured or rewritten on purpose, and the `wiring` probe "door and window states" for the
-   hostage call, which reads 0.25 (6 of 24 choices) against its 0.27 floor: floors never fall, so the rebuild
-   raises it back with choices that really read the building state (Codex: prose cannot fix it).
+   hostage call, now 12 of 24 on the pass 2 branch against its 0.27 floor; confirm with `wiring.test.ts`.
 Done: the teardown's blocks closed as data with the `npm run check:paths` report attached, `npm run verify`
 green, and a separate review.
+
+### beat-marks-before-clocks: A beat that changes a clock applies at its own minute
+Tags: job=command; journeys=chance-not-script; probes=none (clock ordering, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Found by Codex's third read of the Going Live spine (2026-10-22): the engine advances clocks over the whole
+stall before it applies beat marks, so a beat at minute 3 that cuts the stream still lets the stream clock
+climb to minute 9.5 (25.7 to 32.9 on one route) and fire cues after the cut, in projection and commit alike.
+Done: clock-changing beats apply at their timestamps in `stalledRun` and the commit, the remaining minutes
+advance under the changed state, and a fixture test shows no clock bump or cue after a cutting beat.
 
 ### threat-after-close: A threat never lands after the result that ended its scene
 Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine

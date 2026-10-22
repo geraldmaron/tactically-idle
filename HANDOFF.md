@@ -121,6 +121,11 @@ Started together on 2026-10-22 (owner's go), briefs in the same notes folder:
 | ui-leftovers (local_ce760bcd) | Haiku | `ui-leftovers` | `src/ui/screens/HQ.tsx` and the navigation Open needs (asks first if that is `store.ts` or `App.tsx`); port 5175 |
 | squad-names (local_29da4a0d) | Sonnet | `squad-names` | locks: `src/sim/resolution.ts`, `operation.ts`, `operation-selectors.ts`, `src/ui/people/`, `src/ui/blueprint/` (props need lead approval and Codex review), `src/ui/screens/operation-squads.ts` and the live call screens, the Lab squad files, `src/gen/incident/gates/engine-driver.ts`; never `HQ.tsx` or `src/content/`; port 5183 |
 
+spine-pass2 READY (2026-10-22): `claude/spine-pass2-363cdf` at 44f5470, not merged (placeholder strings).
+All 10 second-read findings fixed as data, `check:paths` holds; Codex's third read: 9 of 10 hold, three
+medium findings, no block, recorded in backlog `going-live-spine` step 1. Stopped per its brief; the next step
+waits for the owner.
+
 squad-names merged (cde797c; manifest files `src/sim/squad-names.ts` under kernel and re-render, bea1144):
 `npm run verify` 3,025 tests, art, build and no-lab green on the merged tip; the e2e passed 6 live calls at 390
 and 320 on 5182; Codex approved the branch and, separately, the manifest line, with no findings. The lane
