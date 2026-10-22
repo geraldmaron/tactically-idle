@@ -11,6 +11,7 @@ function memoryHistory() {
   let flow: ReturnType<typeof createCallFlow> | null = null;
   const history = {
     get state() { return entries[index] as Record<string, unknown>; },
+    get length() { return entries.length; },
     pushState(state: unknown) { entries.splice(index + 1); entries.push(state); index++; },
     replaceState(state: unknown) { entries[index] = state; },
     back() { if (index > 0) { index--; flow?.onPop(); } },
@@ -62,6 +63,22 @@ describe('a call before it goes live', () => {
     history.back();
     history.back();
     expect(flow.getSnapshot().open).toEqual({ scenarioId: 'call_1', step: 'deploy' });
+  });
+
+  it('goes from deploy to the brief on Back after a detour, never to the tab it detoured to', () => {
+    const history = memoryHistory();
+    const flow = createCallFlow(history);
+    history.attach(flow);
+    flow.openCall('call_1');
+    flow.goStep('deploy');
+    history.pushOther({ shell: 'hq' });
+    history.pushOther({ shell: 'calls' });
+    flow.back();
+    expect(flow.getSnapshot().open).toEqual({ scenarioId: 'call_1', step: 'brief' });
+    expect(history.state.shell, 'Back stayed on the Calls entry').toBe('calls');
+    flow.back();
+    expect(flow.getSnapshot().open).toBeNull();
+    expect(history.state.shell).toBe('calls');
   });
 
   it('drops the draft when the call deploys or leaves the board', () => {

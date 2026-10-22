@@ -34,24 +34,39 @@ export const EMPTY_DRAFT: PrepareDraft = {
 /** The history key. Other owners spread `history.state` when they push, so a tab detour carries
  * the open call along and a return lands on the same step. */
 export const CALL_FLOW_HISTORY_KEY = 'tacticallyIdleCallFlow';
-type HistoryPort = Pick<History, 'state' | 'pushState' | 'replaceState' | 'back'>;
-interface FlowEntry { open: OpenCall | null; pushed?: boolean }
+type HistoryPort = Pick<History, 'state' | 'pushState' | 'replaceState' | 'back' | 'length'>;
+/** `seq` names the push that made the entry. Another owner's push copies it, so a copy is told apart
+ * by the history's length (see `walkable`). */
+interface FlowEntry { open: OpenCall | null; seq?: number }
 
 export function createCallFlow(history: HistoryPort | null) {
   let open: OpenCall | null = null;
   let drafts: Record<Id, PrepareDraft> = {};
   // The call last opened from the board, so focus returns to its card after Back.
   let opener: Id | null = null;
+  // The entries this flow pushed, oldest first, and the history's length after the last of them. A
+  // tab detour pushes copies of an entry (the shell spreads history.state), which grows the history,
+  // so an entry is this flow's own only while the length is what it was after the flow's last push.
+  let seq = 0;
+  let chain: number[] = [];
+  let lengthAfterPush = -1;
   const listeners = new Set<() => void>();
   let snapshot: { open: OpenCall | null; drafts: Record<Id, PrepareDraft> } = { open, drafts };
   const emit = () => { snapshot = { open, drafts }; listeners.forEach((l) => l()); };
   const entry = (): FlowEntry | null => history?.state?.[CALL_FLOW_HISTORY_KEY] ?? null;
+  const walkable = (here: FlowEntry | null) => !!history && here?.seq !== undefined && chain.includes(here.seq) && history.length === lengthAfterPush;
   const write = (next: OpenCall | null, mode: 'push' | 'replace') => {
     open = next;
     if (history) {
-      const value: FlowEntry = { open: next, pushed: mode === 'push' || (entry()?.pushed ?? false) };
-      const state = { ...history.state, [CALL_FLOW_HISTORY_KEY]: value };
-      if (mode === 'push') history.pushState(state, ''); else history.replaceState(state, '');
+      const here = entry();
+      if (mode === 'push') {
+        const at = walkable(here) ? chain.indexOf(here!.seq!) : -1;
+        chain = [...chain.slice(0, at + 1), ++seq];
+        history.pushState({ ...history.state, [CALL_FLOW_HISTORY_KEY]: { open: next, seq } satisfies FlowEntry }, '');
+        lengthAfterPush = history.length;
+      } else {
+        history.replaceState({ ...history.state, [CALL_FLOW_HISTORY_KEY]: { open: next, ...(here?.seq !== undefined ? { seq: here.seq } : {}) } satisfies FlowEntry }, '');
+      }
     }
     emit();
   };
@@ -78,11 +93,12 @@ export function createCallFlow(history: HistoryPort | null) {
       write({ ...open, step }, 'push');
     },
     /** The head's Back: the deploy step goes to the brief, the brief to the board. Walks history
-     * when this flow pushed the entry, so browser Forward returns; otherwise replaces it. */
+     * when the entry is this flow's own, so browser Forward returns; after a detour (a copy of the
+     * entry) it replaces it instead, so Back never lands on the tab the player detoured to. */
     back() {
       if (!open) return;
       const here = entry();
-      if (history && here?.pushed && same(here.open, open)) { history.back(); return; }
+      if (walkable(here) && same(here!.open, open)) { history!.back(); return; }
       write(open.step === 'deploy' ? { ...open, step: 'brief' } : null, 'replace');
     },
     /** The call went live (or is gone): leave the flow and drop its draft. */
