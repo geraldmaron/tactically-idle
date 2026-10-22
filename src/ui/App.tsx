@@ -24,7 +24,7 @@ import { GrantToasts } from './components/GrantToasts';
 import { useCampaigns, useGame } from './store';
 import { DepartmentContext } from './components/department-context';
 import { FirstRun } from './settings/FirstRun';
-import { SettingsSheet } from './settings/SettingsSheet';
+import { MenuSheet } from './settings/SettingsSheet';
 import { useSettings } from './settings/SettingsControls';
 
 export function App() {
@@ -53,7 +53,7 @@ function GameShell() {
   const nav = usePlayerNavigation();
   const { tab } = nav;
   const [savesOpen, setSavesOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
   const chrome = useChromeShell();
   const { mode } = chrome.api;
@@ -69,7 +69,7 @@ function GameShell() {
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
                 <div className="chrome-head" ref={chrome.setHead}>
-                  {mode === 'desk' && <TopBar onOpenSaves={() => setSavesOpen(true)} />}
+                  {mode === 'desk' && <TopBar onOpenMenu={() => setMenuOpen(true)} />}
                 </div>
                 <SaveWarning onOpen={() => setSavesOpen(true)} />
                 <main className={`screen screen-${tab}`} key={tab}>
@@ -83,8 +83,8 @@ function GameShell() {
                 <div className="chrome-foot" ref={chrome.setFoot}>
                   {mode === 'desk' && <BottomNav />}
                 </div>
-                <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} onOpenSettings={() => { setSavesOpen(false); setSettingsOpen(true); }} />
-                <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+                <MenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} onOpenSaves={() => { setMenuOpen(false); setSavesOpen(true); }} />
+                <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
                 <WelcomeBack />
                 <GrantToasts />

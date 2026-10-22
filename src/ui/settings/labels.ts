@@ -71,7 +71,7 @@ export const SETTINGS_TEXT = {
   leaveCalls: 'You can leave any call on the board. Calls expire without a penalty.',
   notAgeCheck: 'These settings are your preferences. We don\'t check your age.',
   continue: 'Continue to headquarters',
-  changeLater: 'You can change these later in Settings, from the saves button at the top of the screen. Settings also has a Support entry.',
+  changeLater: 'You can change these later from the menu button at the top of the screen. The menu also has a Support entry.',
   settingsTitle: 'Settings',
   settingsSubtitle: 'Kept in this browser, apart from your saves',
   openSettings: 'Settings',
@@ -88,6 +88,20 @@ export const SETTINGS_TEXT = {
   flashingHint: 'On a hot call, red and blue lights sweep across the top of the screen, faster as the pressure builds. Turn them off if flashing light bothers you.',
   flashingOn: 'On',
   flashingOff: 'Off',
+} as const;
+
+/** The menu sheet's own words (settings/SettingsSheet.tsx). */
+export const MENU_TEXT = {
+  title: 'Menu',
+  campaign: 'Campaign',
+  saves: 'Saves',
+  themes: 'Themes to avoid',
+  noneAvoided: 'None avoided',
+  peopleColor: 'Color names by role',
+  support: 'Support',
+  talk: 'Talk to someone',
+  talkDetail: '988 in the US, any hour',
+  everyCall: (themes: string) => `Every call can involve ${themes}, so these stay on.`,
 } as const;
 
 /** Support details, shown in Settings at all times and as the debrief line on any situation with

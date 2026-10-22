@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { budget } from '../../sim/department-selectors';
 import { makeState } from '../../sim/test-fixtures';
-import { moneyFull, ratePerMinute } from '../format';
+import { moneyFull, rate } from '../format';
 import { createPlayerNavigation, PLAYER_NAV_HISTORY_KEY } from './nav';
 import { Sheet, type SheetProps } from './Sheet';
 import { createDepartmentHelpNavigation, DepartmentStatHelp, DepartmentStatusBar, TOPBAR_HELP_HISTORY_KEY, type DepartmentStat } from './TopBar';
@@ -20,14 +20,18 @@ function elements(node: ReactNode): Element[] {
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 
 describe('department status explanations', () => {
-  it('shows whole dollars, a per-minute rate and the brand, with four named native help buttons', () => {
+  it('shows whole dollars, the rate per hour, trust and level in words and no logo, with four named native help buttons', () => {
     const state = makeState();
     state.department.funding = 12400;
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
-    expect(html).toContain('alt="Tactically Idle"');
+    expect(html).not.toContain('<img');
     expect(html).toContain('>$12,400</span>');
+    expect(html).toContain(`>${rate(budget(state).net)}</button>`);
+    expect(html).toContain(`>Trust ${Math.round(state.department.trust)}</button>`);
+    expect(html).toContain(`>Level ${state.department.level}</button>`);
+    expect(html).not.toContain('/min');
     expect(html).toContain('Funding: $12,400. Show explanation');
-    expect(html).toContain(`Income after costs: ${ratePerMinute(budget(state).net)} a real minute, ${moneyFull(budget(state).net)} an hour. Show explanation`);
+    expect(html).toContain(`Income after costs: ${rate(budget(state).net)}, ${moneyFull(budget(state).net)} an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);
     expect(html).toContain(`Department level: ${state.department.level}. Show explanation`);
     expect(html.match(/<button/g)).toHaveLength(4);

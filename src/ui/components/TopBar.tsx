@@ -1,17 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { assetUrl } from '../art/assetUrl';
 import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import type { GameState } from '../../sim/types';
-import { Icon } from '../icons';
-import { liveMoney, moneyFull, pad2, ratePerMinute } from '../format';
+import { liveMoney, moneyFull, rate } from '../format';
 import { Sheet } from './Sheet';
 import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
 import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
-import { CampaignButton } from './SaveManager';
+import { MenuButton } from './SaveManager';
 
 export type DepartmentStat = 'funding' | 'income' | 'trust' | 'level';
 const STAT_TITLES: Record<DepartmentStat, string> = { funding: 'Funding', income: 'Income after costs', trust: 'Public trust', level: 'Department level' };
@@ -58,8 +56,9 @@ export function createDepartmentHelpNavigation(history: HistoryPort, owner: stri
   };
 }
 
-/** Mark, funding, net rate, trust, department level and saves, in one row on every screen. */
-export function TopBar({ onOpenSaves }: { onOpenSaves?: () => void }) {
+/** The resource bar on desk screens: funding, the net rate per hour, trust and level in words,
+ * each opening its explanation, and the menu. */
+export function TopBar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const g = useGame();
   const owner = useId();
   const [topic, setTopic] = useState<DepartmentStat | null>(null);
@@ -73,10 +72,10 @@ export function TopBar({ onOpenSaves }: { onOpenSaves?: () => void }) {
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);
   const live = useLiveFunding(g);
-  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenSaves={onOpenSaves} />;
+  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenMenu={onOpenMenu} />;
 }
 
-export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenSaves, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenSaves?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
+export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenMenu?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
   const b = budget(g);
   const d = g.department;
   const helpProps = (stat: DepartmentStat, value: string) => ({
@@ -88,30 +87,21 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenSaves, li
   });
   return (
     <>
-    <header className="topbar topbar-help">
-      <h1 className="wordmark"><img className="brand-mark" src={assetUrl("brand/mark-dark.svg")} alt="Tactically Idle" width="34" height="34" /></h1>
+    <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
-        <li><button className="stat stat-cash topbar-stat-button" {...helpProps('funding', moneyFull(d.funding))}>
-          <Icon name="cash" size={18} />
+        <li><button className="stat stat-cash" {...helpProps('funding', moneyFull(d.funding))}>
           <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
-        <li><button className={`stat stat-rate topbar-stat-button${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${ratePerMinute(b.net)} a real minute, ${moneyFull(b.net)} an hour`)}>
-          <Icon name="trend" size={16} />
-          <span>{ratePerMinute(b.net)}</span>
+        <li><button className={`stat stat-rate${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${rate(b.net)}, ${moneyFull(b.net)} an hour`)}>
+          {rate(b.net)}
         </button></li>
-        <li><button className="stat stat-trust topbar-stat-button" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
-          <Icon name="shield" size={17} />
-          <span>{Math.round(d.trust)}</span>
+        <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
+          Trust {Math.round(d.trust)}
         </button></li>
       </ul>
-      <button className="hexlevel topbar-level-button" {...helpProps('level', String(d.level))}>
-        <svg viewBox="0 0 40 44" width="34" height="38" aria-hidden="true">
-          <path d="M20 2l16 9.2v21.6L20 42 4 32.8V11.2z" fill="rgba(243,180,50,.08)" stroke="var(--amber)" strokeWidth="2" strokeLinejoin="round" />
-        </svg>
-        <span>{pad2(d.level)}</span>
-      </button>
-      {onOpenSaves && <CampaignButton onOpen={onOpenSaves} />}
+      <button className="stat stat-level" {...helpProps('level', String(d.level))}>Level {d.level}</button>
+      {onOpenMenu && <MenuButton onOpen={onOpenMenu} />}
     </header>
     <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">
       {topic && <DepartmentStatHelp g={g} topic={topic} />}

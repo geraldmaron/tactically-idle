@@ -48,3 +48,27 @@
 .toast-layer { position: absolute; left: 0; right: 0; top: var(--chrome-head-h, 0px); bottom: var(--chrome-foot-h, 0px); z-index: 40; pointer-events: none; }
 .app .toast-layer > .toasts { position: absolute; top: auto; bottom: 10px; left: 12px; right: 12px; }
 .app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
+
+/* Desk chrome: the 44px resource bar, in words, and four equal tabs (docs/ui-ux-audit.md). */
+.app .resource-bar { min-height: 44px; height: 44px; gap: var(--sp1); padding: 0 var(--sp2) 0 var(--sp1); }
+.resource-bar .stats { flex: 1 1 auto; margin: 0; justify-content: flex-start; flex-wrap: nowrap; gap: 0; }
+.resource-bar .stats > li { display: flex; min-width: 0; }
+.resource-bar .stat { position: relative; height: 44px; padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.resource-bar .stat-rate { color: var(--good-text, var(--good)); font-weight: 500; }
+.resource-bar .stat-rate.stat-neg { color: var(--harm-text, var(--harm)); }
+.resource-bar .stat-trust, .resource-bar .stat-level { color: var(--t2); font-weight: 500; }
+.resource-bar .stat-level { flex: none; margin-left: auto; }
+.resource-bar .menu-btn { margin-right: 0; color: var(--t2); }
+.resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
+@media (hover: hover) { .resource-bar button:hover { background: rgba(255, 255, 255, .05); } }
+@container game (max-width: 359px) {
+  .resource-bar .stat { padding: 0 6px; }
+  .app .resource-bar { padding: 0 2px 0 0; gap: 0; }
+}
+
+.chrome-foot > .bottomnav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bottomnav .navbtn { gap: 0; }
+.bottomnav .navlabel { position: relative; font: 600 var(--s14)/1 var(--f-ui); }
+.bottomnav .navbadge { top: -12px; right: -16px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+.bottomnav .live-dot { top: -6px; right: -12px; }
+.bottomnav .navdot { top: -5px; right: -10px; background: var(--act); }

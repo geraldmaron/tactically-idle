@@ -8,16 +8,16 @@ import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../content/conte
 import { drawableKinds } from '../../sim/incidents';
 import { blockedAlone, canAvoid, leavesCalls } from './avoidable';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, reasonText, settingsSummary } from './labels';
+import { ADVISORY_THEMES, CARD_THEME_WORDS, CARD_WARNING_TEXT, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, reasonText, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children }: { open: boolean; title: string; children: unknown }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children as never) : null }));
-const { SettingsSheet } = await import('./SettingsSheet');
+const { MenuSheet } = await import('./SettingsSheet');
 
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 const allLabels = [THEME_LABELS, WARNING_LABELS, TIMER_LABELS].flatMap((group) => Object.values(group).flatMap((l) => [l.name, l.detail]))
-  .concat(Object.values(SETTINGS_TEXT), Object.entries(SUPPORT_TEXT).filter(([key]) => key !== 'chatUrl').map(([, text]) => text), ADVISORY_THEMES, Object.values(CARD_THEME_WORDS), Object.values(CARD_WARNING_TEXT));
+  .concat(Object.values(SETTINGS_TEXT), Object.values(MENU_TEXT).flatMap((v) => typeof v === 'string' ? [v] : []), MENU_TEXT.everyCall('death'), Object.entries(SUPPORT_TEXT).filter(([key]) => key !== 'chatUrl').map(([, text]) => text), ADVISORY_THEMES, Object.values(CARD_THEME_WORDS), Object.values(CARD_WARNING_TEXT));
 
 describe('settings labels', () => {
   it('keep the house rules: no em or en dashes, no spaced hyphens, no colons', () => {
@@ -90,18 +90,28 @@ describe('settings screens', () => {
     expect(seen.size).toBeGreaterThan(1);
   });
 
-  it('shows the approved lead, 988 line and chat button in Settings', () => {
-    const html = renderToStaticMarkup(createElement(SettingsSheet, { open: true, onClose: () => {} }));
-    for (const line of [SUPPORT_TEXT.lead, SUPPORT_TEXT.us]) expect(text(html)).toContain(line);
+  it('shows the approved lead, 988 line and chat button on the menu\'s support page', () => {
+    const html = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, initialPage: 'support' }));
+    for (const line of [SUPPORT_TEXT.lead, SUPPORT_TEXT.us, SUPPORT_TEXT.elsewhere]) expect(text(html)).toContain(line);
     expect(html).toContain('href="https://chat.988lifeline.org"');
+    expect(html).toContain('href="tel:988"');
+    expect(html).toContain('href="sms:988"');
     expect(text(html)).toContain('Chat online');
   });
 
-  it('settings always lead with support, call and text links to 988 and a line for outside the US', () => {
-    const html = renderToStaticMarkup(createElement(SettingsSheet, { open: true, onClose: () => {} }));
-    expect(html).toContain('href="tel:988"');
-    expect(html).toContain('href="sms:988"');
-    expect(text(html)).toContain(SUPPORT_TEXT.elsewhere);
-    expect(html.indexOf('settings-support')).toBeLessThan(html.indexOf('settings-controls'));
+  it('the menu always carries a Support row, and settings are rows', () => {
+    const html = text(renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} })));
+    for (const label of [MENU_TEXT.campaign, MENU_TEXT.saves, MENU_TEXT.themes, SETTINGS_TEXT.warningsHeading, SETTINGS_TEXT.timerHeading, SETTINGS_TEXT.soundHeading, SETTINGS_TEXT.flashingHeading, MENU_TEXT.peopleColor, MENU_TEXT.talk]) expect(html).toContain(label);
+  });
+
+  it('the avoid page shows only themes a player can avoid, and names the ones every call carries', () => {
+    const html = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, initialPage: 'themes' }));
+    const always = THEME_ORDER.filter((theme) => blockedAlone(theme));
+    for (const theme of THEME_ORDER) {
+      if (always.includes(theme)) expect(text(html)).not.toContain(THEME_LABELS[theme].name);
+      else expect(text(html)).toContain(THEME_LABELS[theme].name);
+    }
+    expect(html).not.toMatch(/disabled=""/);
+    if (always.length) expect(text(html)).toContain('Every call can involve');
   });
 });

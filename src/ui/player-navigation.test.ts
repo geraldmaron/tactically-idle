@@ -46,9 +46,19 @@ function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
 }
 
 describe('canonical player navigation', () => {
-  it('keeps exactly HQ, Squad, Ops, Develop and Gear as top-level destinations', () => {
+  it('keeps exactly HQ, Calls, Officers and Build as top-level destinations', () => {
     const html = markup(createElement(BottomNav));
-    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Squad', 'Ops', 'Develop', 'Gear']);
+    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Officers', 'Build']);
+  });
+
+  it('opens Build on the segment an old route id names, and the Build tab returns to the last one', () => {
+    const f = historyFixture();
+    f.nav.go('gear');
+    expect(f.route()).toMatchObject({ tab: 'gear', buildSegment: 'gear' });
+    f.nav.go('hq');
+    expect(f.route()).toMatchObject({ tab: 'hq', buildSegment: 'gear' });
+    f.nav.openDevelopment('patrol_1');
+    expect(f.route()).toMatchObject({ tab: 'develop', buildSegment: 'develop', developmentNode: 'patrol_1' });
   });
 
   it('routes officer, certification and course requests into Squad Training', () => {

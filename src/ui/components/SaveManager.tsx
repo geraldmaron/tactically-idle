@@ -4,10 +4,6 @@ import { Sheet } from './Sheet';
 import { Button, Chip } from './ui';
 import { Icon } from '../icons';
 import { money } from '../format';
-import { usePeopleColor } from '../people/PeopleText';
-import { setPeopleColor } from '../people/prefs';
-import { useSettings } from '../settings/SettingsControls';
-import { SETTINGS_TEXT, settingsSummary } from '../settings/labels';
 
 type Edit = { type: 'new' | 'copy' | 'rename' | 'delete' | 'import' | 'load'; id: number; name: string; data?: string; permanent?: boolean };
 const timestamp = (at: number) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -28,14 +24,15 @@ export function campaignStatus(saved: ReturnType<typeof useCampaigns>): { name: 
   };
 }
 
-/** Saves live behind one header button. A dot marks a campaign that isn't safely saved, so the
- * status costs no screen height until it matters. */
-export function CampaignButton({ onOpen }: { onOpen: () => void }) {
+/** The menu: campaign and saves, settings and support behind one button at the end of the
+ * resource bar. A dot marks a campaign that isn't safely saved, so the status costs no height
+ * until it matters. */
+export function MenuButton({ onOpen }: { onOpen: () => void }) {
   const saved = useCampaigns();
   const status = campaignStatus(saved);
-  return <button type="button" className={`campaign-btn${saved.issue ? ' campaign-btn-warning' : ''}`} onClick={onOpen}
-    aria-label={`Saves, settings and new game. ${status.name}, ${status.detail}`}>
-    <Icon name="bookmark" size={18} />
+  return <button type="button" className={`campaign-btn menu-btn${saved.issue ? ' campaign-btn-warning' : ''}`} onClick={onOpen} aria-haspopup="dialog"
+    aria-label={`Menu. Saves, settings and support. ${status.name}, ${status.detail}`}>
+    <Icon name="menu" size={20} />
     {isResponsivePreview && <span className="campaign-btn-test">Test</span>}
     {status.attention && <i className="campaign-btn-dot" aria-hidden="true" />}
   </button>;
@@ -64,10 +61,8 @@ function SaveStatus() {
   </div>;
 }
 
-export function SaveManager({ open, onClose, onOpenSettings }: { open: boolean; onClose: () => void; onOpenSettings?: () => void }) {
+export function SaveManager({ open, onClose }: { open: boolean; onClose: () => void }) {
   const saved = useCampaigns();
-  const settings = useSettings();
-  const peopleColor = usePeopleColor();
   const [edit, setEdit] = useState<Edit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -116,30 +111,16 @@ export function SaveManager({ open, onClose, onOpenSettings }: { open: boolean; 
     </form> : <>
       <SaveStatus />
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
-      <div className="save-actions save-primary-actions"><Button variant="primary" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => run({ type: 'save' }, 'Current campaign saved.')}>Save now</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
-      {/* Settings ride on this sheet, the one menu in the header, rather than a sixth nav destination. */}
-      {onOpenSettings && <button type="button" className="settings-entry" onClick={onOpenSettings}>
-        <Icon name="wrench" size={18} />
-        <span className="settings-entry-text"><strong>{SETTINGS_TEXT.openSettings}</strong><small className="dim">{settingsSummary(settings)}</small></span>
-        <Icon name="chevronRight" size={18} />
-      </button>}
-      {/* The one switch for people colors in call text (src/ui/people); a display preference kept in this browser, not in the save. */}
-      <label className="toggle save-pref">
-        <input type="checkbox" checked={peopleColor} onChange={(e) => setPeopleColor(e.target.checked)} />
-        <span className="toggle-ui" aria-hidden="true" />
-        <span className="toggle-text"><strong>Color names by role</strong><small className="dim">Subjects, civilians, people at the scene and your officers each get their own color and mark in call text.</small></span>
-      </label>
+      <div className="save-actions save-primary-actions"><Button onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
       {!firstEmpty && <p className="save-alert">All ten slots are occupied. Choose a slot below to replace, or delete a save you no longer need.</p>}
       <ol className="save-slots">
         {saved.slots.map((slot, i) => <li className={`save-slot${saved.activeSlotId === i + 1 ? ' save-slot-active' : ''}`} key={i}>
           <div className="save-slot-head"><span className="save-slot-number">{String(i + 1).padStart(2, '0')}</span><strong>{slot?.name ?? 'Empty slot'}</strong>{saved.activeSlotId === i + 1 && <Chip tone="mint">Active</Chip>}</div>
           {slot && <><p className="save-slot-summary">{slot.valid ? `Day ${slot.day} · Level ${slot.level} · ${slot.officers} officers · ${money(slot.funding ?? 0)}${slot.operation ? ' · Operation in progress' : ''}` : 'Unreadable save · original data retained'}</p><p className="dim save-slot-time">Saved {timestamp(slot.savedAt)}</p></>}
-          <div className="save-actions">
-            {slot && <Button size="sm" disabled={!slot.valid || saved.activeSlotId === i + 1} onClick={() => saved.activeSlotId ? run({ type: 'load', id: i + 1 }, 'Campaign loaded.', true) : begin('load', i + 1)}>Load slot {i + 1}</Button>}
-            <Button size="sm" onClick={() => begin('new', i + 1)}>New here</Button>
-            <Button size="sm" onClick={() => begin('copy', i + 1)}>Save here</Button>
-            {slot && <><Button size="sm" onClick={() => begin('rename', i + 1)}>Rename</Button><Button size="sm" variant="ghost" disabled={saved.activeSlotId === i + 1} title={saved.activeSlotId === i + 1 ? 'Load another campaign before deleting this save' : undefined} onClick={() => begin('delete', i + 1)}>Delete</Button></>}
-          </div>
+          <SlotActions active={saved.activeSlotId === i + 1} filled={!!slot} valid={!!slot?.valid} id={i + 1}
+            onLoad={() => saved.activeSlotId ? run({ type: 'load', id: i + 1 }, 'Campaign loaded.', true) : begin('load', i + 1)}
+            onSave={() => run({ type: 'save' }, 'Current campaign saved.')} onBegin={(type) => begin(type, i + 1)}
+            onExport={() => { const data = exportSlotSave(i + 1); if (data) download(data, `tactically-idle-slot-${i + 1}.json`); }} />
         </li>)}
       </ol>
       <div className="save-actions">{saved.canUndoDelete && <Button onClick={() => run({ type: 'undoDelete' }, 'Deleted save restored.')}>Undo last deletion</Button>}<Button onClick={() => download(exportCurrentSave(), 'tactically-idle-campaign.json')}>Export current game</Button><label className="btn btn-secondary btn-md save-import">Import backup<input type="file" accept=".json,application/json" onChange={async (e) => {
@@ -152,4 +133,28 @@ export function SaveManager({ open, onClose, onOpenSettings }: { open: boolean; 
     </>}
     </fieldset>
   </Sheet>;
+}
+
+/** One primary action per slot (load it, save the active one, or start a game in an empty one),
+ * and everything else behind More. */
+function SlotActions({ id, active, filled, valid, onLoad, onSave, onBegin, onExport }: {
+  id: number; active: boolean; filled: boolean; valid: boolean;
+  onLoad: () => void; onSave: () => void; onBegin: (type: 'new' | 'copy' | 'rename' | 'delete') => void; onExport: () => void;
+}) {
+  const primary = active ? <Button size="sm" onClick={onSave}>Save now</Button>
+    : filled ? <Button size="sm" disabled={!valid} onClick={onLoad}>Load</Button>
+    : <Button size="sm" onClick={() => onBegin('new')}>New game here</Button>;
+  return <div className="save-actions save-slot-actions">
+    {primary}
+    <details className="save-more">
+      <summary className="btn btn-quiet btn-sm" aria-label={`More for slot ${id}`}>More</summary>
+      <div className="save-more-menu">
+        {filled && <Button size="sm" variant="ghost" onClick={() => onBegin('new')}>New game here</Button>}
+        {!active && <Button size="sm" variant="ghost" onClick={() => onBegin('copy')}>Save this game here</Button>}
+        {filled && <Button size="sm" variant="ghost" onClick={() => onBegin('rename')}>Rename</Button>}
+        {filled && <Button size="sm" variant="ghost" onClick={onExport}>Export</Button>}
+        {filled && !active && <Button size="sm" variant="danger" onClick={() => onBegin('delete')}>Delete</Button>}
+      </div>
+    </details>
+  </div>;
 }
