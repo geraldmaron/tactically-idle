@@ -191,11 +191,11 @@ describe('rendered player destinations and persistent drafts', () => {
     for (const old of ['Store sections', 'Search courses', 'Get Points', 'Test DP', 'Development branches']) expect(html).not.toContain(old);
   });
 
-  it('renders Training under Squad and removes the duplicated officer course catalog', () => {
+  it('renders Training under Officers and removes the duplicated officer course catalog', () => {
     const id = Object.keys(state.officers)[0];
     const officer = state.officers[id];
     const squad = markup(createElement(SquadScreen), { tab: 'squad', squadSection: 'training', trainingDraft: { officerId: id, search: '' } });
-    expect(squad).toContain('aria-label="Squad sections"');
+    expect(squad).toContain('aria-label="Officers sections"');
     expect(squad).toContain(`data-training-officer-id="${id}"`);
     expect(squad).toContain('Search courses');
     expect(squad).toContain('Choose officer');

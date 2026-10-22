@@ -72,3 +72,11 @@
 .bottomnav .navbadge { top: -12px; right: -16px; min-width: 18px; height: 18px; padding: 0 4px; border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
 .bottomnav .live-dot { top: -6px; right: -12px; }
 .bottomnav .navdot { top: -5px; right: -10px; background: var(--act); }
+
+/* Overflow (components/Overflow.tsx): a quiet More control and its menu. */
+.overflow { position: relative; flex: none; }
+.overflow > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 48px; cursor: pointer; }
+.overflow > summary::-webkit-details-marker { display: none; }
+.overflow-menu { position: absolute; right: 0; top: calc(100% + var(--sp1)); z-index: 5; min-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: var(--sp1); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .5); }
+.overflow-up .overflow-menu { top: auto; bottom: calc(100% + var(--sp1)); }
+.overflow-menu .btn { justify-content: flex-start; width: 100%; }

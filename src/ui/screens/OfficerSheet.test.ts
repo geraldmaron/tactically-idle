@@ -1,6 +1,7 @@
 // officer-profile: the contract the rebuilt profile keeps. Cost and value up front, readiness in
 // view, three tabs, and the actions that change something (teach, dismiss, move, retain) behave
 // exactly once and only through the engine.
+import { rankedName } from '../components/OfficerRow';
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,10 +58,11 @@ describe('officer profile', () => {
     const o = state.officers.off_brooks;
     const page = html(o.id);
     expect(page).toContain('aria-label="Cost and value"');
-    expect(page).toContain(`-$${o.wage}/h`);
+    expect(page).toContain(`>$${o.wage}/h<`);
     expect(page).toContain(`+$${detailRate(o)}/h`);
     expect(page).toContain('aria-label="Readiness"');
-    expect(page).toContain('Ready for a call');
+    expect(page).toContain(`Ready · stress ${Math.floor(o.stress)}`);
+    expect(page).toContain(rankedName(o));
     for (const tab of ['Overview', 'Career', 'Care']) expect(page).toContain(`>${tab}</`);
     expect(page).not.toContain('<details class="osheet-more"');
   });

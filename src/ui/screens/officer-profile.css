@@ -5,7 +5,7 @@
 .profile-portrait img, .profile-portrait canvas { border-radius: 12px; }
 .profile-leader { position: absolute; right: -4px; top: -4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-3); color: var(--t1); }
 .profile-id { display: grid; gap: 6px; min-width: 0; }
-.profile-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; font-size: 13px; color: var(--text-dim); }
+.profile-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; font-size: var(--s14); color: var(--t2); }
 .profile-facts span { display: inline-flex; align-items: center; gap: 4px; }
 .profile-value, .profile-record { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .profile-value > div, .profile-record > div { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
@@ -22,7 +22,13 @@
 .profile-traits li { display: grid; gap: 2px; font-size: 13px; }
 .profile-traits strong { display: inline-flex; align-items: center; gap: 4px; }
 .profile-traits span { color: var(--text-dim); }
-.profile-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; }
-.profile-actions .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-actions { display: flex; gap: var(--sp2); align-items: stretch; }
+.profile-actions > .btn-primary { flex: 1 1 auto; min-height: 48px; }
+.profile-actions > .overflow > summary { min-height: 48px; }
 .profile-dismiss p { margin: 0 0 8px; }
 .profile-traits .profile-trait-origin { font-size: 12px; color: var(--mint); }
+
+/* One readiness line under the name (docs/ui-ux-audit.md, "say it once"). */
+.profile-ready-line { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; font-size: var(--s14); line-height: 1.35; font-weight: 500; }
+.profile-ready-line .icon { flex: none; margin-top: 1px; }
+.profile-portrait img, .profile-portrait canvas { width: 72px; height: 72px; }

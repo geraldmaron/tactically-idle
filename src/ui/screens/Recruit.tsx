@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id } from '../../sim/types';
-import { Button, Card, Chip, EmptyState, RatingBars, Section } from '../components/ui';
+import { Button, Chip, EmptyState, RatingBars, Section } from '../components/ui';
 import { RankChip } from '../components/RankInsignia';
 import { useToast } from '../components/toast';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
@@ -56,18 +56,15 @@ export function Recruit() {
 
   return (
     <Section
-      title="Recruit"
-      icon="user"
+      title="Candidates"
       id="recruit-h"
       action={<RecruitRefresh />}
       hint={full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour.`}
     >
       {candidates.length === 0 ? (
-        <Card>
-          <EmptyState icon="people" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
-            {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
-          </EmptyState>
-        </Card>
+        <EmptyState icon="people" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
+          {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
+        </EmptyState>
       ) : (
         <div className="cand-list">
           {candidates.map((c, index) => {
@@ -104,25 +101,17 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
   const career = useCareerSnapshot(o);
   return (
     <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
-    <Card className={`cand${receipt ? ' cand-hired' : ''}`}>
+    <div className={`cand cand-row${receipt ? ' cand-hired' : ''}`}>
       <div className="cand-top">
         <div className="cand-portrait">
-          <Portrait officer={o} size={56} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={40} {...agePortraitProps(g, o, now)} />
         </div>
         <div className="cand-id">
           <strong className="cand-name">
             {o.firstName} {o.surname}
           </strong>
-          <span className="cand-facts">
-            <span><Icon name={ROLE_META[o.role].icon} size={13} />{ROLE_META[o.role].label}</span>
-            <span><Icon name="cake" size={13} />Age {career.age}</span>
-            <span title="Prior service"><Icon name="medal" size={13} />{yearsText(career.service)} prior</span>
-          </span>
-          <span className="chips">
-            <Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip>
-            <RankChip rank={career.rank} />
-            {career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}
-          </span>
+          <span className="cand-facts">{ROLE_META[o.role].label} · Age {career.age} · {perHour(o.wage)}</span>
+          {o.certs.length > 0 && <span className="cand-certs">{o.certs.map((x) => <span key={x}><Icon name={CERT_ICON[x]} size={16} />{CERT_NAME[x]}</span>)}</span>}
         </div>
         <button
           type="button"
@@ -135,28 +124,11 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
           <Icon name="bookmark" size={20} />
         </button>
       </div>
-      <RatingBars ratings={o.ratings} dense label={`${o.firstName} ${o.surname} ratings`} />
-      {(o.certs.length > 0 || o.traits.length > 0) && (
-        <div className="chips">
-          {o.certs.map((x) => (
-            <Chip key={x} tone="mint" icon={CERT_ICON[x]}>
-              {CERT_NAME[x]}
-            </Chip>
-          ))}
-          {o.traits.map((t) => (
-            <Chip key={t} icon={TRAIT_INFO[t].icon} title={TRAIT_INFO[t].condition}>
-              {TRAIT_INFO[t].label}
-            </Chip>
-          ))}
-        </div>
-      )}
-      {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
       <div className="cand-foot">
-        <span className="dim cand-meta">
-          <Icon name="cash" size={13} />
-          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · <Icon name="clock" size={13} /> leaves {relativeTime(c.expiresAt, now)}</>}
+        <span className="cand-meta">
+          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
-        <Button className="recruit-review-toggle" size="sm" variant={receipt ? 'secondary' : 'primary'} aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
+        <Button className="recruit-review-toggle" size="sm" variant="quiet" aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
           {receipt ? 'Done' : 'Review hire'}
         </Button>
       </div>
@@ -167,14 +139,14 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
         if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) { setReceiptHeight(height); onHired(proj); }
         else hiring.current = false;
       }} />}
-    </Card>
+    </div>
     </div>
   );
 }
 
-/** The hire as a contract (hire-contract-card): what it costs now, what it costs every hour, where
- * that leaves the department's rate, and the kit the officer brings. Money is drawn as bars on one
- * scale so the trade reads before the numbers do. */
+/** The hire as a contract (hire-contract-card): who they are, what it costs now, what it costs
+ * every hour, where that leaves the department's rate, and the kit the officer brings. Funding now
+ * is in the resource bar; the confirm button says what is left after signing. */
 export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: Candidate; proj: Projection; hired: boolean; open: boolean; onClose: () => void; onConfirm: () => void }) {
   const g = useGame();
   const o = c.officer;
@@ -186,22 +158,27 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
   const short = proj.netAfter < 0;
   const pace = learningPace(o);
   const detail = detailRate(o);
+  const career = useCareerSnapshot(o);
   return (
     <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={`Hire ${o.firstName} ${o.surname}`} className="hire-contract"
-      subtitle={<span className="chips"><Chip icon={ROLE_META[o.role].icon}>{ROLE_META[o.role].label}</Chip><Chip tone="amber" icon="cash">{perHour(o.wage)}</Chip></span>}
+      subtitle={`${ROLE_META[o.role].label} · ${perHour(o.wage)}`}
       footer={hired
         ? <><p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster{kit.length ? ', with their kit in the Armory' : ''}.</p><Button variant="primary" block onClick={onClose}>Done</Button></>
-        : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire · {money(proj.upfront)}</Button>}>
+        : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire for {money(proj.upfront)}, leaves {money(after)}</Button>}>
       <div className="contract">
+        <section className="contract-who" aria-label="Who they are">
+          <div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div>
+          <RatingBars ratings={o.ratings} label={`${o.firstName} ${o.surname} ratings`} />
+          {(o.certs.length > 0 || o.traits.length > 0) && <div className="chips">
+            {o.certs.map((x) => <Chip key={x} tone="good" icon={CERT_ICON[x]}>{CERT_NAME[x]}</Chip>)}
+            {o.traits.map((t) => <Chip key={t} icon={TRAIT_INFO[t].icon} title={TRAIT_INFO[t].condition}>{TRAIT_INFO[t].label}</Chip>)}
+          </div>}
+          {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
+        </section>
         <section className="contract-sign" aria-label="Due at signing">
           <span className="contract-label">Due at signing</span>
           <strong className="contract-hero">{money(proj.upfront)}</strong>
           {kitCost > 0 && <span className="dim">Includes {money(kitCost)} of issue kit</span>}
-          <span className="contract-funds" role="img" aria-label={`Funding ${money(funding)} now, ${money(after)} after signing`}>
-            <i className="contract-funds-left" style={{ width: `${Math.max(0, Math.min(100, (after / Math.max(1, funding)) * 100))}%` }} />
-            <i className="contract-funds-spent" style={{ width: `${Math.max(0, Math.min(100, (proj.upfront / Math.max(1, funding)) * 100))}%` }} />
-          </span>
-          <span className="contract-funds-legend"><span>Now {money(funding)}</span><span className={after < 0 ? 'tone-danger' : undefined}>After {money(after)}</span></span>
         </section>
         <section className="contract-rate" aria-label="Every hour">
           <span className="contract-label">Every hour</span>
