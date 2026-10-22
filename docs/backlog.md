@@ -445,14 +445,14 @@ profile get a `swat-writing-review` read.
 
 ### owner-visual-picks: The owner picks the tab plate and the reading serif from one compare page
 Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
-Needs: start=none; integrate=visual-story (for the plate options); ship=none
+Needs: start=none; integrate=none; ship=none
 
 Two open owner decisions are visual, so the owner judges them side by side, not from prose. One
 private compare page (an Artifact) shows, at 390 and 320 and from one fixed-seed campaign:
 
 1. The tab-root plate at no plate, 72px, 96px and 128px on each of HQ, Calls, Officers and Build,
-   so the owner also decides whether every tab gets one. `visual-story` builds the plate with its
-   height as one token so any pick is a one-line change.
+   so the owner also decides whether every tab gets one. The plate height is one token
+   (`--plate-h` in `theme.css`, tabs in `TAB_PLATES`), so any pick is a one-line change.
 2. The decide beat and a debrief in the current face and in the candidate serif behind the dev
    switch (`src/ui/settings/candidates.ts`, `docs/ops-experience.md` "The reading face: still open").
 
@@ -512,43 +512,18 @@ fingerprint, give the offer row a consent-pending state, and show the real befor
 proving ad history never moves odds, draws or pressure, the offer surface at 390 and 320, and the
 log fields present on every event.
 
-### visual-story: Every screen tells its story with art and icons
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and art); lane=interface
+### ui-leftovers: HQ's Open lands on the named call
+Tags: job=command; journeys=answer-a-call; probes=none (navigation); lane=interface
 Needs: start=none; integrate=none; ship=none
 
-Found when the Desk and Street redesign landed (2026-10-22): the plan only listed what to remove,
-so icon uses in `src/ui/` fell from 269 to 228 and banners or plates from 9 to 4, and the icon kit
-(`docs/visual-kit.md`) is adopted in one place (`CallTypeBadge`). `TAB_ICON`, `RESOURCE_ICON`,
-`SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `BRANCH_ICON`, the gear icons, `StatusMark`,
-`OutcomeMark` and `Spot` are unused. Adopt the kit across the desk and the calls flow: the four
-tabs and the resource bar carry their icons; each tab root opens on a compact plate (about 96px)
-from its existing banner art, with no kicker or paragraph; every row in Officers, Build, Calls and
-the debrief leads with a face, gear art or a kit icon; the brief, deploy and debrief headings get
-their icons back; empty states use `Spot`. Painted call-type medallions (deferred from the icon
-kit) belong here. This partly reverses the audit's "no banner on tab roots"; the plate height is
-one token, and the owner picks its value and which tabs carry it in `owner-visual-picks`. Done: a design-floors ratchet that only rises counts kit
-adoption (each tab root renders a plate, each listed row has a lead visual, the tabs and the bar
-render their icons), and captures at 390 and 320 are compared with today's.
-
-### ui-leftovers: Finish the redesign in files no lane owned this round
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and text); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Left by the 2026-10-22 redesign sessions: the Armory's search, collection bar and filter rail and
-the Training store (`src/ui/storefront/`) are unrestyled; First Run still shows themes a player
-can't avoid as disabled switches; the Lab's `GameFrame.tsx` still passes a Prepare button and "Continue to <stage>"; dead CSS for the
-old board and Prepare (`.optile*`, `.prep-title`, `.pickcard*`, `.prep-steps`) sits in `app.css` and
-`skin.css`; and `docs/captures/ui-ux-audit/tools/capture.mjs` still uses pre-four-tab selectors for
-the desk screens (the desk session's updated copy is described in its hand-over). Some `.optile*`
-rules still have consumers (`CallTile.tsx`, `CardWarning.tsx`, the Lab's `GameFrame.tsx`), so each
-selector goes only after its consumers are checked. Done: each of these fixed and the capture tool
-walking every screen with no step error. Also found in the lead's 2026-10-22 play: HQ's "your move" card
-says "<call> is the oldest call" with Open, but Open shows the whole board (`src/ui/screens/HQ.tsx`
-`nav.go('ops')`), not that call's brief.
+The rest of the redesign leftovers shipped with `visual-story` and the tooling leftovers (2026-10-22).
+Left from the lead's play: HQ's "your move" card says "<call> is the oldest call" with Open, but Open
+shows the whole board (`src/ui/screens/HQ.tsx` `nav.go('ops')`), not that call's brief. Done: Open on
+that card lands on the named call's brief, shown at 390x844.
 
 ### squad-names: Every surface names a squad the way the player named it
 Tags: job=command; journeys=answer-a-call, joint-operation; probes=none (labels); lane=engine
-Needs: start=visual-story (it edits the live call screens); integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 "Squad A" survives in `src/sim/resolution.ts` (`squadLabel` takes only an id, and feeds reasons,
 contributors and route labels), `src/ui/people/lexicon.ts`, the Blueprint's accessibility text
@@ -559,18 +534,6 @@ and the gates' `engine-driver.ts`. Hardcoding "Alpha" would break renamed squads
 an interface file, so the name-bearing contract gets lead approval and a Codex adversarial review
 first. Done: one name source used by the sim, the UI, the Blueprint and the Lab, a renamed squad
 showing its name on every call surface, and the tests that pinned "Squad A" asserting the name.
-
-### roster-save-rule: Refuse saves whose squads list officers from other squads
-Tags: job=keep; journeys=save-round-trip; probes=none (save validation); lane=engine
-Needs: start=none; integrate=none; ship=none
-
-Deferred from the paid-details Codex review (2026-10-22): paid details now strain only officers
-who belong to the patrol squad, but a save that lists an officer under two squads still loads.
-Refusing it is a roster rule wider than taps and must be checked against other saved states, such
-as squad moves waiting for a call to end. Also from the calls-flow review: a snapshot saved while a
-decision was unpaused (the browser killed before the page-hide save) still counts that time until
-load; freezing the stall at save time needs `src/sim/campaign-slots.ts`. Done: both rules, with save
-round-trip tests.
 
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
@@ -667,7 +630,7 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   mediation network later; 9 the $2.99 and $4.99 price points; 10 personalised ads ever.
 - **Chat lines on the strip:** the live strip shows 2 lines (`CHAT_LINES`, the owner's 2026-10-21
   "easy to read"); a pile-on reads better in 3 at 390x844, or the thread could open in its own view.
-- **The tab-root plate** that `visual-story` brings back (its height and whether every tab gets
+- **The tab-root plate** that `visual-story` brought back (its height and whether every tab gets
   one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
 
 Decided 2026-10-22 (Going Live): the rebuild (`going-live-spine`) must let every balance style reach
