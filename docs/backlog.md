@@ -200,7 +200,7 @@ fingerprints and Lab handle a list. Distinct from `new-call-types`, which adds k
 
 ### going-live-spine: Going Live rebuilt structure first
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=none (content structure); lane=calls
-Needs: start=none (owner sets the turn-reach target); integrate=path-measures; ship=going-live-review
+Needs: start=none; integrate=path-measures; ship=going-live-review
 
 The 2026-10-22 teardown (`docs/calls/notes/going-live-teardown.md`) and Codex's separate read both say
 reject, back to `swat-call-design`: one escalation used 34 times (the handgun on the manager); the
@@ -211,7 +211,8 @@ after the result that closed their scene; the clerk leaves free in 30 of 43 line
 `docs/calls/depth-mesh-method.md`: spine and consequence graph gated on engine measures before prose.
 Done: those blocks closed as data (escalations from four or more mechanisms, no more than two per
 path; truths decoupled or the coupling priced; one exit decision; the lie charged in both situations;
-the turn reachable by every balance style; previews true in every situation), the `path-measures`
+the turn reached by every balance style (random, best_odds, patient, fast) in at least 50% of drawn
+calls, owner target 2026-10-22; previews true in every situation), the `path-measures`
 report attached, and a separate review.
 
 ### path-measures: Path-level measures for a call
@@ -659,6 +660,9 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   "easy to read"); a pile-on reads better in 3 at 390x844, or the thread could open in its own view.
 - **The tab-root plate** that `visual-story` brings back (its height and whether every tab gets
   one) and **the reading serif**: picked from one compare page (`owner-visual-picks`).
+
+Decided 2026-10-22 (Going Live): the rebuild (`going-live-spine`) must let every balance style reach
+the turn in at least 50% of drawn calls.
 
 Decided 2026-10-22 (monetization): watching an ad is rewarded, and the ad-watch rate is measured
 and used as `docs/research/mobile-hook-patterns.md` describes (`rewarded-ads`); real-money income
