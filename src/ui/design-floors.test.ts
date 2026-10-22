@@ -1,7 +1,6 @@
 // Floors for the Desk and Street system (docs/ui-ux-audit.md, "Skin"): colour comes from tokens,
-// nothing reads under 12px, small text only shrinks, and buttons stay thumb-sized. Like the floors
-// in src/architecture/, each moves in one direction only: when a pass removes small text, lower
-// SMALL_TEXT_CEILING to the new count in the same commit, and the test says so when it can.
+// nothing reads under 12px, and buttons stay thumb-sized. Small text only shrinks: that ratchet and the
+// rest of the UI debt live in src/ui/ui-debt.json (ui-gates-static.test.ts).
 import { describe, expect, it } from 'vitest';
 
 // Vitest stubs every CSS import, raw ones included, so the stylesheets are read from disk. The src
@@ -24,9 +23,6 @@ const THEME_FILES = ['/src/ui/theme.css'];
  * in blueprint.css is not a screen pixel. Its HTML parts (room list, key, chooser) still count. */
 const SVG_UNITS = { file: '/src/ui/blueprint/blueprint.css', under: 6 };
 const FLOOR_PX = 12;
-const SMALL_PX = 14;
-/** Declarations under 14px, counted 2026-10-22 after the visual-story pass (347 before it; 309 before the filter rail). Only falls. */
-const SMALL_TEXT_CEILING = 307;
 const TOUCH_PX = 44;
 const BUTTON_CLASS = /\.(btn|pill|icon-btn|stepper-btn|navbtn|hud-btn|linkbtn|live-cancel)(?![\w-])/;
 
@@ -82,11 +78,7 @@ describe('design floors', () => {
     expect(fluid, `give the size a ${FLOOR_PX}px floor`).toEqual([]);
   });
 
-  it(`keeps text under ${SMALL_PX}px from growing`, () => {
-    const small = allRules().flatMap(rule => fontSizes(rule).filter(size => size.px < SMALL_PX)).length;
-    expect(small, `new text under ${SMALL_PX}px: decisions read at 14px or more (docs/ui-ux-audit.md, "Scale")`).toBeLessThanOrEqual(SMALL_TEXT_CEILING);
-    expect(small, `small text fell to ${small}: lower SMALL_TEXT_CEILING to it`).toBe(SMALL_TEXT_CEILING);
-  });
+  // Text under 14px is a ratchet in src/ui/ui-debt.json (rule R7.sub14), checked by ui-gates-static.test.ts.
 
   it(`keeps the touch target at ${TOUCH_PX}px`, () => {
     const touch = rules('/src/ui/theme.css').flatMap(rule => [...rule.body.matchAll(/--touch\s*:\s*([^;]+)/g)].map(([, value]) => value.trim()));
