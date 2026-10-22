@@ -219,10 +219,9 @@ Codex's third read (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f3
 adverse is now the shame event its tag names (crowd x3 routes 165 to 0 on the dither-aware walk), and the
 minute-3 beat is a suspension warning, not a cut, with the rate flag gone (the stream reads live throughout).
 The lead re-ran `check:paths` on 8d8a0fc: turn reach 78/95/93/96, uniform 56/57, nothing beaten. Left, in order:
-1. A decision before prose: `go_in` keeps its +8 on `clip_out`, which a warning now sets instead of a
-   suspension, so the entry bonus no longer has the stopped audience behind it. Keep it (the warning is
-   reason enough), shrink it, or move it. Also asked (spine sheet row O): `way_out`'s run-out text cannot
-   differ by `nextIf` route; per-route text would change `TreeTimeout`, an interface file.
+   Owner, 2026-10-22: `go_in` keeps its +8 on `clip_out`; the suspension warning is reason enough.
+1. Open, not blocking prose: `way_out`'s run-out text cannot differ by `nextIf` route (spine sheet row O);
+   per-route text would change `TreeTimeout`, an interface file, so it waits for a lead decision.
 2. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
    consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
    and `swat-writing-review` by a separate reader.
