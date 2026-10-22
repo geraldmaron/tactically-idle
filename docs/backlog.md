@@ -212,7 +212,7 @@ after the result that closed their scene; the clerk leaves free in 30 of 43 line
 Done: those blocks closed as data (escalations from four or more mechanisms, no more than two per
 path; truths decoupled or the coupling priced; one exit decision; the lie charged in both situations;
 the turn reached by every balance style (random, best_odds, patient, fast) in at least 50% of drawn
-calls, owner target 2026-10-22; previews true in every situation), the `path-measures`
+calls, owner target 2026-10-22; previews true in every situation), the `npm run check:paths`
 report attached, and a separate review.
 
 ### threat-after-close: A threat never lands after the result that ended its scene
