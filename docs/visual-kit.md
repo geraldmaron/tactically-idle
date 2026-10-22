@@ -7,8 +7,8 @@ contact sheets [visual-kit-390.jpg](captures/visual-kit/visual-kit-390.jpg) and
 
 | Piece | Where | Use |
 | --- | --- | --- |
-| Icons | `src/ui/icons.tsx` | `<Icon name size title? />`, 167 line glyphs |
-| Name tables | `src/ui/icons/kit.ts` | `TAB_ICON`, `RESOURCE_ICON`, `SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `GEAR_CATEGORY_ICON`, `BRANCH_ICON`, `CALL_TYPE_ICON`, keyed by the sim's own ids |
+| Icons | `src/ui/icons.tsx` | `<Icon name size title? />`, 168 line glyphs |
+| Name tables | `src/ui/icons/kit.ts` | `TAB_ICON`, `RESOURCE_ICON`, `SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `GEAR_CATEGORY_ICON`, `GEAR_SOURCE_ICON`, `BRANCH_ICON`, `CALL_TYPE_ICON`, keyed by the sim's own ids |
 | Call-type badges | `src/ui/icons/CallTypeBadge.tsx` | `<CallTypeBadge type size label? />` |
 | Status and outcome marks | `src/ui/icons/marks.tsx` | `<StatusMark status />`, `<OutcomeMark band label />` |
 | Empty-state spots | `src/ui/icons/spots.tsx` | `<Spot name width? />` |
@@ -84,6 +84,13 @@ drawing as `checkcircle`, named for its meaning.
 | less_lethal | `lessLethal` |
 | vehicles | `van` |
 | supplies | `crate` |
+
+### Gear source (`GEAR_SOURCE_ICON`)
+
+`basicKit` (a vest with a check) marks the basic kit every officer carries: radio headset, sidearm,
+carbine and light armor (`sim/basic-kit.ts`). It is never stock, so put it beside those items
+wherever they appear with pooled gear (the team step, the Armory, the hire contract). Pooled armory
+stock keeps `box`.
 
 ### Upgrade branches (`BRANCH_ICON`)
 

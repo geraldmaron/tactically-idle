@@ -49,6 +49,11 @@ export const GEAR_CATEGORY_ICON: Record<ItemCategory, IconName> = {
   supplies: 'crate',
 };
 
+/** Where a piece of gear comes from: the basic kit every officer carries (sim/basic-kit.ts), or pooled
+ * armory stock. Put basicKit beside basic kit wherever it is listed with pooled gear. */
+export type GearSourceKey = 'basic' | 'pooled';
+export const GEAR_SOURCE_ICON: Record<GearSourceKey, IconName> = { basic: 'basicKit', pooled: 'box' };
+
 export const BRANCH_ICON: Record<DevBranch, IconName> = {
   personnel: 'idcard',
   field: 'route',

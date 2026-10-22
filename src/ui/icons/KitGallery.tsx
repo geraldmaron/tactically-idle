@@ -5,7 +5,7 @@ import type { IconName } from '../icons';
 import { CallTypeBadge } from './CallTypeBadge';
 import { OutcomeMark, StatusMark, MARK_STATUSES, OUTCOME_BANDS } from './marks';
 import { Spot, SPOT_NAMES } from './spots';
-import { BRANCH_ICON, CALL_TYPE_ICON, GEAR_CATEGORY_ICON, OFFICER_STATUS_ICON, OUTCOME_ICON, RESOURCE_ICON, SKILL_ICON, TAB_ICON } from './kit';
+import { BRANCH_ICON, CALL_TYPE_ICON, GEAR_CATEGORY_ICON, GEAR_SOURCE_ICON, OFFICER_STATUS_ICON, OUTCOME_ICON, RESOURCE_ICON, SKILL_ICON, TAB_ICON } from './kit';
 import type { IncidentType } from '../../sim/scenario-types';
 import { RESULT_LABEL } from '../screens/OperationFeedback';
 
@@ -46,6 +46,7 @@ export function KitGallery() {
       <Table title="Officer status" rows={OFFICER_STATUS_ICON} />
       <Table title="Outcomes" rows={OUTCOME_ICON} />
       <Table title="Gear categories" rows={GEAR_CATEGORY_ICON} />
+      <Table title="Gear source" rows={GEAR_SOURCE_ICON} />
       <Table title="Upgrade branches" rows={BRANCH_ICON} />
       <Table title="Call types" rows={CALL_TYPE_ICON} />
       <Table title="Navigation and actions" rows={Object.fromEntries(NAV.map((n) => [n, n]))} />
