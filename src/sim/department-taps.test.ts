@@ -139,6 +139,9 @@ describe('overflow guards (Codex review)', () => {
     const before = structuredClone(taps);
     expect(grantMultiplier(taps, forever, T0).ok).toBe(false);
     expect(taps).toEqual(before);
+    const s = createInitialState(T0);
+    s.department.taps = taps;
+    expect(deserialize(serialize(s, T0))!.department.taps).toEqual(before);
   });
 
   it('refuses tuning whose burst holds less than one whole tap', () => {
