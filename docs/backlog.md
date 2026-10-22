@@ -411,6 +411,50 @@ switch (`src/ui/settings/candidates.ts`). The owner compares it as `docs/ops-exp
 ("The reading face: still open"). Then ship the winner, delete the loser's rule from
 `candidates.css` and remove the switch.
 
+### ui-system: One visual system under every screen
+Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+Tokens for type (12/14/16/18/22/28), space (4 to 32) and colour roles, one primitive set (Button,
+Chip, Card, Row, Sheet, ActionBar), the duplicate definitions in app.css and skin.css removed,
+hex moved to tokens, and the Desk and Street skin applied through them, story text staying in
+Barlow until ops-experience-compare is settled (docs/ui-ux-audit.md). Done: tests fail on new
+decision text under 14px, interactive elements under 44px and hex outside the theme; captures
+retaken at 390, 320 and 430 with the audit's tool, compared with its probe numbers.
+
+### chrome-contract: One chrome contract for desk screens, flows and the live call
+Tags: job=command; journeys=answer-a-call, save-round-trip; probes=none (layout); lane=interface
+Needs: start=ui-system; integrate=none; ship=none
+
+A 44px resource bar in words and per-hour rates; no banner on tab roots; flows with a head, back
+and one action bar and no tabs; one Menu sheet for the campaign, settings and support. Every row
+of the audit's exit table holds: the Prepare draft survives Back and detours, the debrief settles
+before it is left. Step out comes last, with a pause owned by navigation and not by page
+visibility. Done: no primary button is covered at any width; the review body at 320x568 is at
+least 248px; background, reload and a long wait while stepped out resume the same beat with
+elapsed time kept.
+
+### calls-say-once: Each fact once on every step of a call
+Tags: job=command; journeys=answer-a-call, debrief-explains; probes=none (layout); lane=interface
+Needs: start=chrome-contract; integrate=none; ship=none
+
+The say-it-once ledger by field and the verb ladder in docs/ui-ux-audit.md applied to the board,
+brief, deploy, decide, review, result and debrief, with the squad named one way, designed against
+today's pooled equipment. Folds in ops-experience-now, which is deleted when this ships. Done: for
+every ledger field the keeping field is present and the repeats are gone, and the distinct fields
+(time range, per-choice exposure, completion, projected income) are present, in the game and the
+Lab, with two squads on a call.
+
+### four-tabs: HQ, Calls, Officers and Build
+Tags: job=build; journeys=hire-and-equip, officer-promotes; probes=none (navigation); lane=interface
+Needs: start=chrome-contract (after basic kit reaches main and the owner validates the merge); integrate=none; ship=squad-preset-editor
+
+Officers holds Squads, Roster, Hire and Training; Build holds Upgrades and the Armory; HQ's
+cutaway shows state and stops repeating the tabs, keeping the Watch Commander opt-out on each duty
+row and the shift report reopenable; assignment has one path; badges open the segment they are
+about. Done: the e2e script reaches every former screen; hire-and-equip passes; the nav round
+trips return; captures at three widths.
+
 ### onboarding: A first call that teaches the loop
 Tags: job=command; journeys=answer-a-call; probes=none (teaching flow); lane=deferred
 Needs: start=none; integrate=none; ship=none

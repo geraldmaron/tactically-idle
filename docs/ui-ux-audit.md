@@ -474,7 +474,7 @@ Codex's verdicts on each major change, as recorded:
 
 ## Proposed backlog items
 
-Not yet in `docs/backlog.md`; they go in when the owner approves. Format per `COORDINATION.md`.
+Added to `docs/backlog.md` under Player experience on 2026-10-21, with the owner's approval. Format per `COORDINATION.md`.
 
 ```
 ### ui-system: One visual system under every screen
@@ -513,7 +513,7 @@ Lab, with two squads on a call.
 
 ### four-tabs: HQ, Calls, Officers and Build
 Tags: job=build; journeys=hire-and-equip, officer-promotes; probes=none (navigation); lane=interface
-Needs: start=chrome-contract, worn-kit (and the owner's validation of the merge); integrate=none; ship=squad-preset-editor
+Needs: start=chrome-contract (after basic kit reaches main and the owner validates the merge); integrate=none; ship=squad-preset-editor
 
 Officers holds Squads, Roster, Hire and Training; Build holds Upgrades and the Armory; HQ's
 cutaway shows state and stops repeating the tabs, keeping the Watch Commander opt-out on each duty
