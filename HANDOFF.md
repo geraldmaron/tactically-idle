@@ -126,7 +126,16 @@ All 10 second-read findings fixed as data, `check:paths` holds; Codex's third re
 medium findings, no block, recorded in backlog `going-live-spine` step 1. Stopped per its brief. Owner's go: the three
 round 3 findings fixed as data at 8d8a0fc; the lead re-ran `check:paths` there (turn reach 78/95/93/96,
 nothing beaten). Not run on the branch: full verify (the old call's pinned tests fail by design until step 3).
-Prose waits for the owner's next go.
+Owner's go for prose (2026-10-22): layers run one at a time, each cut from
+the previous tip. P4a scene: prose-scene (local_31193569, Sonnet), from 8d8a0fc, writes only strings in
+`hostage-live.ts` and `hostage.ts` plus its record; brief `going-live-spine/prose-p4a-brief.md`. Then P4b menu,
+P4c consequences (P3 folded in), P5 chat variants, one integration edit, `swat-writing-review` by a separate
+reader, the old call's tests, then merge.
+
+Archived 2026-10-22 (owner's go): the three wave 4 and 5 lanes and six wave 1 to 3 lanes, merged branches
+deleted. Kept: the old lead, going-live-spine, spine-pass2, and going-live-teardown (it had live work when
+archived; retry later). Raw git-ignored capture frames (visual-story before, owner-visual-picks) copied to
+`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/raw-captures/`.
 
 squad-names merged (cde797c; manifest files `src/sim/squad-names.ts` under kernel and re-render, bea1144):
 `npm run verify` 3,025 tests, art, build and no-lab green on the merged tip; the e2e passed 6 live calls at 390
