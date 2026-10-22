@@ -8,15 +8,14 @@ import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
 import { OverlayRootContext } from './components/Sheet';
-import { NavContext, usePlayerNavigation } from './components/nav';
+import { NavContext, topTab, usePlayerNavigation } from './components/nav';
 import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
 import { HQ } from './screens/HQ';
 import { SquadScreen } from './screens/Squad';
 import { OpsScreen } from './screens/Ops';
-import { DevelopScreen } from './screens/Develop';
-import { GearScreen } from './screens/Gear';
+import { BuildScreen } from './screens/Build';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { SaveManager, SaveWarning } from './components/SaveManager';
 import { WelcomeBack } from './components/WelcomeBack';
@@ -72,13 +71,12 @@ function GameShell() {
                   {mode === 'desk' && <TopBar onOpenMenu={() => setMenuOpen(true)} />}
                 </div>
                 <SaveWarning onOpen={() => setSavesOpen(true)} />
-                <main className={`screen screen-${tab}`} key={tab}>
+                <main className={`screen screen-${tab}`} key={topTab(tab)}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
                   {tab === 'hq' && <HQ />}
                   {tab === 'squad' && <SquadScreen />}
                   {tab === 'ops' && <OpsScreen />}
-                  {tab === 'develop' && <DevelopScreen highlightedNode={nav.developmentNode} highlightRequest={nav.developmentRequest} />}
-                  {tab === 'gear' && <GearScreen />}
+                  {(tab === 'develop' || tab === 'gear') && <BuildScreen />}
                 </main>
                 <div className="chrome-foot" ref={chrome.setFoot}>
                   {mode === 'desk' && <BottomNav />}

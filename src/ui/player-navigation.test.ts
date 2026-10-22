@@ -144,12 +144,12 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).not.toContain('<details');
     expect(html).toContain('aria-label="Show equipment"');
     expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid"'));
-    expect(html).toContain('class="qm-card qm-card-not_hired"');
+    expect(html).toContain('class="ui-row qm-row qm-row-not_hired"');
     expect(html).toContain('Open the post in Develop');
     // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
     expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
-    expect(html).toContain('<strong>Restock rules</strong>');
-    expect(html).toContain('<strong>Loadout presets</strong>');
+    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Restock rules/);
+    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Loadout presets/);
     expect(html).not.toContain('Hire manager');
     expect(html).not.toContain('Search courses');
   });
@@ -160,10 +160,8 @@ describe('rendered player destinations and persistent drafts', () => {
     state.department.developmentTiers.logistics_equipment_manager = 3;
     fillOpenPostsForTest(state);
     const html = markup(createElement(GearScreen));
-    expect(html).toContain('class="qm-card qm-card-off"');
-    expect(html).toContain('Tier 3</span>');
-    expect(html).toContain('45% cheaper service</span>');
-    expect(html).toContain('40% less wear</span>');
+    expect(html).toContain('class="ui-row qm-row qm-row-off"');
+    expect(html).toContain('Tier 3 · 45% cheaper service, 40% less wear');
     expect(html).not.toContain('Open the post in Develop');
     // The budget control lives once, in the Quartermaster's Command Staff sheet.
     const sheet = markup(createElement(ManagerSheet, { id: 'quartermaster', g: state, now: NOW, onClose: () => {}, inGear: true }));

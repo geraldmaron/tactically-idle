@@ -80,3 +80,6 @@
 .overflow-menu { position: absolute; right: 0; top: calc(100% + var(--sp1)); z-index: 5; min-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: var(--sp1); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2); box-shadow: 0 12px 32px rgba(0, 0, 0, .5); }
 .overflow-up .overflow-menu { top: auto; bottom: calc(100% + var(--sp1)); }
 .overflow-menu .btn { justify-content: flex-start; width: 100%; }
+
+/* Build's segments sit above either segment's page. */
+.build-segments { padding: var(--sp3) var(--gutter) 0; }
