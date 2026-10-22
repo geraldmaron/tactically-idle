@@ -167,8 +167,6 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   const list = [...rosterOfficers(), ...(opts.squadC ? squadCOfficers() : [])];
   for (const o of list) officers[o.id] = o;
   const inv: Record<Id, number> = {
-    // Operation fixtures are fully stocked; real new-game stock remains six.
-    radio_kit: opts.squadC ? 12 : 8,
     loud_hailer: 2,
     throw_phone: 1,
     ballistic_shield: 2,
@@ -221,10 +219,10 @@ export function makeState(opts: FixtureOptions = {}): GameState {
 }
 
 const DEFAULT_LOADOUTS: Record<SquadId, Record<Id, number>> = {
-  A: { radio_kit: 1, throw_phone: 1, ballistic_shield: 1, trauma_kit: 2 },
-  B: { radio_kit: 1, loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2 },
-  C: { radio_kit: 1, loud_hailer: 1, trauma_kit: 1 },
-  D: { radio_kit: 1, trauma_kit: 1 },
+  A: { throw_phone: 1, ballistic_shield: 1, trauma_kit: 2 },
+  B: { loud_hailer: 1, door_ram: 1, ballistic_shield: 1, trauma_kit: 2 },
+  C: { loud_hailer: 1, trauma_kit: 1 },
+  D: { trauma_kit: 1 },
 };
 
 const DEFAULT_POSITIONS: Record<SquadId, Id> = { A: 'front_yard', B: 'side_yard_e', C: 'front_yard', D: 'front_yard' };
@@ -349,23 +347,6 @@ export function startRun(state: GameState, scenarioId: Id, squadIds: SquadId[], 
   const r = apply(state, startCmd(scenarioId, squadIds, over));
   if (!r.result.ok) throw new Error(`startOperation refused: ${r.result.reason}`);
   return r.state;
-}
-
-/** Override reserved radio quantities to exercise equipment-shortage rules. */
-export function withReservedRadios(state: GameState, quantities: Partial<Record<SquadId, number>>): GameState {
-  const modified = structuredClone(state);
-  const retained: Partial<Record<SquadId, number>> = {};
-  modified.reservations = modified.reservations.filter((reservation) => {
-    const limit = quantities[reservation.squadId];
-    if (reservation.itemId !== 'radio_kit' || limit === undefined) return true;
-    const count = retained[reservation.squadId] ?? 0;
-    retained[reservation.squadId] = count + 1;
-    if (count < limit) return true;
-    modified.units[reservation.unitId].status = 'ready';
-    return false;
-  });
-  if (modified.activeRun) modified.activeRun.reservationIds = modified.reservations.map((r) => r.id);
-  return modified;
 }
 
 type Status = 'unknown' | 'reported' | 'confirmed' | 'disproved';

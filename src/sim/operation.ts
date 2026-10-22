@@ -57,7 +57,7 @@ import { flushSquadMoves } from './roster';
 import { crewFlags, leadFlags } from './crew';
 import { LEAD_PREFIX } from './crew-flags';
 import { releaseRun, reserveLoadouts, settleRun, squadUnits } from './inventory';
-import { withStandardRadios } from './standard-kit';
+import { isBasicUnit, withoutBasicKit } from './basic-kit';
 import { spaceAt, stagingPointById } from './spatial';
 import { centroidOf, defaultStagingFor, reachableOverGround, spaceLabel } from './spatial-factors';
 import {
@@ -314,14 +314,12 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd): StartC
   }
 
   const upkeep = departmentUpkeep(state);
-  const standard = withStandardRadios(state, ids, cmd.loadouts, cmd.units, now, upkeep, (sid) => deployRoster(state, sid, now).goes);
-  if (standard.issue) issues.push(standard.issue);
-  cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+  cmd = { ...cmd, ...withoutBasicKit(state, cmd.loadouts, cmd.units) };
   for (const sid of Object.keys(cmd.units ?? {}) as SquadId[]) if (!ids.includes(sid)) issues.push(`Equipment given for ${squadLabel(sid)}, which is not deployed`);
   for (const sid of Object.keys(cmd.loadouts) as SquadId[]) if (!ids.includes(sid)) issues.push(`Loadout given for ${squadLabel(sid)}, which is not deployed`);
   const probe = structuredClone(state);
   const r = reserveLoadouts(probe, 'probe', cmd.loadouts, cmd.units, now, upkeep);
-  if (!r.ok && !standard.issue) issues.push(r.reason);
+  if (!r.ok) issues.push(r.reason);
 
   if (issues.length === 0 && built) warnings.push(...startWarnings(state, now, scenario, built, cmd));
   return { issues, warnings, scenario, built };
@@ -348,12 +346,6 @@ function startWarnings(state: GameState, now: number, scenario: ScenarioDefiniti
     if (evs.length > 0 && evs.every((e) => !e.eligible)) {
       const best = evs[0];
       out.push(`${a.title}: ${best.reason}`);
-    }
-  }
-  if (cmd.squadIds.length > 1) {
-    for (const sid of cmd.squadIds) {
-      const hasKit = unitOverride[sid].some((u) => ITEMS[u.itemId]?.tags.includes('comms_kit'));
-      if (!hasKit) out.push(`${squadLabel(sid)} has no radio kit: coordination with other squads will be slower`);
     }
   }
   return out;
@@ -927,8 +919,7 @@ const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
   startOperation(draft, cmd, ctx) {
     const upkeep = departmentUpkeep(draft);
-    const standard = withStandardRadios(draft, cmd.squadIds, cmd.loadouts, cmd.units, ctx.now, upkeep, (sid) => deployRoster(draft, sid, ctx.now).goes);
-    cmd = { ...cmd, loadouts: standard.loadouts, units: standard.units };
+    cmd = { ...cmd, ...withoutBasicKit(draft, cmd.loadouts, cmd.units) };
     const chk = checkStart(draft, ctx.now, cmd);
     if (chk.issues.length > 0 || !chk.scenario) return fail(chk.issues[0] ?? 'Cannot start this operation');
     const scenario = chk.scenario;
@@ -1162,6 +1153,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const unitsUsed: Id[] = [];
     for (const u of [...ev.uses, ...suppliesSpent.map(supply => ({ ...supply, qty: 1, consumable: true }))]) {
       if (!storyRouteUsed && ev.storyMovementOnlyUnitIds?.includes(u.unitId)) continue;
+      // Basic kit is part of the officer: nothing to wear, settle or count as spent.
+      if (isBasicUnit(u.unitId)) continue;
       used[u.itemId] = (used[u.itemId] ?? 0) + u.qty;
       unitsUsed.push(u.unitId);
     }

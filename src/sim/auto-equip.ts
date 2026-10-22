@@ -2,7 +2,7 @@ import type { GameState, Id, ItemUnit, Officer, SquadId } from './types';
 import type { ActionDefinition } from './scenario-types';
 import { ITEMS } from '../content/items';
 import { readyUnits } from './inventory';
-import { radioRequirement, standardRadioPlan, STANDARD_RADIO } from './standard-kit';
+import { isBasicKit } from './basic-kit';
 import { deployRoster } from './squads';
 import { getBuilt, RESOLUTION_TUNING } from './resolution';
 import { projectedCondition } from './equipment';
@@ -24,7 +24,7 @@ export interface AutoLoadout {
 }
 
 export interface AutoLoadoutOptions {
-  /** Every supplied optional item key is a player choice, including zero; radios follow the roster. */
+  /** Every supplied optional item key is a player choice, including zero. Basic kit is never packed. */
   loadouts?: Partial<Record<SquadId, Record<Id, number>>>;
   units?: Partial<Record<SquadId, Id[]>>;
   /** Only these chosen squads are changed; all chosen squads reserve their current picks. */
@@ -39,7 +39,7 @@ export function autoEquipReadyUnits(state: GameState, itemId: Id, now: number): 
 /**
  * Pure preparation helper: uses owned stock, never buys, settles time, or advances RNG.
  * There is no carry-capacity mechanic. Pack at most one of each reusable item per
- * squad, plus one standard radio per officer; consumables cover feasible sequential uses; only actual exclusive/terminal
+ * squad (basic kit is part of every officer and never packed); consumables cover feasible sequential uses; only actual exclusive/terminal
  * alternatives share an allowance. Manual quantities are never capped.
  * Only public action requirements/bonuses are inspected, never fact truth or people.
  */
@@ -48,7 +48,6 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const chosen = [...new Set(squadIds)].sort();
   const targets = new Set((options.targets ?? chosen).filter((sid) => chosen.includes(sid)));
   const time = Math.max(now, state.department.clockHighWater);
-  const crew = (sid: SquadId) => deployRoster(state, sid, time).goes;
   const taken = new Set<Id>(state.reservations.map((r) => r.unitId));
   const counts: Partial<Record<SquadId, Record<Id, number>>> = {};
   const picks: Partial<Record<SquadId, ItemUnit[]>> = {};
@@ -56,13 +55,13 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   const warnings = new Map<string, string>();
   const label = (sid: SquadId) => state.squads.find((s) => s.id === sid)?.name ?? `Squad ${sid}`;
   const warn = (key: string, message: string) => warnings.set(key, message);
-  const locked = (sid: SquadId, itemId: Id) => itemId === STANDARD_RADIO || Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
+  const locked = (sid: SquadId, itemId: Id) => Object.hasOwn(options.loadouts?.[sid] ?? {}, itemId);
   const upkeep = departmentUpkeep(state);
-  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time, upkeep) }));
+  const pool = Object.keys(ITEMS).filter((id) => !ITEMS[id].supportOnly && !isBasicKit(id)).flatMap((id) => autoEquipReadyUnits(state, id, time)).map((u) => ({ ...u, condition: projectedCondition(state, u, time, upkeep) }));
   const usableIds = new Set(pool.map((u) => u.id));
 
   for (const sid of chosen) {
-    counts[sid] = { ...Object.fromEntries(Object.entries(options.loadouts?.[sid] ?? {}).filter(([id]) => id !== 'battery_pack')), [STANDARD_RADIO]: radioRequirement(state, sid, crew) };
+    counts[sid] = { ...Object.fromEntries(Object.entries(options.loadouts?.[sid] ?? {}).filter(([id]) => id !== 'battery_pack' && !isBasicKit(id))) };
     picks[sid] = [];
     if (targets.has(sid)) {
       result.loadouts[sid] = counts[sid];
@@ -78,26 +77,11 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
     }
   }
 
-  // Standard radios are automatic even when only one squad's optional gear is
-  // targeted. They take distinct best-condition stock before optional choices.
-  const radioPlan = standardRadioPlan(state, chosen.filter((sid) => officers[sid]), time, upkeep, crew);
-  if (radioPlan.issue) warn('standard-radios', radioPlan.issue);
-  for (const sid of chosen) {
-    for (const id of radioPlan.units[sid] ?? []) {
-      taken.add(id);
-      picks[sid]!.push(state.units[id]);
-      if (targets.has(sid) && !options.units?.[sid]?.includes(id)) result.added += 1;
-    }
-    if (targets.has(sid) && officers[sid]) {
-      result.rationale[sid]!.push(`${radioPlan.units[sid]?.length ?? 0}/${radioRequirement(state, sid, crew)} standard radios ready: one per officer, assigned automatically.`);
-    }
-  }
-
   // Exact optional picks across ALL squads take precedence over quantity fill.
   for (const sid of [...chosen].sort((a, b) => Number(targets.has(a)) - Number(targets.has(b)))) {
     for (const id of options.units?.[sid] ?? []) {
       const unit = state.units[id];
-      if (unit?.itemId === STANDARD_RADIO) continue;
+      if (unit && isBasicKit(unit.itemId)) continue;
       if (unit && ITEMS[unit.itemId]?.supportOnly) { warn(`support:${id}`, 'Vehicles require an explicit exterior support slot and are never packed automatically.'); continue; }
       const quantity = unit && locked(sid, unit.itemId) ? counts[sid]![unit.itemId] : undefined;
       const quantityFull = quantity !== undefined && (!Number.isInteger(quantity) || quantity < 0 || picks[sid]!.filter((u) => u.itemId === unit.itemId).length >= quantity);
@@ -123,7 +107,7 @@ export function autoLoadout(state: GameState, scenarioId: Id, squadIds: SquadId[
   // Honor manually requested quantities first, without inventing missing units.
   for (const sid of [...chosen].sort((a, b) => Number(targets.has(a)) - Number(targets.has(b)))) {
     for (const [itemId, qty] of Object.entries(counts[sid]!)) {
-      if (itemId === STANDARD_RADIO) continue;
+      if (isBasicKit(itemId)) continue;
       if (ITEMS[itemId]?.supportOnly) { delete counts[sid]![itemId]; warn(`support:${itemId}`, 'Vehicles require an explicit exterior support slot and are never packed automatically.'); continue; }
       if (!Number.isInteger(qty) || qty < 0 || !ITEMS[itemId]) {
         warn(`quantity:${sid}:${itemId}`, `${label(sid)}: invalid quantity or unknown item ${ITEMS[itemId]?.name ?? itemId}; check the manual loadout.`);

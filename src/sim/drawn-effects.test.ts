@@ -42,9 +42,11 @@ describe('team force (TEAM_FORCE_V1)', () => {
   const run = {} as GameState['activeRun'] & object;
   const units = () => [makeUnit('impact_launcher', 1), makeUnit('conducted_energy_device', 2), makeUnit('service_sidearm', 3), makeUnit('impact_supply', 4), makeUnit('energy_cartridge', 5)];
   const scenario = (people: IncidentPersonDef[]) => ({ incidentPeople: people } as ScenarioDefinition);
-  const pick = (people: IncidentPersonDef[], knowledge: Record<string, string> = {}, flags: string[] = []) =>
-    teamForceProfile(state, { knowledge, flags } as unknown as typeof run, scenario(people), ['A'], ['o1'], 'shooter', units);
-  const choose = (people: IncidentPersonDef[], knowledge?: Record<string, string>, flags?: string[]) => pick(people, knowledge, flags).profile;
+  // Only the basic sidearm: what the threat alone decides, firearm or hands.
+  const armed = () => [makeUnit('service_sidearm', 3)];
+  const pick = (people: IncidentPersonDef[], knowledge: Record<string, string> = {}, flags: string[] = [], carried = units) =>
+    teamForceProfile(state, { knowledge, flags } as unknown as typeof run, scenario(people), ['A'], ['o1'], 'shooter', carried);
+  const choose = (people: IncidentPersonDef[], knowledge?: Record<string, string>, flags?: string[]) => pick(people, knowledge, flags, armed).profile;
   const threat = (armament: NonNullable<IncidentPersonDef['threat']>['armament'], readiness: NonNullable<IncidentPersonDef['threat']>['readiness'] = 'brandished') =>
     ({ armament, readiness, disposition: 'agitated', intent: 'harm_others', awareness: 'aware' }) as const;
   const knife = shooter({ threat: threat('edged'), weapon: { kind: 'edged', real: 'real' } });
@@ -56,33 +58,33 @@ describe('team force (TEAM_FORCE_V1)', () => {
     expect(choose([told], { f_gun: 'reported' })).toBe('firearm');
     expect(choose([told], { f_gun: 'confirmed' })).toBe('firearm');
     // Not believed: the claim was never heard, or the team found it false.
-    expect(choose([told], { f_gun: 'unknown' })).toBe('less_lethal_impact');
-    expect(choose([told], { f_gun: 'disproved' })).toBe('less_lethal_impact');
+    expect(choose([told], { f_gun: 'unknown' })).toBe('hands');
+    expect(choose([told], { f_gun: 'disproved' })).toBe('hands');
     // A gun that is carried, not in hand, is no imminent threat on its own.
-    expect(choose([shooter({ threat: threat('handgun', 'carried') })])).toBe('less_lethal_impact');
+    expect(choose([shooter({ threat: threat('handgun', 'carried') })])).toBe('hands');
     // A replica in hand looks like a gun, and the team acts on what it sees.
     expect(choose([shooter({ weapon: { kind: 'handgun', real: 'replica' } })])).toBe('firearm');
   });
 
   it('uses the firearm against a blade or a bat in hand only within reach of someone', () => {
     const reach = AUTHORIZATION_V1.deadlyForce.reachFt;
-    expect(choose([{ ...knife, doorFt: reach + 5 }])).toBe('less_lethal_impact');
+    expect(choose([{ ...knife, doorFt: reach + 5 }])).toBe('hands');
     expect(choose([{ ...knife, doorFt: reach }])).toBe('firearm');
     expect(choose([{ ...knife, threat: threat('blunt'), doorFt: reach - 2 }])).toBe('firearm');
     // Within reach of a held person in the same room, until that person is out.
     const held: IncidentPersonDef = { id: 'held', kind: 'hostage', label: 'Sam', minor: false, spaceId: 'r1', at: { x: 10, y: 18 } };
     expect(choose([knife, held])).toBe('firearm');
-    expect(choose([knife, held], {}, ['safe:held'])).toBe('less_lethal_impact');
-    expect(choose([knife, { ...held, spaceId: 'r2' }])).toBe('less_lethal_impact');
-    expect(choose([knife, { ...held, at: { x: 10, y: 10 + reach + 1 } }])).toBe('less_lethal_impact');
+    expect(choose([knife, held], {}, ['safe:held'])).toBe('hands');
+    expect(choose([knife, { ...held, spaceId: 'r2' }])).toBe('hands');
+    expect(choose([knife, { ...held, at: { x: 10, y: 10 + reach + 1 } }])).toBe('hands');
   });
 
   it('uses less-lethal when it is carried by a trained officer, in range and clear, and otherwise the team’s hands', () => {
-    expect(choose([empty])).toBe('less_lethal_impact');
-    expect(choose([{ ...empty, doorFt: 80 }])).toBe('hands');
-    expect(choose([{ ...empty, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }])).toBe('hands');
+    expect(pick([empty]).profile).toBe('less_lethal_impact');
+    expect(pick([{ ...empty, doorFt: 80 }]).profile).toBe('hands');
+    expect(pick([{ ...empty, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }]).profile).toBe('hands');
     const child: IncidentPersonDef = { id: 'kid', kind: 'victim', label: 'Sam', minor: true, spaceId: 'r1', at: { x: 13, y: 10 } };
-    expect(choose([empty, child])).toBe('hands');
+    expect(pick([empty, child]).profile).toBe('hands');
     expect(teamForceProfile({ department: { clockHighWater: UNIT_NOW, developmentTiers: {} }, officers: { o1: { certs: [] } } } as unknown as GameState, run, scenario([empty]), ['A'], ['o1'], 'shooter', units).profile).toBe('hands');
     // Out of the launcher's range only the device remains, and it reaches 15 feet.
     const deviceOnly = () => [makeUnit('conducted_energy_device', 2), makeUnit('energy_cartridge', 5)];
@@ -92,8 +94,8 @@ describe('team force (TEAM_FORCE_V1)', () => {
 
   it('says what the team could see and why that tool, in plain sentences', () => {
     const reasons = {
-      gun: pick([shooter()]),
-      reach: pick([{ ...knife, doorFt: 6 }]),
+      gun: pick([shooter()], {}, [], armed),
+      reach: pick([{ ...knife, doorFt: 6 }], {}, [], armed),
       unseen: pick([shooter({ armamentFactId: 'f_gun' })], { f_gun: 'unknown' }),
       outOfReach: pick([knife]),
       cover: pick([{ ...empty, cover: { objectId: 'o', label: 'counter', grade: 'hard' } }]),
@@ -107,6 +109,17 @@ describe('team force (TEAM_FORCE_V1)', () => {
     expect(reasons.none).toMatchObject({ rule: 'hands:none_carried', reason: 'Ash has nothing in hand. The team has no less-lethal tool it can use.' });
     const lines = [...Object.values(FORCE_REASONS.deadly), ...Object.values(FORCE_REASONS.threat), ...Object.values(FORCE_REASONS.tool)];
     for (const line of lines) expect(line, 'colon or dash').not.toMatch(/[:–—]| - /);
+  });
+
+  it('uses less-lethal first on a deadly threat when it is in range and clear, and the firearm when it is not', () => {
+    expect(pick([shooter()])).toMatchObject({ profile: 'less_lethal_impact', reason: 'Ash is holding a handgun. The impact launcher reaches from the door.' });
+    expect(choose([{ ...shooter(), cover: { objectId: 'o', label: 'counter', grade: 'hard' } }])).toBe('firearm');
+    expect(pick([{ ...shooter(), cover: { objectId: 'o', label: 'counter', grade: 'hard' } }]).profile).toBe('firearm');
+    const child: IncidentPersonDef = { id: 'kid', kind: 'victim', label: 'Sam', minor: true, spaceId: 'r1', at: { x: 13, y: 10 } };
+    expect(pick([shooter(), child]).profile).toBe('firearm');
+    expect(pick([{ ...shooter(), doorFt: 80 }]).profile).toBe('firearm');
+    // A launcher with nothing to fire is not carried.
+    expect(pick([shooter()], {}, [], () => units().filter(unit => unit.itemId !== 'impact_supply' && unit.itemId !== 'energy_cartridge')).profile).toBe('firearm');
   });
 
   it('falls through to a qualified less-lethal tool when the deadly threat has no carried firearm', () => {

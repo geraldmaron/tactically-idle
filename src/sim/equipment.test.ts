@@ -33,10 +33,12 @@ describe('starting units', () => {
 
   it('turns the starting stock into individual units with unique serials', () => {
     const counts = Object.fromEntries(Object.keys(ITEMS).map((id) => [id, unitsOf(s, id).length]));
-    expect(counts).toMatchObject({ radio_kit: 8, loud_hailer: 2, throw_phone: 1, service_sidearm: 2, ballistic_shield: 2, door_ram: 1, observation_binoculars: 2, trauma_kit: 6, thermal_imager: 0, camera_drone: 0 });
+    // Basic kit is part of every officer (basic-kit.ts), never stock.
+    expect(counts).toMatchObject({ radio_kit: 0, service_sidearm: 0, compact_carbine: 0, light_protection: 0, loud_hailer: 2, throw_phone: 1, ballistic_shield: 2, door_ram: 1, observation_binoculars: 2, trauma_kit: 6, thermal_imager: 0, camera_drone: 0 });
     const serials = Object.values(s.units).map((u) => u.serial);
     expect(new Set(serials).size).toBe(serials.length);
-    expect(unitsOf(s, 'radio_kit')[0].serial).toBe('RH-0101');
+    // The retired basic kit's ids are still skipped, so serials are where they always were.
+    expect(unitsOf(s, 'loud_hailer')[0].serial).toBe('LH-0107');
     expect(unitsOf(s, 'trauma_kit').every((u) => u.serial.startsWith('TK-'))).toBe(true);
   });
 
@@ -51,30 +53,31 @@ describe('starting units', () => {
     expect(Math.max(...rates)).toBeLessThanOrEqual(1.25);
     expect(new Set(rates).size).toBeGreaterThan(rates.length * 0.8);
     expect(createInitialState(T0).units).toEqual(s.units);
-    const radios = unitsOf(s, 'radio_kit').map((u) => u.condition);
-    expect(Math.min(...radios)).toBeLessThan(60);
-    expect(Math.min(...radios)).toBeGreaterThan(ITEMS.radio_kit.wear.unreliableBelow);
-    expect(Math.max(...radios)).toBeGreaterThan(90);
+    const reusable = Object.values(s.units).filter((u) => ITEMS[u.itemId].kind === 'equipment');
+    const conditions = reusable.map((u) => u.condition);
+    expect(Math.min(...conditions)).toBeLessThan(70);
+    for (const u of reusable) expect(u.condition).toBeGreaterThan(ITEMS[u.itemId].wear.unreliableBelow);
+    expect(Math.max(...conditions)).toBeGreaterThan(90);
   });
 
   it('includes power with equipment and keeps expiry on true consumables', () => {
     expect(unitsOf(s, 'battery_pack')).toEqual([]);
     expect(ITEMS.battery_pack).toBeUndefined();
     for (const u of unitsOf(s, 'trauma_kit')) expect(u.expiresAt).toBeGreaterThan(T0);
-    for (const u of unitsOf(s, 'radio_kit')) expect(u.expiresAt).toBeNull();
+    for (const u of unitsOf(s, 'loud_hailer')) expect(u.expiresAt).toBeNull();
   });
 });
 
 describe('time wear', () => {
-  it('two radios with different wear rates diverge over 10 game days', () => {
+  it('two hailers with different wear rates diverge over 10 game days', () => {
     const s = createInitialState(T0);
-    const [a, b] = unitsOf(s, 'radio_kit');
+    const [a, b] = unitsOf(s, 'loud_hailer');
     a.condition = 80;
     b.condition = 80;
     a.wearRate = 0.8;
     b.wearRate = 1.25;
     const next = ok(s, { type: 'tick' }, T0 + 10 * HOUR_MS); // 1 real hour = 1 game day
-    const perDay = ITEMS.radio_kit.wear.perDay;
+    const perDay = ITEMS.loud_hailer.wear.perDay;
     expect(next.units[a.id].condition).toBeCloseTo(80 - perDay * 0.8 * 10, 6);
     expect(next.units[b.id].condition).toBeCloseTo(80 - perDay * 1.25 * 10, 6);
     expect(next.units[a.id].condition).toBeGreaterThan(next.units[b.id].condition);
@@ -90,33 +93,33 @@ describe('time wear', () => {
 
   it('condition never goes below zero', () => {
     const s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
-    radio.condition = 1;
+    const hailer = unitsOf(s, 'loud_hailer')[0];
+    hailer.condition = 0.5;
     const next = ok(s, { type: 'tick' }, T0 + 24 * HOUR_MS);
-    expect(next.units[radio.id].condition).toBe(0);
+    expect(next.units[hailer.id].condition).toBe(0);
   });
 
   it('units in service do not age', () => {
     let s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit').find((u) => u.condition < ITEMS.radio_kit.wear.restoreTo)!;
-    s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
-    const during = ok(s, { type: 'tick' }, T0 + 2 * HOUR_MS);
-    expect(during.units[radio.id].condition).toBe(radio.condition);
+    const hailer = unitsOf(s, 'loud_hailer').find((u) => u.condition < ITEMS.loud_hailer.wear.restoreTo)!;
+    s = ok(s, { type: 'serviceUnit', unitId: hailer.id }, T0);
+    const during = ok(s, { type: 'tick' }, T0 + HOUR_MS); // mid-service: a hailer takes 2 hours
+    expect(during.units[hailer.id].condition).toBe(hailer.condition);
   });
 });
 
 describe('per-use wear', () => {
   it('only the unit the decision used wears at debrief, scaled by its own rate', () => {
     const s = createInitialState(T0);
-    const [a, b] = readyUnits(s, 'radio_kit', departmentUpkeep(s)); // best condition first
-    expect(reserveLoadouts(s, 'run_1', { A: { radio_kit: 2 } }, undefined, T0, departmentUpkeep(s))).toEqual({ ok: true });
+    const [a, b] = readyUnits(s, 'loud_hailer', departmentUpkeep(s)); // best condition first
+    expect(reserveLoadouts(s, 'run_1', { A: { loud_hailer: 2 } }, undefined, T0, departmentUpkeep(s))).toEqual({ ok: true });
     expect(s.units[a.id].status).toBe('reserved');
     expect(s.units[b.id].status).toBe('reserved');
     const before = { a: s.units[a.id].condition, b: s.units[b.id].condition, usesA: a.uses, usesB: b.uses };
     // Nothing degrades by merely being reserved.
     expect(before.a).toBe(a.condition);
     const out = settleRun(s, 'run_1', [a.id], departmentUpkeep(s));
-    const perUse = ITEMS.radio_kit.wear.perUse;
+    const perUse = ITEMS.loud_hailer.wear.perUse;
     expect(s.units[a.id].condition).toBeCloseTo(before.a - perUse * a.wearRate, 1);
     expect(s.units[a.id].uses).toBe(before.usesA + 1);
     expect(s.units[b.id].condition).toBe(before.b);
@@ -177,17 +180,18 @@ describe('expiry', () => {
 describe('thresholds and the ready pool', () => {
   it('unreliable units stay deployable with reduced effect; failed ones are excluded', () => {
     const s = createInitialState(T0);
-    const [a, b, c] = unitsOf(s, 'radio_kit');
-    a.condition = 40; // unreliable (below 45)
-    b.condition = 10; // failed (at or below 15)
-    const ready = readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id);
+    const [a, b] = unitsOf(s, 'loud_hailer');
+    const c = createUnit(s, 'loud_hailer', T0);
+    a.condition = 35; // unreliable (below 40)
+    b.condition = 5; // failed (at or below 10)
+    const ready = readyUnits(s, 'loud_hailer', departmentUpkeep(s)).map((u) => u.id);
     expect(ready).toContain(a.id);
     expect(ready).not.toContain(b.id);
     expect(ready).toContain(c.id);
-    expect(unitEffectiveness(a, ITEMS.radio_kit)).toBeGreaterThan(0.4);
-    expect(unitEffectiveness(a, ITEMS.radio_kit)).toBeLessThan(1);
-    expect(unitEffectiveness(b, ITEMS.radio_kit)).toBe(0);
-    const views = unitViews(s, 'radio_kit', T0);
+    expect(unitEffectiveness(a, ITEMS.loud_hailer)).toBeGreaterThan(0.4);
+    expect(unitEffectiveness(a, ITEMS.loud_hailer)).toBeLessThan(1);
+    expect(unitEffectiveness(b, ITEMS.loud_hailer)).toBe(0);
+    const views = unitViews(s, 'loud_hailer', T0);
     expect(views.find((v) => v.unit.id === a.id)!.stateLabel).toBe('Unreliable');
     expect(views.find((v) => v.unit.id === b.id)!.stateLabel).toBe('Failed');
     expect(views[0].unit.id).toBe(b.id); // worst first
@@ -197,55 +201,57 @@ describe('thresholds and the ready pool', () => {
 
   it('the shift report lists a unit once when it crosses unreliable, then failed', () => {
     const s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
-    radio.wearRate = 1;
-    radio.condition = 45.5; // 0.15/day: unreliable after ~4 days, failed ~200 days later
+    const hailer = unitsOf(s, 'loud_hailer')[0];
+    hailer.wearRate = 1;
+    hailer.condition = 40.2; // 0.05/day: unreliable after ~4 days, failed ~600 days later
     const a = ok(s, { type: 'tick' }, T0 + 10 * HOUR_MS);
-    expect(a.report!.equipment.filter((e) => e.unitId === radio.id)).toEqual([{ unitId: radio.id, event: 'unreliable' }]);
+    expect(a.report!.equipment.filter((e) => e.unitId === hailer.id)).toEqual([{ unitId: hailer.id, event: 'unreliable' }]);
     const b = ok(a, { type: 'tick' }, T0 + 12 * HOUR_MS);
-    expect(b.report!.equipment.filter((e) => e.unitId === radio.id)).toHaveLength(1);
+    expect(b.report!.equipment.filter((e) => e.unitId === hailer.id)).toHaveLength(1);
     const failing = createInitialState(T0);
-    const r2 = unitsOf(failing, 'radio_kit')[0];
+    const r2 = unitsOf(failing, 'loud_hailer')[0];
     r2.wearRate = 1;
-    r2.condition = 15.5;
+    r2.condition = 10.2;
     const c = ok(failing, { type: 'tick' }, T0 + 10 * HOUR_MS);
     expect(c.report!.equipment.filter((e) => e.unitId === r2.id).map((e) => e.event)).toEqual(['failed']);
   });
 
   it('a short settlement still reports a threshold crossing', () => {
     const s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
-    radio.wearRate = 1;
-    radio.condition = 45.001;
+    const hailer = unitsOf(s, 'loud_hailer')[0];
+    hailer.wearRate = 1;
+    hailer.condition = 40.001;
     const next = ok(s, { type: 'tick' }, T0 + 5 * 60_000); // 5 minutes: below the report threshold
-    expect(next.report?.equipment).toEqual([{ unitId: radio.id, event: 'unreliable' }]);
+    expect(next.report?.equipment).toEqual([{ unitId: hailer.id, event: 'unreliable' }]);
   });
 });
 
 describe('servicing', () => {
   it('costs the service fee, takes real time, and restores to restoreTo, never above', () => {
     let s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit').sort((a, b) => a.condition - b.condition)[0];
-    const { serviceCost, serviceHours, restoreTo } = ITEMS.radio_kit.wear;
+    const hailer = unitsOf(s, 'loud_hailer').sort((a, b) => a.condition - b.condition)[0];
+    const { serviceCost, serviceHours, restoreTo } = ITEMS.loud_hailer.wear;
     const funding = s.department.funding;
-    s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
+    s = ok(s, { type: 'serviceUnit', unitId: hailer.id }, T0);
     expect(s.department.funding).toBe(funding - serviceCost);
-    expect(s.units[radio.id]).toMatchObject({ status: 'service', serviceUntil: T0 + serviceHours * HOUR_MS });
-    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
-    expect(unitViews(s, 'radio_kit', T0).find((v) => v.unit.id === radio.id)).toMatchObject({ stateLabel: 'In service', canService: false, canScrap: false });
+    expect(s.units[hailer.id]).toMatchObject({ status: 'service', serviceUntil: T0 + serviceHours * HOUR_MS });
+    expect(readyUnits(s, 'loud_hailer', departmentUpkeep(s)).map((u) => u.id)).not.toContain(hailer.id);
+    expect(unitViews(s, 'loud_hailer', T0).find((v) => v.unit.id === hailer.id)).toMatchObject({ stateLabel: 'In service', canService: false, canScrap: false });
 
     const mid = ok(s, { type: 'tick' }, T0 + (serviceHours - 1) * HOUR_MS);
-    expect(mid.units[radio.id].status).toBe('service');
+    expect(mid.units[hailer.id].status).toBe('service');
     const done = ok(s, { type: 'tick' }, T0 + serviceHours * HOUR_MS);
-    expect(done.units[radio.id].status).toBe('ready');
-    expect(done.units[radio.id].serviceUntil).toBeNull();
-    expect(done.units[radio.id].condition).toBeCloseTo(restoreTo, 6);
-    // It restores up to restoreTo, never above it: a 96 radio keeps its 96.
-    expect(done.report!.equipment).toContainEqual({ unitId: radio.id, event: 'serviced' });
+    expect(done.units[hailer.id].status).toBe('ready');
+    expect(done.units[hailer.id].serviceUntil).toBeNull();
+    expect(done.units[hailer.id].condition).toBeCloseTo(restoreTo, 6);
+    // It restores up to restoreTo, never above it: a 97 hailer keeps its 97.
+    expect(done.report!.equipment).toContainEqual({ unitId: hailer.id, event: 'serviced' });
 
-    const better = unitsOf(createInitialState(T0), 'radio_kit').sort((a, b) => b.condition - a.condition)[0];
+    const fresh = createInitialState(T0);
+    const better = unitsOf(fresh, 'loud_hailer')[0];
+    better.condition = 97;
     expect(better.condition).toBeGreaterThan(restoreTo);
-    expect(refused(createInitialState(T0), { type: 'serviceUnit', unitId: better.id }, T0)).toMatch(/already in better condition/);
+    expect(refused(fresh, { type: 'serviceUnit', unitId: better.id }, T0)).toMatch(/already in better condition/);
   });
 
   it('is refused for consumables, reserved units, funds shortfalls and unknown units', () => {
@@ -253,56 +259,56 @@ describe('servicing', () => {
     const kit = unitsOf(s, 'trauma_kit')[0];
     expect(refused(s, { type: 'serviceUnit', unitId: kit.id }, T0)).toMatch(/Consumables/);
     expect(refused(s, { type: 'serviceUnit', unitId: 'nope' }, T0)).toMatch(/No such unit/);
-    const radio = unitsOf(s, 'radio_kit').sort((a, b) => a.condition - b.condition)[0];
+    const hailer = unitsOf(s, 'loud_hailer').sort((a, b) => a.condition - b.condition)[0];
     s.department.funding = 10;
-    expect(refused(s, { type: 'serviceUnit', unitId: radio.id }, T0)).toMatch(/Needs \$60/);
+    expect(refused(s, { type: 'serviceUnit', unitId: hailer.id }, T0)).toMatch(/Needs \$30/);
     s.department.funding = 5000;
-    s.units[radio.id].status = 'reserved';
-    expect(refused(s, { type: 'serviceUnit', unitId: radio.id }, T0)).toMatch(/deployed/);
+    s.units[hailer.id].status = 'reserved';
+    expect(refused(s, { type: 'serviceUnit', unitId: hailer.id }, T0)).toMatch(/deployed/);
   });
 
   it('a failed unit can be serviced back into the ready pool', () => {
     let s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
-    radio.condition = 5;
-    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
-    s = ok(s, { type: 'serviceUnit', unitId: radio.id }, T0);
+    const hailer = unitsOf(s, 'loud_hailer')[0];
+    hailer.condition = 5;
+    expect(readyUnits(s, 'loud_hailer', departmentUpkeep(s)).map((u) => u.id)).not.toContain(hailer.id);
+    s = ok(s, { type: 'serviceUnit', unitId: hailer.id }, T0);
     s = ok(s, { type: 'tick' }, T0 + 4 * HOUR_MS);
-    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).toContain(radio.id);
+    expect(readyUnits(s, 'loud_hailer', departmentUpkeep(s)).map((u) => u.id)).toContain(hailer.id);
   });
 });
 
 describe('scrapping', () => {
   it('removes the unit from the department for a small salvage refund', () => {
     let s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
+    const hailer = unitsOf(s, 'loud_hailer')[0];
     const funding = s.department.funding;
-    const owned = ownedCount(s, 'radio_kit');
-    s = ok(s, { type: 'scrapUnit', unitId: radio.id }, T0);
-    expect(s.units[radio.id].status).toBe('scrapped');
-    expect(ownedCount(s, 'radio_kit')).toBe(owned - 1);
-    expect(readyUnits(s, 'radio_kit', departmentUpkeep(s)).map((u) => u.id)).not.toContain(radio.id);
-    expect(s.department.funding).toBe(funding + Math.round(ITEMS.radio_kit.cost * 0.05));
-    expect(unitViews(s, 'radio_kit', T0).map((v) => v.unit.id)).not.toContain(radio.id);
-    expect(refused(s, { type: 'scrapUnit', unitId: radio.id }, T0)).toMatch(/already scrapped/);
+    const owned = ownedCount(s, 'loud_hailer');
+    s = ok(s, { type: 'scrapUnit', unitId: hailer.id }, T0);
+    expect(s.units[hailer.id].status).toBe('scrapped');
+    expect(ownedCount(s, 'loud_hailer')).toBe(owned - 1);
+    expect(readyUnits(s, 'loud_hailer', departmentUpkeep(s)).map((u) => u.id)).not.toContain(hailer.id);
+    expect(s.department.funding).toBe(funding + Math.round(ITEMS.loud_hailer.cost * 0.05));
+    expect(unitViews(s, 'loud_hailer', T0).map((v) => v.unit.id)).not.toContain(hailer.id);
+    expect(refused(s, { type: 'scrapUnit', unitId: hailer.id }, T0)).toMatch(/already scrapped/);
   });
 
   it('refuses reserved units', () => {
     const s = createInitialState(T0);
-    const radio = readyUnits(s, 'radio_kit', departmentUpkeep(s))[0];
-    reserveLoadouts(s, 'run_1', { A: { radio_kit: 1 } }, undefined, T0, departmentUpkeep(s));
-    expect(refused(s, { type: 'scrapUnit', unitId: radio.id }, T0)).toMatch(/deployed/);
+    const hailer = readyUnits(s, 'loud_hailer', departmentUpkeep(s))[0];
+    reserveLoadouts(s, 'run_1', { A: { loud_hailer: 1 } }, undefined, T0, departmentUpkeep(s));
+    expect(refused(s, { type: 'scrapUnit', unitId: hailer.id }, T0)).toMatch(/deployed/);
   });
 
   it('restock rules replace scrapped and expired units', () => {
     let s = createInitialState(T0);
     s = ok(s, { type: 'unlockNode', nodeId: 'logistics_presets' }, T0);
     s = ok(s, { type: 'unlockNode', nodeId: 'logistics_restock' }, T0);
-    s = ok(s, { type: 'setRestockRule', rule: { itemId: 'radio_kit', target: 8, budgetCeiling: 2000 } }, T0);
-    s = ok(s, { type: 'scrapUnit', unitId: unitsOf(s, 'radio_kit')[0].id }, T0);
+    s = ok(s, { type: 'setRestockRule', rule: { itemId: 'loud_hailer', target: 2, budgetCeiling: 2000 } }, T0);
+    s = ok(s, { type: 'scrapUnit', unitId: unitsOf(s, 'loud_hailer')[0].id }, T0);
     const next = ok(s, { type: 'tick' }, T0 + HOUR_MS);
-    expect(ownedCount(next, 'radio_kit')).toBe(8);
-    const fresh = unitsOf(next, 'radio_kit').filter((u) => u.acquiredAt >= T0);
+    expect(ownedCount(next, 'loud_hailer')).toBe(2);
+    const fresh = unitsOf(next, 'loud_hailer').filter((u) => u.acquiredAt >= T0);
     expect(fresh).toHaveLength(1);
     expect(fresh[0].condition).toBeGreaterThan(99);
   });
@@ -311,12 +317,14 @@ describe('scrapping', () => {
 describe('store and unit views', () => {
   it('storeOptions counts units and reports mean condition', () => {
     let s = createInitialState(T0);
-    const radios = unitsOf(s, 'radio_kit');
-    radios[0].condition = 40; // unreliable
-    radios[1].condition = 10; // failed
-    s = ok(s, { type: 'serviceUnit', unitId: radios[2].id }, T0);
-    const opt = storeOptions(s).find((o) => o.item.id === 'radio_kit')!;
-    expect(opt).toMatchObject({ owned: 8, ready: 6, inService: 1, unreliable: 1, reserved: 0, expired: 0 });
+    createUnit(s, 'loud_hailer', T0, { condition: 90 });
+    createUnit(s, 'loud_hailer', T0, { condition: 90 });
+    const hailers = unitsOf(s, 'loud_hailer');
+    hailers[0].condition = 35; // unreliable
+    hailers[1].condition = 5; // failed
+    s = ok(s, { type: 'serviceUnit', unitId: hailers[2].id }, T0);
+    const opt = storeOptions(s).find((o) => o.item.id === 'loud_hailer')!;
+    expect(opt).toMatchObject({ owned: 4, ready: 2, inService: 1, unreliable: 1, failed: 1, reserved: 0, expired: 0 });
     expect(opt.meanCondition).toBeGreaterThan(50);
     expect(opt.meanCondition).toBeLessThan(95);
     expect(storeOptions(s).find((o) => o.item.id === 'thermal_imager')!.meanCondition).toBeNull();
@@ -324,17 +332,17 @@ describe('store and unit views', () => {
 
   it('unitViews gives days to unreliable from the unit\'s own rate, and reasons for what is not allowed', () => {
     const s = createInitialState(T0);
-    const radio = unitsOf(s, 'radio_kit')[0];
-    radio.condition = 60;
-    radio.wearRate = 1.25;
-    unitsOf(s, 'radio_kit')[1].condition = 97;
-    const v = unitViews(s, 'radio_kit', T0).find((x) => x.unit.id === radio.id)!;
-    expect(v.daysToUnreliable).toBeCloseTo((60 - 45) / (0.15 * 1.25), 6);
+    const hailer = unitsOf(s, 'loud_hailer')[0];
+    hailer.condition = 60;
+    hailer.wearRate = 1.25;
+    unitsOf(s, 'loud_hailer')[1].condition = 97;
+    const v = unitViews(s, 'loud_hailer', T0).find((x) => x.unit.id === hailer.id)!;
+    expect(v.daysToUnreliable).toBeCloseTo((60 - 40) / (0.05 * 1.25), 6);
     expect(v.stateLabel).toBe('Worn');
     expect(v.canService).toBe(true);
     expect(v.canScrap).toBe(true);
     expect(v.effectiveness).toBe(1);
-    const good = unitViews(s, 'radio_kit', T0).find((x) => x.unit.condition >= 95)!;
+    const good = unitViews(s, 'loud_hailer', T0).find((x) => x.unit.condition >= 95)!;
     expect(good.stateLabel).toBe('Good');
     expect(good.canService).toBe(false);
     expect(good.serviceReason).toMatch(/better condition/);
@@ -343,13 +351,13 @@ describe('store and unit views', () => {
     expect(kit.daysToUnreliable).toBeNull();
     expect(kit.expiresAt).not.toBeNull();
     // Between ticks the view projects the unsettled time, so it stays exact.
-    const later = unitViews(s, 'radio_kit', T0 + 10 * HOUR_MS).find((x) => x.unit.id === radio.id)!;
-    expect(later.unit.condition).toBeCloseTo(60 - 0.15 * 1.25 * 10, 6);
+    const later = unitViews(s, 'loud_hailer', T0 + 10 * HOUR_MS).find((x) => x.unit.id === hailer.id)!;
+    expect(later.unit.condition).toBeCloseTo(60 - 0.05 * 1.25 * 10, 6);
   });
 
   it('buyItem creates separate units at condition 100 with their own wear rates', () => {
-    const s = ok(createInitialState(T0), { type: 'buyItem', itemId: 'radio_kit', qty: 3 }, T0);
-    const fresh = unitsOf(s, 'radio_kit').filter((u) => u.condition === 100);
+    const s = ok(createInitialState(T0), { type: 'buyItem', itemId: 'loud_hailer', qty: 3 }, T0);
+    const fresh = unitsOf(s, 'loud_hailer').filter((u) => u.condition === 100);
     expect(fresh).toHaveLength(3);
     expect(new Set(fresh.map((u) => u.wearRate)).size).toBeGreaterThan(1);
     expect(new Set(Object.values(s.units).map((u) => u.serial)).size).toBe(Object.keys(s.units).length);

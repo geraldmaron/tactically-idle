@@ -16,7 +16,8 @@ import { money, perHour, rate, relativeTime, yearsText } from '../format';
 import './recruit.css';
 import './squad-visual.css';
 import { CERT_NAME } from '../../content/certs';
-import { ISSUE_RADIO, issueKit } from '../../content/issue-kit';
+import { issueKit } from '../../content/issue-kit';
+import { BASIC_KIT, isBasicKit } from '../../sim/basic-kit';
 import { ITEMS } from '../../content/items';
 import { GearArtFrame } from '../art/GearArt';
 import { Sheet } from '../components/Sheet';
@@ -215,10 +216,10 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
           <span className="contract-rate-row"><span>Learns from calls</span><b className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</b></span>
           <span className="contract-rate-row"><span>Instructor detail</span><b className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'Needs a certification' : `+${perHour(detail)}`}</b></span>
         </section>
-        {kit.length > 0 && <section className="contract-kit" aria-label="Brings">
+        <section className="contract-kit" aria-label="Brings">
           <span className="contract-label">Brings</span>
-          <ul>{kit.map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{itemId === ISSUE_RADIO && <span className="dim">Provided</span>}</li>)}</ul>
-        </section>}
+          <ul>{[...BASIC_KIT, ...kit].map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{isBasicKit(itemId) && <span className="dim">Basic kit</span>}</li>)}</ul>
+        </section>
         {!hired && !proj.ok && proj.reason && <p className="note note-warn"><Icon name="lock" size={16} />{proj.reason}</p>}
       </div>
     </Sheet>

@@ -6,8 +6,8 @@ import type { ItemDefinition } from '../sim/types';
 export const ITEMS: Record<string, ItemDefinition> = {
   radio_kit: {
     id: 'radio_kit',
-    helpsWith: ["Each deployed officer needs a working headset for squad coordination."],
-    counters: ["Walls, floors, distance and worn equipment weaken the connection. Extra radios do not add another bonus."],
+    helpsWith: ["Basic kit: every officer carries one. It needs no training or upgrade and is never bought, worn out or packed.", "Keeps squads in contact on a call."],
+    counters: ["Walls, floors and distance weaken the connection. A radio relay helps where the link is weak."],
     category: 'comms',
     name: 'Radio headset',
     kind: 'equipment',
@@ -218,16 +218,16 @@ export const ITEMS: Record<string, ItemDefinition> = {
 },
   light_protection: {
     "id": "light_protection",
-    "name": "Light protective kit",
+    "name": "Light body armor",
     "category": "protection",
     "kind": "equipment",
     "cost": 650,
     "tags": [
         "light_protection"
     ],
-    "description": "Lightweight protection for calls that include a protective response.",
-    "helpsWith": ["Helps protect officers during the available protective response option.", "Game bonus: +4 to that action score."],
-    "counters": ["Gives no bonus to conversation or first aid. Only the strongest suitable protective kit counts; extra kits do not add bonuses."],
+    "description": "Light body armor every officer wears on a call.",
+    "helpsWith": ["Basic kit: every officer carries one. It needs no training or upgrade and is never bought, worn out or packed."],
+    "counters": ["Adds nothing to an action score. Shields and rescue shields are the protection upgrades."],
     "wear": {
         "perUse": 4,
         "perDay": 0.05,
@@ -279,9 +279,9 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "tags": [
         "response_sidearm"
     ],
-    "description": "Supports trained officers when a call offers firearm use. That choice can cause serious injury or death even when its protection task succeeds.",
-    "helpsWith": ["Requires an officer trained for entry team duty and a suitable response option.", "Game bonus: +3 to that action score."],
-    "counters": ["Gives no bonus on routine calls or during conversations. Only the best suitable response weapon counts; extra weapons do not add bonuses."],
+    "description": "The handgun every officer carries. Firing it can cause serious injury or death even when its protection task succeeds.",
+    "helpsWith": ["Basic kit: every officer carries one. It needs no training or upgrade and is never bought, worn out or packed."],
+    "counters": ["Adds nothing to an action score. The response shotgun and the precision rifle are the response upgrades."],
     "wear": {
         "perUse": 5,
         "perDay": 0.05,
@@ -291,9 +291,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
         "serviceCost": 90,
         "restoreTo": 95
     },
-    "requiresCerts": [
-        "entry_team"
-    ],
     "capabilities": [
         "authorized_response"
     ]
@@ -307,9 +304,9 @@ export const ITEMS: Record<string, ItemDefinition> = {
     "tags": [
         "response_carbine"
     ],
-    "description": "Supports trained officers when a high-risk call offers firearm use. Task success and injury or death are separate outcomes.",
-    "helpsWith": ["Requires an officer trained for entry team duty and a suitable response option.", "Game bonus: +6 to that action score."],
-    "counters": ["Adds 1 minute to the action. Gives no bonus on routine calls. Only the best suitable response weapon counts."],
+    "description": "The primary weapon every officer carries. Task success and injury or death are separate outcomes.",
+    "helpsWith": ["Basic kit: every officer carries one. It needs no training or upgrade and is never bought, worn out or packed."],
+    "counters": ["Adds nothing to an action score. The response shotgun and the precision rifle are the response upgrades."],
     "wear": {
         "perUse": 5,
         "perDay": 0.05,
@@ -319,10 +316,6 @@ export const ITEMS: Record<string, ItemDefinition> = {
         "serviceCost": 90,
         "restoreTo": 95
     },
-    "requiresNode": "field_response_program",
-    "requiresCerts": [
-        "entry_team"
-    ],
     "capabilities": [
         "authorized_response"
     ]
@@ -337,7 +330,7 @@ export const ITEMS: Record<string, ItemDefinition> = {
         "response_shotgun"
     ],
     "description": "Supports trained officers when a call offers firearm use, with context-dependent game effects. Serious injury or death remains possible.",
-    "helpsWith": ["Requires an officer trained for entry team duty.", "Game bonus: +5 to the response action score in tight spaces, or +2 in an open area."],
+    "helpsWith": ["Requires an officer trained for entry team duty.", "Game bonus: +6 to the response action score in tight spaces, or +3 in an open area."],
     "counters": ["Adds 1 minute. Cannot open doors or use other ammunition types in this game. Only the best suitable response weapon counts."],
     "wear": {
         "perUse": 5,
