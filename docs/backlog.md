@@ -465,28 +465,9 @@ profile get a `swat-writing-review` read.
 
 ## Player experience
 
-### ui-gates: Every surface is measured for visual antipatterns at every width
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout gates, not odds); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-The owner (2026-10-22): the app feels half baked, with missing icons and polish, uneven padding and margins,
-and inconsistencies, and every surface must have code-level validation with no assumptions. Astra's audit of
-261 fixed-seed frames (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`, captures beside it) found 29 defects and proposed rules R1 to R18. Build them:
-static rules in vitest (R1 spacing from `--sp*` tokens, R3 declared gaps, R4 a lead visual on every section
-heading and list row, R5 kit semantics for source, status and outcome, R7 the type floors, R8 no literal
-colors in CSS or TSX, R9 icon sizes 16/20/24 and stroke 1.75, R10 one implementation per component family,
-R11 shared empty, loading and error states) and a rendered gate, `npm run check:ui`, that runs the capture
-probe at 320, 390 and 430 and checks R2 one gutter per surface, R6 effective 44px hit regions, R12 no
-unintended overflow or essential-copy clipping, R13 safe areas, R14 contrast, R15 chip insets, R16 the first
-decision reachable, R17 every registered surface and state captured, R18 art decoded. Fix the probe first:
-active-surface scoping, ancestor clipping, hit-testing, per-element ids, and unlocked restock, presets and
-error states. Debt lives in a generated baseline (`npm run ui:baseline`) that only falls and that the lead
-regenerates at each merge; rules Astra marks hard zero start as ratchets at today's count. Done: every rule
-has a gate, `npm run verify` and `npm run check:ui` pass on today's UI, and a negative control fails each rule.
-
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=ui-gates; integrate=none; ship=none
+Needs: start=none; integrate=none; ship=none
 
 Astra's packages P2 to P8, one builder each, no shared files: P2 HQ, finance and command staff; P3 squads,
 officer sheet, hire, arrange and training; P4 Build, upgrades and Armory (essential-copy clamps, hidden
@@ -497,7 +478,9 @@ P7 live call, review, result and debrief (compact strip and empty radio, keeping
 `docs/ops-experience.md`, a reachable first choice, outcome and resource marks); P8 portraits, art and the
 blueprint (literal colors, art sizing, fallback floors). The shared tokens, variants, `LoadingState`,
 `ErrorState`, semantic type classes, `ICON_SIZE` and required `Row.lead` and `Section.icon` landed with
-ui-primitives (2026-10-22). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
+ui-primitives (2026-10-22). The gates (`ui-gates`, 2026-10-22) hold every rule's debt in `src/ui/ui-debt.json` (`npm run check:ui`,
+`npm run ui:baseline`, `docs/visual-kit.md` "UI gates"); each package brings its files and states to zero.
+Briefs: `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/ui-surfaces-brief.md`. File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
 package's surfaces pass every gate at 320, 390 and 430, a fixed-seed sweep compared with the 2026-10-22
 captures, and a closing Astra read of the after set.
 

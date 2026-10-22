@@ -175,7 +175,12 @@ ui-primitives merged (2c8d943; small-text ceiling 307 to 275 and architecture re
 re-run on 7375045, the owner's direct ask that made `Row.lead` and `Section.icon` required and touched 8
 call sites in `SettingsSheet.tsx`, `HQ.tsx`, `Recruit.tsx` plus `LiveView.tsx` and `live-call.css`). The lead
 looked at the merged captures (`ui-audit/after-primitives/`): chips keep their inset; the Menu's switch rows
-still lack leads (P5). Its dev servers on 5175 and 5176 are its own; it stops them when told.
+still lack leads (P5). Its dev servers on 5175 and 5176 were stopped.
+
+ui-gates merged (712c3e4): `npm run verify` 3,088 tests, art, build and no-lab green; `npm run check:ui` against
+5182 matches `src/ui/ui-debt.json` on every rule; Codex's four gaps fixed (b4c9cd9). Gaps it states: R3's
+rendered sibling-gap check, R5 forecast rows in the DOM, R14 pixels behind art. Wave B (P2 to P8) proposed as
+cards, ports P2 5175, P3 5176, P4 5177, P5 5178, P6 5179, P7 5180, P8 5185; brief `ui-audit/ui-surfaces-brief.md`.
 
 ## Locks outside normal ownership
 
