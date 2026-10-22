@@ -20,7 +20,7 @@ const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 
 /** A score as a filled ring: mint from 80, amber from 50, danger below. The number or icon sits inside. */
 export function ScoreRing({ value, size = 34, children }: { value: number; size?: number; children?: ReactNode }) {
   const v = Math.max(0, Math.min(100, value));
-  const tone = v >= 80 ? 'var(--mint)' : v >= 50 ? 'var(--amber)' : 'var(--danger)';
+  const tone = v >= 80 ? 'var(--mint)' : v >= 50 ? 'var(--warn)' : 'var(--danger)';
   return <span className="score-ring" aria-hidden="true" style={{ width: size, height: size, background: `conic-gradient(${tone} ${v * 3.6}deg, rgba(255,255,255,.1) 0deg)` }}><span className="score-ring-core" style={{ width: size - 8, height: size - 8 }}>{children}</span></span>;
 }
 

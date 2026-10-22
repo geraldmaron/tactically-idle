@@ -3,12 +3,12 @@
    scanning the log hears the subject first. */
 .transcript { display: grid; gap: 6px; margin: 10px 0 12px; padding: 10px 12px; list-style: none; border-radius: 8px; background: rgba(7, 12, 22, .55); border: 1px solid rgba(255, 255, 255, .06); }
 .transcript-row { display: grid; grid-template-columns: minmax(64px, 26%) 1fr; gap: 10px; align-items: baseline; }
-.transcript-speaker { font: 600 12px/1.3 var(--font-cond); letter-spacing: .08em; text-transform: uppercase; color: var(--amber-2); overflow-wrap: anywhere; }
-.transcript-line { font-size: 15px; line-height: 1.45; color: #eef2f8; }
-.transcript-negotiator .transcript-speaker { color: #8fb8ff; }
+.transcript-speaker { font: 600 12px/1.3 var(--font-cond); color: var(--t2); overflow-wrap: anywhere; }
+.transcript-line { font-size: 15px; line-height: 1.45; color: var(--t1); }
+.transcript-negotiator .transcript-speaker { color: var(--info); }
 .transcript-radio .transcript-speaker { color: var(--text-dim); }
 .transcript-negotiator .transcript-line,
-.transcript-radio .transcript-line { font-family: var(--font-cond); font-size: 15.5px; letter-spacing: .01em; color: #c9d3e2; }
+.transcript-radio .transcript-line { font-family: var(--font-cond); font-size: 15.5px; letter-spacing: .01em; color: var(--t-plate); }
 .transcript-repeat { margin-top: -2px; }
 @media (max-width: 340px) {
   .transcript-row { grid-template-columns: 1fr; gap: 1px; }

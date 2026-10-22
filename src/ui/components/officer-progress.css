@@ -43,6 +43,6 @@
 .rank-ladder > li[data-state="current"] { border-color: var(--mint); background: rgba(90, 207, 166, 0.08); }
 .rank-ladder > li[data-state="current"] .rank-ladder-mark { border-color: var(--mint); box-shadow: 0 0 0 2px rgba(90, 207, 166, 0.25); }
 .rank-ladder > li[data-state="current"] .rank-ladder-xp { color: var(--mint); }
-.rank-ladder > li[data-state="next"] { border-color: rgba(243, 180, 50, 0.45); }
-.rank-ladder > li[data-state="next"] .rank-ladder-xp { color: var(--amber-2); }
+.rank-ladder > li[data-state="next"] { border-color: var(--t1); }
+.rank-ladder > li[data-state="next"] .rank-ladder-xp { color: var(--t1); }
 .rank-ladder > li[data-state="later"] { opacity: 0.72; }

@@ -15,12 +15,12 @@
 /* Hire contract (hire-contract-card): money as bars on one scale, the kit as art. */
 .contract { display: grid; gap: 14px; min-width: 0; }
 .contract section { display: grid; gap: 6px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
-.contract-label { font-family: var(--font-cond); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
-.contract-hero { font-family: var(--font-cond); font-size: 36px; line-height: 1; color: var(--amber-2); }
+.contract-label { font-family: var(--font-cond); font-size: 12px; color: var(--text-dim); }
+.contract-hero { font-family: var(--font-cond); font-size: 36px; line-height: 1; color: var(--t1); }
 .contract-funds { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--text) 8%, transparent); }
 .contract-funds i { display: block; height: 100%; }
 .contract-funds-left { background: var(--mint); }
-.contract-funds-spent { background: repeating-linear-gradient(135deg, var(--amber) 0 6px, color-mix(in srgb, var(--amber) 55%, transparent) 6px 12px); }
+.contract-funds-spent { background: repeating-linear-gradient(135deg, var(--t3) 0 6px, color-mix(in srgb, var(--t3) 55%, transparent) 6px 12px); }
 .contract-funds-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
 .contract-rate-row { display: flex; justify-content: space-between; font-size: 14px; }
 .contract-gauge { display: grid; gap: 6px; }
@@ -31,4 +31,3 @@
 .contract-gauge-bar i.neg { background: var(--danger); }
 .contract-kit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .contract-kit li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 14px; }
-.contract-kit li .dim { font-size: 12px; }

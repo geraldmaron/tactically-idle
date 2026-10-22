@@ -2,12 +2,12 @@
 .operation-squad-focus .choice-rail { margin: 0; }
 .operation-squad-hint { margin: 5px 0 8px; color: var(--text-dim); font-size: 12px; line-height: 1.45; }
 .squad-tab-detail { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
-.squad-tab-detail small { color: var(--text-dim); font-size: 11px; line-height: 1.2; }
+.squad-tab-detail small { color: var(--text-dim); font-size: var(--s12); line-height: 1.2; }
 .action-squad-assignment { padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); }
 .assignment-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .assignment-choice { display: flex; flex: 1 1 115px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 3px; padding: 9px 11px; text-align: left; }
 .assignment-choice strong { font-size: 13px; }
-.assignment-choice small { color: var(--text-dim); font-size: 11px; line-height: 1.35; }
+.assignment-choice small { color: var(--text-dim); font-size: var(--s12); line-height: 1.35; }
 .assignment-choice:disabled { opacity: .55; cursor: default; }
 .operation-squad-participants { margin: 3px 0; font-size: 12px; line-height: 1.45; }
 .prep-squad-workspace { min-width: 0; }

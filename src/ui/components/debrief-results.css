@@ -26,7 +26,7 @@
 .result-officer-heading { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; align-items: baseline; }
 .result-officer-heading > div { min-width: 0; }
 .result-officer-heading strong { font-size: 15px; line-height: 1.3; }
-.result-officer-id { display: block; font-size: 11px; color: var(--text-dim); }
+.result-officer-id { display: block; font-size: var(--s12); color: var(--text-dim); }
 .result-xp { flex-shrink: 0; color: var(--mint); font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .result-stress { display: grid; gap: 4px; }
 .result-stress .meter { width: 100%; height: 5px; }
@@ -55,9 +55,9 @@
   .result-portrait-stack > :nth-child(3) { display: none; }
 }
 
-.result-completion { min-width: 0; border-left: 3px solid var(--amber); padding-left: 12px; display: grid; gap: 7px; }
+.result-completion { min-width: 0; border-left: 3px solid var(--hair-2); padding-left: 12px; display: grid; gap: 7px; }
 .result-completion-achieved { border-left-color: var(--mint); }
-.result-completion-label { color: var(--amber-2); font-size: 23px; line-height: 1.2; }
+.result-completion-label { color: var(--t2); font-size: 23px; line-height: 1.2; }
 .result-completion-achieved .result-completion-label { color: var(--mint); }
 .result-completion p { margin: 0; font-size: 14px; line-height: 1.45; }
 .result-remaining h3 { margin: 5px 0; font-size: 14px; }
@@ -77,14 +77,14 @@
 .score-line-values { display: flex; flex-shrink: 0; gap: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .force-lines li { display: grid; gap: 3px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.45; }
 .force-line-reason { font-size: 13px; color: var(--text-dim); }
-.force-line-why { margin-right: 6px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); }
+.force-line-why { margin-right: 6px; font-size: var(--s12); color: var(--t2); }
 
 /* The promotion moment (officer-ranks): one bright row per rank reached, above the officer list. */
 .result-promotions { display: grid; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
-.result-promotion { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(243, 180, 50, 0.55); border-radius: 10px; background: linear-gradient(120deg, rgba(243, 180, 50, 0.16), var(--panel)); animation: result-promotion-in 520ms ease-out both; }
-.result-promotion-mark { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #24324a, #0b111c); border: 2px solid var(--amber); box-shadow: 0 0 14px rgba(243, 180, 50, 0.35); }
+.result-promotion { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(69, 207, 143, 0.55); border-radius: 10px; background: linear-gradient(120deg, rgba(69, 207, 143, 0.16), var(--panel)); animation: result-promotion-in 520ms ease-out both; }
+.result-promotion-mark { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, var(--ink-3), var(--ink-0)); border: 2px solid var(--good); box-shadow: 0 0 14px rgba(69, 207, 143, 0.35); }
 .result-promotion-body { display: grid; gap: 2px; min-width: 0; }
-.result-promotion-kicker { font: 700 11px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-2); }
+.result-promotion-kicker { font: 700 var(--s12)/1.2 var(--font-cond); color: var(--t2); }
 .result-promotion-body strong { font: 700 16px/1.2 var(--font-cond); letter-spacing: 0.02em; }
 .result-promotion-line { font-size: 12.5px; color: var(--text-dim); }
 .result-xp .rank-insignia { vertical-align: -2px; }

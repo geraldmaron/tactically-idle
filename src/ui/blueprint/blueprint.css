@@ -29,7 +29,7 @@
 
 /* ---------------------------------------------------------------- paper */
 .bp-grid-fine {
-  stroke: #fff;
+  stroke: var(--white);
   stroke-opacity: 0.13;
   stroke-width: 0.6px;
   fill: none;
@@ -37,7 +37,7 @@
   shape-rendering: crispEdges;
 }
 .bp-grid-major {
-  stroke: #fff;
+  stroke: var(--white);
   stroke-opacity: 0.27;
   stroke-width: 0.9px;
   fill: none;
@@ -77,7 +77,7 @@
 }
 .bp-wall-fill {
   fill: none;
-  stroke: #123c92;
+  stroke: var(--bp-stroke);
 }
 .bp-wall-hatch {
   fill: none;
@@ -103,7 +103,7 @@
   vector-effect: non-scaling-stroke;
 }
 .bp-door-leaf {
-  fill: #0f3685;
+  fill: var(--bp-fill-2);
   stroke: var(--chalk);
   stroke-width: 1.1px;
   vector-effect: non-scaling-stroke;
@@ -124,7 +124,7 @@
   stroke: none;
 }
 .bp-lock-body {
-  fill: #0f3685;
+  fill: var(--bp-fill-2);
   stroke: var(--marker-amber);
   stroke-width: 1.2px;
   vector-effect: non-scaling-stroke;
@@ -162,7 +162,7 @@
   fill: none;
 }
 .bp-solid {
-  fill: #1a4aa6;
+  fill: var(--bp-fill);
   fill-opacity: 0.88;
 }
 .bp-soft {
@@ -203,7 +203,7 @@
   letter-spacing: 0.1em;
   fill: var(--chalk);
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.5px;
   stroke-linejoin: round;
   stroke-opacity: 0.85;
@@ -215,7 +215,7 @@
   letter-spacing: 0.14em;
   fill: var(--chalk-dim);
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.4px;
   stroke-linejoin: round;
 }
@@ -282,7 +282,7 @@
   font-size: 2.15px;
   letter-spacing: 0.02em;
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.55px;
   stroke-linejoin: round;
 }
@@ -296,7 +296,7 @@
   fill-opacity: 0.86;
 }
 .bp-hl-streak {
-  stroke: #ffd2a1;
+  stroke: var(--bp-warm);
   stroke-opacity: 0.5;
   stroke-width: 0.12px;
   fill: none;
@@ -306,7 +306,7 @@
   font-weight: 700;
   font-size: 1.95px;
   letter-spacing: 0.05em;
-  fill: #0a1d4f;
+  fill: var(--bp-ink);
 }
 .bp-front-arrow {
   fill: none;
@@ -322,7 +322,7 @@
   font-size: 1.75px;
   fill: var(--chalk);
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.45px;
   stroke-linejoin: round;
 }
@@ -336,7 +336,7 @@
 
 /* squad tokens */
 .bp-badge {
-  fill: #0d2a6e;
+  fill: var(--bp-fill-3);
   stroke: var(--chalk);
   stroke-width: 0.2px;
   stroke-linejoin: round;
@@ -354,13 +354,13 @@
   letter-spacing: 0.12em;
   fill: var(--chalk);
   paint-order: stroke;
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-width: 0.5px;
   stroke-linejoin: round;
 }
 .bp-squad-focus .bp-badge {
   fill: var(--amber);
-  stroke: #0b1d4d;
+  stroke: var(--bp-ink);
   stroke-width: 0.22px;
 }
 .bp-squad-focus .bp-badge-letter {
@@ -380,7 +380,7 @@
 }
 .bp-select-glow {
   fill: none;
-  stroke: #fff;
+  stroke: var(--white);
   stroke-opacity: 0.75;
   stroke-width: 5px;
   vector-effect: non-scaling-stroke;
@@ -451,7 +451,7 @@
   border-radius: 4px;
   background: rgba(9, 28, 78, 0.88);
   color: var(--chalk);
-  font: 500 11px/1.3 var(--font-cond);
+  font: 500 var(--s12)/1.3 var(--font-cond);
   text-align: right;
   pointer-events: none;
 }
@@ -554,7 +554,7 @@
 .bp-roomlist-tag {
   margin-left: 8px;
   font-family: var(--font-cond);
-  font-size: 11px;
+  font-size: var(--s12);
   letter-spacing: 0.08em;
   color: var(--muted);
   border: 1px solid var(--line-strong);
@@ -606,7 +606,7 @@
 }
 .bp-wall-glassfill {
   fill: none;
-  stroke: #8fc2ff;
+  stroke: var(--bp-light);
   stroke-opacity: 0.45;
 }
 .bp-win-bar {
@@ -631,11 +631,11 @@
   stroke-width: 1.4px;
 }
 .bp-leaf-hollow_core {
-  fill: #0f3685;
+  fill: var(--bp-fill-2);
   stroke-width: 0.9px;
 }
 .bp-leaf-steel {
-  fill: #0f3685;
+  fill: var(--bp-fill-2);
   stroke-width: 1.2px;
 }
 .bp-leaf-glass {
@@ -644,7 +644,7 @@
 }
 .bp-steel-plate-bg {
   fill: var(--chalk);
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-width: 0.8px;
   vector-effect: non-scaling-stroke;
 }
@@ -652,7 +652,7 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.78px;
-  fill: #0b2a72;
+  fill: var(--bp-stroke-deep);
 }
 .bp-glass-tick {
   fill: none;
@@ -720,7 +720,7 @@
   font-size: 1.3px;
   letter-spacing: 0.01em;
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.45px;
   stroke-linejoin: round;
 }
@@ -737,13 +737,13 @@
   font-size: 2.1px;
   fill: var(--marker-amber);
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.4px;
   stroke-linejoin: round;
 }
 .bp-figure {
   fill: var(--marker-mint);
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-width: 0.16px;
   stroke-linejoin: round;
 }
@@ -753,7 +753,7 @@
   font-size: 1.45px;
   fill: var(--marker-mint);
   paint-order: stroke;
-  stroke: #17469d;
+  stroke: var(--map-deep);
   stroke-width: 0.5px;
   stroke-linejoin: round;
 }
@@ -771,7 +771,7 @@
 /* squads at a staging point */
 .bp-tick-halo {
   fill: none;
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-opacity: 0.7;
   stroke-width: 0.62px;
   stroke-linecap: round;
@@ -788,7 +788,7 @@
 .bp-staging-dot {
   fill: var(--chalk);
   fill-opacity: 0.4;
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-opacity: 0.5;
   stroke-width: 0.08px;
 }
@@ -796,7 +796,7 @@
 /* ---------------------------------------------------------------- action overlays */
 .bp-ov-halo {
   fill: none;
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-opacity: 0.5;
   stroke-width: 0.72px;
   stroke-linecap: round;
@@ -868,7 +868,7 @@
 }
 .bp-ov-dot {
   fill: var(--chalk);
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-width: 0.12px;
 }
 .bp-ov-clear .bp-ov-dot {
@@ -888,7 +888,7 @@
 }
 .bp-ov-x-halo {
   fill: none;
-  stroke: #0b2a72;
+  stroke: var(--bp-stroke-deep);
   stroke-opacity: 0.75;
   stroke-width: 0.8px;
   stroke-linecap: round;
@@ -899,7 +899,7 @@
   font-size: 1.35px;
   fill: var(--chalk);
   paint-order: stroke;
-  stroke: #123c92;
+  stroke: var(--bp-stroke);
   stroke-width: 0.5px;
   stroke-linejoin: round;
 }
@@ -945,7 +945,7 @@
   inset: 0 0 auto;
   min-height: 48px;
   padding: 4px 8px;
-  background: #102f74;
+  background: var(--bp-chip);
   border-bottom: 1px solid rgba(243, 247, 255, 0.3);
 }
 .live-map .bp-floor-controls {
@@ -979,7 +979,7 @@
   padding: 4px 12px;
   border: 1px solid rgba(243, 247, 255, 0.35);
   border-radius: 5px;
-  background: #0b255c;
+  background: var(--bp-chip-deep);
   color: var(--chalk);
   font-family: var(--font-cond);
   font-size: 14px;
@@ -1026,7 +1026,7 @@
   stroke-opacity: 0.85;
 }
 .bp-marker-back {
-  fill: #123c92;
+  fill: var(--bp-stroke);
   fill-opacity: 0.96;
   stroke: none;
 }
@@ -1057,7 +1057,7 @@
   font-weight: 700;
   fill: var(--chalk);
   paint-order: stroke;
-  stroke: #123c92;
+  stroke: var(--bp-stroke);
   stroke-width: 0.7px;
 }
 .bp-person-caption {
@@ -1065,7 +1065,7 @@
   font-size: 1.3px;
   fill: var(--marker-amber);
   paint-order: stroke;
-  stroke: #123c92;
+  stroke: var(--bp-stroke);
   stroke-width: 0.4px;
 }
 /* Map boxes take the plan's shape (--bp-hw, set by Blueprint) within a floor and a cap, so a wide
@@ -1135,21 +1135,21 @@
 }
 
 /* Public people and possessions: certainty belongs to each mark independently. */
-.bp-pg { stroke: #0b2a72; stroke-width: .12px; stroke-linejoin: round; }
+.bp-pg { stroke: var(--bp-stroke-deep); stroke-width: .12px; stroke-linejoin: round; }
 .bp-pg-conf { fill: var(--marker-mint); color: var(--marker-mint); }
 .bp-pg-rep { fill: var(--marker-amber); color: var(--marker-amber); }
 .bp-pg-line { fill: none; stroke: currentColor; stroke-width: .3px; stroke-linecap: round; stroke-linejoin: round; }
 .bp-person-stale .bp-person-ring { stroke-opacity: .65; }
-.bp-person-condition circle { fill: #123c92; stroke: #ffc3b9; stroke-width: .13px; }
-.bp-person-condition path { fill: none; stroke: #ffc3b9; stroke-width: .18px; stroke-linecap: round; }
-.bp-person[data-condition="deceased"] .bp-pg { fill: #cbd2d8; color: #cbd2d8; }
+.bp-person-condition circle { fill: var(--bp-stroke); stroke: var(--bp-hurt); stroke-width: .13px; }
+.bp-person-condition path { fill: none; stroke: var(--bp-hurt); stroke-width: .18px; stroke-linecap: round; }
+.bp-person[data-condition="deceased"] .bp-pg { fill: var(--bp-gone); color: var(--bp-gone); }
 .bp-carried { fill: none; stroke-width: .13px; stroke-linecap: round; stroke-linejoin: round; }
 .bp-carried-confirmed { stroke: var(--marker-mint); }
 .bp-carried-reported { stroke: var(--marker-amber); }
-.bp-carried .bp-carried-back { fill: #123c92; stroke-width: .07px; }
+.bp-carried .bp-carried-back { fill: var(--bp-stroke); stroke-width: .07px; }
 .bp-carried-reported .bp-carried-back { stroke-dasharray: .18 .12; }
-.bp-carried-more { font: 700 1px var(--font-cond); fill: var(--chalk); paint-order: stroke; stroke: #123c92; stroke-width: .35px; }
-.bp-chip-box { fill: #123c92; stroke: currentColor; stroke-width: .09px; }
+.bp-carried-more { font: 700 1px var(--font-cond); fill: var(--chalk); paint-order: stroke; stroke: var(--bp-stroke); stroke-width: .35px; }
+.bp-chip-box { fill: var(--bp-stroke); stroke: currentColor; stroke-width: .09px; }
 .bp-chip-confirmed { color: var(--marker-mint); }
 .bp-chip-reported { color: var(--marker-amber); }
 .bp-chip-text { font: 600 1.1px var(--font-cond); fill: currentColor; letter-spacing: .02em; }

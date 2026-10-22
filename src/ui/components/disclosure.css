@@ -20,7 +20,7 @@
   transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.15s ease;
 }
 .disclosure[open] > .disclosure-summary .disclosure-chevron { transform: rotate(-135deg) translate(-2px, -2px); }
-.disclosure[open] > .disclosure-summary { color: var(--amber-2); }
+.disclosure[open] > .disclosure-summary { color: var(--t1); }
 .disclosure-body { padding-bottom: 8px; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .disclosure-chevron { transition: none; } }
 .disclosure-rowed > .disclosure-summary { padding: 0; font-weight: inherit; }

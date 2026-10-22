@@ -3,4 +3,4 @@
 .prep-equipment-options > ul { margin: 0; padding: 0; list-style: none; }
 .prep-equipment-options li { padding: 12px 0; border-top: 1px solid var(--line); }
 .prep-equipment-options strong { display: block; margin-bottom: 5px; font-size: 14px; }
-.prep-equipment-options .btn { min-height: 44px; height: auto; max-width: 100%; white-space: normal; }
+.prep-equipment-options .btn { height: auto; max-width: 100%; white-space: normal; }
