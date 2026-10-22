@@ -27,7 +27,7 @@
   margin-top: 10px;
 }
 .prep-support-selected {
-  border-color: var(--amber);
+  border-color: var(--t2);
 }
 .prep-support-card .field {
   margin-top: 12px;
@@ -40,6 +40,6 @@
 .prep-support-issues {
   margin: 8px 0;
   padding-left: 18px;
-  color: var(--amber);
+  color: var(--warn);
   font-size: 13px;
 }

@@ -7,10 +7,13 @@ import type { StatusKey } from './labels';
 import { ChoiceRail } from './ChoiceRail';
 import { StressDisplay } from './StressDisplay';
 
-// Small shared primitives. Styling lives in app.css.
+// Small shared primitives, one definition each (docs/ui-ux-audit.md, "Patterns in use"). Styling
+// lives in app.css under "primitives", from the tokens in theme.css.
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  /** Primary is the player's move, one per screen and the only amber. Quiet is everything else
+   * (`secondary` is its older name; `ghost` drops the outline). Danger removes or undoes. */
+  variant?: 'primary' | 'quiet' | 'secondary' | 'ghost' | 'danger';
   size?: 'md' | 'sm';
   icon?: IconName;
   block?: boolean;
@@ -36,7 +39,9 @@ export function Chip({
   title,
 }: {
   children: ReactNode;
-  tone?: 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
+  /** Neutral, good and harm, plus warn for strain and wear. `mint` and `danger` are the older
+   * names of good and harm; `amber` and `blue` read as neutral. */
+  tone?: 'neutral' | 'good' | 'harm' | 'warn' | 'amber' | 'mint' | 'danger' | 'blue';
   icon?: IconName;
   title?: string;
 }) {
@@ -48,9 +53,11 @@ export function Chip({
   );
 }
 
+/** A titled block. The heading is 14px in sentence case, with a quiet count or a link at the right. */
 export function Section({
   title,
   action,
+  count,
   children,
   id,
   hint,
@@ -58,6 +65,7 @@ export function Section({
 }: {
   title: string;
   action?: ReactNode;
+  count?: ReactNode;
   children: ReactNode;
   id?: string;
   hint?: ReactNode;
@@ -70,6 +78,7 @@ export function Section({
           {icon && <Icon name={icon} size={18} />}
           {title}
         </h2>
+        {count !== undefined && <span className="section-count">{count}</span>}
         {action}
       </div>
       {hint && <p className="section-hint">{hint}</p>}
@@ -78,8 +87,59 @@ export function Section({
   );
 }
 
+/** A thing you open: a flat panel with one hairline. Lists use Row instead. `amber` marks the one
+ * card that needs the player now. */
 export function Card({ children, className, tone }: { children: ReactNode; className?: string; tone?: 'amber' | 'mint' }) {
   return <div className={`card${tone ? ` card-${tone}` : ''}${className ? ` ${className}` : ''}`}>{children}</div>;
+}
+
+/** A list row with a hairline: a lead (face or art), a title and a line, and a trailing value or
+ * chevron. With onClick the whole row is the button. */
+export function Row({ lead, title, detail, trail, onClick, className, label }: {
+  lead?: ReactNode;
+  title: ReactNode;
+  detail?: ReactNode;
+  trail?: ReactNode;
+  onClick?: () => void;
+  className?: string;
+  /** The accessible name when the row is a button and its text alone would be unclear. */
+  label?: string;
+}) {
+  const body = (
+    <>
+      {lead && <span className="ui-row-lead">{lead}</span>}
+      <span className="ui-row-main">
+        <span className="ui-row-title">{title}</span>
+        {detail && <span className="ui-row-detail">{detail}</span>}
+      </span>
+      {trail && <span className="ui-row-trail">{trail}</span>}
+    </>
+  );
+  const classes = `ui-row${className ? ` ${className}` : ''}`;
+  return onClick
+    ? <button type="button" className={classes} onClick={onClick} aria-label={label}>{body}</button>
+    : <div className={classes}>{body}</div>;
+}
+
+type ActionBarButton = Omit<ButtonProps, 'variant' | 'children' | 'block'> & { label: ReactNode };
+
+/** The foot of a flow: an optional summary line, one primary, at most one quiet button. */
+export function ActionBar({ summary, primary, quiet, className }: {
+  summary?: ReactNode;
+  primary: ActionBarButton;
+  quiet?: ActionBarButton;
+  className?: string;
+}) {
+  const { label: primaryLabel, ...primaryProps } = primary;
+  return (
+    <div className={`action-bar${className ? ` ${className}` : ''}`}>
+      {summary && <p className="action-bar-summary">{summary}</p>}
+      <div className="action-bar-buttons">
+        {quiet && (() => { const { label, ...props } = quiet; return <Button variant="quiet" {...props}>{label}</Button>; })()}
+        <Button variant="primary" {...primaryProps}>{primaryLabel}</Button>
+      </div>
+    </div>
+  );
 }
 
 export function EmptyState({ icon = 'info', title, children }: { icon?: IconName; title: string; children?: ReactNode }) {

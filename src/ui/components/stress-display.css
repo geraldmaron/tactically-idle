@@ -1,5 +1,5 @@
 .stress-display { --stress-ink: var(--mint); min-width: 0; }
-.stress-strained { --stress-ink: var(--amber); }
+.stress-strained { --stress-ink: var(--warn); }
 .stress-overloaded { --stress-ink: var(--warn); }
 .stress-recovery { --stress-ink: var(--danger); }
 .stress-reading { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; }
@@ -10,7 +10,7 @@
 .stress-scale { position: relative; margin: 12px 4px 8px; height: 9px; }
 .stress-zones { display: grid; grid-template-columns: 3fr 3fr 2fr 2fr; gap: 3px; height: 100%; }
 .stress-zones i { background: var(--mint); opacity: .28; border-radius: 2px; }
-.stress-zones i:nth-child(2) { background: var(--amber); }
+.stress-zones i:nth-child(2) { background: var(--warn); }
 .stress-zones i:nth-child(3) { background: var(--warn); }
 .stress-zones i:nth-child(4) { background: var(--danger); }
 .stress-pin { position: absolute; top: -3px; bottom: -3px; width: 3px; background: var(--text); transform: translateX(-50%); border-radius: 2px; box-shadow: 0 0 0 2px var(--panel); }
@@ -20,8 +20,8 @@
 .stress-change { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-dim); }
 .stress-change strong { font-weight: 600; }
 .stress-crossing { margin: 6px 0 0; color: var(--stress-ink); font-size: 12px; font-weight: 600; }
-.stress-mini { --stress-ink: var(--mint); display: inline-flex; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 5px; color: var(--stress-ink); font-size: 11px; letter-spacing: 0; text-transform: none; }
-.stress-mini.stress-strained { --stress-ink: var(--amber); }
+.stress-mini { --stress-ink: var(--mint); display: inline-flex; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 5px; color: var(--stress-ink); font-size: var(--s12); letter-spacing: 0; text-transform: none; }
+.stress-mini.stress-strained { --stress-ink: var(--warn); }
 .stress-mini.stress-overloaded { --stress-ink: var(--warn); }
 .stress-mini.stress-recovery { --stress-ink: var(--danger); }
 .stress-mini strong { font-variant-numeric: tabular-nums; }

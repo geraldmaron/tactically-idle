@@ -31,7 +31,7 @@ export function Portrait({ officer, size = 80, className, age }: PortraitProps) 
   const name = `${officer.firstName} ${officer.surname}`.trim();
   const style = {
     position: 'relative' as const, width: size, height: Math.round(size * 1.04 * 100) / 100,
-    overflow: 'hidden', borderRadius: 'inherit', background: 'linear-gradient(160deg, #1c2c49 0%, #0d1628 100%)', flex: 'none',
+    overflow: 'hidden', borderRadius: 'inherit', background: 'linear-gradient(160deg, var(--ink-3) 0%, var(--ink-1) 100%)', flex: 'none',
   };
   return (
     <div className={className} style={style} data-portrait={failed ? 'unavailable' : 'painted'} title={age === undefined ? name : `${name} · age ${Math.floor(age)} · file portrait`}>

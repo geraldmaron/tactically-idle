@@ -27,7 +27,7 @@
   padding: 8px 0;
   border: 0;
   background: transparent;
-  color: var(--amber-2);
+  color: var(--t2);
   font-weight: 600;
   white-space: normal;
   text-align: left;
@@ -37,7 +37,7 @@
   min-width: 0;
   padding: 13px;
   border: 1px solid var(--line-strong);
-  border-top: 3px solid var(--amber);
+  border-top: 3px solid var(--hair-2);
   border-radius: var(--radius);
   background: var(--panel);
   font-size: 14px;
@@ -53,8 +53,6 @@
 .decision-number {
   color: var(--text-dim);
   font-size: 12px;
-  letter-spacing: .06em;
-  text-transform: uppercase;
 }
 .decision-heading .chip { white-space: normal; max-width: 100%; }
 .decision-lead { margin: 12px 0; }
@@ -66,7 +64,7 @@
 .decision-pills .chip { font-variant-numeric: tabular-nums; }
 .chip .chip-status { font-weight: 500; opacity: .85; }
 .decision-heard { margin: 0; }
-.decision-next { padding: 10px; margin: 12px 0 0; border-left: 2px solid var(--amber); background: rgba(243, 180, 50, .07); }
+.decision-next { padding: 10px; margin: 12px 0 0; border-left: 2px solid var(--hair-2); background: var(--ink-2); }
 .decision-next p { margin: 0; }
 .decision-next p + p { margin-top: 6px; }
 .decision-causes { margin-top: 8px; border-top: 1px solid var(--line); }
@@ -103,7 +101,7 @@
 .operation-log-sheet .icon-btn,
 .operation-action-sheet .icon-btn { min-width: 44px; min-height: 44px; flex-shrink: 0; }
 .operation-choices .call-head { gap: 8px; flex-wrap: wrap; }
-.operation-choices .call-label { letter-spacing: .13em; }
+.operation-choices .call-label { }
 .operation-choices .call-details { padding: 8px 0; min-height: 44px; white-space: normal; }
 .operation-stage-prompt { margin: 2px 0 8px; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
 .operation-choice-count { margin: 0 0 12px; color: var(--text-dim); font-size: 13px; line-height: 1.4; }
@@ -124,8 +122,8 @@
 .callbtn-command { font-size: 12px; line-height: 1.35; }
 .callbtn-on .callbtn-command { color: var(--amber-ink); }
 /* A lie or a promise past command: amber, not command's mint, so it never reads as approved. */
-.callbtn-command.callbtn-deceive { color: var(--amber-2); }
-.debrief-epilogue { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 15.5px; line-height: 1.5; font-style: italic; color: #e8edf5; overflow-wrap: anywhere; }
+.callbtn-command.callbtn-deceive { color: var(--t1); }
+.debrief-epilogue { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 15.5px; line-height: 1.5; font-style: italic; color: var(--t1); overflow-wrap: anywhere; }
 .operation-command-line { margin: 0 0 6px; font-size: 14px; line-height: 1.4; }
 .operation-costs { display: grid; gap: 8px; margin: 5px 0 9px; }
 .operation-costs > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -137,7 +135,7 @@
 .consequence-high { color: var(--warn); }
 .consequence-severe { color: var(--danger); }
 .outcome-options { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.outcome-option { padding: 10px; border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 5px; background: var(--bg); }
+.outcome-option { padding: 10px; border: 1px solid var(--line); border-left: 3px solid var(--hair-2); border-radius: 5px; background: var(--bg); }
 .outcome-favorable { border-left-color: var(--mint); }
 .outcome-adverse { border-left-color: var(--danger); }
 .outcome-option > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; font-size: 14px; }
@@ -174,7 +172,7 @@
 /* Live stress summary: one row of chips instead of a gauge per officer. */
 
 /* Unavailable choices: slim, reviewable rows under one label, after the choices the team can take. */
-.call-locked-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; margin: 4px 0 -2px; font-family: var(--font-cond); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.call-locked-label { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; margin: 4px 0 -2px; font-family: var(--font-cond); font-size: 13px; font-weight: 600; color: var(--muted); }
 .call-locked-label .icon { flex-shrink: 0; }
 .operation-choices .callbtn-off { min-height: 44px; align-items: center; padding: 7px 12px; background: transparent; }
 .operation-choices .callbtn-off .callbtn-icon { margin-top: 0; color: var(--muted); }

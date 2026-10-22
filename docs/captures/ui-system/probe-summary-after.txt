@@ -1,0 +1,99 @@
+== width 320 errors: 0
+  01-first-run                 scrollH=1839 client=568 small<44=  0 text<13=  0 sizes=[] overflow=False top=0 nav=0 foot=0 primary=-
+  02-hq                        scrollH=1681 client=451 small<44=  0 text<13= 31 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  03-finance-sheet             scrollH=752 client=433 small<44=  0 text<13= 17 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=-
+  03b-level-sheet              scrollH=1681 client=451 small<44=  0 text<13= 31 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  04-command-staff-sheet       scrollH=436 client=427 small<44=  0 text<13= 42 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Open the post in Devel@467
+  05-squad                     scrollH=2192 client=451 small<44=  0 text<13= 55 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  06-officer-sheet             scrollH=993 client=366 small<44=  0 text<13= 35 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-career      scrollH=993 client=366 small<44=  0 text<13= 42 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-care        scrollH=606 client=366 small<44=  0 text<13= 38 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  07-arrange-sheet             scrollH=781 client=308 small<44=  4 text<13= 32 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=119 primary=Apply arrangement@512
+  08-hire-contract-sheet       scrollH=678 client=349 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=Review hire for Mateo @256
+  09-training                  scrollH=2373 client=451 small<44=  0 text<13= 31 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  10-develop                   scrollH=1079 client=451 small<44=  0 text<13= 32 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  11-develop-sheet             scrollH=652 client=295 small<44=  0 text<13= 36 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=132 primary=Buy tier I@503
+  12-gear                      scrollH=2211 client=451 small<44=  0 text<13= 32 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  13-gear-item-sheet           scrollH=893 client=275 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=141 primary=Buy 1 · $250 funding@512
+  14-restock-sheet             scrollH=2211 client=451 small<44=  0 text<13= 32 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  15-presets-sheet             scrollH=2211 client=451 small<44=  0 text<13= 32 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  16-saves-sheet               scrollH=1704 client=410 small<44=  0 text<13= 23 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=New game@332
+  17-settings-sheet            scrollH=1775 client=410 small<44=  0 text<13= 20 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  18-board                     scrollH=1840 client=451 small<44=  0 text<13= 16 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  19-prepare-brief             scrollH=2816 client=451 small<44=  0 text<13= 25 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Choose team@447
+  20-prepare-team-empty        scrollH=800 client=451 small<44=  0 text<13= 13 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@447
+  21-prepare-team-picked       scrollH=1930 client=451 small<44=  0 text<13= 16 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@447
+  22-live-decide-1             scrollH=1824 client=503 small<44=  0 text<13= 18 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  23-review-sheet              scrollH=1374 client=148 small<44=  0 text<13= 42 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=90 primary=Confirm: Talk to her o@447
+  24-result-beat               scrollH=883 client=503 small<44=  0 text<13= 17 sizes=[12] overflow=True top=0 nav=65 foot=71 primary=Continue to The bag@445
+  25-live-decide-2             scrollH=1872 client=503 small<44=  0 text<13= 28 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  25-live-decide-3             scrollH=1589 client=503 small<44=  0 text<13= 26 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  26-debrief                   scrollH=1938 client=386 small<44=  0 text<13= 27 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Close debrief@449
+  27-board-after               scrollH=1445 client=451 small<44=  0 text<13= 15 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  28-hq-after-call             scrollH=1656 client=451 small<44=  0 text<13= 30 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+== width 390 errors: 0
+  01-first-run                 scrollH=1820 client=844 small<44=  0 text<13=  0 sizes=[] overflow=False top=0 nav=0 foot=0 primary=-
+  02-hq                        scrollH=1768 client=727 small<44=  0 text<13= 36 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  03-finance-sheet             scrollH=752 client=676 small<44=  0 text<13= 24 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=-
+  03b-level-sheet              scrollH=1768 client=727 small<44=  0 text<13= 36 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  04-command-staff-sheet       scrollH=1768 client=727 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Open the post in Devel@733
+  05-squad                     scrollH=2057 client=727 small<44=  0 text<13= 61 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  06-officer-sheet             scrollH=929 client=609 small<44=  0 text<13= 50 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-career      scrollH=989 client=609 small<44=  0 text<13= 57 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-care        scrollH=2057 client=727 small<44=  0 text<13= 73 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  07-arrange-sheet             scrollH=761 client=590 small<44=  4 text<13= 44 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=79 primary=Apply arrangement@776
+  08-hire-contract-sheet       scrollH=678 client=592 small<44=  0 text<13= 55 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=Review hire for Talia @393
+  09-training                  scrollH=2352 client=727 small<44=  0 text<13= 33 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  10-develop                   scrollH=1013 client=727 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  11-develop-sheet             scrollH=1013 client=727 small<44=  0 text<13= 51 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=132 primary=Buy tier I@779
+  12-gear                      scrollH=2216 client=727 small<44=  0 text<13= 37 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  13-gear-item-sheet           scrollH=776 client=518 small<44=  0 text<13= 43 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=141 primary=Buy 1 · $250 funding@788
+  14-restock-sheet             scrollH=2216 client=727 small<44=  0 text<13= 37 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  15-presets-sheet             scrollH=2216 client=727 small<44=  0 text<13= 37 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  16-saves-sheet               scrollH=1568 client=670 small<44=  0 text<13= 29 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=New game@329
+  17-settings-sheet            scrollH=1674 client=670 small<44=  0 text<13= 25 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  18-board                     scrollH=1913 client=727 small<44=  0 text<13= 18 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Prepare@623
+  19-prepare-brief             scrollH=2702 client=727 small<44=  0 text<13= 24 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Choose team@723
+  20-prepare-team-empty        scrollH=791 client=727 small<44=  0 text<13= 12 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@723
+  21-prepare-team-picked       scrollH=1955 client=727 small<44=  0 text<13= 16 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@723
+  22-live-decide-1             scrollH=1724 client=779 small<44=  0 text<13= 30 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  23-review-sheet              scrollH=1412 client=302 small<44=  0 text<13= 56 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=90 primary=Confirm: Talk to him o@723
+  24-result-beat               scrollH=837 client=779 small<44=  0 text<13= 23 sizes=[12] overflow=True top=0 nav=65 foot=71 primary=Continue to The bag@639
+  25-live-decide-2             scrollH=1636 client=779 small<44=  0 text<13= 36 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  25-live-decide-3             scrollH=1384 client=779 small<44=  0 text<13= 34 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  26-debrief                   scrollH=1872 client=662 small<44=  0 text<13= 35 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Close debrief@725
+  27-board-after               scrollH=1530 client=727 small<44=  0 text<13= 15 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Prepare@623
+  28-hq-after-call             scrollH=1744 client=727 small<44=  0 text<13= 35 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+== width 430 errors: 0
+  01-first-run                 scrollH=1744 client=932 small<44=  0 text<13=  0 sizes=[] overflow=False top=0 nav=0 foot=0 primary=-
+  02-hq                        scrollH=1818 client=815 small<44=  0 text<13= 34 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  03-finance-sheet             scrollH=1818 client=815 small<44=  0 text<13= 35 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  03b-level-sheet              scrollH=1818 client=815 small<44=  0 text<13= 34 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  04-command-staff-sheet       scrollH=1818 client=815 small<44=  0 text<13= 38 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Open the post in Devel@821
+  05-squad                     scrollH=1972 client=815 small<44=  0 text<13= 67 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  06-officer-sheet             scrollH=929 client=686 small<44=  0 text<13= 63 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-career      scrollH=989 client=686 small<44=  0 text<13= 72 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  06-officer-sheet-care        scrollH=1972 client=815 small<44=  0 text<13= 79 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=-
+  07-arrange-sheet             scrollH=714 client=668 small<44=  4 text<13= 56 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=79 primary=Apply arrangement@864
+  08-hire-contract-sheet       scrollH=678 client=669 small<44=  0 text<13= 66 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=67 primary=Review hire for Daniel@437
+  09-training                  scrollH=2289 client=815 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  10-develop                   scrollH=919 client=815 small<44=  0 text<13= 42 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  11-develop-sheet             scrollH=919 client=815 small<44=  0 text<13= 53 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=132 primary=Buy tier I@867
+  12-gear                      scrollH=2216 client=815 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  13-gear-item-sheet           scrollH=757 client=595 small<44=  0 text<13= 47 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=141 primary=Buy 1 · $250 funding@876
+  14-restock-sheet             scrollH=2216 client=815 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  15-presets-sheet             scrollH=2216 client=815 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  16-saves-sheet               scrollH=1568 client=747 small<44=  0 text<13= 34 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=New game@340
+  17-settings-sheet            scrollH=1564 client=747 small<44=  0 text<13= 30 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-
+  18-board                     scrollH=1847 client=815 small<44=  0 text<13= 18 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Prepare@595
+  19-prepare-brief             scrollH=2638 client=815 small<44=  0 text<13= 30 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Choose team@811
+  20-prepare-team-empty        scrollH=None client=None small<44=  0 text<13= 12 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@787
+  21-prepare-team-picked       scrollH=2005 client=815 small<44=  0 text<13= 17 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Deploy@811
+  22-live-decide-1             scrollH=1698 client=867 small<44=  0 text<13= 29 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  23-review-sheet              scrollH=1391 client=352 small<44=  0 text<13= 56 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=90 primary=Confirm: Talk to him o@811
+  24-result-beat               scrollH=None client=None small<44=  0 text<13= 23 sizes=[12] overflow=True top=0 nav=65 foot=71 primary=Continue to The bag@669
+  25-live-decide-2             scrollH=1592 client=867 small<44=  0 text<13= 36 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  25-live-decide-3             scrollH=1403 client=867 small<44=  0 text<13= 40 sizes=[12, 12.5] overflow=True top=0 nav=65 foot=0 primary=-
+  26-debrief                   scrollH=1549 client=750 small<44=  0 text<13= 34 sizes=[12] overflow=False top=52 nav=65 foot=0 primary=Close debrief@813
+  27-board-after               scrollH=1483 client=815 small<44=  0 text<13= 17 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=Prepare@595
+  28-hq-after-call             scrollH=1779 client=815 small<44=  0 text<13= 33 sizes=[12, 12.5] overflow=False top=52 nav=65 foot=0 primary=-

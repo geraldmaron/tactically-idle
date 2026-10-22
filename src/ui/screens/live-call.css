@@ -5,13 +5,13 @@
 
 /* ---- one pinned strip: the call's name, where it is, and everything that runs down or builds up */
 .app:has(.live-one) .topbar { display: none; }
-.live .live-head { padding: 10px var(--gutter) 6px; background: #0b111c; display: grid; gap: 4px; }
-.live .live-strip { position: sticky; top: 0; z-index: 6; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: #0d1524; box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
+.live .live-head { padding: 10px var(--gutter) 6px; background: var(--ink-0); display: grid; gap: 4px; }
+.live .live-strip { position: sticky; top: 0; z-index: 6; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: var(--ink-1); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
 .live .live-strip-head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .live .live-title { display: grid; flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; }
 .live .live-title:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.live .live-name { font: 700 19px/1.1 var(--font-cond); letter-spacing: 0.02em; text-transform: uppercase; overflow-wrap: anywhere; }
-.live .live-title-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font: 600 12px/1.2 var(--font-ui); color: var(--amber-2); }
+.live .live-name { font: 700 19px/1.1 var(--font-cond); letter-spacing: 0.02em; overflow-wrap: anywhere; }
+.live .live-title-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font: 600 12px/1.2 var(--font-ui); color: var(--t2); }
 .live .live-sub { display: flex; flex-wrap: wrap; align-items: center; margin: 0; gap: 2px 10px; font-size: 12px; color: var(--text-dim); }
 .live .live-sub .live-cancel { margin-left: auto; }
 /* Lights and sirens on a hot call (owner, 2026-10-20): a small red and blue light bar in the call bar,
@@ -20,14 +20,14 @@
  * and far smaller than its flash area. Under reduced motion both lights hold steady. */
 .live-lightbar { display: inline-flex; gap: 3px; padding: 2px 3px; border-radius: 4px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .live-lightbar i { display: block; width: 14px; height: 7px; border-radius: 2px; }
-.live-lightbar i:first-child { background: #5a1410; animation: siren-red 0.8s steps(1, end) infinite; }
-.live-lightbar i:last-child { background: #0e2350; animation: siren-blue 0.8s steps(1, end) infinite; }
-@keyframes siren-red { 0% { background: #ff3b30; box-shadow: 0 0 8px 2px rgba(255, 59, 48, 0.85); } 30% { background: #5a1410; box-shadow: none; } }
-@keyframes siren-blue { 0%, 50% { background: #0e2350; box-shadow: none; } 50.01% { background: #3b7bff; box-shadow: 0 0 8px 2px rgba(59, 123, 255, 0.85); } 80% { background: #0e2350; box-shadow: none; } }
+.live-lightbar i:first-child { background: var(--siren-r-dim); animation: siren-red 0.8s steps(1, end) infinite; }
+.live-lightbar i:last-child { background: var(--siren-b-dim); animation: siren-blue 0.8s steps(1, end) infinite; }
+@keyframes siren-red { 0% { background: var(--siren-r); box-shadow: 0 0 8px 2px rgba(255, 59, 48, 0.85); } 30% { background: var(--siren-r-dim); box-shadow: none; } }
+@keyframes siren-blue { 0%, 50% { background: var(--siren-b-dim); box-shadow: none; } 50.01% { background: var(--siren-b); box-shadow: 0 0 8px 2px rgba(59, 123, 255, 0.85); } 80% { background: var(--siren-b-dim); box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) {
   .live-lightbar i { animation: none !important; }
-  .live-lightbar i:first-child { background: #ff3b30; }
-  .live-lightbar i:last-child { background: #3b7bff; }
+  .live-lightbar i:first-child { background: var(--siren-r); }
+  .live-lightbar i:last-child { background: var(--siren-b); }
 }
 /* The light wash (owner, 2026-10-21): on a hot call the lights run as a sequence across the pinned
  * strip and fade into the top of the scene, so the decision is made under them. A soft red band
@@ -38,7 +38,7 @@
  * reduced motion the lights hold still as a faint red and blue edge. */
 .live .live-strip { overflow: visible; }
 .live-wash { position: absolute; left: 0; right: 0; top: 0; bottom: -140px; z-index: 2; overflow: hidden; pointer-events: none; mix-blend-mode: screen;
-  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent); }
+  -webkit-mask-image: linear-gradient(180deg, var(--black) 55%, transparent); mask-image: linear-gradient(180deg, var(--black) 55%, transparent); }
 .live-wash i { position: absolute; top: -10%; bottom: -10%; left: 0; width: 75%; opacity: 0; will-change: transform, opacity; }
 .live-wash i:first-child { background: radial-gradient(ellipse 50% 60% at 50% 40%, rgba(255, 59, 48, 1), rgba(255, 59, 48, 0)); animation: wash-red var(--wash-cycle, 2.4s) ease-in-out infinite; }
 .live-wash i:last-child { background: radial-gradient(ellipse 50% 60% at 50% 40%, rgba(90, 150, 255, 1), rgba(90, 150, 255, 0)); animation: wash-blue var(--wash-cycle, 2.4s) ease-in-out infinite; }
@@ -59,11 +59,11 @@
 .live .step-track { height: 12px; }
 .live .step-line { top: 5px; }
 .live .step-dot { width: 12px; height: 12px; margin-left: -6px; }
-.live .step-label { font-size: 10.5px; }
+.live .step-label { font-size: var(--s12); }
 .live .step-current .step-dot { box-shadow: none; }
 
 /* The decision point's threat, in the strip while the player decides. Still: its place and tone carry it. */
-.live .threat-pill { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; padding: 5px 10px; min-height: 32px; border: 1px solid rgba(255, 107, 87, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(255, 107, 87, 0.2), rgba(255, 107, 87, 0.08)); color: #ffd8d1; font: 600 14.5px/1.25 var(--font-cond); letter-spacing: 0.02em; }
+.live .threat-pill { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; padding: 5px 10px; min-height: 32px; border: 1px solid rgba(255, 107, 87, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(255, 107, 87, 0.2), rgba(255, 107, 87, 0.08)); color: var(--harm-text); font: 600 14.5px/1.25 var(--font-cond); letter-spacing: 0.02em; }
 .live .threat-pill-label { flex: 1 1 auto; white-space: normal; overflow: visible; }
 .live .threat-pill-sep { display: none; }
 .live .threat-pill-min { font-size: 15.5px; }
@@ -72,10 +72,10 @@
 .live-scene { display: grid; gap: 6px; padding: 8px var(--gutter) 0; }
 .live-scene-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-width: 0; }
 .live-scene-where { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; font: 600 13px/1.25 var(--font-cond); letter-spacing: 0.04em; color: var(--text-dim); }
-.live-scene-where .icon { color: var(--amber); }
-.live-scene-changed { padding: 1px 6px; border: 1px solid rgba(63, 208, 142, 0.5); border-radius: 999px; color: #cdf5e1; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.live-scene-where .icon { color: var(--t2); }
+.live-scene-changed { padding: 1px 6px; border: 1px solid rgba(63, 208, 142, 0.5); border-radius: 999px; color: var(--good-text); font-size: var(--s12); }
 .live-scene-actions { display: inline-flex; gap: 4px; }
-.live-scene-actions .hud-btn { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
+.live-scene-actions .hud-btn { padding: 0 10px; }
 .live .live-map { margin: 0; }
 .live .live-map[hidden] { display: none; }
 /* Compact: the whole building in a short window, with no map controls. Tap a room to open it. */
@@ -84,7 +84,7 @@
 .live .live-map-compact { min-height: 0; }
 /* Full screen: the same map, so its pan and zoom survive, laid over the call. */
 .live .live-map-full { position: fixed; inset: 0; z-index: 40; min-height: 0; margin: 0; border-radius: 0; display: flex; flex-direction: column; background: var(--paper-deep); }
-.live-map-full-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter); background: #0d1524; border-bottom: 1px solid var(--line); }
+.live-map-full-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter); background: var(--ink-1); border-bottom: 1px solid var(--line); }
 .live .live-map-full .live-map-inner { flex: 1 1 auto; overflow: auto; }
 .app .live-map-full .live-map-inner > .bp-root { grid-template-rows: auto minmax(240px, calc(100svh - 220px)) auto auto; }
 .live-map-full-open .live-strip { z-index: 5; }
@@ -95,12 +95,12 @@
 .live-squad-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
 .live-squad-face { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 44px; padding: 5px 4px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8, 13, 24, 0.4); color: var(--text); text-align: center; cursor: pointer; }
 .live-squad-face:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
-.live-squad-acting { border-color: rgba(243, 180, 50, 0.6); }
+.live-squad-acting { border-color: var(--t2); }
 .live-squad-name { display: inline-flex; align-items: center; justify-content: center; gap: 3px; max-width: 100%; font: 600 12.5px/1.15 var(--font-cond); overflow-wrap: anywhere; }
-.live-squad-stress { font-size: 11px; line-height: 1.15; }
+.live-squad-stress { font-size: var(--s12); line-height: 1.15; }
 .live-squad-stress.stress-recovery:not(.lead-choice-stress) { color: var(--danger); }
 .live-squad-out .lead-face { opacity: 0.5; filter: grayscale(1); }
-.live-team-leader { color: var(--amber-2); }
+.live-team-leader { color: var(--t1); }
 @media (max-width: 360px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- the story: the decision and its choices, or the result */
@@ -111,7 +111,7 @@
 /* The decide beat: the stage kicker, then the moment, then the people, then the choices. */
 .live .operation-choices { margin-top: 4px; }
 .live .operation-choices .operation-stage-prompt { margin: 0 0 12px; padding-left: 12px; font-size: 17.5px; line-height: 1.5; }
-.live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 16px 0 8px; font: 700 14px/1.2 var(--font-cond); letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber-2); }
+.live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 16px 0 8px; font: 700 14px/1.2 var(--font-cond); color: var(--t3); }
 .live .operation-choices .operation-choice-count span { font: 500 12.5px/1.2 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
 
 /* Last decision: one row above the stage, opening in place to the full record. */
@@ -121,7 +121,7 @@
 .last-decision > .disclosure-summary { padding: 8px 10px; }
 .last-decision > .disclosure-body { padding: 0 6px 6px; }
 .last-decision-favorable { border-left-color: var(--mint); }
-.last-decision-mixed { border-left-color: var(--amber); }
+.last-decision-mixed { border-left-color: var(--warn); }
 .last-decision-adverse, .last-decision-force { border-left-color: var(--danger); }
 .last-decision .decision-card { border: 0; background: transparent; padding: 4px 4px 0; }
 
@@ -141,17 +141,17 @@
 @media (prefers-reduced-motion: reduce) { .live .threat-pill-bar i { transition: none; } }
 /* A gauge that fills (FillGauge), in the threat pill's family: label, a bar that fills with a tick at
  * each cue, a state word, and the line naming what it now does. */
-.live .fill-gauge { display: grid; grid-template-columns: minmax(0, auto) minmax(64px, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; margin: 2px 0 0; padding: 4px 10px; min-height: 30px; border: 1px solid rgba(243, 180, 50, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(243, 180, 50, 0.18), rgba(243, 180, 50, 0.06)); color: #ffe9bd; font: 600 15px/1.25 var(--font-cond); letter-spacing: 0.02em; }
-.live .fill-gauge-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: #cdf5e1; }
+.live .fill-gauge { display: grid; grid-template-columns: minmax(0, auto) minmax(64px, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; margin: 2px 0 0; padding: 4px 10px; min-height: 30px; border: 1px solid rgba(245, 155, 66, 0.5); border-radius: 8px; background: linear-gradient(90deg, rgba(245, 155, 66, 0.18), rgba(245, 155, 66, 0.06)); color: var(--warn-text); font: 600 15px/1.25 var(--font-cond); letter-spacing: 0.02em; }
+.live .fill-gauge-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: var(--good-text); }
 .live .fill-gauge-head { display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; font-size: 14px; }
-.live .fill-gauge-head .icon { flex: 0 0 auto; color: var(--amber); }
+.live .fill-gauge-head .icon { flex: 0 0 auto; color: var(--warn); }
 .live .fill-gauge-label { flex: 1 1 auto; white-space: normal; }
-.live .fill-gauge-state { flex: 0 0 auto; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.live .fill-gauge-state { flex: 0 0 auto; font-size: 13px; }
 .live .fill-gauge-bar { position: relative; display: block; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.14); overflow: visible; }
-.live .fill-gauge-bar i { display: block; height: 100%; border-radius: 4px; background: var(--amber); transition: width 1s linear; }
+.live .fill-gauge-bar i { display: block; height: 100%; border-radius: 4px; background: var(--warn); transition: width 1s linear; }
 .live .fill-gauge-stopped .fill-gauge-bar i { background: var(--mint); }
 .live .fill-gauge-tick { position: absolute; top: -3px; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; background: rgba(255, 255, 255, 0.45); }
-.live .fill-gauge-heard { background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
+.live .fill-gauge-heard { background: var(--white); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
 .live .fill-gauge-effect { grid-column: 1 / -1; margin: 0; font: 500 12.5px/1.3 var(--font-ui); letter-spacing: 0; color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .live .fill-gauge-bar i { transition: none; } }
 /* The strip's one pressure (fill-gauge.ts leadingPressure) reads loud: a heavier frame, a big number,
@@ -160,35 +160,35 @@
 .live .threat-pill, .live .fill-gauge { min-height: 44px; padding: 7px 12px 8px; border-width: 2px; border-radius: 10px; row-gap: 6px; transition: border-color 0.4s, background-color 0.4s, box-shadow 0.4s; }
 .live .threat-pill .icon, .live .fill-gauge-head .icon { width: 18px; height: 18px; }
 .live .threat-pill-label { font-size: 16px; }
-.live .threat-pill-min { font: 700 22px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: #fff; }
+.live .threat-pill-min { font: 700 22px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--white); }
 .live .fill-gauge-head { font-size: 16px; }
 .live .threat-pill-bar, .live .fill-gauge-bar { height: 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .live .threat-pill-bar i, .live .fill-gauge-bar i { border-radius: 6px; }
 .live .fill-gauge-tick { top: -3px; height: 18px; }
 .live .threat-pill.pressure-calm { border-color: rgba(255, 107, 87, 0.55); }
-.live .threat-pill.pressure-calm .threat-pill-bar i { background: linear-gradient(90deg, #ff9a6b, #ff6b57); }
-.live .threat-pill.pressure-warn { border-color: #ff6b57; background: linear-gradient(90deg, rgba(255, 107, 87, 0.32), rgba(255, 107, 87, 0.12)); }
-.live .threat-pill.pressure-warn .threat-pill-bar i { background: linear-gradient(90deg, #ff6b57, #ff3b30); box-shadow: 0 0 8px rgba(255, 80, 60, 0.6); }
-.live .threat-pill.pressure-critical { border-color: #ff3b30; background: linear-gradient(90deg, rgba(255, 59, 48, 0.45), rgba(255, 59, 48, 0.2)); box-shadow: 0 0 0 1px rgba(255, 59, 48, 0.5), 0 0 18px rgba(255, 59, 48, 0.45); color: #fff; animation: pressure-flash 0.5s ease-out 2; }
-.live .threat-pill.pressure-critical .threat-pill-bar i { background: #ff3b30; box-shadow: 0 0 10px rgba(255, 59, 48, 0.9); }
-.live .fill-gauge.pressure-warn:not(.fill-gauge-stopped) { border-color: var(--amber); background: linear-gradient(90deg, rgba(243, 180, 50, 0.3), rgba(243, 180, 50, 0.1)); }
-.live .fill-gauge.pressure-warn:not(.fill-gauge-stopped) .fill-gauge-bar i { background: linear-gradient(90deg, var(--amber), #ff9a3c); box-shadow: 0 0 8px rgba(243, 160, 50, 0.6); }
-.live .fill-gauge.pressure-critical:not(.fill-gauge-stopped) { border-color: #ff6b3c; background: linear-gradient(90deg, rgba(255, 107, 60, 0.38), rgba(255, 107, 60, 0.14)); box-shadow: 0 0 16px rgba(255, 107, 60, 0.4); color: #fff; animation: pressure-flash 0.5s ease-out 2; }
-.live .fill-gauge.pressure-critical:not(.fill-gauge-stopped) .fill-gauge-bar i { background: linear-gradient(90deg, #ff9a3c, #ff3b30); box-shadow: 0 0 10px rgba(255, 80, 50, 0.85); }
+.live .threat-pill.pressure-calm .threat-pill-bar i { background: linear-gradient(90deg, var(--harm), var(--harm)); }
+.live .threat-pill.pressure-warn { border-color: var(--harm); background: linear-gradient(90deg, rgba(255, 107, 87, 0.32), rgba(255, 107, 87, 0.12)); }
+.live .threat-pill.pressure-warn .threat-pill-bar i { background: linear-gradient(90deg, var(--harm), var(--siren-r)); box-shadow: 0 0 8px rgba(255, 80, 60, 0.6); }
+.live .threat-pill.pressure-critical { border-color: var(--siren-r); background: linear-gradient(90deg, rgba(255, 59, 48, 0.45), rgba(255, 59, 48, 0.2)); box-shadow: 0 0 0 1px rgba(255, 59, 48, 0.5), 0 0 18px rgba(255, 59, 48, 0.45); color: var(--white); animation: pressure-flash 0.5s ease-out 2; }
+.live .threat-pill.pressure-critical .threat-pill-bar i { background: var(--siren-r); box-shadow: 0 0 10px rgba(255, 59, 48, 0.9); }
+.live .fill-gauge.pressure-warn:not(.fill-gauge-stopped) { border-color: var(--warn); background: linear-gradient(90deg, rgba(245, 155, 66, 0.3), rgba(245, 155, 66, 0.1)); }
+.live .fill-gauge.pressure-warn:not(.fill-gauge-stopped) .fill-gauge-bar i { background: linear-gradient(90deg, var(--warn), var(--warn)); box-shadow: 0 0 8px rgba(243, 160, 50, 0.6); }
+.live .fill-gauge.pressure-critical:not(.fill-gauge-stopped) { border-color: var(--harm); background: linear-gradient(90deg, rgba(255, 107, 60, 0.38), rgba(255, 107, 60, 0.14)); box-shadow: 0 0 16px rgba(255, 107, 60, 0.4); color: var(--white); animation: pressure-flash 0.5s ease-out 2; }
+.live .fill-gauge.pressure-critical:not(.fill-gauge-stopped) .fill-gauge-bar i { background: linear-gradient(90deg, var(--warn), var(--siren-r)); box-shadow: 0 0 10px rgba(255, 80, 50, 0.85); }
 @keyframes pressure-flash { 50% { box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.75), 0 0 26px rgba(255, 59, 48, 0.65); } }
 @media (prefers-reduced-motion: reduce) { .live .threat-pill, .live .fill-gauge { animation: none !important; transition: none; } }
 /* Who the landed threat wound up (ThreatLanded, in the comms log): their stance and an agitation bar with the rise in bright red,
  * which grows in once (no loop). */
 .live .threat-pill-subjects { display: grid; gap: 5px; }
 .live .threat-subject { display: grid; grid-template-columns: minmax(0, auto) minmax(72px, 1fr); align-items: center; gap: 10px; }
-.live .threat-subject-name { font: 600 14px/1.25 var(--font-cond); letter-spacing: 0.02em; color: #ffd8d1; }
+.live .threat-subject-name { font: 600 14px/1.25 var(--font-cond); letter-spacing: 0.02em; color: var(--harm-text); }
 .live .threat-subject-bar { position: relative; display: block; height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); overflow: hidden; }
 .live .threat-subject-bar i { display: block; height: 100%; background: rgba(255, 140, 120, 0.55); }
-.live .threat-subject-bar b { position: absolute; top: 0; height: 100%; background: #ff3b30; box-shadow: 0 0 8px rgba(255, 59, 48, 0.9); transform-origin: left; animation: agitation-rise 0.6s ease-out 1; }
+.live .threat-subject-bar b { position: absolute; top: 0; height: 100%; background: var(--siren-r); box-shadow: 0 0 8px rgba(255, 59, 48, 0.9); transform-origin: left; animation: agitation-rise 0.6s ease-out 1; }
 @keyframes agitation-rise { from { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .live .threat-subject-bar b { animation: none; } }
-.callbtn-gauge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid rgba(243, 180, 50, 0.5); border-radius: 999px; background: rgba(243, 180, 50, 0.12); color: #ffe9bd; font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
-.callbtn-gauge .icon { color: var(--amber); }
+.callbtn-gauge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid rgba(245, 155, 66, 0.5); border-radius: 999px; background: rgba(245, 155, 66, 0.12); color: var(--warn-text); font: 600 13px/1.15 var(--font-cond); letter-spacing: 0.02em; }
+.callbtn-gauge .icon { color: var(--warn); }
 /* The review sheet's map: where this choice happens, at a glance (the scene's map has scrolled away). */
 .app .action-sheet-map { container-type: inline-size; position: relative; margin: 0 0 10px; overflow: hidden; border-radius: 8px; background: var(--paper-deep); }
 .app .action-sheet-map > .bp-root { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto clamp(130px, 40vw, 180px) auto auto; height: auto; aspect-ratio: auto !important; }
@@ -211,34 +211,34 @@
  * each and fade. The count's refresh is the game's one looping signal while a call is open, so the
  * reactions are one-shot and stop under reduced motion. */
 .live .live-sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 4px; }
-.live .source-ticker { position: relative; display: grid; row-gap: 4px; min-width: 0; padding: 6px 10px 7px; border: 1px solid rgba(243, 180, 50, 0.55); border-radius: 10px; background: linear-gradient(90deg, rgba(243, 180, 50, 0.2), rgba(243, 180, 50, 0.06)); color: #ffe9bd; }
-.live .source-ticker-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: #cdf5e1; }
+.live .source-ticker { position: relative; display: grid; row-gap: 4px; min-width: 0; padding: 6px 10px 7px; border: 1px solid rgba(245, 155, 66, 0.55); border-radius: 10px; background: linear-gradient(90deg, rgba(245, 155, 66, 0.2), rgba(245, 155, 66, 0.06)); color: var(--warn-text); }
+.live .source-ticker-stopped { border-color: rgba(63, 208, 142, 0.5); background: linear-gradient(90deg, rgba(63, 208, 142, 0.16), rgba(63, 208, 142, 0.05)); color: var(--good-text); }
 .live .source-ticker-head { display: flex; align-items: flex-start; gap: 6px; margin: 0; min-width: 0; font: 600 13px/1.2 var(--font-cond); letter-spacing: 0.02em; }
 .live .source-ticker-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .live .source-ticker-pull-none { visibility: hidden; }
 .live .source-ticker-count { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 5px; margin: 0; min-width: 0; }
-.live .source-ticker-count b { font: 700 20px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; color: #fff; }
+.live .source-ticker-count b { font: 700 20px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; color: var(--white); }
 .live .source-ticker-count span { font: 600 12px/1.2 var(--font-cond); letter-spacing: 0.02em; }
-.live .source-ticker-pull { flex: 0 0 auto; padding: 1px 5px; border-radius: 4px; background: rgba(255, 59, 48, 0.3); color: #ffd8d1; font: 700 12px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
-.live .source-live-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 6px rgba(255, 59, 48, 0.9); margin-top: 4px; }
+.live .source-ticker-pull { flex: 0 0 auto; padding: 1px 5px; border-radius: 4px; background: rgba(255, 59, 48, 0.3); color: var(--harm-text); font: 700 12px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.live .source-live-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--siren-r); box-shadow: 0 0 6px rgba(255, 59, 48, 0.9); margin-top: 4px; }
 .live .source-live-off { background: var(--mint); box-shadow: none; }
 .live .source-ticker-bar { position: relative; display: block; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
-.live .source-ticker-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--amber), #ff7a3c); transition: width 0.6s linear; }
+.live .source-ticker-bar i { display: block; height: 100%; border-radius: 3px; background: var(--warn); transition: width 0.6s linear; }
 .live .source-ticker-stopped .source-ticker-bar i { background: var(--mint); }
 .live .source-ticker .fill-gauge-tick { top: -2px; height: 10px; }
 /* The chat (owner, 2026-10-21: easy to read): two steady lines, newest at the bottom, each on one
  * line at a readable size. A new line slides up once; nothing fades out from under the reader, and
  * the box keeps its height so nothing below it moves. */
 .live .source-reactions { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: calc(2 * 1.35em + 2px); margin-top: 2px; overflow: hidden; pointer-events: none; font: 500 13px/1.35 var(--font-ui); }
-.live .source-reaction { display: block; min-width: 0; color: #f2f4f8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live .source-reaction { display: block; min-width: 0; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live .source-reaction:last-child { animation: chat-in 0.25s ease-out 1; }
 .live .source-reaction:not(:last-child) { color: rgba(242, 244, 248, 0.72); }
 /* The handle reads first and quieter, like a stream app's chat; a join is the handle alone, dimmer. */
-.live .source-reaction-who { margin-right: 5px; font-weight: 700; color: #ffc078; }
+.live .source-reaction-who { margin-right: 5px; font-weight: 700; color: var(--warn-text); }
 .live .source-reaction-join { color: rgba(242, 244, 248, 0.6); }
 .live .source-reaction-join .source-reaction-who { color: rgba(255, 192, 120, 0.75); }
 /* What the source does to the odds, in words, under its bar. */
-.live .source-ticker-effect { margin: 1px 0 0; font: 500 12.5px/1.3 var(--font-ui); color: #ffd8b0; }
+.live .source-ticker-effect { margin: 1px 0 0; font: 500 12.5px/1.3 var(--font-ui); color: var(--warn-text); }
 @keyframes chat-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .live .source-reaction:last-child { animation: none; }
@@ -254,16 +254,16 @@
 .live .comms-log-lines { height: calc(4 * 1.4em + 15px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; font-size: 14px; scrollbar-width: thin; }
 .live .comms-log-lines:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 4px; }
 .live .comms-quiet { color: var(--text-dim); font-style: italic; }
-.live .comms-landed { display: grid; gap: 5px; padding: 5px 7px; border-radius: 6px; background: rgba(255, 59, 48, 0.18); box-shadow: inset 3px 0 0 #ff3b30; opacity: 1 !important; }
+.live .comms-landed { display: grid; gap: 5px; padding: 5px 7px; border-radius: 6px; background: rgba(255, 59, 48, 0.18); box-shadow: inset 3px 0 0 var(--siren-r); opacity: 1 !important; }
 .live .threat-landed { display: grid; gap: 5px; }
-.live .threat-landed-text { display: flex; align-items: flex-start; gap: 5px; margin: 0; font: 600 14px/1.4 var(--font-ui); color: #fff; }
-.live .threat-landed-text .icon { flex: 0 0 auto; margin-top: 3px; color: #ff6b57; }
-.live .comms-log-head { display: flex; align-items: center; gap: 5px; margin: 0 0 5px; color: #9fb9ff; font: 700 11.5px/1 var(--font-cond); letter-spacing: 0.12em; text-transform: uppercase; }
+.live .threat-landed-text { display: flex; align-items: flex-start; gap: 5px; margin: 0; font: 600 14px/1.4 var(--font-ui); color: var(--white); }
+.live .threat-landed-text .icon { flex: 0 0 auto; margin-top: 3px; color: var(--harm); }
+.live .comms-log-head { display: flex; align-items: center; gap: 5px; margin: 0 0 5px; color: var(--info); font: 700 var(--s12)/1 var(--font-cond); }
 .live .comms-log ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .live .comms-line { font: 500 1em/1.4 var(--font-ui); color: var(--text); }
 .live .comms-line:not(:last-child) { opacity: 0.66; }
-.live .comms-speaker { margin-right: 6px; color: #fff; font: 700 0.93em/1.4 var(--font-cond); letter-spacing: 0.03em; }
-.live .comms-cue .comms-text { font-style: italic; color: #cdd6e6; }
+.live .comms-speaker { margin-right: 6px; color: var(--white); font: 700 1em/1.4 var(--font-cond); }
+.live .comms-cue .comms-text { font-style: italic; color: var(--t-plate); }
 .live .comms-fresh { animation: comms-in 0.5s ease-out 1; }
 @keyframes comms-in { from { opacity: 0; transform: translateY(-4px); background: rgba(122, 162, 255, 0.25); } }
 @media (prefers-reduced-motion: reduce) { .live .comms-fresh { animation: none; } }
@@ -289,9 +289,9 @@
 .live .callbtn-weighed .callbtn-cost { display: block; margin-top: 0; }
 .action-sheet-weigh { display: grid; gap: 6px; margin: 0 0 10px; }
 .action-sheet-weigh > div { display: grid; gap: 2px; }
-.action-sheet-weigh dt { font: 700 12.5px/1.2 var(--font-cond); letter-spacing: 0.04em; text-transform: uppercase; color: var(--amber-2); }
-.action-sheet-weigh-cost dt { color: #ffb4aa; }
-.action-sheet-weigh dd { margin: 0; font-size: 14px; line-height: 1.5; color: #dce5f2; }
+.action-sheet-weigh dt { font: 700 12.5px/1.2 var(--font-cond); color: var(--t2); }
+.action-sheet-weigh-cost dt { color: var(--harm-text); }
+.action-sheet-weigh dd { margin: 0; font-size: 14px; line-height: 1.5; color: var(--t1); }
 
 /* At 200% text a phone is about 420px tall, and the pinned strip would cover most of it: below that
  * height the strip scrolls with the page instead, so the cards stay reachable. */

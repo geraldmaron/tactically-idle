@@ -2,9 +2,7 @@
 .store-training .training-intro { font-size: 13px; }
 .store-training .training-course { gap: 9px; }
 .store-training .training-course-gain { font-size: 14px; font-weight: 600; }
-.store-training .training-course > .dim { font-size: 13px; }
-.training-course-personal { padding: 8px 10px; border-left: 2px solid var(--amber); background: rgba(243, 180, 50, .05); }
-.training-course-personal > .dim { font-size: 13px; }
+.training-course-personal { padding: 8px 10px; border-left: 2px solid var(--hair-2); background: var(--ink-2); }
 .training-course-personal .training-gain { margin-top: 3px; }
 .training-selected-officer, .training-officer-card { min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 12px; }
 .training-selected-officer { display: flex; flex-direction: column; gap: 8px; }
@@ -12,11 +10,11 @@
 .training-portrait { border-radius: 7px; }
 .training-person-name { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 3px; }
 .training-person-name > strong { font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
-.training-person-name > .kicker { font-size: 11px; }
+.training-person-name > .kicker { font-size: var(--s12); }
 .training-person-name > .dim, .training-condition { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .training-condition { color: var(--text); }
 .training-strengths { margin: 0; font-size: 13px; line-height: 1.4; }
-.training-chooser .btn { min-height: 44px; white-space: normal; }
+.training-chooser .btn { white-space: normal; }
 .training-chooser .sheet-title { font-size: 21px; }
 .training-chooser .sheet-sub { font-size: 13px; line-height: 1.4; }
 .training-chooser .sheet-body { padding-top: 10px; }
@@ -30,9 +28,9 @@
 .training-officer-card { display: flex; flex-direction: column; gap: 9px; }
 .training-benefits { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; }
 .training-benefits .training-xp { flex: 0 0 auto; color: var(--text-dim); }
-.training-officer-selected { border-color: var(--amber); }
+.training-officer-selected { border-color: var(--t2); }
 .training-officer-selected .training-person { padding-right: 54px; }
-.training-selected-label { position: absolute; right: 0; top: 0; font-size: 12px; color: var(--amber); }
+.training-selected-label { position: absolute; right: 0; top: 0; font-size: 12px; color: var(--t2); }
 .training-xp { margin: 0; font-size: 13px; line-height: 1.4; }
 .training-gain { display: flex; flex-direction: column; gap: 2px; margin: 0; font-size: 14px; line-height: 1.4; }
 .training-gain > span { font-size: 13px; color: var(--text-dim); }

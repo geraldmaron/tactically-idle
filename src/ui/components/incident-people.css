@@ -1,31 +1,31 @@
-.incident-people-status { min-width: 0; margin: 0 var(--gutter) 10px; padding: 12px; border: 1px solid var(--line); border-top: 2px solid var(--amber); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); overflow-wrap: anywhere; }
+.incident-people-status { min-width: 0; margin: 0 var(--gutter) 10px; padding: 12px; border: 1px solid var(--line); border-top: 2px solid var(--hair-2); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); overflow-wrap: anywhere; }
 .incident-people-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; margin-bottom: 8px; }
-.incident-people-status h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-.incident-people-status h2 > .icon { flex-shrink: 0; color: var(--amber); }
+.incident-people-status h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+.incident-people-status h2 > .icon { flex-shrink: 0; color: var(--t2); }
 .incident-people-tally { font-size: 13px; color: var(--text-dim); }
 .incident-people-tally strong { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--text); }
 .incident-people-care { color: var(--warn); }
 /* One segment per tracked person, coloured by what is known about them. */
 .incident-people-meter { display: flex; gap: 3px; height: 6px; margin-bottom: 10px; }
 .incident-people-meter i { flex: 1 1 0; border-radius: 3px; background: var(--line-strong); }
-.incident-people-meter [data-tone="pending"] { background: repeating-linear-gradient(90deg, var(--amber) 0 5px, transparent 5px 8px); }
+.incident-people-meter [data-tone="pending"] { background: repeating-linear-gradient(90deg, var(--warn) 0 5px, transparent 5px 8px); }
 .incident-people-meter [data-tone="warn"] { background: var(--warn); }
 .incident-people-meter [data-tone="ok"] { background: var(--mint); }
 .incident-people-meter [data-tone="danger"] { background: var(--danger); }
 .incident-people-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 0; margin: 0; list-style: none; min-width: 0; }
 .person-tile { --tone: var(--muted); display: flex; align-items: center; gap: 9px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 6px; background: rgba(11, 17, 28, 0.55); font-size: 13px; line-height: 1.35; }
-.person-tile[data-tone="pending"] { --tone: var(--amber); }
+.person-tile[data-tone="pending"] { --tone: var(--warn); }
 .person-tile[data-tone="warn"] { --tone: var(--warn); }
 .person-tile[data-tone="ok"] { --tone: var(--mint); }
 .person-tile[data-tone="danger"] { --tone: var(--danger); }
 .person-avatar { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border: 2px solid var(--tone); border-radius: 50%; overflow: hidden; background: var(--panel-3); color: var(--tone); font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
-.person-tile[data-tone="pending"] .person-avatar { border-style: dashed; background: rgba(243, 180, 50, 0.08); }
+.person-tile[data-tone="pending"] .person-avatar { border-style: dashed; background: rgba(245, 155, 66, 0.08); }
 .person-avatar > * { flex-shrink: 0; }
 .person-text { display: grid; gap: 2px; min-width: 0; }
 .person-text strong { font-weight: 600; color: var(--text); }
 .person-status { display: flex; align-items: flex-start; gap: 4px; color: var(--tone); font-weight: 600; }
 .person-status > .icon { flex-shrink: 0; margin-top: 2px; }
-.person-tile[data-tone="pending"] .person-status { color: var(--amber-2); }
+.person-tile[data-tone="pending"] .person-status { color: var(--warn); }
 .incident-wounded-list { margin-top: 8px; }
 .incident-subject-list, .incident-clock-list { margin-top: 8px; }
 .person-note { color: var(--text-dim); font-weight: 400; }

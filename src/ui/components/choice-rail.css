@@ -37,20 +37,20 @@
 }
 .choice-rail-grow .choice-rail-item { flex-grow: 1; }
 .choice-rail-selected { color: var(--text); background: var(--panel-3); box-shadow: 0 1px 2px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05); }
-.choice-rail-selected b { color: var(--amber-2); }
+.choice-rail-selected b { color: var(--t1); }
 @media (hover: hover) { .choice-rail-item:not(:disabled):not(.choice-rail-selected):hover { color: var(--text); } }
 
 /* Filters and squad tabs: one recessed track with the chosen option raised out of it. */
 .choice-rail-filter, .choice-rail-tabs { padding: 3px; gap: 2px; border-color: rgba(43, 59, 84, .7); background: rgba(8, 13, 24, .55); }
 .choice-rail-filter .choice-rail-item, .choice-rail-tabs .choice-rail-item { border: 0; border-radius: 7px; }
 .choice-rail-tabs .choice-rail-item b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 5px; background: rgba(255, 255, 255, .06); font-size: 13px; }
-.choice-rail-tabs .choice-rail-selected b { color: var(--amber-ink); background: var(--amber); }
+.choice-rail-tabs .choice-rail-selected b { color: var(--t1); background: var(--ink-3); }
 
 /* Section navigation: plain tabs over a hairline, the current one underlined in amber. */
 .choice-rail-navigation { gap: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
-.choice-rail-navigation .choice-rail-item { position: relative; border: 0; border-radius: 0; color: var(--muted); font: 600 16px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
+.choice-rail-navigation .choice-rail-item { position: relative; border: 0; border-radius: 0; color: var(--muted); font: 600 16px/1.2 var(--font-display); }
 .choice-rail-navigation .choice-rail-selected { color: var(--text); background: transparent; box-shadow: none; }
-.choice-rail-navigation .choice-rail-selected::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--amber); }
+.choice-rail-navigation .choice-rail-selected::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--t1); }
 .choice-rail-item:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .choice-rail-item:disabled { opacity: .5; cursor: default; }
 .choice-rail-count { min-width: 1.35em; padding: 2px 4px; border-radius: 4px; color: var(--text-dim); background: rgba(255,255,255,.06); font-size: 12px; }

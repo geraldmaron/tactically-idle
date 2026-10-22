@@ -12,6 +12,6 @@
 .tap-earn-icon { flex-shrink: 0; color: var(--amber-2); }
 .tap-earn-text { display: grid; gap: 2px; min-width: 0; }
 .tap-earn-text strong { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
-.tap-earn-text small { font-size: 13px; color: var(--text-dim); }
+.tap-earn-text small { font-size: var(--s14); color: var(--text-dim); }
 .tap-earn-target .fund-deltas { top: 6px; left: auto; right: 34px; }
 @media (prefers-reduced-motion: reduce) { .tap-earn-target:active { transform: none; } }

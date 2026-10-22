@@ -1,6 +1,6 @@
 /* Canonical player destinations share the same controls and equipment presentation. */
 .player-return { padding: 12px var(--gutter) 0; }
-.player-return .btn { min-height: 44px; width: 100%; text-align: left; justify-content: flex-start; white-space: normal; }
+.player-return .btn { width: 100%; text-align: left; justify-content: flex-start; white-space: normal; }
 .squad-navigation { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
 .squad-navigation .choice-rail { flex: 1 1 auto; }
 .squad-tab-name { display: block; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; }
@@ -13,10 +13,10 @@
   background:
     linear-gradient(var(--grid-fine) 1px, transparent 1px) 0 0 / 12px 12px,
     linear-gradient(90deg, var(--grid-fine) 1px, transparent 1px) 0 0 / 12px 12px,
-    radial-gradient(circle at 30% 20%, #2a63c9, var(--paper-deep));
+    radial-gradient(circle at 30% 20%, var(--map-hi), var(--paper-deep));
 }
 .store-detail-section h3 {
-  font-family: var(--font-display); font-weight: 500; letter-spacing: .03em; text-transform: uppercase;
+  font-family: var(--font-display); font-weight: 500; letter-spacing: .03em;
 }
 .store-equipment .field, .store-training .field { min-width: 0; margin: 0; }
 .store-equipment .field input, .store-equipment .field select,

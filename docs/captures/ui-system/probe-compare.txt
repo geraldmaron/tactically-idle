@@ -1,0 +1,102 @@
+== 390
+01-first-run             min   None->None  <13   0->  0  <44 0->0  ov 0->0  scrollH 1845->1820  primaryTop None->None
+02-hq                    min     11->  12  <13  36-> 36  <44 0->0  ov 0->0  scrollH 1780->1768  primaryTop None->None
+03-finance-sheet         min     11->  12  <13  32-> 24  <44 0->0  ov 0->0  scrollH 752->752  primaryTop None->None
+03b-level-sheet          min     11->  12  <13  36-> 36  <44 0->0  ov 0->0  scrollH 1780->1768  primaryTop None->None
+04-command-staff-sheet   min     11->  12  <13  39-> 40  <44 0->0  ov 0->0  scrollH 1780->1768  primaryTop 733->733
+05-squad                 min   8.37->  12  <13  63-> 61  <44 0->0  ov 0->0  scrollH 1955->2057  primaryTop None->None
+06-officer-sheet         min   8.37->  12  <13  48-> 50  <44 0->0  ov 0->0  scrollH 915->929  primaryTop None->None
+06-officer-sheet-career  min   8.37->  12  <13  57-> 57  <44 0->0  ov 0->0  scrollH 983->989  primaryTop None->None
+06-officer-sheet-care    min   8.37->  12  <13  71-> 73  <44 0->0  ov 0->0  scrollH 1955->2057  primaryTop None->None
+07-arrange-sheet         min   8.37->  12  <13  46-> 44  <44 4->4  ov 0->0  scrollH 761->761  primaryTop 776->776
+08-hire-contract-sheet   min  8.964->  12  <13  59-> 55  <44 0->0  ov 0->0  scrollH 607->678  primaryTop 393->393
+09-training              min     11->  12  <13  33-> 33  <44 0->0  ov 0->0  scrollH 2347->2352  primaryTop None->None
+10-develop               min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 1012->1013  primaryTop None->None
+11-develop-sheet         min     11->  12  <13  51-> 51  <44 0->0  ov 0->0  scrollH 1012->1013  primaryTop 779->779
+12-gear                  min     11->  12  <13  37-> 37  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+13-gear-item-sheet       min     11->  12  <13  43-> 43  <44 0->0  ov 0->0  scrollH 790->776  primaryTop 788->788
+14-restock-sheet         min     11->  12  <13  37-> 37  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+15-presets-sheet         min     11->  12  <13  37-> 37  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+16-saves-sheet           min     11->  12  <13  31-> 29  <44 0->0  ov 0->0  scrollH 1609->1568  primaryTop 329->329
+17-settings-sheet        min     11->  12  <13  28-> 25  <44 0->0  ov 0->0  scrollH 1704->1674  primaryTop None->None
+18-board                 min     10->  12  <13  19-> 18  <44 0->0  ov 0->0  scrollH 1885->1913  primaryTop 614->623
+19-prepare-brief         min     11->  12  <13  18-> 24  <44 0->0  ov 0->0  scrollH 2536->2702  primaryTop 723->723
+20-prepare-team-empty    min     12->  12  <13  11-> 12  <44 0->0  ov 0->0  scrollH 789->791  primaryTop 723->723
+21-prepare-team-picked   min     11->  12  <13  18-> 16  <44 0->0  ov 0->0  scrollH 1792->1955  primaryTop 723->723
+22-live-decide-1         min   10.5->  12  <13  28-> 30  <44 5->0  ov 1->1  scrollH 1646->1724  primaryTop None->None
+23-review-sheet          min     10->  12  <13  51-> 56  <44 2->0  ov 1->1  scrollH 1336->1412  primaryTop 723->723
+24-result-beat           min   10.5->  12  <13  21-> 23  <44 4->0  ov 1->1  scrollH 814->837  primaryTop 632->639
+25-live-decide-2         min   10.5->  12  <13  34-> 36  <44 4->0  ov 1->1  scrollH 1603->1636  primaryTop None->None
+25-live-decide-3         min   10.5->  12  <13  35-> 34  <44 4->0  ov 1->1  scrollH 1493->1384  primaryTop None->None
+26-debrief               min     11->  12  <13  29-> 35  <44 0->0  ov 0->0  scrollH 1597->1872  primaryTop 725->725
+27-board-after           min     10->  12  <13  16-> 15  <44 0->0  ov 0->0  scrollH 1494->1530  primaryTop 614->623
+28-hq-after-call         min     11->  12  <13  35-> 35  <44 0->0  ov 0->0  scrollH 1741->1744  primaryTop None->None
+smallest text {'b_min': 8.37, 'a_min': 12}
+== 320
+01-first-run             min   None->None  <13   0->  0  <44 0->0  ov 0->0  scrollH 1864->1839  primaryTop None->None
+02-hq                    min     11->  12  <13  30-> 31  <44 0->0  ov 0->0  scrollH 1692->1681  primaryTop None->None
+03-finance-sheet         min     11->  12  <13  24-> 17  <44 0->0  ov 0->0  scrollH 752->752  primaryTop None->None
+03b-level-sheet          min     11->  12  <13  30-> 31  <44 0->0  ov 0->0  scrollH 1692->1681  primaryTop None->None
+04-command-staff-sheet   min     11->  12  <13  33-> 42  <44 0->0  ov 0->0  scrollH 1692->436  primaryTop 461->467
+05-squad                 min  6.696->  12  <13  56-> 55  <44 0->0  ov 0->0  scrollH 2108->2192  primaryTop None->None
+06-officer-sheet         min  6.696->  12  <13  31-> 35  <44 0->0  ov 0->0  scrollH 981->993  primaryTop None->None
+06-officer-sheet-career  min  6.696->  12  <13  41-> 42  <44 0->0  ov 0->0  scrollH 983->993  primaryTop None->None
+06-officer-sheet-care    min  6.696->  12  <13  34-> 38  <44 0->0  ov 0->0  scrollH 598->606  primaryTop None->None
+07-arrange-sheet         min  6.696->  12  <13  32-> 32  <44 4->4  ov 0->0  scrollH 781->781  primaryTop 512->512
+08-hire-contract-sheet   min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 678->678  primaryTop 256->256
+09-training              min     11->  12  <13  31-> 31  <44 0->0  ov 0->0  scrollH 2378->2373  primaryTop None->None
+10-develop               min     11->  12  <13  32-> 32  <44 0->0  ov 0->0  scrollH 1091->1079  primaryTop None->None
+11-develop-sheet         min     11->  12  <13  36-> 36  <44 0->0  ov 0->0  scrollH 602->652  primaryTop 503->503
+12-gear                  min     11->  12  <13  32-> 32  <44 0->0  ov 0->0  scrollH 2231->2211  primaryTop None->None
+13-gear-item-sheet       min    9.5->  12  <13  39-> 40  <44 0->0  ov 0->0  scrollH 900->893  primaryTop 512->512
+14-restock-sheet         min     11->  12  <13  32-> 32  <44 0->0  ov 0->0  scrollH 2231->2211  primaryTop None->None
+15-presets-sheet         min     11->  12  <13  32-> 32  <44 0->0  ov 0->0  scrollH 2231->2211  primaryTop None->None
+16-saves-sheet           min     11->  12  <13  25-> 23  <44 0->0  ov 0->0  scrollH 1745->1704  primaryTop 332->332
+17-settings-sheet        min     11->  12  <13  23-> 20  <44 0->0  ov 0->0  scrollH 1805->1775  primaryTop None->None
+18-board                 min     10->  12  <13  15-> 16  <44 0->0  ov 0->0  scrollH 1818->1840  primaryTop None->None
+19-prepare-brief         min     11->  12  <13  17-> 25  <44 0->0  ov 0->0  scrollH 2778->2816  primaryTop 447->447
+20-prepare-team-empty    min     12->  12  <13  12-> 13  <44 0->0  ov 0->0  scrollH 798->800  primaryTop 447->447
+21-prepare-team-picked   min     11->  12  <13  17-> 16  <44 0->0  ov 0->0  scrollH 1936->1930  primaryTop 447->447
+22-live-decide-1         min     11->  12  <13  19-> 18  <44 5->0  ov 1->1  scrollH 1819->1824  primaryTop None->None
+23-review-sheet          min     10->  12  <13  40-> 42  <44 2->0  ov 1->1  scrollH 1369->1374  primaryTop 447->447
+24-result-beat           min     12->  12  <13  15-> 17  <44 4->0  ov 1->1  scrollH 794->883  primaryTop 445->445
+25-live-decide-2         min     11->  12  <13  26-> 28  <44 4->0  ov 1->1  scrollH 1969->1872  primaryTop None->None
+25-live-decide-3         min     11->  12  <13  26-> 26  <44 4->0  ov 1->1  scrollH 1714->1589  primaryTop None->None
+26-debrief               min     11->  12  <13  27-> 27  <44 0->0  ov 0->0  scrollH 1894->1938  primaryTop 449->449
+27-board-after           min     10->  12  <13  17-> 15  <44 0->0  ov 0->0  scrollH 1430->1445  primaryTop None->None
+28-hq-after-call         min     11->  12  <13  29-> 30  <44 0->0  ov 0->0  scrollH 1668->1656  primaryTop None->None
+smallest text {'b_min': 6.696, 'a_min': 12}
+== 430
+01-first-run             min   None->None  <13   0->  0  <44 0->0  ov 0->0  scrollH 1769->1744  primaryTop None->None
+02-hq                    min     11->  12  <13  34-> 34  <44 0->0  ov 0->0  scrollH 1830->1818  primaryTop None->None
+03-finance-sheet         min     11->  12  <13  43-> 35  <44 0->0  ov 0->0  scrollH 1830->1818  primaryTop None->None
+03b-level-sheet          min     11->  12  <13  34-> 34  <44 0->0  ov 0->0  scrollH 1830->1818  primaryTop None->None
+04-command-staff-sheet   min     11->  12  <13  37-> 38  <44 0->0  ov 0->0  scrollH 1830->1818  primaryTop 821->821
+05-squad                 min   9.45->  12  <13  66-> 67  <44 0->0  ov 0->0  scrollH 1955->1972  primaryTop None->None
+06-officer-sheet         min   9.45->  12  <13  62-> 63  <44 0->0  ov 0->0  scrollH 915->929  primaryTop None->None
+06-officer-sheet-career  min   9.45->  12  <13  74-> 72  <44 0->0  ov 0->0  scrollH 979->989  primaryTop None->None
+06-officer-sheet-care    min   9.45->  12  <13  74-> 79  <44 0->0  ov 0->0  scrollH 1955->1972  primaryTop None->None
+07-arrange-sheet         min   9.45->  12  <13  60-> 56  <44 4->4  ov 0->0  scrollH 714->714  primaryTop 864->864
+08-hire-contract-sheet   min   9.45->  12  <13  76-> 66  <44 0->0  ov 0->0  scrollH 1955->678  primaryTop 876->437
+09-training              min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 2281->2289  primaryTop None->None
+10-develop               min     11->  12  <13  41-> 42  <44 0->0  ov 0->0  scrollH 937->919  primaryTop None->None
+11-develop-sheet         min     11->  12  <13  52-> 53  <44 0->0  ov 0->0  scrollH 937->919  primaryTop 867->867
+12-gear                  min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+13-gear-item-sheet       min     11->  12  <13  47-> 47  <44 0->0  ov 0->0  scrollH 771->757  primaryTop 876->876
+14-restock-sheet         min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+15-presets-sheet         min     11->  12  <13  40-> 40  <44 0->0  ov 0->0  scrollH 2236->2216  primaryTop None->None
+16-saves-sheet           min     11->  12  <13  36-> 34  <44 0->0  ov 0->0  scrollH 1609->1568  primaryTop 340->340
+17-settings-sheet        min     11->  12  <13  33-> 30  <44 0->0  ov 0->0  scrollH 1594->1564  primaryTop None->None
+18-board                 min     10->  12  <13  18-> 18  <44 0->0  ov 0->0  scrollH 1823->1847  primaryTop 590->595
+19-prepare-brief         min     11->  12  <13  17-> 30  <44 0->0  ov 0->0  scrollH 2495->2638  primaryTop 811->811
+20-prepare-team-empty    min     12->  12  <13  11-> 12  <44 0->0  ov 0->0  scrollH None->None  primaryTop 785->787
+21-prepare-team-picked   min     11->  12  <13  19-> 17  <44 0->0  ov 0->0  scrollH 1821->2005  primaryTop 811->811
+22-live-decide-1         min   10.5->  12  <13  29-> 29  <44 5->0  ov 1->1  scrollH 1619->1698  primaryTop None->None
+23-review-sheet          min     10->  12  <13  54-> 56  <44 2->0  ov 1->1  scrollH 1333->1391  primaryTop 811->811
+24-result-beat           min   10.5->  12  <13  21-> 23  <44 4->0  ov 1->1  scrollH None->None  primaryTop 685->669
+25-live-decide-2         min   10.5->  12  <13  33-> 36  <44 4->0  ov 1->1  scrollH 1557->1592  primaryTop None->None
+25-live-decide-3         min   10.5->  12  <13  35-> 40  <44 4->0  ov 1->1  scrollH 1487->1403  primaryTop None->None
+26-debrief               min     11->  12  <13  32-> 34  <44 0->0  ov 0->0  scrollH 1549->1549  primaryTop 813->813
+27-board-after           min     10->  12  <13  18-> 17  <44 0->0  ov 0->0  scrollH 1451->1483  primaryTop 590->595
+28-hq-after-call         min     11->  12  <13  33-> 33  <44 0->0  ov 0->0  scrollH 1791->1779  primaryTop None->None
+smallest text {'b_min': 9.45, 'a_min': 12}
