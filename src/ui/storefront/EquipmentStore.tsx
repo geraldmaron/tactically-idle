@@ -27,7 +27,7 @@ import { Disclosure } from '../components/Disclosure';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { conditionTone } from '../components/labels';
 import { StockBar, UnitList } from './ItemUnits';
-import { CostTag, Segments, type CostQuote } from '../screens/build-parts';
+import { Segments } from '../screens/build-parts';
 import './storefront.css';
 
 interface EquipmentReceipt { itemId: Id; quantity: number }
@@ -111,19 +111,22 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
   const certs = item.requiresCerts?.length ? `. Certification needed to use: ${entry.qualified} certified officer${entry.qualified === 1 ? '' : 's'}` : '';
   const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
   const stock = entry.owned > 0 ? `${entry.owned} owned · ${entry.ready} ready` : 'Not owned';
-  const quote: CostQuote = { state: state === 'buy' ? 'ready' : state, price: item.cost, blocker: state === 'locked' ? `Needs ${entry.unlockName}` : state === 'short' ? 'Needs funding' : undefined };
+  const blocker = state === 'locked' ? `Needs ${entry.unlockName}` : null;
+  const stateLabel = state === 'locked' ? 'Locked' : state === 'short' ? 'Needs funding' : null;
   // Row's markup and classes, with the item id and the element the sheet returns focus to, which Row does not carry.
-  return <button type="button" className={`ui-row inv-tile store-tile store-tile-${state}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
-    <span className="ui-row-lead inv-art" aria-hidden="true"><GearArtFrame itemId={item.id} size={32} /></span>
+  return <button type="button" className={`ui-row inv-tile store-tile store-tile-${state}${entry.owned > 0 ? ' store-tile-owned' : ''}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
+    <span className="ui-row-lead inv-art" aria-hidden="true"><GearArtFrame itemId={item.id} size={32} />{entry.owned > 0 && <span className="store-tile-qty">{entry.owned}</span>}</span>
     <span className="ui-row-main" aria-hidden="true">
       <span className="ui-row-title inv-name">{item.name}
         {entry.needsAttention && <span className="inv-alert"><Icon name="warning" size={16} /></span>}
         {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`}><Icon name="mortarboard" size={16} /></span>}
       </span>
-      <span className="ui-row-detail store-tile-stock">{stock}{acquired !== undefined && <> · <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span></>}{quote.blocker && <> · <CostTag part="note" quote={quote} /></>}</span>
+      <span className="ui-row-detail store-tile-stock">{entry.owned > 0 ? <span className="store-tile-have"><Icon name="check" size={16} />{stock}</span> : stock}{acquired !== undefined && <> · <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span></>}</span>
+      {blocker && <span className="store-tile-gate"><Icon name="lock" size={16} />{blocker}</span>}
     </span>
-    <span className="ui-row-trail" aria-hidden="true">
-      <CostTag part="value" quote={quote} />
+    <span className="ui-row-trail store-tile-price" aria-hidden="true">
+      <span className="store-tile-cost"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{money(item.cost)}</span>
+      {stateLabel && <span className="store-tile-state">{stateLabel}</span>}
     </span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
@@ -156,13 +159,15 @@ function EquipmentDetail({ entry, onPurchase, onClose, onDevelopment, onTraining
       const result = act({ type: 'buyItem', itemId: item.id, qty }, `Bought ${qty} × ${item.name}`);
       setFeedback({ ok: result.ok, text: result.ok ? `${qty} ${qty === 1 ? 'unit added' : 'units added'} to the Armory for ${money(item.cost * qty)} funding.` : result.reason });
       if (result.ok) onPurchase(qty);
-    }}>{quantityValid ? `Buy ${qty} · ${money(item.cost * qty)} funding` : 'Enter quantity to buy'}</Button>
-    {failureMessage && <p className="reason" role="status">{failureMessage}</p>}
+    }}>{!entry.unlocked ? 'Locked' : quantityValid ? `Buy ${qty} · ${money(item.cost * qty)} funding` : 'Enter quantity to buy'}</Button>
+    {failureMessage && entry.unlocked && <p className="reason store-purchase-reason" role="status"><Icon name={entry.unlocked ? 'warning' : 'lock'} size={16} />{failureMessage}</p>}
   </div>}>
     <div ref={objectRef} className={`store-detail-art${feedback?.ok ? ' store-detail-acquired' : ''}`}><GearArtFrame itemId={item.id} size={128} /><div className="store-detail-hero">
       {feedback?.ok && <div className="store-purchase-receipt" role="status"><Icon name="check" size={20} /><div><strong>{item.name} acquired</strong><p>{feedback.text}</p></div></div>}
+      {!entry.unlocked && <div className="store-gate" role="note"><Icon name="lock" size={20} /><div><strong>Needs {entry.unlockName}</strong><p>Unlock it in Build, then come back to buy.</p></div>{item.requiresNode && <Button size="sm" variant="primary" icon="build" onClick={() => onDevelopment(item.requiresNode!)}>View</Button>}</div>}
       <p>{item.description}</p>
       <span className="chips">
+        {entry.owned > 0 && <Chip tone="mint" icon="check">Owned · {entry.owned}</Chip>}
         <Chip tone={entry.unlocked ? 'mint' : 'neutral'} icon={entry.unlocked ? 'unlock' : 'lock'}>{entry.unlocked ? 'Purchase unlocked' : 'Purchase locked'}</Chip>
         <Chip tone={entry.affordable ? 'mint' : 'warn'} icon="cash">{money(item.cost)}{entry.affordable ? '' : ' · needs funding'}</Chip>
         {!!item.requiresCerts?.length && <Chip tone={entry.qualified ? 'blue' : 'warn'} icon="mortarboard">{entry.qualified} certified</Chip>}
