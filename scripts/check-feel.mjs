@@ -48,7 +48,7 @@ async function main() {
     failures.push(...walked.failures);
     const rows = new Map(); // `${screen}\t${rule}` -> { scenarios: Map(id -> details) }
     for (const r of walked.results) {
-      const screen = r.screen.replace(/-reentry$/, '');
+      const screen = r.screen.replace(/-(reentry|blocked)$/, '');
       if (screens && !screens.includes(screen)) continue;
       for (const f of r.findings) {
         const key = `${r.screen}\t${f.rule}`;
@@ -59,13 +59,15 @@ async function main() {
     console.log(`\n${'screen'.padEnd(14)}${'rule'.padEnd(16)}${'enforced'.padEnd(10)}failing scenarios`);
     for (const [key, byScenario] of [...rows].sort()) {
       const [screen, rule] = key.split('\t');
-      const isOn = enforced(rule, screen.replace(/-reentry$/, ''), on);
+      const isOn = enforced(rule, screen.replace(/-(reentry|blocked)$/, ''), on);
       console.log(`${screen.padEnd(14)}${rule.padEnd(16)}${(isOn ? 'ON' : 'off').padEnd(10)}${[...byScenario.keys()].join(' ')}`);
       const [firstScenario, detail] = [...byScenario][0];
       console.log(`${' '.repeat(40)}e.g. ${firstScenario}: ${detail}`);
       if (isOn) hard.push(`${screen} ${rule} in ${[...byScenario.keys()].join(', ')}`);
     }
     if (!rows.size) console.log('(no findings)');
+    // What was measured, so a clean result can be told from a walk that never got there.
+    for (const sc of scenarios) console.log(`measured ${sc.id}: ${walked.results.filter((r) => r.scenario === sc.id).map((r) => r.screen).join(', ') || 'nothing'}${sc.blocked ? ` (reason: ${walked.results.find((r) => r.scenario === sc.id)?.raw.blocked?.text ?? 'none'})` : ''}`);
     // What F5 actually saw, so a clean result can be told from a blind one.
     for (const sc of scenarios.filter((x) => x.paint)) {
       const seen = walked.results.filter((r) => r.scenario === sc.id).map((r) => `${r.screen} ${(r.raw.plates ?? []).filter((p) => p.pendingArt > 0).length}/${(r.raw.plates ?? []).length}`);
