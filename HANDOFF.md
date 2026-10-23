@@ -284,6 +284,10 @@ brief-gaps (c86d354), the brief rebuild (3254345). `owner-visual-picks` shipped.
 
 Wave 2 (visual only, from 3254345): live-debrief (local_8cb0246e, 5180), team (local_559e07b0, 5176),
 hq (local_47377257, 5175), store (local_05ca9623, 5177). Ownership and routed items: the plan's wave 2 table.
+
+Wave 2 merged, untested (owner's visual-only rule): hq (4eeff85), team (35683d4), store (135612a, pill rules moved
+in 91c47b1), live-debrief (13b51a5). Next: wave 3 calls lane and the lead's shared batch, both listed at the end
+of the plan.
 Lead-owned during the wave: `src/ui/ui-debt.json` and `SMALL_TEXT_CEILING` (lanes lower them on their own branch;
 the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme.css`, `app.css`, `skin.css`,
 `player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
