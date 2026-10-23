@@ -83,6 +83,8 @@ export async function serve({ root, given }) {
     rmSync(cacheDir, { recursive: true, force: true });
   };
   process.once('exit', stop);
+  // A cancelled run (Ctrl-C, a killed parent) must not leave Vite running or its cache behind.
+  for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) process.once(signal, () => { stop(); process.exit(code); });
   for (let i = 0; i < 60 && !(await reachable(url)); i++) await new Promise((r) => setTimeout(r, 500));
   if (!(await reachable(url))) { stop(); throw new Error(`could not start a dev server on port ${port}`); }
   return { url, stop };

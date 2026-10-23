@@ -333,7 +333,7 @@
   },
   "R15": {
    "target": 0,
-   "total": 56,
+   "total": 54,
    "counts": {
     "02-hq@320": 1,
     "02-hq@390": 1,
@@ -376,9 +376,7 @@
     "26-debrief@430": 1,
     "27-board-after@320": 1,
     "27-board-after@390": 1,
-    "27-board-after@430": 1,
-    "33-empty-board@390": 1,
-    "33-empty-board@430": 1
+    "27-board-after@430": 1
    }
   },
   "R2.gutter": {

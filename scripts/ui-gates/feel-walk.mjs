@@ -70,7 +70,6 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
     for (const sc of scenarios) {
       const context = await browser.newContext({ viewport: { width: sc.width, height: sc.height }, hasTouch: true, deviceScaleFactor: 2 });
       await context.addInitScript((seed) => { Object.defineProperty(Crypto.prototype, 'getRandomValues', { configurable: true, writable: true, value(a) { a.fill(seed); return a; } }); }, CAMPAIGN_SEED);
-      await installTickHold(context);
       await context.addInitScript((timer) => { if (timer) try { localStorage.setItem('ti-settings', JSON.stringify({ timer })); } catch { /* storage blocked */ } }, sc.timer ?? null);
       await context.addInitScript(() => {
         window.__cls = 0; window.__paint = {};
@@ -87,6 +86,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
       const cdp = await context.newCDPSession(page);
       page.setDefaultTimeout(8000);
       await page.clock.setFixedTime(new Date(FIXED_TIME));
+      await installTickHold(page);
       page.on('dialog', (d) => d.accept());
       const pageErrors = []; page.on('pageerror', (e) => pageErrors.push(String(e)));
       const setInset = (i) => cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: i.top, right: 0, bottom: i.bottom, left: 0 } });

@@ -53,11 +53,11 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
           document.head.append(style);
         });
       });
-      await installTickHold(context);
       const page = await context.newPage();
       const cdp = await context.newCDPSession(page);
       const setInsets = (i) => cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: i });
       await page.clock.setFixedTime(new Date(FIXED_TIME));
+      await installTickHold(page);
       page.on('dialog', (d) => d.accept());
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
       const dir = outDir ? path.join(outDir, String(width)) : null;

@@ -12,12 +12,16 @@ export const LONG_SQUAD_NAMES = ['Westmoreland Heights', 'Northgate Rapid Resp']
 
 const TICK_MS = 5000; // src/ui/store.ts
 
-/** Context init script: the sim's tick interval does nothing while `window.__holdTicks` is true. */
+/**
+ * Init script: the sim's tick interval does nothing while `window.__holdTicks` is true. Install it on the page
+ * AFTER `page.clock.setFixedTime`: Playwright's clock replaces `window.setInterval` when its own init script
+ * runs, and scripts run in the order they were added, so an earlier wrapper is overwritten and the hold fails.
+ */
 export const holdTicksScript = (tickMs) => {
   const real = window.setInterval.bind(window);
   window.setInterval = (callback, ms, ...rest) => real(typeof callback === 'function' && ms === tickMs ? (...a) => { if (!window.__holdTicks) callback(...a); } : callback, ms, ...rest);
 };
-export const installTickHold = (context) => context.addInitScript(holdTicksScript, TICK_MS);
+export const installTickHold = (page) => page.addInitScript(holdTicksScript, TICK_MS);
 
 /** Renames every squad to a 20-character name. Throws when the sim refuses, so a rule change cannot pass silently. */
 export async function seedLongNames(page) {
@@ -28,11 +32,18 @@ export async function seedLongNames(page) {
   if (refused.length) throw new Error(`could not seed long squad names: ${refused[0]}`);
 }
 
-/** Empties the Calls board and waits for the empty state. Call `restoreBoard` before continuing the walk. */
+/**
+ * Empties the Calls board and waits for the empty state, then waits out one full sim tick and checks the board is
+ * still empty: a tick that slipped past the hold would deal a new board, and the frame would not be the empty one.
+ * Call `restoreBoard` before continuing the walk.
+ */
 export async function emptyBoard(page) {
   await page.evaluate(() => { window.__holdTicks = true; });
   await page.clock.setFixedTime(new Date(new Date(FIXED_TIME).getTime() + 30 * 24 * 3600 * 1000));
-  await page.waitForFunction(() => /^No calls waiting/.test(document.querySelector('.cl-board-count')?.textContent ?? ''), null, { timeout: 8000 });
+  const empty = () => page.waitForFunction(() => /^No calls waiting/.test(document.querySelector('.cl-board-count')?.textContent ?? ''), null, { timeout: 8000 });
+  await empty();
+  await page.waitForTimeout(TICK_MS + 700);
+  await empty().catch(() => { throw new Error('the board refilled after a full sim tick: the tick hold did not hold'); });
 }
 
 export async function restoreBoard(page) {
