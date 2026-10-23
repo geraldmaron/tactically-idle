@@ -11,7 +11,8 @@ export const SCENARIOS = [
   { id: 'w320', width: 320, height: HEIGHTS[320], paint: true },
   { id: 'w390', width: 390, height: HEIGHTS[390], paint: true, cold: true },
   { id: 'w430', width: 430, height: HEIGHTS[430] },
-  { id: 'short640', width: 390, height: 640 },
+  // The short screen is judged on reach, not density: the protected full hook leaves room for one card.
+  { id: 'short640', width: 390, height: 640, density: false },
   { id: 'text200', width: 390, height: HEIGHTS[390], textScale: 2 },
   { id: 'timer-off', width: 390, height: HEIGHTS[390], timer: 'off', stepOut: true },
   { id: 'timer-relaxed', width: 390, height: HEIGHTS[390], timer: 'relaxed', stepOut: true },
@@ -88,13 +89,13 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         } catch (e) { failures.push(`${sc.id} ${name}: ${String(e).slice(0, 120)}`); }
       };
       const finish = async (name, raw, shift) => {
-        const findings = judgeScreen(raw, { scale: sc.textScale ?? 1 });
+        const findings = judgeScreen(raw, { scale: sc.textScale ?? 1, density: sc.density !== false });
         // The chrome budget again under the safe-area fixture (notch and home indicator), where it grows by the insets.
         const inset = INSET_FIXTURES.bottom;
         await setInset(inset); await page.waitForTimeout(80);
         const padded = await page.evaluate(feelProbe, { screen: {}, inset: { top: inset.top, bottom: inset.bottom } });
         await setInset(none);
-        const extra = judgeScreen({ primary: { found: true, inside: true, coveredBy: null, disabled: false }, chrome: padded }, {});
+        const extra = judgeScreen({ primary: { found: true, inside: true, coveredBy: null, disabled: false }, chrome: padded }, { scale: sc.textScale ?? 1 });
         results.push({ scenario: sc.id, screen: name, findings: [...findings, ...shift, ...extra], raw });
         log(sc.id, name, findings.length + shift.length + extra.length);
       };

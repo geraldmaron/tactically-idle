@@ -201,8 +201,10 @@ export function judgeEssential(r) {
   return bad;
 }
 
-/** `inset` is the safe-area override the probe ran under; the budget grows by it. */
-export function judgeChrome(c, budget = FEEL_BUDGETS.chromePx) {
+/** `inset` is the safe-area override the probe ran under; the budget grows by it. The budget is for the
+ * default text size: at 2x text the nav labels double, and clipping there is R12's job, not this one's. */
+export function judgeChrome(c, budget = FEEL_BUDGETS.chromePx, scale = 1) {
+  if (scale >= 2) return [];
   const allowed = budget + (c.inset?.top ?? 0) + (c.inset?.bottom ?? 0);
   const used = c.top + c.bottom;
   return used > allowed ? [{ rule: 'F3.chrome', id: `chrome@inset${c.inset?.top ?? 0}/${c.inset?.bottom ?? 0}`, detail: `top bar ${c.top}px (${c.topLabel ?? 'none'}) + bottom ${c.bottom}px (${c.bottomLabel ?? 'none'}) = ${used}px, budget ${allowed}px` }] : [];
@@ -231,12 +233,12 @@ export function judgeTaps(path, taps) {
 }
 
 /** All the in-screen verdicts for one probe result. */
-export function judgeScreen(result, { scale = 1 } = {}) {
+export function judgeScreen(result, { scale = 1, density = true } = {}) {
   return [
     ...judgePrimary(result.primary, { vh: result.vh, jump: result.jump }),
     ...judgeEssential(result),
-    ...judgeChrome(result.chrome),
-    ...judgeDensity(result.density, scale, result.vh),
+    ...judgeChrome(result.chrome, FEEL_BUDGETS.chromePx, scale),
+    ...(density ? judgeDensity(result.density, scale, result.vh) : []),
     ...judgePlates(result.plates),
   ];
 }
