@@ -35,7 +35,7 @@ function ticks(state: GameState, from: number, to: number, step: number): GameSt
 
 function withWatchCommander(): GameState {
   const s = ok(createInitialState(T0), { type: 'unlockNode', nodeId: COMMAND_STAFF.watchCommander.nodeId });
-  // Brooks (squad A, patrol) comes back from a hard call: above the default rest limit.
+  // The starting tactical squad is on standby and Watch Commander restores that duty.
   s.officers.off_brooks.stress = 65;
   return s;
 }
@@ -97,7 +97,7 @@ describe('command staff hiring and state', () => {
     expect(ratesAt(off, T0).net).toBe(base.net);
     const offLater = ok(off, { type: 'tick' }, T0 + 2 * HOUR_MS);
     const onLater = ok(s, { type: 'tick' }, T0 + 2 * HOUR_MS);
-    expect(offLater.department.funding - onLater.department.funding).toBeCloseTo(90 + 4 * 150, 3); // two hours of salary, plus an hour of Alpha's patrol income once it rests
+    expect(offLater.department.funding - onLater.department.funding).toBeCloseTo(90, 3); // two hours of salary; patrol staffing is separate
     expect(onLater.report?.wages).toBeCloseTo((offLater.report?.wages ?? 0) + 90, 6);
   });
 
@@ -128,17 +128,17 @@ describe('Watch Commander', () => {
   it('rests a worn squad at the clock hour and returns it to its earlier duty once everyone is below Strained', () => {
     const s = withWatchCommander();
     const beforeHour = ok(s, { type: 'tick' }, T0 + HOUR_MS - 1);
-    expect(beforeHour.squads[0].duty).toBe('patrol');
+    expect(beforeHour.squads[0].duty).toBe('standby');
     const rested = ok(beforeHour, { type: 'tick' }, T0 + HOUR_MS);
     expect(rested.squads.map((sq) => sq.duty)).toEqual(['rest', 'standby']);
-    expect(commandStaffOf(rested).watch_commander.rested).toEqual({ A: 'patrol' });
-    expect(commandStaffOf(rested).watch_commander.log[0]).toEqual({ at: T0 + HOUR_MS, text: `Rested Alpha: ${s.officers.off_brooks.surname} reached 64 stress` });
-    // 64 at the first hour, then 6 per hour on rest: 34 after five more hours, 28 after six.
+    expect(commandStaffOf(rested).watch_commander.rested).toEqual({ A: 'standby' });
+    expect(commandStaffOf(rested).watch_commander.log[0]).toEqual({ at: T0 + HOUR_MS, text: `Rested Alpha: ${s.officers.off_brooks.surname} reached 62 stress` });
+    // 62 at the first hour, then 6 per hour on rest.
     expect(ok(rested, { type: 'tick' }, T0 + 6 * HOUR_MS).squads[0].duty).toBe('rest');
     const back = ok(rested, { type: 'tick' }, T0 + 7 * HOUR_MS);
-    expect(back.squads[0].duty).toBe('patrol');
+    expect(back.squads[0].duty).toBe('standby');
     expect(commandStaffOf(back).watch_commander.rested).toEqual({});
-    expect(commandStaffOf(back).watch_commander.log[0]).toEqual({ at: T0 + 7 * HOUR_MS, text: 'Returned Alpha to Patrol: everyone below 30 stress' });
+    expect(commandStaffOf(back).watch_commander.log[0]).toEqual({ at: T0 + 7 * HOUR_MS, text: 'Returned Alpha to Standby: everyone below 30 stress' });
   });
 
   it('returns a squad to standby when standby was its duty before rest', () => {
@@ -170,14 +170,15 @@ describe('Watch Commander', () => {
     s.officers.off_reyes.stress = 75;
     const manual = ok(s, { type: 'setManagerPolicy', patch: { managerId: 'watch_commander', optOut: ['B'] } });
     const later = ok(manual, { type: 'tick' }, T0 + 5 * HOUR_MS);
-    expect(later.squads.map((sq) => sq.duty)).toEqual(['patrol', 'standby']);
+    expect(later.squads.map((sq) => sq.duty)).toEqual(['standby', 'standby']);
     expect(commandStaffOf(later).watch_commander.log).toEqual([]);
   });
 
   it('stops rotating when switched off and resumes when switched back on', () => {
     const off = ok(withWatchCommander(), { type: 'setManagerEnabled', managerId: 'watch_commander', enabled: false });
+    off.officers.off_brooks.stress = 75;
     const idle = ok(off, { type: 'tick' }, T0 + 3 * HOUR_MS);
-    expect(idle.squads[0].duty).toBe('patrol');
+    expect(idle.squads[0].duty).toBe('standby');
     expect(commandStaffOf(idle).watch_commander.log.map((e) => e.text)).toEqual(['Switched off']);
     const on = ok(idle, { type: 'setManagerEnabled', managerId: 'watch_commander', enabled: true }, T0 + 3 * HOUR_MS);
     expect(ok(on, { type: 'tick' }, T0 + 4 * HOUR_MS).squads[0].duty).toBe('rest');

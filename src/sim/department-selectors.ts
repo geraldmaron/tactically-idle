@@ -47,6 +47,10 @@ export interface Budget {
   /** All figures are funding per hour. */
   base: number;
   patrol: number;
+  patrolBase: number;
+  patrolBoost: number;
+  patrolWages: number;
+  patrolOperating: number;
   nodeIncome: number;
   gross: number;
   wages: number;

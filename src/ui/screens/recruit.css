@@ -34,17 +34,21 @@
 
 /* Candidates as rows (docs/ui-ux-audit.md, "Officers"): who they are on one line, the signing on
    the next, and the contract (skills, cost, kit) in its sheet. */
-.cand-list { gap: 0; }
-.cand.cand-row { gap: var(--sp1); padding: var(--sp3) 0; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: none; }
-.cand.cand-row.cand-hired { border-color: var(--hair); }
+.cand-list { gap: var(--sp4); }
+.cand.cand-row { gap: var(--sp3); padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
+.cand.cand-row.cand-hired { border-color: var(--mint); }
 .cand-row .cand-top { align-items: center; gap: var(--sp3); }
-.cand-row .cand-portrait { width: 40px; height: 40px; border: 0; border-radius: 50%; }
-.cand-row .cand-portrait > [data-portrait] { height: 40px !important; }
+.cand-row .cand-portrait { width: 104px; height: 112px; border: 0; border-radius: var(--r2); }
+.cand-row .cand-portrait > [data-portrait] { width: 104px !important; height: 112px !important; }
+.cand-row .cand-name { font: 700 var(--s22)/1.1 var(--f-title); }
+.cand-row .cand-shortlist { position: absolute; top: var(--sp2); right: var(--sp2); }
+.cand-row { position: relative; }
+.cand-row .cand-id { padding-top: var(--sp4); }
 .cand-row .cand-id { gap: 2px; }
 .cand-row .cand-facts { display: block; font-size: var(--s14); color: var(--t2); }
 .cand-certs { display: flex; flex-wrap: wrap; gap: 2px var(--sp3); font-size: var(--s14); color: var(--good-text, var(--good)); }
 .cand-certs > span { display: inline-flex; align-items: center; gap: var(--sp1); }
-.cand-row .cand-foot { padding-left: 52px; }
+.cand-row .cand-foot { padding: var(--sp3) 0 0; border-top: 1px solid var(--hair); }
 .cand-row .cand-meta { font-size: var(--s14); color: var(--t3); }
 .cand-row.cand-hired .cand-meta { color: var(--good-text, var(--good)); }
 .contract-who { display: grid; gap: var(--sp3); }

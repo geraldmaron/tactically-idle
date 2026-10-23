@@ -55,11 +55,10 @@ export const BRANCH_META: Record<DevBranch, { label: string; icon: IconName; blu
 export const BRANCHES: DevBranch[] = ['personnel', 'field', 'intel', 'logistics', 'wellbeing'];
 
 export const DUTY_META: Record<SquadDuty, { label: string; icon: IconName; blurb: string }> = {
-  patrol: { label: 'Patrol', icon: 'patrol', blurb: 'Earns routine funding. Slow recovery.' },
   standby: { label: 'Standby', icon: 'standby', blurb: 'No routine income. Moderate recovery.' },
   rest: { label: 'Rest', icon: 'moon', blurb: 'No income. Recovers fastest.' },
 };
-export const DUTIES: SquadDuty[] = ['patrol', 'standby', 'rest'];
+export const DUTIES: SquadDuty[] = ['standby', 'rest'];
 
 export const BAND_SHORT: Record<StressBand, string> = {
   ready: 'Ready',

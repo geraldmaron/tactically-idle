@@ -8,7 +8,8 @@ import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
-import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
+import { FinanceDetail, FundingDeltas, useLiveFunding, useFundingFeedback } from './Finance';
+import { assetUrl } from '../art/assetUrl';
 import { MenuButton } from './SaveManager';
 import { Icon } from '../icons';
 import { RESOURCE_ICON } from '../icons/kit';
@@ -74,10 +75,18 @@ export function TopBar({ onOpenMenu }: { onOpenMenu?: () => void }) {
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);
   const live = useLiveFunding(g);
-  return <DepartmentStatusBar g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenMenu={onOpenMenu} />;
+  const { arrival } = useFundingFeedback();
+  const cash = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!arrival || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animation = cash.current?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-out' });
+    return () => animation?.cancel();
+  }, [arrival]);
+
+  return <DepartmentStatusBar fundingRef={cash} g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenMenu={onOpenMenu} />;
 }
 
-export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, live = { shown: g.department.funding, deltas: [] } }: { g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenMenu?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
+export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onOpenMenu, live = { shown: g.department.funding, deltas: [] } }: { fundingRef?: React.Ref<HTMLButtonElement>; g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenMenu?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
   const b = budget(g);
   const d = g.department;
   const helpProps = (stat: DepartmentStat, value: string) => ({
@@ -91,8 +100,8 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, liv
     <>
     <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
-        <li><button className="stat stat-cash" {...helpProps('funding', moneyFull(d.funding))}>
-          <Icon name={RESOURCE_ICON.funds} size={16} className="res-icon" />
+        <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', moneyFull(d.funding))}>
+          <img className="resource-cash-art" src={assetUrl('art/plates/tex_cash.webp')} alt="" aria-hidden="true" />
           <span className="stat-cash-value">{liveMoney(live.shown)}</span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
@@ -113,7 +122,7 @@ export function DepartmentStatusBar({ g, topic, onOpen, onClose, onOpenMenu, liv
   );
 }
 
-export function DepartmentStatHelp({ g, topic }: { g: GameState; topic: DepartmentStat }) {
+export function DepartmentStatHelp({ g, topic }: { fundingRef?: React.Ref<HTMLButtonElement>; g: GameState; topic: DepartmentStat }) {
   if (topic === 'funding' || topic === 'income') return <div className="department-stat-help"><FinanceDetail g={g} /></div>;
   if (topic === 'trust') return <div className="department-stat-help">
     <p className="department-stat-value">{Math.round(g.department.trust)} <span>out of 100</span></p>

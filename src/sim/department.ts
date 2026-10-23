@@ -15,7 +15,7 @@ import { INCIDENT_CONTENT_VERSION } from '../gen/incident';
 import { COMMAND_STAFF_HANDLERS, createCommandStaff } from './command-staff';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { startDetail } from './detail';
-import { createTapState, tapEarn } from './department-taps';
+import { activatePatrolBoost, createPatrolState, dismissPatrol, hirePatrol, seedPatrol, startPatrolTraining } from './patrol';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 
@@ -90,7 +90,10 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   offerRetention: (d, c) => ROSTER_HANDLERS.offerRetention(d, c.officerId, netRate),
   startDetail: (d, c) => startDetail(d, c.officerId),
   markIncidentsSeen: (d) => INCIDENT_HANDLERS.markIncidentsSeen(d),
-  tapEarn: (d, c) => tapEarn(d, c.count, d.department.clockHighWater),
+  hirePatrol: (d, c) => hirePatrol(d, c.profileId),
+  dismissPatrol: (d, c) => dismissPatrol(d, c.employeeId),
+  startPatrolTraining: (d, c) => startPatrolTraining(d, c.employeeId),
+  activatePatrolBoost: (d, c) => activatePatrolBoost(d, c.boostId),
   setManagerEnabled: (d, c) => COMMAND_STAFF_HANDLERS.setManagerEnabled(d, c.managerId, c.enabled),
   setManagerPolicy: (d, c) => COMMAND_STAFF_HANDLERS.setManagerPolicy(d, c.patch),
   hireStaff: (d, c) => COMMAND_STAFF_HANDLERS.hireStaff(d, c.managerId, c.candidateId),
@@ -102,6 +105,7 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
   const officers = startingOfficers(now, campaignSeed);
   const state: GameState = {
     saveVersion: CURRENT_SAVE_VERSION,
+    patrol: createPatrolState(),
     personnel: createPersonnel(campaignSeed, officers),
     contentVersion: INCIDENT_CONTENT_VERSION,
     department: {
@@ -123,7 +127,6 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
       clockHighWater: now,
       // Game day 0 (1 Jan 2026) is the moment the department is created.
       calendarEpoch: now,
-      taps: createTapState(now),
     },
     officers,
     squads: startingSquads(),
@@ -138,6 +141,7 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
     nextId: 1,
     rngState: campaignSeed >>> 0,
   };
+  seedPatrol(state, now);
   createStartingUnits(state, now);
   fillCandidates(state, now, candidatePoolSize(state));
   // Three generated incidents are waiting from the first minute (the authored Maple Street

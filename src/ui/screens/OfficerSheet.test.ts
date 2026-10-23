@@ -128,7 +128,10 @@ describe('profile navigation', () => {
     expect(backs).toBe(1);
     expect(current).toMatchObject({ tab: 'squad', officerId: null });
     nav.openOfficer('off_chen');
+    nav.go('store');
+    expect(current).toMatchObject({ tab: 'store', storeSection: 'equipment', officerId: null });
+    nav.openOfficer('off_chen');
     nav.go('gear');
-    expect(current).toMatchObject({ tab: 'gear', officerId: null });
+    expect(current).toMatchObject({ tab: 'store', storeSection: 'equipment', officerId: null });
   });
 });

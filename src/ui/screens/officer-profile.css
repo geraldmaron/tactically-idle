@@ -31,4 +31,4 @@
 /* One readiness line under the name (docs/ui-ux-audit.md, "say it once"). */
 .profile-ready-line { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; font-size: var(--s14); line-height: 1.35; font-weight: 500; }
 .profile-ready-line .icon { flex: none; margin-top: 1px; }
-.profile-portrait img, .profile-portrait canvas { width: 72px; height: 72px; }
+.profile-portrait img, .profile-portrait canvas { width: 124px; height: 136px; object-fit: cover; }

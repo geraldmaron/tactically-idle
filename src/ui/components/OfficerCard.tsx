@@ -13,6 +13,7 @@ import { CERT_NAME } from '../../content/certs';
 import { officerGrowth } from './OfficerProgress';
 import { RankInsignia } from './RankInsignia';
 import { RANKS } from '../../content/ranks';
+import { StatusMark } from '../icons/marks';
 
 export interface OfficerCardProps {
   officer: Officer;
@@ -76,13 +77,14 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
             </span>
           )}
           {leader && <span className="ocard-leader" aria-hidden="true"><Icon name="star" size={11} /></span>}
-          <span className="ocard-name"><small>{RANKS[growth.rank].abbr}</small> {officer.surname}</span>
+          <span className="ocard-name"><small>{RANKS[growth.rank].abbr} {officer.firstName}</small>{officer.surname}</span>
         </span>
         <span className="ocard-row" aria-hidden="true">
-          <span className="ocard-role" title={role.label}><Icon name={role.icon} size={13} /></span>
+          <span className="ocard-role"><Icon name={role.icon} size={16} />{role.short}</span>
           {certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={11} />)}{officer.certs.length > certs.length && <b>+{officer.certs.length - certs.length}</b>}</span>}
           <ReadinessBar stress={officer.stress} />
         </span>
+        <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} /></span>
         {footer}
       </Tag>
     );

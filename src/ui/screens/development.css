@@ -3,6 +3,7 @@
    medal, what it does next, tier pips and cost; what it needs is drawn as an edge from the
    prerequisite's medal and named on the row. Effects, the tier ladder and buying live in the sheet. */
 .develop-page { gap: 10px; }
+.build-title { margin: 0 0 var(--sp4); font: 700 var(--s28)/1.1 var(--f-title); }
 
 .dev-label { display: flex; align-items: baseline; gap: 6px; margin: 0; font: 700 12px/1.2 var(--font-cond); color: var(--muted); }
 .dev-label-note { font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-family: var(--font-ui); }
@@ -111,12 +112,12 @@
 /* Build, Upgrades (docs/ui-ux-audit.md): the one Next card is the only amber; rows are flat with a
    hairline and a quiet price; the sheet buys, because a buy can't be undone and a milestone might
    grant the same tier free. */
-.dev-next { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
+.dev-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
 .dev-next[data-ready] { border-color: rgba(242, 178, 52, 0.35); background: var(--act-soft); }
 .dev-next-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--sp3); min-height: 44px; padding: 0; border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
 .dev-next-open:focus-visible { outline: 2px solid var(--act); outline-offset: 4px; border-radius: var(--r1); }
 .dev-next-main { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
-.dev-next-main strong { font: 600 var(--s16)/1.2 var(--f-ui); }
+.dev-next-main strong { font: 700 var(--s22)/1.1 var(--f-title); }
 .dev-next-fx { font-size: var(--s14); color: var(--t2); }
 .dev-next-buy { flex: none; min-height: 48px; padding: 0 var(--sp4); font-size: var(--s16); font-variant-numeric: tabular-nums; }
 .dev-branch-chips { display: flex; flex-wrap: wrap; gap: var(--sp2); }
@@ -125,13 +126,15 @@
 .dev-branch-chip:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .dev-tab-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--act); }
 .dev-branch-blurb { margin: 0; font-size: var(--s14); color: var(--t2); }
-.dev-track { gap: 0; }
-.dev-node { min-height: 64px; padding: var(--sp2) 0; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: none; }
-.dev-node[data-state="owned"], .dev-node[data-state="ready"] { border-color: var(--hair); box-shadow: none; }
-.dev-node[data-state="locked"] { border-style: solid; background: none; }
+.dev-track { gap: var(--sp3); }
+.dev-track > li { padding-left: calc(var(--depth, 0) * var(--sp3)); }
+.dev-node { min-height: 112px; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
+.dev-node .dev-medal { width: 72px; height: 72px; }
+.dev-node[data-state="owned"], .dev-node[data-state="ready"] { border-color: var(--hair-2); box-shadow: none; }
+.dev-node[data-state="locked"] { border-style: dashed; background: var(--ink-0); }
 .dev-node[data-state="locked"] .dev-node-fx, .dev-node[data-state="locked"] .dev-price { color: var(--t3); }
-.dev-node-title strong { font: 600 var(--s16)/1.2 var(--f-ui); letter-spacing: 0; }
-.dev-node-fx { font-size: var(--s14); color: var(--t2); }
+.dev-node-title strong { font: 700 var(--s18)/1.15 var(--f-title); letter-spacing: 0; white-space: normal; overflow: visible; }
+.dev-node-fx { display: block; font-size: var(--s14); color: var(--t2); overflow: visible; }
 .dev-node-needs { font-size: var(--s14); color: var(--t3); }
 .dev-node-needs .icon { display: none; }
 .dev-price { font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -139,3 +142,9 @@
 .dev-price-done { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--good-text, var(--good)); }
 .dev-milestone-text { font: 500 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); }
 .dev-milestone-text b { font-weight: 600; }
+@media (max-width: 374px) {
+  .dev-next { grid-template-columns: minmax(0, 1fr); }
+  .dev-next-buy { justify-self: stretch; }
+  .dev-node { grid-template-columns: auto minmax(0, 1fr); }
+  .dev-node-side { grid-column: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--sp2); }
+}

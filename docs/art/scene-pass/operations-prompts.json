@@ -1,0 +1,125 @@
+{
+  "recorded": "2026-10-22",
+  "prompt_status": "verbatim",
+  "generation_mode": "built-in image_gen",
+  "use_case": "stylized-concept",
+  "note": "Four new environment plates, separate from the current hub exterior. Prompts are exact requests, not reconstructed intent. No existing runtime asset was replaced.",
+  "assets": [
+    {
+      "id": "scene_command_room",
+      "placement": "Command",
+      "prompt": "Use case: stylized-concept. Asset type: a single 3:2 landscape environment plate, 1536 by 1024, for a portrait mobile department management game. Primary request: an intimate department command room at blue hour, illustrated as a physical place that tells the story of patient, practical work. An oval worn wood briefing table sits toward the foreground with an unlabelled paper street plan, four restrained folders and a small radio; behind it are two compact dispatch desks and an ordinary wall pinboard holding abstract pale sheets. Tall windows reveal the same blue-hour city and leafy street as a modest modern municipal station. Empty chairs, lamps on, no people. Style: polished hand-painted editorial game illustration, architectural forms with broad readable silhouettes, subtle dry brush texture, slightly simplified materials, no hard outlines, no photorealistic lens effects. Restrained cobalt dusk, deep navy and slate, warm amber lamps, muted ivory paper; calm and humane, not heroic. Composition: eye-level three-quarter room view, table as one clear central form, windows on upper half, dark quiet foreground corners where a UI can place small live state markers, no text integrated into the painting. Avoid text, lettering, numerals, logos, badges, flags, insignia, firearms, weapons, surveillance walls, tactical poses, neon, sci-fi HUDs, coins, particles, sparkle effects, dramatic action and ornamental clutter.",
+      "source_file": "exec-6c999425-6fbc-4bac-b55b-b1dd050ec033.png",
+      "source_directory": "/Users/geralddagher/.codex/generated_images/01a165db-45d6-7963-bf0a-68d181371c72",
+      "inspected_source": {
+        "width": 1536,
+        "height": 1024,
+        "mode": "RGB"
+      },
+      "output_file": "public/art/plates/scene_command_room.webp",
+      "inspected_output": {
+        "width": 1200,
+        "height": 800,
+        "mode": "RGB"
+      },
+      "processing": {
+        "resize_to": [
+          1200,
+          800
+        ],
+        "resampling_filter": "Pillow Image.Resampling.LANCZOS",
+        "webp_quality": 88,
+        "webp_method": 6
+      },
+      "placement_note": "Briefing table, paper plan and radio establish decisions and dispatch. Place current call or readiness status in the lower foreground; illustration is environmental, not a live map.",
+      "visual_review": "Inspected full generated master. Cohesive cobalt dusk and amber practical lamps; no readable text, logos, insignia, firearms, HUD graphics, currency, particles or people observed."
+    },
+    {
+      "id": "scene_patrol_garage",
+      "placement": "Patrol",
+      "prompt": "Use case: stylized-concept. Asset type: single 3:2 landscape environment plate, 1536 by 1024, for a portrait mobile department management game. Primary request: the station roll-call and vehicle garage at blue hour, a grounded place where a shift prepares to leave. A modest unmarked dark blue utility van is parked inside the right bay, nose three-quarter toward the viewer. At left an open equipment rack holds four plain navy duty jackets, a bench below it and two compact closed supply cases. An empty departure clipboard with blank paper hangs beside the garage door. The open bay shows a quiet blue-hour leafy city street and warm windows. No people, no posed officers. Style: polished hand-painted editorial game illustration with broad readable silhouettes, subtle dry brush texture, simplified architectural materials and restrained detail. Palette: cobalt dusk, deep navy and slate, warm amber strip lamps, muted ivory, natural concrete. Calm, humane and practical, no spectacle. Composition: a wide readable room with strong separation between the van bay at right and coat rack at left, quiet dark concrete foreground and darker upper corners that could support small live UI state markers. Avoid text, lettering, numerals, logos, badges, insignia, flags, weapons, heroic imagery, emergency flashing lights, neon, sci-fi HUDs, coins, particles, sparkle effects and ornamental clutter.",
+      "source_file": "exec-d80eee9f-d3e6-4e5f-b8fb-786915c9f2ad.png",
+      "source_directory": "/Users/geralddagher/.codex/generated_images/01a165db-45d6-7963-bf0a-68d181371c72",
+      "inspected_source": {
+        "width": 1536,
+        "height": 1024,
+        "mode": "RGB"
+      },
+      "output_file": "public/art/plates/scene_patrol_garage.webp",
+      "inspected_output": {
+        "width": 1200,
+        "height": 800,
+        "mode": "RGB"
+      },
+      "processing": {
+        "resize_to": [
+          1200,
+          800
+        ],
+        "resampling_filter": "Pillow Image.Resampling.LANCZOS",
+        "webp_quality": 88,
+        "webp_method": 6
+      },
+      "placement_note": "Garage van at right and roll-call jackets at left establish departure preparation. Put current patrol state over the quiet concrete floor. Jacket and case counts are scenic, not roster totals.",
+      "visual_review": "Inspected full generated master. Cohesive cobalt dusk and amber practical lamps; no readable text, logos, insignia, firearms, HUD graphics, currency, particles or people observed."
+    },
+    {
+      "id": "scene_facilities_plan",
+      "placement": "Build",
+      "prompt": "Use case: stylized-concept. Asset type: single 3:2 landscape environment plate, 1536 by 1024, for a portrait mobile department management game. Primary request: a department facilities planning workbench at blue hour, with a large tactile scale model of a modest two-story municipal station on an ivory architectural plan, viewed from a slightly elevated three-quarter angle. The model has a removed roof so broad room zones are clear: one amber-lit dispatch room, one slate-blue locker room, one small warm training room, and a plain garage bay with a tiny blue van. Keep these four large simple room zones, not dozens of tiny rooms. Thin wood model walls, a rolled drawing at the back and one plain ruler provide an honest facilities-planning context. Behind the workbench a dark workshop window shows cobalt dusk and a leafy city street; one warm adjustable task lamp illuminates the model. No people. Style: polished hand-painted editorial game illustration matching grounded blue-hour municipal interiors, broad readable forms, subtle dry brush texture, simplified architectural materials, restrained detail. Palette: deep navy and slate, cobalt blue, warm amber, ivory and pale model wood. Calm, practical and human-scaled. Composition: model and its distinct room areas fill the middle, a darker quiet border at the bottom for live UI overlays, eye is led from plan to model. Avoid text, lettering, numbers, dimension labels, logos, badges, insignia, flags, weapons, heroic imagery, neon, sci-fi HUDs, glowing grids, floating objects, coins, particles, sparkle effects and decorative clutter.",
+      "source_file": "exec-ec9c2b03-adca-4f2e-a7cb-23ccdcb8b5f0.png",
+      "source_directory": "/Users/geralddagher/.codex/generated_images/01a165db-45d6-7963-bf0a-68d181371c72",
+      "inspected_source": {
+        "width": 1536,
+        "height": 1024,
+        "mode": "RGB"
+      },
+      "output_file": "public/art/plates/scene_facilities_plan.webp",
+      "inspected_output": {
+        "width": 1200,
+        "height": 800,
+        "mode": "RGB"
+      },
+      "processing": {
+        "resize_to": [
+          1200,
+          800
+        ],
+        "resampling_filter": "Pillow Image.Resampling.LANCZOS",
+        "webp_quality": 88,
+        "webp_method": 6
+      },
+      "placement_note": "Facilities model establishes building investment. Live upgrade markers may align with broad room zones; rendered rooms are an architectural study, not the exact purchased facility state.",
+      "visual_review": "Inspected full generated master. Cohesive cobalt dusk and amber practical lamps; no readable text, logos, insignia, firearms, HUD graphics, currency, particles or people observed."
+    },
+    {
+      "id": "scene_armory_counter",
+      "placement": "Store",
+      "prompt": "Use case: stylized-concept. Asset type: single 3:2 landscape environment plate, 1536 by 1024, for a portrait mobile department management game. Primary request: a department equipment armory issue counter at blue hour, pictured as a useful modest supply room. A sturdy warm wood issue counter spans the foreground. On its middle lie one plain navy protective vest with no lettering, one simple compact handheld radio and a closed first-aid pouch with no symbols or labels, arranged as three distinct large forms. Behind is a secure wire mesh equipment cage with orderly shelves of blank hard equipment cases, charging radio docks and folded navy clothing, with a closed service gate on the right. A small high window on the left shows cobalt dusk and a leafy street. No firearms, no weapons, no ammunition, no people. Style: polished hand-painted editorial game illustration, broad readable silhouettes, restrained detail, subtle dry brush texture, simplified believable materials. Palette: deep navy and graphite equipment, slate steel, warm amber practical lamps, muted warm wood and cobalt blue window. Calm, humane, practical and maintained, not militaristic or heroic. Composition: eye-level three-quarter room view, foreground equipment clearly silhouetted, darker quiet corners and bottom edge suitable for small live UI markers, no embedded information graphics. Avoid all text, lettering, numerals, logos, badges, insignia, flags, firearms, weapon shapes, heroic poses, dramatic spotlighting, neon, sci-fi HUDs, coins, particles, sparkle effects and decorative clutter.",
+      "source_file": "exec-b049d0f4-22fd-4d40-b004-29eb7c77546b.png",
+      "source_directory": "/Users/geralddagher/.codex/generated_images/01a165db-45d6-7963-bf0a-68d181371c72",
+      "inspected_source": {
+        "width": 1536,
+        "height": 1024,
+        "mode": "RGB"
+      },
+      "output_file": "public/art/plates/scene_armory_counter.webp",
+      "inspected_output": {
+        "width": 1200,
+        "height": 800,
+        "mode": "RGB"
+      },
+      "processing": {
+        "resize_to": [
+          1200,
+          800
+        ],
+        "resampling_filter": "Pillow Image.Resampling.LANCZOS",
+        "webp_quality": 88,
+        "webp_method": 6
+      },
+      "placement_note": "Vest, radio and supply pouch establish practical provisioning. Use the foreground counter for actual purchase/stock status. Visible shelf contents are atmosphere, not inventory counts.",
+      "visual_review": "Inspected full generated master. Cohesive cobalt dusk and amber practical lamps; no readable text, logos, insignia, firearms, HUD graphics, currency, particles or people observed."
+    }
+  ]
+}

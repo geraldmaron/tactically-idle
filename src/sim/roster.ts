@@ -42,7 +42,7 @@ export const ROSTER_TUNING = tunable('ROSTER_TUNING', {
 /** The department's hourly net, after wages, for a state at its settled clock (economy.ts netRate). */
 export type NetRate = (state: GameState) => number;
 
-const DUTIES: SquadDuty[] = ['patrol', 'standby', 'rest'];
+const DUTIES: SquadDuty[] = ['standby', 'rest'];
 
 /** Department plus the one field this module adds (frozen contract: optional, JSON-safe). */
 type DepartmentExt = Department & { candidateRefreshedAt?: number };
@@ -73,6 +73,7 @@ export function hireCheck(state: GameState, candidateId: Id, netRate: NetRate): 
   const netAfter = netBefore - wage;
   const base = { upfront: cand.signingCost, wageDelta: wage, netBefore, netAfter };
   if (cand.officer.identityId && state.personnel?.employedIdentityIds.includes(cand.officer.identityId)) return { ...base, ok: false, reason: 'That officer has already served in this campaign' };
+  if (cand.officer.identityId && state.patrol?.personnel.some((person) => person.profileId === cand.officer.identityId)) return { ...base, ok: false, reason: 'That person has served in the patrol workforce' };
   if (gameDay(state, t) >= mandatoryRetirementDay(cand.officer)) return { ...base, ok: false, reason: 'That candidate has reached retirement age; refresh the pool' };
   const cap = state.department.rosterCap;
   if (rosterSize(state) >= cap) return { ...base, ok: false, reason: `Roster is full (${rosterSize(state)}/${cap})` };
@@ -177,7 +178,7 @@ function refreshCheck(state: GameState, poolSize: number): { ok: boolean; reason
 
 /** The reserve can grow by adding authored identities; absent portraits do not block a career. */
 export function recruitmentStatus(state: GameState, now: number) {
-  const employed = new Set(state.personnel?.employedIdentityIds ?? []);
+  const employed = new Set([...(state.personnel?.employedIdentityIds ?? []), ...(state.patrol?.personnel ?? []).map((person) => person.profileId)]);
   const day = gameDay(state, now);
   let unseen = 0;
   let available = 0;
@@ -203,7 +204,7 @@ function staffIdentityIds(state: GameState): string[] {
 export function fillCandidates(d: GameState, now: number, poolSize: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
   const personnel = d.personnel!;
-  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: [...personnel.employedIdentityIds, ...staffIdentityIds(d)] };
+  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: [...personnel.employedIdentityIds, ...staffIdentityIds(d), ...(d.patrol?.personnel ?? []).map((person) => person.profileId)] };
   const taken = new Set<string>();
   for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
   for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));

@@ -1,7 +1,7 @@
 /* The Desk register (docs/ui-ux-audit.md, "Skin"), loaded after app.css. It used to be the
    night-shift skin's grain, lit edges, mono labels and rubber stamps; those moved into the tokens
    and primitives, and what stays here is the painted art (plates, banners, call scenes) and the
-   pieces of chrome later phases restructure. Flat surfaces, slate everywhere but the player's move.
+   pieces of chrome later phases restructure. Blue hour surfaces, warm action controls, and mint funding.
    Texture URLs arrive as custom properties set from assetUrl() on .app, so they follow the base
    path; every texture has a flat colour under it, so a missing file changes nothing but grain. */
 
@@ -76,25 +76,6 @@
 
 /* A banner opening a padded page bleeds to the frame edges. */
 .page > .screen-banner:first-child { margin: -12px calc(-1 * var(--gutter)) 0; }
-
-/* ------------------------------------------------------------ the main action */
-/* Ops is lifted out of the rail as a round amber button, the primary action of the game. The
-   chrome-contract phase replaces it with four equal tabs and a count badge. */
-.bottomnav { overflow: visible; position: relative; z-index: 9; }
-.navbtn-primary { overflow: visible; }
-.navbtn-primary .navicon {
-  display: grid; place-items: center; width: 56px; height: 56px; margin-top: -26px; border-radius: 50%;
-  background: radial-gradient(circle at 50% 30%, var(--act-hi), var(--amber) 60%, var(--act-lo));
-  color: var(--amber-ink); border: 3px solid var(--ink-0);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--black) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--act) 50%, transparent), inset 0 2px 0 color-mix(in srgb, var(--act-text) 60%, transparent);
-}
-.navbtn-primary .navicon .icon { filter: none; }
-.navbtn-primary.navbtn-on::before { display: none; }
-.navbtn-primary.navbtn-on .navicon { box-shadow: 0 6px 18px color-mix(in srgb, var(--act) 45%, transparent), 0 0 0 2px var(--amber-2), inset 0 2px 0 color-mix(in srgb, var(--act-text) 60%, transparent); }
-.navbtn-primary .navlabel { margin-top: var(--sp1); }
-.navbtn-primary .live-dot { top: 2px; right: 2px; background: var(--danger); border-color: var(--ink-0); }
-.navbtn-primary .navbadge { top: -2px; right: -4px; }
-.navdot { position: absolute; top: -1px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); border: 2px solid var(--ink-0); }
 
 /* The result grade: three marks, filled from the outcome score; a death leaves them empty and grey. */
 .result-marks { display: inline-flex; gap: var(--sp2); margin: var(--sp1) 0 var(--sp1); }

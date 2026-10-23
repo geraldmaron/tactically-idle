@@ -402,17 +402,27 @@ deterministic since #57, and the `check:strings` wrapper since #64 (byte-identic
 
 ## Department and staff
 
-### patrol-work: Routine patrol returns as idle work under the Watch Commander
-Tags: job=return; journeys=offline-settles; probes=none (idle economy); lane=engine
+Current owner revision, 2026-10-22: NPC patrol replaces tapping; SWAT costs remain. The prior tap,
+detail-strain and four-tab/banner decisions are superseded where they conflict with `docs/patrol-work.md`
+and the blue-hour visual direction. The running overhaul is still a draft, not the new economy.
+
+### patrol-work: NPC patrol personnel replace tapping and SWAT patrol income
+Tags: job=return; journeys=offline-settles, hire-and-equip, save-round-trip; probes=none (idle economy); lane=engine
 Needs: start=none; integrate=none; ship=none
 
-Owner decision 2026-10-19: restore routine patrol work, which was deleted. Squads still have a
-`patrol` duty that earns routine funding (`src/sim/types.ts` `SquadDuty`); what went was the
-standing patrol assignments on the board (removed before 2026-10-18, see git history around
-721536c and 4e908ac). Done: a short design note first (what patrol work is, how it pays, how the
-Watch Commander runs it, how it shows on the board without crowding tactical calls), approved by the
-lead, then the engine loop and its UI. The note is `docs/patrol-work.md` (proposed 2026-10-19); it
-waits on owner answers 2 and 3 listed there (1 is answered: patrol pay stays flat).
+Owner revision 2026-10-22: remove tapping, broaden the department with autonomous patrol personnel,
+retain SWAT signing costs/wages, and reconsider routine SWAT patrol. The revised design and adversarial
+controls are in `docs/patrol-work.md`. Retire SWAT revenue patrol; preserve standby/rest and explicit
+specialist assignments. Reuse settlement, projections, ledger and reports. Add separate patrol records,
+service-time grades, hiring/payroll/operating costs, training and hard position ceilings per department
+level. Bump the save version deliberately; never silently reset an incompatible campaign.
+
+Done: HQ shows a staffed patrol scene and automatic income, Team separates SWAT/Patrol/Command, a real
+hire shows its costs and unboosted net change, and no tap control/command or legacy SWAT patrol income
+remains. Online/offline tests cover every rate boundary, cap, clock rollback, training, saves, empty roster
+and sustainable recovery. Simulate first-session, 24-hour and multi-day pacing before treating proposed
+prices or rates as balanced. Update duties, Watch Commander, optimizer, finance and affected journeys.
+Physical-device validation remains in `playtests`.
 
 ### worn-kit: Light body armor protects the officer who wears it
 Tags: job=build; journeys=team-moves-odds; probes=none (changes harm severity, not a chance input); lane=engine
@@ -458,8 +468,7 @@ Needs: start=none; integrate=none; ship=none
 The owner (2026-10-22): the app feels half baked, with missing icons and polish, uneven padding and margins,
 and inconsistencies, and every surface must have code-level validation with no assumptions. Astra's audit of
 261 fixed-seed frames (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`, captures beside it) found 29 defects and proposed rules R1 to R18. Build them:
-static rules in vitest (R1 spacing from `--sp*` tokens, R3 declared gaps, R4 a lead visual on every section
-heading and list row, R5 kit semantics for source, status and outcome, R7 the type floors, R8 no literal
+static rules in vitest (R1 spacing from `--sp*` tokens, R3 declared gaps, R5 kit semantics for source, status and outcome, R7 the type floors, R8 no literal
 colors in CSS or TSX, R9 icon sizes 16/20/24 and stroke 1.75, R10 one implementation per component family,
 R11 shared empty, loading and error states) and a rendered gate, `npm run check:ui`, that runs the capture
 probe at 320, 390 and 430 and checks R2 one gutter per surface, R6 effective 44px hit regions, R12 no
@@ -469,6 +478,11 @@ active-surface scoping, ancestor clipping, hit-testing, per-element ids, and unl
 error states. Debt lives in a generated baseline (`npm run ui:baseline`) that only falls and that the lead
 regenerates at each merge; rules Astra marks hard zero start as ratchets at today's count. Done: every rule
 has a gate, `npm run verify` and `npm run check:ui` pass on today's UI, and a negative control fails each rule.
+
+Latest blue-hour revision: retire R4's picture-before-every-heading/list-row and hidden-glyph bans;
+screen composition and readability supersede those aesthetic mandates. Fix R16 so an off-screen
+choices affordance cannot satisfy the first-viewport gate, with a failing negative control. Re-run
+the full gate and deliberately inspect every changed baseline after the new Store/Patrol surfaces land.
 
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
@@ -504,45 +518,45 @@ Owner's picks (2026-10-22): the plate stays 96px on all four tabs (already `--pl
 the reading face stays the sans. Done: the serif rule deleted from `candidates.css`, the dev switch removed,
 and the compare captures retired.
 
-### tap-multiplier-content: Upgrades and power-ups that raise desk tap pay
-Tags: job=build; journeys=hire-and-equip; probes=none (department income, not call odds); lane=engine
-Needs: start=none; integrate=none; ship=none
+### patrol-boosts: Bounded boosts apply to NPC patrol funding
+Tags: job=build; journeys=hire-and-equip, offline-settles; probes=none (funding, not call odds); lane=engine
+Needs: start=patrol-work; integrate=none; ship=none
 
-Tap to earn shipped 2026-10-21 with the base multiplier only (`TAP_MULTIPLIERS` in
-`src/sim/department-taps.ts`): upgrades, timed power-ups and entitlements share one grant path,
-kinds multiply and bonuses of one kind add, and the same power-up twice extends. Add
-development-tree desk upgrades granted on purchase and timed power-ups with a way to earn them in
-play; `rewarded-ads` adds watching an ad as a second way, and `real-purchases` adds the paid
-entitlements. Show the combined multiplier and any running power-up near the desk, and decide
-whether owned upgrades pick up a later rebalance. Beyond the base it waits on `detail-strain-drain`, and it
-stays inside the budgets in `docs/monetization.md` section 3 (upgrades up to x1.4, earned power-ups up to x2
-including the ad's +0.5, a reachable stack of at most x7). Owner, 2026-10-22: a multiplier gives no strain
-advantage, so each tap's strain scales with the combined multiplier and pay per strain stays constant. Done: upgrades and power-ups each have at least
-one entry, a test proves each raises tap pay, the ceiling test builds the largest reachable holding through
-`combinedFactor`, and the player can see what is active.
+Replace tap multipliers and the obsolete separate detail-strain-drain proposal with the rules in
+`docs/patrol-work.md`. Boost eligible NPC gross only, with a bounded additive bonus and explicit expiry;
+show the actual net dollar change. Neither revenue nor boosts grant service XP or department levels.
+Permanent commitments use sustainable unboosted projections. Reuse/extract the sound grant validation
+from the existing multiplier path without keeping tap state as the patrol model.
 
-### detail-strain-drain: Strain from paid details drains at the patrol rate on every duty
-Tags: job=build; journeys=hire-and-equip; probes=none (department economy, not call odds); lane=engine
-Needs: start=none; integrate=none; ship=none
+Done: expiry and training boundaries give equal online/offline results; replay does not duplicate a grant;
+zero eligible income cannot consume a worthless boost; maximum grade/capacity/boost combinations pass
+multi-day pacing and recovery simulations. The old tap products and ceiling in `docs/monetization.md`
+do not determine new paid value.
 
-`docs/monetization.md` section 3: resting recovers 6 stress an hour against patrol's 1, the recovery
-upgrade doubles both and duty changes are free, so "rest, then tap" beats "patrol and tap" once the tap
-stack passes x3, or x1.5 with the top upgrade. The ad's own x1.5 sits on that edge. Option B: strain
-earned on paid details drains at `recoveryPerHour.patrol x recoveryMultiplier x ageRecoveryFactor` on
-every duty, with no rest or standby rate and no Watch Commander rest bonus, following the officer across
-squad transfers and while unassigned. The data shape (a balance inside stress, or a separate pool) is
-this item's call, with a save change. Done: a test runs rest-and-tap, standby-and-tap, patrol-and-tap and a
-transfer through the engine at the top recovery upgrade, with and without the commander bonus, and tap
-income per officer-hour is equal on every route and at most the $150 patrol income.
+### store-destination: A persistent Store with clear purchase states
+Tags: job=build; journeys=hire-and-equip; probes=none (navigation and purchases); lane=interface
+Needs: start=none; integrate=patrol-work; ship=none
+
+Owner request 2026-10-22: an easily accessible modern game Store. Use management navigation HQ, Calls,
+Team, Build, Store; keep live calls focused. Move existing EquipmentStore into Store rather than
+building a second catalog. Equipment requirements preserve their return context. Team owns staffing
+and training; Build owns facilities. Boosts/real offers appear only when usable content and a working
+provider exist. Clearly distinguish funding and real-money prices, owned/locked/unaffordable/offline,
+pending/canceled/failed purchase and Restore states. Confirm successful acquisitions beside the object.
+
+Done: one-press Store entry from management screens; correct context return; 320/390/430px keyboard,
+150% text, safe-area and touch-target checks; persistent labels fit without clipping; resource bar also
+remains readable with enlarged text. These enlargement defects were observed during the blue-hour
+review and must be fixed with the navigation revision. No fake countdowns or unearned badges.
 
 ### rewarded-ads: Watching an ad is rewarded, and the watch rate is measured
 Tags: job=build; journeys=hire-and-equip; probes=new:ad-history-blind; lane=engine
-Needs: start=detail-strain-drain; integrate=none; ship=store-wrap (the ad network SDK)
+Needs: start=patrol-boosts; integrate=store-destination; ship=store-wrap (the ad network SDK)
 
-The player chooses to watch an ad from an offer and gets the reward `docs/monetization.md` sets: one
-power-up, `ad-overtime`, +0.5 (x1.5) to tap pay for 10 game minutes, no funding. Offers appear only as an
-inline row on the desk, under the gates in its section 4 (never on a call screen, the board, at open, in the
-Store, in a notification or modal, or after harm). The reader lives in a new ad reader module under `src/sim/` with `AD_TUNING`;
+The player chooses a rewarded ad that grants a useful timed patrol funding boost under
+`docs/patrol-work.md`. Determine its value from the new idle economy; the old tap-based x1.5/10-minute
+worth estimate and eligibility are superseded. Offers remain optional and outside call/adverse-result
+surfaces. The reader lives in a new ad reader module under `src/sim/` with `AD_TUNING`;
 the log is a local ring buffer of 500 outside the save, which the player can delete.
 The player profile (`src/sim/player-profile.ts`, `docs/player-profile.md`) gains an ad reader:
 offers shown, ads watched to the end, offers declined, over a rolling window, read as a watch rate.
@@ -578,9 +592,10 @@ the rendered save-slot rejection message, never seen. From the hook-pattern rese
 tuning hash, the timer setting and the profile readers in effect; variants compared in a round
 differ in one setting and run through the Lab's existing controls; observations follow PLAN.md
 criteria 12 and 14; a variant is dropped when testers can't explain an effect it introduced or it
-produces a material issue under criterion 14. The tap-to-idle income ratio is read here too, and from `docs/monetization.md`: ad cadence, the offer's
-shown worth against the tap pay actually earned, an equal-income paid and unpaid journey, a rest-and-tap
-rotation check, and whether testers understand that an ad or a purchase changes pay only.
+produces a material issue under criterion 14. The revised patrol economy is read here too, alongside ad cadence and the offer's
+shown worth against actual patrol funding, paid and unpaid progression with identical service hours,
+finite staffing capacity, sustainable payroll, and whether testers understand that boosts affect gross
+patrol income rather than multiplying department net. The tap-to-idle metric is superseded.
 
 ### store-wrap: Package the game for the App Store and Play Store
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
@@ -594,20 +609,20 @@ label question, the U.S. state privacy path, and Google's rewarded ads policy (n
 
 ### real-purchases: The store sells real-money income multipliers
 Tags: job=build; journeys=hire-and-equip; probes=funding-balance; lane=engine
-Needs: start=detail-strain-drain; integrate=none; ship=store-wrap (App Store and Play Store billing)
+Needs: start=patrol-boosts; integrate=store-destination; ship=store-wrap (App Store and Play Store billing)
 
-Owner decisions: free to play with purchases (2026-10-19); development points and point packs
-removed (2026-10-20); real-money income multipliers are sold in the store (2026-10-22). A Store
-surface lists the two multipliers in `docs/monetization.md` section 7 (`desk-overtime` +0.5, $2.99;
-`desk-overtime-plus` +1, $4.99 (owner, 2026-10-22); non-consumable, per account; the entitlement kind capped at x2.5);
+Owner decisions: free to play with purchases; no development-point packs; sell income multipliers.
+The 2026-10-22 NPC patrol revision supersedes the tap products and their value/stack assumptions.
+Set product benefits against the tested patrol economy, preserving account-level entitlements and
+store-provided prices. The persistent Store shows affected income, actual net delta, ownership and expiry;
 billing goes through RevenueCat (`@revenuecat/purchases-capacitor`) behind an adapter whose only output is a
 `VerifiedEntitlements` branded type, with Restore in the Store and in Settings. Resolve RevenueCat's receipt
 validation and refund notifications before building. A purchase grants an entitlement
-through `grantEntitlement` on the shared multiplier path (`src/sim/department-taps.ts`), only after
+through the verified shared patrol boost grant path, only after
 a receipt check, since the local save can be edited. Prices are the same for every player. The
 `funding-balance` probe today checks only added funding (`src/architecture/wiring.ts`); it extends
 to purchase status, so owning a multiplier never moves call odds. A dev store stands in for billing
-until `store-wrap`. Done: each multiplier sold, granted, shown near the desk and restored across a
+until `store-wrap`. Done: each multiplier sold, granted, shown in HQ/Store and restored across a
 reinstall on a real phone, with the probe extended.
 
 ### offline-shell: The game opens with no network
@@ -651,7 +666,7 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read
   (owner, 2026-10-22).
 
-Decided 2026-10-22 (owner answers): option B for paid-detail strain (`detail-strain-drain`); a multiplier
+Superseded by the NPC patrol revision in `docs/patrol-work.md` (historical owner answers, 2026-10-22): option B for paid-detail strain; a multiplier
 gives no strain advantage, so each tap's strain scales with the combined multiplier and pay per strain is
 constant (the multiplier saves taps); entitlements per account; the ad's x1.5 for 10 minutes ships and
 playtests judge its size; the first room scales with multipliers; an offer that would pay nothing is not

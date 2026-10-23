@@ -45,7 +45,7 @@ describe('starting state', () => {
       ['off_brooks', 'off_chen', 'off_lindqvist', 'off_okafor', 'off_ortiz', 'off_park', 'off_reyes', 'off_vale'].sort(),
     );
     expect(s.squads.map((q) => [q.id, q.name, q.duty, q.leaderId])).toEqual([
-      ['A', 'Alpha', 'patrol', 'off_brooks'],
+      ['A', 'Alpha', 'standby', 'off_brooks'],
       ['B', 'Bravo', 'standby', 'off_okafor'],
     ]);
     expect(s.officers.off_reyes.certs).not.toContain('crisis_negotiation');
@@ -64,7 +64,7 @@ describe('starting state', () => {
   });
   it('opens with the illustrative budget', () => {
     const b = budget(s);
-    expect(b).toMatchObject({ gross: 1200, wages: 380, operating: 120, supplies: 80, net: 620 });
+    expect(b).toMatchObject({ gross: 1440, wages: 380, operating: 120, supplies: 80, net: 620 });
   });
   it('gives every officer a distinct, uneven profile', () => {
     const profiles = Object.values(s.officers).map((o) => JSON.stringify(o.ratings));
@@ -470,12 +470,14 @@ describe('development tree, training and store', () => {
 describe('recovery view', () => {
   it('explains blockers, factors and the deployable time', () => {
     const s = createInitialState(T0);
+    s.squads.find((squad) => squad.officerIds.includes('off_vale'))!.duty = 'standby';
     s.officers.off_vale.stress = 85;
     const info = recoveryInfo(s, 'off_vale', T0);
     expect(info.band).toBe('recovery');
     expect(info.blocker).toMatch(/mandatory recovery/);
-    expect(info.deployableAt).toBeGreaterThan(T0 + 5 * HOUR_MS);
-    expect(info.factors.join(' ')).toMatch(/patrol: 1\/h/);
+    expect(info.deployableAt).toBeGreaterThan(T0 + HOUR_MS);
+    expect(info.deployableAt).toBeLessThan(T0 + 2 * HOUR_MS);
+    expect(info.factors.join(' ')).toMatch(/standby: 3\/h/);
     expect(recoveryInfo(s, 'off_chen', T0)).toMatchObject({ band: 'ready', deployableAt: null, blocker: null });
   });
 });

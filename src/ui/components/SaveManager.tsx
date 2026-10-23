@@ -56,8 +56,6 @@ function SaveStatus() {
   const status = campaignStatus(saved);
   return <div className={`save-status${saved.issue ? ' save-status-warning' : ''}`}>
     <span><strong>{status.name}</strong><small>{status.detail}</small></span>
-    {/* Development builds only: the Scenario Lab (/lab) plays every call on the real engine and shows its options, odds and branches. */}
-    {import.meta.env.DEV && <a className="save-status-lab" href={`${import.meta.env.BASE_URL}lab`} target="_blank" rel="noreferrer">Scenario Lab</a>}
   </div>;
 }
 
@@ -87,7 +85,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
   const selected = edit ? saved.slots[edit.id - 1] : null;
   return <Sheet open={open} onClose={close} interactionKey={`${edit?.type ?? 'slots'}:${busy}`} title={edit ? edit.type === 'delete' ? 'Delete save?' : edit.type === 'rename' ? 'Rename save' : edit.type === 'new' ? 'Start a new game' : edit.type === 'load' ? 'Load saved campaign?' : edit.type === 'import' ? 'Import backup' : 'Save a copy' : isResponsivePreview ? 'Temporary test saves' : 'Local saves'} subtitle={isResponsivePreview ? 'Ten in-memory slots · lost when this frame reloads or closes' : 'Ten slots · stored in this browser on this device'} className="save-manager">
     {saved.issue && <p className="save-alert" role="alert">{saved.issue}</p>}
-    {error && <p className="save-alert" role="alert">{error}</p>}
+    {error && error !== saved.issue && <p className="save-alert" role="alert">{error}</p>}
     {message && <p className="save-success" role="status">{message}</p>}
     {busy && <p role="status">Saving locally…</p>}
     <fieldset disabled={busy} className="save-controls">

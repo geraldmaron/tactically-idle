@@ -1,13 +1,15 @@
 /* The Officers tab (screens/Squad.tsx): segments, then squads as blocks of rows. */
 .officers-page { gap: var(--sp4); }
+.officers-title { margin: 0; font: 700 var(--s28)/1.1 var(--f-title); }
 .officers-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); min-height: 44px; }
 .officers-head .section-title { margin: 0; }
 .text-link { min-height: 44px; padding: 0 var(--sp1); border: 0; background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; cursor: pointer; }
 .text-link:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
-.squad-block { display: flex; flex-direction: column; }
+.squad-block { display: flex; flex-direction: column; gap: var(--sp3); }
+.officer-character-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp3); min-width: 0; }
 .squad-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp3); min-height: 44px; }
 .squad-block-head .squad-badge { width: 24px; height: 24px; font: 700 var(--s14)/1 var(--f-title); }
-.squad-block-name { flex: 1 1 auto; min-width: 0; margin: 0; font: 600 var(--s16)/1.2 var(--f-ui); }
+.squad-block-name { flex: 1 1 auto; min-width: 0; margin: 0; font: 700 var(--s22)/1.1 var(--f-title); }
 .squad-rename { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 44px; max-width: 100%; padding: 0; border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .squad-rename .icon { flex: none; color: var(--t3); }
 .squad-rename:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }

@@ -10,30 +10,24 @@ export type HubRoom = 'dispatch' | 'training' | 'lockers' | 'armory' | 'briefing
 export interface HubPin {
   room: HubRoom;
   text: string;
+  detail?: string;
   /** act: the player's move (a call waits); harm: something is going wrong. */
   tone?: 'act' | 'harm';
   onOpen?: () => void;
 }
 
-/** Where each room's pin stands on the cropped painting (hub_hq.webp), left or right column and
- * the room's height as a share of the frame. */
-const PIN_AT: Record<HubRoom, { side: 'left' | 'right'; top: number }> = {
-  dispatch: { side: 'left', top: 17 }, training: { side: 'right', top: 17 },
-  lockers: { side: 'left', top: 49 }, armory: { side: 'right', top: 49 },
-  briefing: { side: 'left', top: 78 }, garage: { side: 'right', top: 78 },
-};
-
-export function Hub({ pins }: { pins: HubPin[] }) {
+/** A compact department scene. State chips name actual conditions, not invented room positions. */
+export function Hub({ pins, title, meta }: { pins: HubPin[]; title?: string; meta?: string }) {
   const src = plateUrl('hub_hq');
   const [failed, setFailed] = useState(false);
   const painted = !!src && !failed;
   return <section className={`hub${painted ? '' : ' hub-plain'}`} aria-label="Headquarters">
     {painted && <img className="hub-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onError={() => setFailed(true)} />}
+    {title && <div className="hub-identity"><span>{meta}</span><h1>{title}</h1></div>}
     {pins.length > 0 && <ul className="hub-pins">
       {pins.map((pin) => {
-        const at = PIN_AT[pin.room];
-        const body = <>{pin.tone === 'act' && <i className="hub-dot" aria-hidden="true" />}{pin.text}</>;
-        return <li key={pin.room} className={`hub-pin${pin.tone ? ` hub-pin-${pin.tone}` : ''}`} style={{ top: `${at.top}%`, [at.side]: 'var(--sp4)' }}>
+        const body = <>{pin.tone === 'act' && <i className="hub-dot" aria-hidden="true" />}<span className="hub-pin-text"><strong>{pin.text}</strong>{pin.detail && <span>{pin.detail}</span>}</span></>;
+        return <li key={pin.room} className={`hub-pin${pin.tone ? ` hub-pin-${pin.tone}` : ''}`}>
           {pin.onOpen ? <button type="button" onClick={pin.onOpen}>{body}</button> : <span>{body}</span>}
         </li>;
       })}

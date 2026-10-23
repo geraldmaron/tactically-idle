@@ -111,7 +111,7 @@ export function startingOfficers(now: number, campaignSeed = 12345): Record<Id, 
 
 export function startingSquads(): Squad[] {
   return [
-    { id: 'A', name: 'Alpha', officerIds: ['off_chen', 'off_brooks', 'off_ortiz', 'off_vale'], leaderId: 'off_brooks', duty: 'patrol', loadoutPreset: {} },
+    { id: 'A', name: 'Alpha', officerIds: ['off_chen', 'off_brooks', 'off_ortiz', 'off_vale'], leaderId: 'off_brooks', duty: 'standby', loadoutPreset: {} },
     { id: 'B', name: 'Bravo', officerIds: ['off_okafor', 'off_lindqvist', 'off_reyes', 'off_park'], leaderId: 'off_okafor', duty: 'standby', loadoutPreset: {} },
   ];
 }

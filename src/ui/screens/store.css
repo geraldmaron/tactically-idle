@@ -1,0 +1,16 @@
+.store-screen-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp3); padding: var(--sp3) var(--gutter) 0; }
+.store-screen-head > .choice-rail { flex: 1 1 180px; }
+.store-screen-title { margin: 0; font: 700 var(--s28)/1.1 var(--f-title); }
+.store-screen-counter { align-content: flex-end; min-height: 136px; padding-bottom: var(--sp3); }
+.store-screen-counter > .plate-art { object-position: center 58%; }
+.store-screen-counter::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ink-0) 75%, transparent) 55%, var(--ink-0)); }
+.store-screen-counter::after { background: none; }
+.store-screen-counter .store-screen-title { text-shadow: 0 2px 8px var(--ink-0); }
+.gear-page-compact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
+.gear-page-compact > .disclosure { grid-column: 1; }
+.gear-page-compact .store-equipment { display: contents; }
+.gear-page-compact .equipment-controls { grid-column: 2; }
+.gear-page-compact > .disclosure[open], .gear-page-compact .equipment-controls[open], .gear-page-compact .store-group, .gear-page-compact .inv-grid, .gear-page-compact .store-equipment > .card { grid-column: 1 / -1; }
+.gear-page-compact .equipment-controls .disclosure-body { display: grid; gap: var(--sp3); }
+.gear-page-compact .store-collection { min-height: 24px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.gear-page-compact .store-search input { min-height: var(--touch); }

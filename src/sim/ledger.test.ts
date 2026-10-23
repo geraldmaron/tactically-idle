@@ -70,7 +70,6 @@ describe('only the ledger and hourly accrual write funding', () => {
   // Each file outside the ledger may write funding only where named here, with the reason.
   const ALLOWED: Record<string, { count: number; reason: string }> = {
     'ledger.ts': { count: 1, reason: 'postFunding itself' },
-    'economy.ts': { count: 2, reason: 'settle() applies hourly accrual as a rate and clamps at zero' },
     'equipment-manager.ts': { count: 1, reason: 'clears sub-unit rounding residue at the reserve floor' },
   };
   it('finds no other write', () => {

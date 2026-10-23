@@ -1,0 +1,7 @@
+.team-page { display: flex; flex-direction: column; min-width: 0; }
+.team-head { display: grid; gap: var(--sp3); padding: var(--sp4) var(--gutter) 0; }
+.team-head .section-title { margin: 0; font: 750 var(--s28)/1.15 var(--f-title); }
+.team-command { padding-top: var(--sp4); }
+.team-page .squad-page { padding-top: var(--sp3); }
+.team-head > .choice-rail-navigation, .team-page .squad-page > .choice-rail-navigation { flex-wrap: wrap; overflow-x: visible; row-gap: var(--sp1); }
+.team-head > .choice-rail-navigation .choice-rail-item, .team-page .squad-page > .choice-rail-navigation .choice-rail-item { flex: 1 1 auto; white-space: normal; }

@@ -68,7 +68,7 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
     <div className="profile">
       <section className="profile-hero" aria-label="Officer">
         <div className="profile-portrait">
-          <Portrait officer={o} size={72} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={124} {...agePortraitProps(g, o, now)} />
           {isLeader && <span className="profile-leader" title="Squad leader"><Icon name="star" size={13} /></span>}
         </div>
         <div className="profile-id">

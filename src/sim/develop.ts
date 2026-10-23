@@ -117,7 +117,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
     return no(`Needs ${money(fee)} (have ${money(state.department.funding)})`);
   }
   if (officer) {
-    // Training takes the officer off patrol income; refuse if that would push the budget into deficit.
+    // Temporary patrol boosts never underwrite a training commitment.
     const t = at;
     const trial: GameState = {
       ...state,
@@ -126,7 +126,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
         [officer.id]: { ...officer, assignment: { kind: 'training', courseId: course.id, startedAt: t, endsAt: t + course.hours * HOUR_MS } },
       },
     };
-    const net = ratesAt(trial, t).net;
+    const net = ratesAt(trial, t, false).net;
     if (net < 0) return no(`Training would leave the department ${money(-net)}/h short while ${officer.surname} is away`);
   }
   return { ok: true, reason: null };

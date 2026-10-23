@@ -352,8 +352,8 @@ export interface Candidate {
 /** Up to four persistent squads (owner decision, 2026-10-02). */
 export type SquadId = 'A' | 'B' | 'C' | 'D';
 export const SQUAD_IDS: readonly SquadId[] = ['A', 'B', 'C', 'D'];
-/** Squad duty when not deployed. patrol earns routine funding; rest speeds recovery. */
-export type SquadDuty = 'patrol' | 'standby' | 'rest';
+/** SWAT duty when not deployed. Rest speeds recovery; patrol is a separate workforce. */
+export type SquadDuty = 'standby' | 'rest';
 
 export interface Squad {
   id: SquadId;
@@ -500,7 +500,7 @@ export interface Course {
 }
 
 /** What a ledger entry was for (src/sim/ledger.ts). */
-export type LedgerKind = 'payout' | 'signing' | 'severance' | 'purchase' | 'training' | 'development' | 'service' | 'salvage' | 'restock' | 'staff' | 'detail' | 'tap';
+export type LedgerKind = 'payout' | 'signing' | 'severance' | 'purchase' | 'training' | 'development' | 'service' | 'salvage' | 'restock' | 'staff' | 'detail' | 'patrol';
 
 /** One discrete change to funding, with the balance either side (save v11). */
 export interface LedgerEntry {
@@ -516,27 +516,39 @@ export interface LedgerEntry {
   latest?: number;
 }
 
-/** Where a tap multiplier came from (sim/department-taps.ts): a development the department bought,
- * a timed power-up, or a real purchase. */
-export type MultiplierSource = 'upgrade' | 'powerup' | 'entitlement';
+export type PatrolGrade = 1 | 2 | 3;
 
-/** A multiplier the department holds (save v17), copied from its registry entry when granted. */
-export interface ActiveMultiplier {
+/** A coverage position, separate from tactical officers and their equipment and stress. */
+export interface PatrolEmployee {
   id: Id;
-  source: MultiplierSource;
-  /** Applied to every tap while held; from 1 to MAX_MULTIPLIER_FACTOR, so expiry never raises the total. */
-  factor: number;
-  grantedAt: number;
-  /** Game time a power-up stops counting. Only power-ups carry one; settlement drops it after. */
-  expiresAt?: number;
+  profileId: Id;
+  grade: PatrolGrade;
+  /** Productive hours inside the department's funded accrual window. Never derived from money. */
+  serviceHours: number;
+  hiredAt: number;
+  /** Departed identities stay in history and cannot be hired again. */
+  dismissedAt: number | null;
+  training: { toGrade: PatrolGrade; startedAt: number; endsAt: number } | null;
 }
 
-/** Paid detail taps (save v17, sim/department-taps.ts): the refill-limited allowance and the multipliers. */
-export interface TapState {
-  /** Taps the books can still credit as of `at`; refills with game time up to a burst. */
-  credit: number;
-  at: number;
-  multipliers: ActiveMultiplier[];
+export interface PatrolBoost {
+  id: Id;
+  factor: number;
+  grantedAt: number;
+  expiresAt: number;
+}
+
+export interface PatrolState {
+  personnel: PatrolEmployee[];
+  nextId: number;
+  boosts: PatrolBoost[];
+}
+
+export interface PatrolTrainingCompletion {
+  employeeId: Id;
+  profileId: Id;
+  grade: PatrolGrade;
+  completedAt: number;
 }
 
 /** A development a milestone granted free (sim/grants.ts). */
@@ -587,8 +599,6 @@ export interface Department {
   candidateRefreshedAt?: number;
   /** Epoch ms of game-calendar day 0 (see src/sim/calendar.ts). */
   calendarEpoch: number;
-  /** Paid detail taps and their multipliers (save v17). Optional for fixtures; absent reads as no taps yet. */
-  taps?: TapState;
 }
 
 export interface ShiftReport {
@@ -607,6 +617,8 @@ export interface ShiftReport {
   /** Developments a milestone granted in this window (save v12). */
   grants?: GrantRecord[];
   completedCourses: { officerId: Id; courseId: Id }[];
+  /** Patrol promotions completed during this report's interval, separate from SWAT courses. */
+  patrolTraining?: PatrolTrainingCompletion[];
   recovered: Id[];
   shortages: string[];
   capped: boolean;
@@ -1158,6 +1170,8 @@ export interface PendingSquadMove {
 }
 
 export interface GameState {
+  /** Named civilian-facing patrol service positions. Never part of tactical squads (save v18). */
+  patrol: PatrolState;
   /** Squad moves waiting for a call to end (save v11). Optional for isolated simulation fixtures. */
   pendingSquadMoves?: PendingSquadMove[];
   /** Saved arrangement protections and a mapping-only undo point. */
@@ -1219,8 +1233,10 @@ export type Command =
   | { type: 'offerRetention'; officerId: Id }
   | { type: 'startDetail'; officerId: Id }
   | { type: 'markIncidentsSeen' }
-  /** `count` taps of paid detail work on HQ, batched by the screen (sim/department-taps.ts). */
-  | { type: 'tapEarn'; count: number }
+  | { type: 'hirePatrol'; profileId: Id }
+  | { type: 'dismissPatrol'; employeeId: Id }
+  | { type: 'startPatrolTraining'; employeeId: Id }
+  | { type: 'activatePatrolBoost'; boostId: Id }
   // command staff (src/sim/command-staff.ts); unlockNode opens a post, hireStaff fills it
   | { type: 'setManagerEnabled'; managerId: ManagerId; enabled: boolean }
   | { type: 'setManagerPolicy'; patch: ManagerPolicyPatch }
@@ -1276,7 +1292,18 @@ export interface Ctx {
   timer?: import('./timer-setting').TimerSetting;
 }
 
-export type HandlerResult = { ok: true } | { ok: false; reason: string };
+/** A successful patrol commitment, presented once by the UI and never persisted as a command. */
+export interface PatrolReceipt {
+  kind: 'hire' | 'dismiss' | 'training' | 'boost';
+  employeeId?: Id;
+  profileId?: Id;
+  boostId?: Id;
+  amount: number;
+  sequence: number;
+  netDelta: number;
+  endsAt?: number;
+}
+export type HandlerResult = { ok: true; patrolReceipt?: PatrolReceipt } | { ok: false; reason: string };
 
 /**
  * Handlers receive a structuredClone draft they may mutate freely. The dispatcher
@@ -1318,7 +1345,10 @@ export type DepartmentCommandType =
   | 'scrapUnit'
   | 'offerRetention'
   | 'markIncidentsSeen'
-  | 'tapEarn'
+  | 'hirePatrol'
+  | 'dismissPatrol'
+  | 'startPatrolTraining'
+  | 'activatePatrolBoost'
   | 'setManagerEnabled'
   | 'setManagerPolicy'
   | 'hireStaff'

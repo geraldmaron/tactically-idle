@@ -56,7 +56,6 @@ export const PINNED_BY: Readonly<Record<string, readonly string[]>> = {
   RECRUIT_TUNING: [...sim('department', 'campaign-selection', 'personnel'), 'src/ui/screens/Recruit.test.ts'],
   LEARNING_APTITUDE: sim('officer-value', 'career'),
   DETAIL_TUNING: sim('officer-value'),
-  TAP_TUNING: sim('department-taps'),
   REPUTATION_TUNING: [...sim('reputation'), 'src/architecture/wiring.test.ts', BALANCE],
   PROFILE_TUNING: [...sim('player-profile'), BALANCE],
 };
@@ -365,10 +364,9 @@ export const TUNING_META: readonly FieldMeta[] = [
   ...table('ECONOMY_TUNING', { group: 'economy', mode: 'department' }, {
     capMs: { label: 'Accrual stops after', help: 'Income and costs stop accruing this long after the player\'s last command.', min: 3_600_000, max: 172_800_000, step: 3_600_000, unit: 'ms' },
     baseAllocation: { label: 'Allocation', help: 'Funding the department gets per hour.', min: 0, max: 2000, step: 10, unit: 'per hour' },
-    patrolPerOfficer: { label: 'Patrol income', help: 'Funding per available officer in a squad on patrol, per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
     facilities: { label: 'Facilities cost', help: 'Funding spent on facilities per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
     supplies: { label: 'Supplies cost', help: 'Funding spent on routine supplies per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
-    ...each('recoveryPerHour', { rest: 'resting', standby: 'on standby', patrol: 'on patrol' }, name => ({ label: `Stress recovery ${name}`, help: 'Stress an officer sheds per hour on this duty.', group: 'strain', min: 0, max: 15, step: 0.5, unit: 'per hour' })),
+    ...each('recoveryPerHour', { rest: 'resting', standby: 'on standby' }, name => ({ label: `Stress recovery ${name}`, help: 'Stress an officer sheds per hour on this duty.', group: 'strain', min: 0, max: 15, step: 0.5, unit: 'per hour' })),
     reportMinMs: { label: 'Shift report from', help: 'A settlement shorter than this makes no shift report unless something notable happened.', mode: 'display', min: 60_000, max: 3_600_000, step: 60_000, unit: 'ms' },
     restockIntervalMs: { label: 'Restock interval', help: 'Restock rules run on this grid of the clock.', min: 600_000, max: 14_400_000, step: 600_000, unit: 'ms' },
   }),
@@ -392,12 +390,6 @@ export const TUNING_META: readonly FieldMeta[] = [
     max: { label: 'Aptitude at rating 100', help: 'Learning rate multiplier for an officer whose mean composure and awareness is 100.', min: 1, max: 2, step: 0.05, unit: '×' },
     fastAt: { label: 'Reads "learns fast" from', help: 'Combined learning rate at or above which the profile says the officer learns fast. Labels only.', mode: 'display', min: 1, max: 2, step: 0.05, unit: '×' },
     slowAt: { label: 'Reads "learns slowly" at', help: 'Combined learning rate at or below which the profile says the officer learns slowly. Labels only.', mode: 'display', min: 0.3, max: 1, step: 0.05, unit: '×' },
-  }),
-  ...table('TAP_TUNING', { group: 'economy', mode: 'department' }, {
-    base: { label: 'Paid detail tap pays', help: 'Funding one tap of paid detail work credits before multipliers.', min: 0.1, max: 100, step: 0.1, unit: 'funding' },
-    maxPerSecond: { label: 'Paid detail taps credited per second', help: 'The most taps a second the books credit; faster taps are dropped, so an autoclicker earns no more.', min: 1, max: 60, step: 1, unit: 'taps' },
-    burstSeconds: { label: 'Paid detail tap burst', help: 'Seconds of taps the allowance holds, so a short flurry above the rate still counts. It never saves up past this, so taps do not accrue offline.', min: 0.25, max: 10, step: 0.25, unit: 'seconds' },
-    stressPerDollar: { label: 'Paid detail strain per dollar', help: 'Strain each dollar of base tap pay puts on the free officers of the squads on patrol, split across them; they stop at the strained line. Multipliers raise pay, not strain.', min: 0.01, max: 1, step: 0.01, unit: 'stress' },
   }),
   ...table('DETAIL_TUNING', { group: 'economy', mode: 'department' }, {
     hours: { label: 'Instructor detail length', help: 'Hours an officer is away teaching for a neighbouring department.', min: 1, max: 24, step: 1, unit: 'hours' },

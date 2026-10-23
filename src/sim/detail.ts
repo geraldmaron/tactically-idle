@@ -1,8 +1,8 @@
 // Instructor details (officer-value, owner decision 2026-10-19). A certified officer can spend a few
 // hours teaching for a neighbouring department, which pays the department a fee when the detail
 // ends. The fee per hour rises with the officer's wage and certifications, so pricier, better
-// qualified officers earn faster. While on a detail the officer cannot deploy and earns no patrol
-// pay, so the fee is a trade against readiness, never free money.
+// qualified officers earn faster. While on a detail the SWAT officer cannot deploy and the separate
+// patrol workforce continues its coverage. The fee trades against readiness, never free money.
 import type { GameState, HandlerResult, Id, Officer, ShiftReport } from './types';
 import { awardXp, learnedXp } from './career';
 import { deployability, fullName } from './officer';

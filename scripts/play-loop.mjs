@@ -2,6 +2,106 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+/** Automatic patrol funding on the live HQ surface, then the real hire and boost purchase flows.
+ * Proves authoritative accrual, HQ-only bounded motion, navigation reconciliation and reduced motion. */
+export async function playPatrolEconomy(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844, captureDir } = {}) {
+  const fixed = new Date();
+  await page.clock.setFixedTime(fixed);
+  await page.setViewportSize({ width, height });
+  const errors = []; page.on('pageerror', error => errors.push(String(error)));
+  page.on('dialog', dialog => dialog.accept());
+  const capture = async (name, target = null, activePage = page) => {
+    if (!captureDir) return;
+    await mkdir(captureDir, { recursive: true });
+    if (target) { await target.scrollIntoViewIfNeeded(); await target.screenshot({ path: `${captureDir}/${name}-${width}.png` }); }
+    else await activePage.screenshot({ path: `${captureDir}/${name}-${width}.png` });
+  };
+  const onboard = async (activePage) => {
+    await activePage.goto(baseURL);
+    const firstRun = activePage.locator('.first-run');
+    await firstRun.waitFor();
+    await firstRun.getByRole('button', { name: 'Continue to headquarters', exact: true }).click();
+    await activePage.locator('.hq-patrol').waitFor();
+  };
+  const state = async (activePage) => activePage.evaluate(() => window.__ti.getState());
+  const walletMatches = async (activePage) => activePage.waitForFunction(() => {
+    const wallet = Number((document.querySelector('.stat-cash-value')?.textContent ?? '').replace(/[^\d-]/g, ''));
+    const actual = Math.round(window.__ti.getState().department.funding);
+    return Number.isFinite(wallet) && Math.abs(wallet - actual) <= 1;
+  });
+  await onboard(page);
+  const sprites = page.locator('.funding-flight-layer .cash-sprite');
+  const spriteStyle = async () => page.evaluate(() => ({
+    count: document.querySelectorAll('.funding-flight-layer .cash-sprite').length,
+    layerPointerEvents: getComputedStyle(document.querySelector('.funding-flight-layer')).pointerEvents,
+    spritePointerEvents: [...document.querySelectorAll('.funding-flight-layer .cash-sprite')].every(sprite => getComputedStyle(sprite).pointerEvents === 'none'),
+  }));
+
+  const initial = await state(page);
+  assert.equal(initial.patrol.personnel.filter(person => person.dismissedAt === null).length, 4, 'a new department starts with four patrol employees');
+  assert.equal(await page.locator('.hq-patrol-rate strong').innerText(), '+$620/h', 'the starting department net is preserved');
+  assert.equal(await page.locator('.tap-earn-target').count(), 0, 'paid-detail tapping is absent');
+  await capture('patrol-hq-initial', page.locator('.hq-patrol'));
+
+  const before = initial.department.funding;
+  await page.clock.setFixedTime(new Date(fixed.getTime() + 60 * 60_000));
+  await page.waitForFunction(initialFunding => window.__ti.getState().department.funding >= initialFunding + 620, before, { timeout: 8000 });
+  assert.ok(await sprites.count() > 0, 'authoritative patrol settlement starts the HQ cash flight');
+  let spriteState = await spriteStyle();
+  assert.ok(spriteState.count <= 24, 'cash flights stay within the sprite bound');
+  assert.equal(spriteState.layerPointerEvents, 'none', 'the flight layer does not intercept input');
+  assert.equal(spriteState.spritePointerEvents, true, 'cash sprites do not intercept input');
+  await capture('patrol-funding-flight', page.locator('.funding-flight-layer'));
+  await sprites.first().waitFor({ state: 'detached', timeout: 3000 });
+  assert.equal(Math.round((await state(page)).department.funding - before), 620, 'one hour credits the authoritative starting net');
+  await walletMatches(page);
+
+  // The canonical Team flow hires a fifth employee and exposes the now-positive Store boost.
+  await page.locator('nav').getByRole('button', { name: 'Team', exact: true }).click();
+  await page.getByRole('button', { name: 'Patrol', exact: true }).click();
+  await page.getByRole('button', { name: 'Hire patrol', exact: true }).click();
+  await page.locator('.patrol-candidates').getByRole('button', { name: /Review hire/ }).first().click();
+  await page.getByRole('button', { name: /Confirm hire/ }).click();
+  await page.locator('.patrol-receipt').waitFor();
+  assert.equal((await state(page)).patrol.personnel.filter(person => person.dismissedAt === null).length, 5, 'the hire receipt leaves five employed patrol staff');
+  await capture('patrol-hire-receipt', page.locator('.patrol-receipt'));
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.locator('nav').getByRole('button', { name: 'Store', exact: true }).click();
+  await page.getByRole('button', { name: 'Boosts', exact: true }).click();
+  const grant = page.getByRole('button', { name: 'Review grant', exact: true });
+  assert.equal(await grant.isEnabled(), true, 'five productive staff make the four-hour grant return more than its price');
+  await grant.click();
+  await page.getByRole('button', { name: /Activate grant/ }).click();
+  await page.locator('.patrol-receipt').waitFor();
+  assert.equal((await state(page)).patrol.boosts.length, 1, 'the Store purchase activates one patrol boost');
+  await capture('patrol-boost-receipt', page.locator('.patrol-receipt'));
+  assert.deepEqual(errors, [], 'uncaught errors during patrol economy flow');
+
+  // A second, fresh context tests reduced motion without changing the normal-motion walk above.
+  const browser = page.context().browser();
+  assert.ok(browser, 'the paid-details page belongs to a launched browser');
+  const reducedContext = await browser.newContext({ viewport: { width, height }, hasTouch: true });
+  const reducedErrors = [];
+  try {
+    const reducedPage = await reducedContext.newPage();
+    await reducedPage.emulateMedia({ reducedMotion: 'reduce' });
+    await reducedPage.clock.setFixedTime(fixed);
+    reducedPage.on('pageerror', error => reducedErrors.push(String(error)));
+    await onboard(reducedPage);
+    const reducedBefore = (await state(reducedPage)).department.funding;
+    await reducedPage.clock.setFixedTime(new Date(fixed.getTime() + 60 * 60_000));
+    await reducedPage.waitForFunction(initialFunding => window.__ti.getState().department.funding >= initialFunding + 620, reducedBefore, { timeout: 8000 });
+    const reducedSprites = reducedPage.locator('.cash-sprite');
+    assert.equal(await reducedSprites.count(), 0, 'reduced motion skips cash particles');
+    assert.equal(Math.round((await state(reducedPage)).department.funding - reducedBefore), 620, 'reduced motion preserves authoritative patrol accrual');
+    await walletMatches(reducedPage);
+    await capture('patrol-reduced-motion', null, reducedPage);
+    assert.deepEqual(reducedErrors, [], 'uncaught errors with reduced motion');
+  } finally { await reducedContext.close(); }
+
+  return { width, height, initialNet: 620, hired: 1, boost: 'community-grant', reducedMotion: true };
+}
+
 /** Real UI, isolated browser context, no injected game state or stubbed requests.
  * A fresh department opens the Ops board and:
  * 1. checks the casebook shows a locked framework as its requirement, with no call content;
@@ -271,6 +371,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // Run it on another dev port, e.g. node scripts/play-loop.mjs http://localhost:5182.
   const baseURL = process.argv[2] ?? process.env.TI_BASE_URL;
   try {
+    const paidContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    try {
+      const patrol = await playPatrolEconomy(await paidContext.newPage(), { width: 390, height: 844, baseURL, captureDir: process.env.TI_CAPTURE_DIR });
+      console.log(`Passed patrol economy at ${patrol.width}x${patrol.height}: $${patrol.initialNet}/h initial net, ${patrol.hired} hire, ${patrol.boost} activated, HQ-only motion and reduced motion honored.`);
+    } finally { await paidContext.close(); }
     for (const [width, height] of [[390, 844], [320, 568]]) {
       const context = await browser.newContext({ viewport: { width, height }, hasTouch: true });
       try { results.push(...await playLiveCalls(await context.newPage(), { width, height, baseURL, captureDir: process.env.TI_CAPTURE_DIR })); }

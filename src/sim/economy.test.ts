@@ -71,14 +71,14 @@ function expectEquivalent(a: GameState, b: GameState) {
 describe('start budget', () => {
   it('lands on the illustrative hourly budget', () => {
     const r = ratesAt(createInitialState(T0), T0);
-    expect(r).toMatchObject({ base: 600, patrol: 600, nodeIncome: 0, gross: 1200, wages: 380, operating: 120, supplies: 80, net: 620 });
+    expect(r).toMatchObject({ base: 600, patrol: 840, patrolWages: 180, patrolOperating: 60, nodeIncome: 0, gross: 1440, wages: 380, operating: 120, supplies: 80, net: 620 });
   });
   it('a course frees patrol income when it ends (rates per segment)', () => {
     const s = scenario();
-    expect(ratesAt(s, T0).patrol).toBe(2 * 150); // Chen in training, Vale injured
-    expect(ratesAt(s, T0).net).toBe(320);
-    expect(ratesAt(s, T0 + 2 * HOUR_MS).patrol).toBe(3 * 150); // Vale back, Chen still away
-    expect(ratesAt(s, T0 + 5 * HOUR_MS).net).toBe(470);
+    expect(ratesAt(s, T0).patrol).toBe(840); // Tactical staffing does not change the patrol workforce.
+    expect(ratesAt(s, T0).net).toBe(620);
+    expect(ratesAt(s, T0 + 2 * HOUR_MS).patrol).toBe(840);
+    expect(ratesAt(s, T0 + 5 * HOUR_MS).net).toBe(620);
   });
 });
 
@@ -102,18 +102,18 @@ describe('offline equivalence', () => {
   it('funding is the sum of per-segment rates, not the final rate times the absence', () => {
     const start = scenario();
     const s = ok(start, { type: 'tick' }, T0 + 4 * HOUR_MS);
-    // Chen trains 0-4h (470/h net), Vale injured 0-1.7h so patrol drops by 150 then.
-    const expected = 12400 - 600 + 1.7 * (470 - 150) + (4 - 1.7) * 470;
+    // Patrol continues through tactical training and injury because it is a separate workforce.
+    const expected = 12400 - 600 + 4 * 620;
     expect(s.department.funding).toBeCloseTo(expected, 3);
-    expect(s.department.funding).not.toBeCloseTo(12400 - 600 + 4 * 620, 0);
+    expect(s.department.funding).toBeCloseTo(12400 - 600 + 4 * 620, 3);
   });
 
   it('produces a shift report for the offline window', () => {
     const s = ok(createInitialState(T0), { type: 'tick' }, T0 + 4 * HOUR_MS);
     expect(s.report).toMatchObject({ from: T0, to: T0 + 4 * HOUR_MS, accruedHours: 4, capped: false, shortages: [] });
-    expect(s.report!.gross).toBeCloseTo(4800, 3);
-    expect(s.report!.wages).toBeCloseTo(1520, 3);
-    expect(s.report!.operating).toBeCloseTo(800, 3);
+    expect(s.report!.gross).toBeCloseTo(5760, 3);
+    expect(s.report!.wages).toBeCloseTo(24 * 560 / 6, 3); // 4h at $560/h total payroll
+    expect(s.report!.operating).toBeCloseTo(4 * (120 + 80 + 60), 3);
     expect(s.report!.net).toBeCloseTo(2480, 3);
   });
 
@@ -142,8 +142,8 @@ describe('funding cap', () => {
     const start = createInitialState(T0);
     const at30 = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
     // Wages and income stop together: net over 30h equals net over 24h, never 24h income minus 30h wages.
-    expect(at30.report!.wages).toBeCloseTo(24 * 380, 3);
-    expect(at30.report!.gross).toBeCloseTo(24 * 1200, 3);
+    expect(at30.report!.wages).toBeCloseTo(24 * (380 + 180), 3);
+    expect(at30.report!.gross).toBeCloseTo(24 * 1440, 3);
   });
 
   it('a later command restarts the window', () => {
@@ -214,13 +214,14 @@ describe('time safety', () => {
 describe('recovery', () => {
   it('an officer at stress 85 cannot deploy until the displayed deployableAt', () => {
     let s = establishedDepartment(T0);
+    s.squads.find((squad) => squad.officerIds.includes('off_vale'))!.duty = 'standby';
     s.officers.off_vale.stress = 85; // Alpha is on patrol: 1/h
     expect(deployability(s.officers.off_vale, T0).ok).toBe(false);
     const info = recoveryInfo(s, 'off_vale', T0);
     expect(info.band).toBe('recovery');
     const at = info.deployableAt!;
-    expect(at - T0).toBeGreaterThan(5 * HOUR_MS);
-    expect(at - T0).toBeLessThan(5 * HOUR_MS + 2 * 60_000);
+    expect(at - T0).toBeGreaterThan(HOUR_MS);
+    expect(at - T0).toBeLessThan(2 * HOUR_MS);
 
     s = tickSteps(s, T0, at - TICK);
     expect(deployability(s.officers.off_vale, at - TICK).ok).toBe(false);
@@ -251,16 +252,16 @@ describe('recovery', () => {
     for (const o of Object.values(p.officers)) o.stress = 70;
     p = ok(p, { type: 'tick' }, T0 + HOUR_MS);
     expect(p.officers.off_okafor.stress).toBeCloseTo(70 - 3 * 1.5 * 0.88, 6); // standby x1.5, age 57
-    expect(p.officers.off_chen.stress).toBeCloseTo(70 - 1.5, 6); // patrol x1.5
+    expect(p.officers.off_chen.stress).toBeCloseTo(70 - 3 * 1.5, 6); // standby x1.5
   });
 
-  it('deployed officers do not recover or earn patrol income', () => {
+  it('deployed officers do not recover and do not affect separate patrol income', () => {
     const s = createInitialState(T0);
     s.officers.off_chen.assignment = { kind: 'operation', runId: 'run_1' };
     s.officers.off_chen.stress = 60;
     const next = ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
     expect(next.officers.off_chen.stress).toBe(60);
-    expect(ratesAt(s, T0).patrol).toBe(450);
+    expect(ratesAt(s, T0).patrol).toBe(840);
   });
 
   it('the report lists officers who left mandatory recovery', () => {
@@ -333,15 +334,14 @@ describe('restock rules', () => {
 });
 
 describe('officer rates', () => {
-  it('splits the hourly money by officer, and patrol shares sum to the department patrol line', async () => {
+  it('reports tactical detail and wage rates separately from patrol workforce income', async () => {
     const { officerRates } = await import('./economy');
     const g = establishedDepartment(T0);
     const t = g.department.clockHighWater;
     const rows = Object.values(officerRates(g, t));
     expect(rows.length).toBe(Object.keys(g.officers).length);
-    expect(rows.reduce((s, r) => s + r.patrol, 0)).toBe(ratesAt(g, t).patrol);
     expect(rows.reduce((s, r) => s + r.wage, 0)).toBe(ratesAt(g, t).wages);
-    for (const r of rows) expect(r.net).toBeCloseTo(r.patrol + r.detail - r.wage);
+    for (const r of rows) expect(r.net).toBeCloseTo(r.detail - r.wage);
     // Wages differ, so officers on the same duty net different amounts.
     expect(new Set(rows.map((r) => r.net)).size).toBeGreaterThan(1);
   });

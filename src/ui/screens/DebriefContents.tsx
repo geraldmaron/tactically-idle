@@ -14,7 +14,7 @@ import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
 import { armamentLabel } from '../components/incident';
 import { BeforeAfter, Card, Chip, SubHead } from '../components/ui';
-import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
+import { DebriefConsequences, DebriefRewards, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
@@ -62,11 +62,12 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
       {heroAction}
     </div>
     <DebriefSupport scenarioId={d.scenarioId} />
-    <DebriefSummary debrief={d} />
-    <DebriefScore debrief={d} />
+    <DebriefSummary debrief={d} includeRewards={false} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={officers} />
+    <Card className="result-department"><DebriefRewards debrief={d} /></Card>
+    <DebriefScore debrief={d} />
     <DebriefEvidence debrief={d} decisions={decisions} officers={officers} scenario={scenario} reality={reality} />
   </>;
 }

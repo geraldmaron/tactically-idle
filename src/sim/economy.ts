@@ -26,7 +26,7 @@ import { staffLever } from './staff-pool';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { postFunding } from './ledger';
 import { completeDetails } from './detail';
-import { dropExpiredMultipliers } from './department-taps';
+import { accruePatrolService, applyPatrolDue, nextPatrolEventTime, patrolRates } from './patrol';
 
 export const HOUR_MS = 3_600_000;
 
@@ -36,14 +36,12 @@ export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
   capMs: 24 * HOUR_MS,
   /** Department allocation per hour (funding). */
   baseAllocation: 600,
-  /** Routine patrol income per available officer in a squad on patrol, per hour. */
-  patrolPerOfficer: 150,
   /** Facilities, per hour. */
   facilities: 120,
   /** Routine supplies, per hour. */
   supplies: 80,
   /** Stress recovered per hour by the squad duty of the officer. */
-  recoveryPerHour: { rest: 6, standby: 3, patrol: 1 } as Record<SquadDuty, number>,
+  recoveryPerHour: { rest: 6, standby: 3 } as Record<SquadDuty, number>,
   /** A settlement shorter than this does not produce a shift report (unless something notable happened). */
   reportMinMs: 15 * 60_000,
   /** Restock rules run on this absolute-clock grid, so tick size cannot change results. */
@@ -104,6 +102,10 @@ export function recoveryRate(state: GameState, o: Officer, t: number = simNow(st
 export interface Rates {
   base: number;
   patrol: number;
+  patrolBase: number;
+  patrolBoost: number;
+  patrolWages: number;
+  patrolOperating: number;
   nodeIncome: number;
   gross: number;
   wages: number;
@@ -115,22 +117,15 @@ export interface Rates {
 }
 
 /** Hourly rates implied by the state at time t. Pure. */
-export function ratesAt(state: GameState, t: number): Rates {
-  let patrolMembers = 0;
-  for (const sq of state.squads) {
-    if (sq.duty !== 'patrol') continue;
-    for (const id of sq.officerIds) {
-      const o = state.officers[id];
-      if (o && !o.assignment && !isInjured(o, t)) patrolMembers++;
-    }
-  }
+export function ratesAt(state: GameState, t: number, boosted = true): Rates {
+  const workforce = patrolRates(state, t, boosted);
   let nodeIncome = 0;
   for (const e of unlockedEffects(state)) if (e.kind === 'income') nodeIncome += e.perHour;
   let wages = 0;
   for (const o of Object.values(state.officers)) wages += o.wage;
 
   const base = ECONOMY_TUNING.baseAllocation;
-  const patrol = patrolMembers * ECONOMY_TUNING.patrolPerOfficer;
+  const patrol = workforce.gross;
   const gross = base + patrol + nodeIncome;
   const operating = ECONOMY_TUNING.facilities;
   const staff = commandStaffSalaries(state);
@@ -138,48 +133,46 @@ export function ratesAt(state: GameState, t: number): Rates {
   return {
     base,
     patrol,
+    patrolBase: workforce.baseGross,
+    patrolBoost: workforce.boostAmount,
+    patrolWages: workforce.wages,
+    patrolOperating: workforce.operating,
     nodeIncome,
     gross,
     wages,
     operating,
     supplies,
     staff,
-    net: gross - wages - staff - operating - supplies,
+    net: gross - wages - workforce.wages - workforce.operating - staff - operating - supplies,
   };
 }
 
-/** One officer's hourly money: what they bring in (patrol, or a detail's fee spread over its hours)
- * against their wage. Patrol pay is flat per officer (docs/patrol-work.md, owner 2026-10-19), so
- * rates differ by wage, duty and instructor details, never by skill on patrol. */
+/** A tactical officer's instructor detail against their wage. Patrol staff have separate rates. */
 export interface OfficerRate {
-  patrol: number;
   detail: number;
   wage: number;
   net: number;
 }
 
-/** Hourly rate of every officer at time t. Their patrol column sums to ratesAt().patrol. Pure. */
-export function officerRates(state: GameState, t: number): Record<Id, OfficerRate> {
-  const patrolling = new Set<Id>();
-  for (const sq of state.squads) if (sq.duty === 'patrol') for (const id of sq.officerIds) patrolling.add(id);
+/** Hourly rate of every SWAT officer at time t. Pure. */
+export function officerRates(state: GameState, _t: number): Record<Id, OfficerRate> {
   const out: Record<Id, OfficerRate> = {};
   for (const o of Object.values(state.officers)) {
-    const patrol = patrolling.has(o.id) && !o.assignment && !isInjured(o, t) ? ECONOMY_TUNING.patrolPerOfficer : 0;
     const a = o.assignment;
     const detail = a?.kind === 'detail' && a.endsAt > a.startedAt ? a.fee / ((a.endsAt - a.startedAt) / HOUR_MS) : 0;
-    out[o.id] = { patrol, detail, wage: o.wage, net: patrol + detail - o.wage };
+    out[o.id] = { detail, wage: o.wage, net: detail - o.wage };
   }
   return out;
 }
 
 /** What each squad duty is worth, for the squad builder's preview (squad-optimizer.ts DutyRates). */
 export function dutyRates(): DutyRates {
-  return { recoveryPerHour: ECONOMY_TUNING.recoveryPerHour, patrolPerOfficer: ECONOMY_TUNING.patrolPerOfficer };
+  return { recoveryPerHour: ECONOMY_TUNING.recoveryPerHour };
 }
 
-/** The hourly net at the state's settled clock: what the roster weighs a hire or dismissal against. */
+/** Sustainable hourly net at the settled clock. Temporary boosts never fund permanent commitments. */
 export function netRate(state: GameState): number {
-  return ratesAt(state, simNow(state)).net;
+  return ratesAt(state, simNow(state), false).net;
 }
 
 // ---------------------------------------------------------------- settlement
@@ -192,6 +185,7 @@ interface Acc {
   maintenance: number;
   maintenanceStarted: Id[];
   courses: { officerId: Id; courseId: Id }[];
+  patrolTraining: NonNullable<ShiftReport['patrolTraining']>;
   shortages: Set<string>;
   equipment: ShiftReport['equipment'];
   personnel: ShiftReport['personnel'];
@@ -243,6 +237,7 @@ function runRestock(d: GameState, acc: Acc, t: number): void {
  * processed exactly once.
  */
 function applyDue(d: GameState, prev: number, t: number, acc: Acc, restock: boolean, exclusion?: ContentExclusion): void {
+  acc.patrolTraining.push(...applyPatrolDue(d, t));
   const due = Object.values(d.officers)
     .filter((o) => o.assignment?.kind === 'training' && o.assignment.endsAt <= t)
     .sort((a, b) => {
@@ -281,6 +276,7 @@ function nextEventTime(d: GameState, t: number, T: number, W: number, restockAct
   consider(nextUnitEventTime(d, t));
   consider(nextCareerEventTime(d, t, (o) => recoveryRate(d, o, t)));
   consider(nextIncidentEventTime(d, t));
+  consider(nextPatrolEventTime(d, t));
   consider(W);
   if (restockActive) {
     const I = ECONOMY_TUNING.restockIntervalMs;
@@ -319,6 +315,7 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     maintenance: 0,
     maintenanceStarted: [],
     courses: [],
+    patrolTraining: [],
     shortages: new Set(),
     equipment: [],
     personnel: [],
@@ -340,11 +337,13 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     const accrualHours = t < W ? (Math.min(e, W) - t) / HOUR_MS : 0;
     if (accrualHours > 0) {
       acc.gross += r.gross * accrualHours;
-      acc.wages += (r.wages + r.staff) * accrualHours;
-      acc.operating += (r.operating + r.supplies) * accrualHours;
-      dep.funding += r.net * accrualHours;
-      if (dep.funding < 0) {
-        dep.funding = 0;
+      acc.wages += (r.wages + r.patrolWages + r.staff) * accrualHours;
+      acc.operating += (r.operating + r.supplies + r.patrolOperating) * accrualHours;
+      const earned = r.net * accrualHours;
+      const credited = Math.max(-dep.funding, earned);
+      postFunding(dep, credited, 'patrol', 'Department service funding', Math.min(e, W), { foldAcrossAccrual: true });
+      accruePatrolService(d, accrualHours);
+      if (credited > earned) {
         acc.shortages.add('Funding ran out: payroll and operating costs were not fully covered');
       }
     }
@@ -355,13 +354,12 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     t = e;
   }
 
-  // Unshortlisted candidates who have waited too long leave the pool, and spent power-ups stop counting.
+  // Unshortlisted candidates who have waited too long leave the pool.
   d.candidates = d.candidates.filter((c) => c.shortlisted || c.expiresAt > T);
-  dropExpiredMultipliers(dep, T);
   dep.lastSettledAt = T;
 
   // A short settlement is not worth a report unless something happened that the player should see.
-  const notable = acc.courses.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0 || acc.maintenanceStarted.length > 0;
+  const notable = acc.courses.length > 0 || acc.patrolTraining.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0 || acc.maintenanceStarted.length > 0;
   if (T - L < ECONOMY_TUNING.reportMinMs && !notable) return;
   const recovered = [...wasRecovering].filter((id) => d.officers[id] && d.officers[id].stress < STRESS_BANDS.recovery);
   const rep: ShiftReport = {
@@ -376,6 +374,7 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     maintenanceStarted: acc.maintenanceStarted,
     net: dep.funding - fundingBefore,
     completedCourses: acc.courses,
+    patrolTraining: acc.patrolTraining,
     recovered,
     shortages: [...acc.shortages],
     capped: T > W,
@@ -400,6 +399,7 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     net: prev.net + rep.net,
     ...(prev.grants?.length || rep.grants?.length ? { grants: [...(prev.grants ?? []), ...(rep.grants ?? [])] } : {}),
     completedCourses: [...prev.completedCourses, ...rep.completedCourses],
+    patrolTraining: [...(prev.patrolTraining ?? []), ...(rep.patrolTraining ?? [])],
     recovered: [...new Set([...prev.recovered, ...rep.recovered])],
     shortages: [...new Set([...prev.shortages, ...rep.shortages])],
     capped: prev.capped || rep.capped,

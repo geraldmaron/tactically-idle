@@ -103,10 +103,9 @@ describe('squads as blocks with separate rename drafts', () => {
     const officers = Object.keys(state.officers).length;
     const squads = capture(SquadScreen).html;
     for (const squad of state.squads) expect(squads).toContain(`aria-label="Squad ${squad.id}, ${squad.name}"`);
-    expect(squads.match(/class="ui-row officer-row /g)).toHaveLength(officers);
-    expect(squads).not.toContain('ocard-tile');
+    expect(squads.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
     const roster = capture(SquadScreen, { squadSection: 'roster' }).html;
-    expect(roster.match(/class="ui-row officer-row /g)).toHaveLength(officers);
+    expect(roster.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
   });
 
   it('recreates the navigation owner on New and Load even though campaigns share squad A/B ids', () => {

@@ -9,7 +9,6 @@ import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, boardPlan, incidentsOf } from './helpers';
 import type { BoardEntry } from './helpers';
-import { TabPlate } from '../art/TabPlate';
 import { Casebook } from './Casebook';
 import { CallTile } from './CallTile';
 import { GamePeopleProvider } from '../people/PeopleText';
@@ -42,8 +41,8 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
   }, []);
 
   return (<>
-    <TabPlate tab="calls" title="Calls" />
     <div className="page cl-board">
+      <h1 className="section-title cl-board-title"><Icon name="calls" size={24} />Calls</h1>
       <header className="cl-board-head">
         <h2 className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</h2>
         <p className="cl-board-meta">

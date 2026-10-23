@@ -24,10 +24,11 @@ describe('department status explanations', () => {
     const state = makeState();
     state.department.funding = 12400;
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
-    expect(html).not.toContain('<img');
+    expect(html).toContain('class="resource-cash-art"');
+    expect(html).toContain('data-funding-target');
     expect(html).toContain('>$12,400</span>');
     expect(html).toContain(`${rate(budget(state).net)}</button>`);
-    expect(html.match(/<svg class="icon res-icon"/g), 'funds, rate, trust and level each carry their icon').toHaveLength(4);
+    expect(html.match(/<svg class="icon res-icon"/g), 'rate, trust and level retain their icons beside the cash illustration').toHaveLength(3);
     expect(html).toContain(`<span class="res-word">Trust </span>${Math.round(state.department.trust)}</button>`);
     expect(html).toContain(`<span class="res-word">Level </span>${state.department.level}</button>`);
     expect(html).not.toContain('/min');
@@ -89,7 +90,7 @@ describe('department status explanations', () => {
     expect(current.net).toBe(net);
     expect(html).toContain(`${net > 0 ? '+' : net < 0 ? '-' : ''}$${Math.abs(net)}/h`);
     expect(html).toContain(`Income ${'$'}${current.gross.toLocaleString('en-US')}/h, costs`);
-    for (const label of ['Base allocation', 'Patrol work', 'Officer wages', 'Facilities', 'Routine supplies']) expect(html).toContain(`<dt>${label}</dt>`);
+    for (const label of ['Base allocation', 'Patrol service', 'SWAT payroll', 'Patrol payroll', 'Patrol operations', 'Facilities', 'Routine supplies']) expect(html).toContain(`<dt>${label}</dt>`);
   });
 
   it.each([0, 78, 100])('explains public trust at %s on its actual 0–100 scale', (trust) => {

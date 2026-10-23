@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FactStatusChip } from '../components/FactStatusChip';
 import type { ReactNode } from 'react';
 import type {
@@ -21,10 +21,12 @@ import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { Blueprint } from '../blueprint/Blueprint';
+import { PlateArt } from '../art/Plates';
 import { RoomList } from '../blueprint/RoomList';
 import { floorCount } from '../blueprint/floors';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
+import { containSheetFocus } from '../components/sheet-focus';
 import { Button, Chip, SubHead } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
@@ -42,7 +44,6 @@ import { joinNames, squadName } from './operation-squads';
 import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
-import { CandidateSwitch, SHOW_CANDIDATE_SWITCH } from '../settings/CandidateSwitch';
 import { readSettings } from '../settings/prefs';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
@@ -153,6 +154,14 @@ export function LiveView(p: LiveViewProps) {
   const [mapKey, setMapKey] = useState(false);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [mapFull, setMapFull] = useState(false);
+  const mapElement = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const map = mapElement.current;
+    if (!mapFull || !map?.parentElement) return;
+    // Keep the drawing mounted so its pan and zoom survive. The scene owns the modal while it
+    // is full-screen, using the same focus, inert, Escape and restoration rules as a Sheet.
+    return containSheetFocus(map.parentElement, map, null, () => setMapFull(false));
+  }, [mapFull]);
   const [mapFolded, setMapFolded] = useState(readMapFolded);
   // From stage 2 the map folds to its header unless the player opens it for that stage (owner chose
   // 4B, 2026-10-21, docs/ops-experience.md); stage 1 keeps the player's remembered choice.
@@ -254,13 +263,13 @@ export function LiveView(p: LiveViewProps) {
         </> : <>
           {p.feedback}
           <section className="call operation-choices" aria-label="Your call">
-            {/* One order on every stage (owner, 2026-10-21): the prompt and what was said, then what is
-                said on scene while you decide, then the choices. The stage rail names the stage, and
+            {/* The prompt, what was said and the choices lead; the live radio follows them.
+                The stage rail names the stage, and
                 the strip carries the threat and what each source does to the odds, so neither repeats
                 here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
             <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
-              guidance={commsLog}
               onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
+            {commsLog}
           </section>
           {p.failedResponse}
           {p.supportContext}
@@ -271,7 +280,8 @@ export function LiveView(p: LiveViewProps) {
     <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
-      <header className="live-head">
+      <header className={`live-head${p.scene ? ' plate' : ''}`}>
+        <PlateArt src={p.scene ?? null} />
         <div className="live-strip-head">
           {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
               comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
@@ -280,7 +290,7 @@ export function LiveView(p: LiveViewProps) {
             <span className="live-name">{p.title}</span>
             <span className="live-title-more"><Icon name="info" size={14} />Briefing</span>
           </button>
-          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel the call">Cancel</button>}
+          <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog"><Icon name="blueprint" size={20} />Full map</button>
         </div>
         <p className="live-sub">
           <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
@@ -295,8 +305,13 @@ export function LiveView(p: LiveViewProps) {
               <span>{pressureWord(p.pressure)}</span>
             </span>
           </span>
+          {beat === 'decide' && <button type="button" className="hud-btn live-choice-access" data-choices-below onClick={(event) => {
+            const live = event.currentTarget.closest('.live');
+            const firstChoice = live?.querySelector('.operation-choices .callbtn') ?? live?.querySelector('.operation-choice-count');
+            firstChoice?.scrollIntoView({ block: 'center' });
+          }}><Icon name="chevronDown" size={16} />Your call</button>}
+          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel the call">Cancel</button>}
         </p>
-        {SHOW_CANDIDATE_SWITCH && <CandidateSwitch />}
       </header>
       <div className="live-bar live-strip">
         {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
@@ -307,20 +322,19 @@ export function LiveView(p: LiveViewProps) {
         </div>}
       </div>
 
-      {beat === 'result' && story}
-      {/* The scene: the map (compact, foldable, or full screen) and the squad, above the story on the
-          decide beat and folded under it on the result beat. */}
+      {story}
+      {/* The decision and its consequences lead. The supporting scene remains inspectable here
+          and through the Full map control beside the call title. */}
       <section className="live-scene" aria-label="The scene">
         <div className="live-scene-head">
           <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={14} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
           <span className="live-scene-actions">
-            {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={() => setMapFull(true)}><Icon name="blueprint" size={15} />Full map</button>}
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
               <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={15} />{mapShown ? 'Hide map' : 'Show map'}
             </button>}
           </span>
         </div>
-        <div className={`live-map${mapFull ? ' live-map-full' : ' live-map-compact'}`} id="live-map" hidden={!mapShown} role={mapFull ? 'dialog' : undefined} aria-modal={mapFull || undefined} aria-label={mapFull ? 'Map of the scene' : undefined}>
+        <div ref={mapElement} tabIndex={mapFull ? -1 : undefined} className={`live-map${mapFull ? ' live-map-full' : ' live-map-compact'}`} id="live-map" hidden={!mapShown} role={mapFull ? 'dialog' : undefined} aria-modal={mapFull || undefined} aria-label={mapFull ? 'Map of the scene' : undefined}>
           {mapFull && <div className="live-map-full-head">
             <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}</span>
             <button type="button" className="hud-btn" onClick={() => setMapFull(false)} aria-label="Close the map"><Icon name="x" size={16} />Close</button>
@@ -351,7 +365,7 @@ export function LiveView(p: LiveViewProps) {
             <button type="button" className="hud-btn" onClick={p.onToggleRooms} aria-pressed={p.showRooms}><Icon name={p.showRooms ? 'blueprint' : 'list'} size={16} />{p.showRooms ? 'Map' : 'Rooms'}</button>
           </div>}
         </div>
-        <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" modal={false} maxHeight="short">
+        <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" maxHeight="short">
           <div className="map-key-body" aria-label="Map legend">
             <span className="map-key-items">
               <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
@@ -362,7 +376,6 @@ export function LiveView(p: LiveViewProps) {
         </Sheet>
         {(beat === 'decide' || sceneOpen) && squadRow}
       </section>
-      {beat === 'decide' && story}
 
       <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing">
         <div className="live-briefing">{p.situation}</div>

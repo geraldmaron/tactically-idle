@@ -4,12 +4,11 @@ import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
 import './officers.css';
 import { Button, EmptyState } from '../components/ui';
-import { OfficerRow } from '../components/OfficerRow';
+import { OfficerCard } from '../components/OfficerCard';
 import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
-import { TabPlate } from '../art/TabPlate';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
 import { useNav } from '../components/nav';
@@ -22,15 +21,15 @@ import './squad-visual.css';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
-/** The Officers tab: Squads, Roster, Hire and Training as segments (docs/ui-ux-audit.md,
- * "Officers"). Each officer shows once per view. Tapping an officer opens their sheet, the one
+/** The SWAT section: Squads, Roster, Hire and Training. Each officer shows once per view.
+ * Tapping an officer opens their sheet, the one
  * place an officer is moved between squads or made leader; Arrange proposes a whole arrangement. */
 export function SquadScreen() {
   const nav = useNav();
   return (<>
-    <TabPlate tab="officers" title="Officers" />
     <div className="page squad-page officers-page">
-      <ChoiceRail value={nav.squadSection} kind="navigation" label="Officers sections" grow onChange={nav.setSquadSection} options={[
+      <h2 className="sr-only officers-title">SWAT</h2>
+      <ChoiceRail value={nav.squadSection} kind="navigation" label="SWAT sections" grow onChange={nav.setSquadSection} options={[
         { value: 'squads', label: 'Squads' }, { value: 'roster', label: 'Roster' }, { value: 'hire', label: 'Hire' }, { value: 'training', label: 'Training' },
       ]} />
       {nav.squadSection === 'training' ? <TrainingStore />
@@ -63,7 +62,7 @@ function SquadsView() {
         <h2 id="squad-bench-h" className="squad-block-name">Unassigned</h2>
         <span className="squad-block-meta">Off duty until in a squad</span>
       </div>
-      {unassigned.map((o) => <OfficerRow key={o.id} officer={o} now={now} onClick={() => nav.openOfficer(o.id)} />)}
+      <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} onClick={() => nav.openOfficer(o.id)} />)}</div>
     </section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
       : !full && <Button variant="quiet" icon="plus" onClick={() => setCreating(true)}>New squad</Button>}
@@ -161,7 +160,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
         )}
       </div>
       {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
-      {members.map((o) => <OfficerRow key={o.id} officer={o} now={now} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
+      <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
       {open > 0 && <p className="squad-block-open">{open === 1 ? '1 open place' : `${open} open places`}</p>}
     </section>
   );
@@ -223,8 +222,8 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
       <ChoiceRail value={filter} label="Show officers" grow onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
         value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
       }))} />
-      {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <div className="officer-rows">
-        {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
+      {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <div className="officer-character-grid">
+        {shown.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
       </div>}
     </section>
   );

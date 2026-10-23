@@ -24,8 +24,7 @@ export function ScoreRing({ value, size = 34, children }: { value: number; size?
   return <span className="score-ring" aria-hidden="true" style={{ width: size, height: size, background: `conic-gradient(${tone} ${v * 3.6}deg, rgba(255,255,255,.1) 0deg)` }}><span className="score-ring-core" style={{ width: size - 8, height: size - 8 }}>{children}</span></span>;
 }
 
-export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
-  const promotions = d.officerCondition.reduce((total, c) => total + (c.promotions?.length ?? 0), 0);
+export function DebriefSummary({ debrief: d, includeRewards = true }: { debrief: DebriefResult; includeRewards?: boolean }) {
   return <Card className="result-summary">
     {d.disposition && <CompletionResult debrief={d} />}
     {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
@@ -38,7 +37,14 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         </span>
       </section>)}
     </div>}
-    <section className="result-rewards" aria-label="Rewards">
+    {includeRewards && <DebriefRewards debrief={d} />}
+  </Card>;
+}
+
+/** Kept separate in the full debrief so people and their condition precede department rewards. */
+export function DebriefRewards({ debrief: d }: { debrief: DebriefResult }) {
+  const promotions = d.officerCondition.reduce((total, c) => total + (c.promotions?.length ?? 0), 0);
+  return <section className="result-rewards" aria-label="Rewards">
       <span className="result-score-label"><Icon name="cash" size={16} />Rewards</span>
       <div className="chips result-reward-chips">
         {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
@@ -48,8 +54,7 @@ export function DebriefSummary({ debrief: d }: { debrief: DebriefResult }) {
         {d.levelReached !== undefined && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
         {d.fundingReward === 0 && d.trustDelta === 0 && !d.serviceEarned && !promotions && <span className="dim">No funding or trust change.</span>}
       </div>
-    </section>
-  </Card>;
+    </section>;
 }
 
 /** V13: what the call was scored on, line by line (the trust lines add up to the trust change before

@@ -20,6 +20,7 @@ import { trainingCandidates, trainingOfficerCondition, trainingRatingGain, train
 import { createTrainingChooserNavigation, type TrainingChoice, type TrainingEnrolment } from './training-chooser-navigation';
 import './training-store.css';
 import '../screens/squad-visual.css';
+import './storefront.css';
 import { CERT_NAME } from '../../content/certs';
 import { squadName } from '../../sim/squad-names';
 
@@ -56,7 +57,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const { officerId, search } = draft;
   const setOfficerId = (id: Id) => nav.setTrainingDraft({ ...draft, officerId: id });
   const setSearch = (value: string) => nav.setTrainingDraft({ ...draft, search: value });
-  const [feedback, setFeedback] = useState<{ courseId: Id; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ courseId: Id; ok: boolean; text: string } | null>(null);
   const [choice, setChoice] = useState<TrainingChoice | null>(null);
   const owner = useId();
   const requestRef = useRef(focusRequest);
@@ -119,7 +120,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     if (!reviewing || !selectedCourse || !reviewing.option.available || submitting.current) return;
     submitting.current = true;
     const result = act({ type: 'startCourse', officerId: reviewing.officer.id, courseId: selectedCourse.id }, `${fullName(reviewing.officer)} started ${selectedCourse.name}`);
-    setFeedback({ courseId: selectedCourse.id, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} real hours.` : result.reason });
+    setFeedback({ courseId: selectedCourse.id, ok: result.ok, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} real hours.` : result.reason });
     if (result.ok) {
       const assignment = getState().officers[reviewing.officer.id]?.assignment;
       if (assignment?.kind === 'training') chooser.current?.complete({ officerName: fullName(reviewing.officer), startedAt: assignment.startedAt, endsAt: assignment.endsAt });
@@ -153,7 +154,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
         <div className="course-tile-top">
           <CourseEmblem course={course} locked={locked} />
-          <p className="course-tile-meta"><span><Icon name="clock" size={13} />{course.hours}h</span><span><Icon name="cash" size={13} />{money(fee(course.cost))}</span></p>
+          <p className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></p>
         </div>
         <h3>{course.name}</h3>
         <div className="course-tile-gains">
@@ -165,12 +166,12 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}
         {/* A full department is shown once by the places pips, not repeated on every tile. */}
         {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
-        {officer && available && <p className="training-eligible"><Icon name="check" size={13} />{officer.firstName} can enrol</p>}
+        {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
         <div className="course-tile-foot">
           {locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`} title="View development program" />}
-          <Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>
+          <Button variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>
         </div>
-        {feedback?.courseId === course.id && <p role="status">{feedback.text}</p>}
+        {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
       </article>;
     })}</div>
     {!options.length && <EmptyState spot="nothingInStock" title="No courses match">Clear the course search to see all training.</EmptyState>}
@@ -187,9 +188,9 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
         <div className="training-confirm-details">
-          <p className="training-confirm-line"><Icon name="cash" size={14} />{game.department.funding >= fee(selectedCourse.cost) ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - fee(selectedCourse.cost))}</> : `Funding ${money(game.department.funding)} of ${money(fee(selectedCourse.cost))} needed`}</p>
-          <p className="training-confirm-line"><Icon name="mortarboard" size={14} />{freePlaces} training {freePlaces === 1 ? 'place' : 'places'} free <TrainingPlaces used={inTraining} total={game.department.trainingSlots} bare /></p>
-          <p className="training-confirm-line"><Icon name="clock" size={14} />Away from squad duties for {selectedCourse.hours} real hours</p>
+          <p className="training-confirm-line"><Icon name="cash" size={16} />{game.department.funding >= fee(selectedCourse.cost) ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - fee(selectedCourse.cost))}</> : `Funding ${money(game.department.funding)} of ${money(fee(selectedCourse.cost))} needed`}</p>
+          <p className="training-confirm-line"><Icon name="mortarboard" size={16} />{freePlaces} training {freePlaces === 1 ? 'place' : 'places'} free <TrainingPlaces used={inTraining} total={game.department.trainingSlots} bare /></p>
+          <p className="training-confirm-line"><Icon name="clock" size={16} />Away from squad duties for {selectedCourse.hours} real hours</p>
           <p className="dim">Grants arrive on completion. XP may also improve a rating.</p>
         </div>
         {feedback?.courseId === selectedCourse.id && <p className="reason" role="status">{feedback.text}</p>}
@@ -230,8 +231,9 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
   const rating = course.grants.rating;
   const cert = course.grants.cert;
   return <div className="training-enrolment" data-training-enrolment={course.id}>
+    <div className="training-receipt-emblem"><CourseEmblem course={course} /><span className="training-receipt-check" aria-hidden="true"><Icon name="check" size={20} /></span></div>
     <div className="training-person">
-      {officer && <Portrait officer={officer} size={52} className="training-portrait" />}
+      {officer && <Portrait officer={officer} size={68} className="training-portrait" />}
       <div className="training-person-name"><strong>{enrolment.officerName}</strong><span>{course.name}</span><span className="training-eligible" role="status">{inTraining ? `In training · ${duration(assignment.endsAt - now)} remaining` : completed ? 'Course completed' : officer ? trainingOfficerCondition(officer, now) : 'No longer on the roster'}</span></div>
     </div>
     <div className="training-confirm-details"><strong>{completed ? 'Course completion benefits' : 'On completion'}</strong><p className="training-course-gain">{cert ? `Earn ${CERT_NAME[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key}` : ''}</p><p>+{courseXpGain(course.hours)} XP</p><p className="dim">{inTraining ? 'Away from squad duties until training finishes. Gains arrive on completion; XP may also improve a rating.' : completed ? 'Training has finished. Course gains and XP have been applied.' : 'Enrolment recorded. Check the officer’s current assignment for their availability.'}</p></div>
@@ -242,8 +244,8 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
 export function CourseEmblem({ course, locked = false }: { course: Course; locked?: boolean }) {
   const icon: IconName = course.grants.cert ? CERT_ICON[course.grants.cert] : RATING_META.find((meta) => meta.key === course.grants.rating?.key)?.icon ?? 'mortarboard';
   return <span className={`node-medallion course-emblem${locked ? ' node-medallion-locked' : ''}`} aria-hidden="true">
-    <EmblemArt id={course.id} icon={icon} size={40} iconSize={22} />
-    {locked && <span className="node-medallion-badge node-badge-locked"><Icon name="lock" size={10} /></span>}
+    <EmblemArt id={course.id} icon={icon} size={64} iconSize={36} />
+    {locked && <span className="node-medallion-badge node-badge-locked"><Icon name="lock" size={16} /></span>}
   </span>;
 }
 
@@ -252,7 +254,7 @@ export function TrainingPlaces({ used, total, bare = false }: { used: number; to
   const pips = <span className="training-pips" aria-hidden="true">{Array.from({ length: Math.max(total, used) }, (_, index) => <i key={index} className={index < used ? 'on' : ''} />)}</span>;
   if (bare) return pips;
   return <span className="training-places" role="img" aria-label={`${used} of ${total} training places in use`}>
-    <Icon name="mortarboard" size={14} />{pips}<b>{used}/{total}</b>
+    <Icon name="mortarboard" size={16} />{pips}<b>{used}/{total}</b>
   </span>;
 }
 
@@ -275,7 +277,7 @@ export function TrainingOfficerCard({ candidate: { officer, option }, now, selec
   return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}${option.available ? '' : ' training-officer-unavailable'}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
     <div className="training-person">
       <Portrait officer={officer} size={44} className="training-portrait" />
-      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={12} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · ${squadName(squads, officer.squadId)}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
+      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={16} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · ${squadName(squads, officer.squadId)}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
       <StressDisplay value={officer.stress} compact />
       {onSelect && <Button size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`} className="training-select">Select</Button>}
       {selected && !onSelect && <span className="training-selected-label">Selected</span>}

@@ -113,7 +113,7 @@ describe('age and learning', () => {
     const s = createInitialState(T0);
     const okafor = s.officers.off_okafor; // standby: 3/h, age 57 -> x0.88
     expect(recoveryRate(s, okafor)).toBeCloseTo(3 * 0.88, 9);
-    expect(recoveryRate(s, s.officers.off_chen)).toBe(1); // patrol, age 33
+    expect(recoveryRate(s, s.officers.off_chen)).toBe(3); // standby, same recovery as squad B
     expect(recoveryInfo(s, 'off_okafor', T0).factors.join(' ')).toMatch(/Recovers 12% slower \(age 57\)/);
   });
 
@@ -396,7 +396,8 @@ describe('retention', () => {
 describe('burnout', () => {
   it('sustained stress above 70 for 20 game days announces a retirement 30 days out', () => {
     let s = createInitialState(T0);
-    s.officers.off_chen.stress = 100; // patrol: recovers 1/h, so it is still above 70 after 20 hours (80)
+    s.officers.off_chen.assignment = { kind: 'operation', runId: 'burnout-test' }; // no recovery while deployed
+    s.officers.off_chen.stress = 100;
     s = tick(s, 19);
     expect(s.officers.off_chen.retirement).toBeNull();
     s = tick(s, 21);
@@ -406,16 +407,20 @@ describe('burnout', () => {
     expect(refused(s, { type: 'offerRetention', officerId: 'off_chen' }, at(21))).toMatch(/strain/);
     s = tick(s, 49);
     expect(s.officers.off_chen).toBeDefined();
+    s.officers.off_chen.assignment = null;
     s = tick(s, 51);
     expect(s.officers.off_chen).toBeUndefined();
   });
 
   it('stress that recovers below 70 resets the clock', () => {
     let s = createInitialState(T0);
-    s.officers.off_chen.stress = 75; // patrol 1/h: below 70 after 5 hours
+    s.officers.off_chen.assignment = null;
+    s.squads.find((squad) => squad.officerIds.includes('off_chen'))!.duty = 'standby';
+    s.officers.off_chen.stress = 75; // standby: below 70 after about two hours
     s = tick(s, 25);
     expect(s.officers.off_chen.retirement).toBeNull();
     // Back up above 70 starts a fresh 20-day clock rather than resuming the old one.
+    s.officers.off_chen.assignment = { kind: 'operation', runId: 'burnout-reset-test' };
     s.officers.off_chen.stress = 95;
     s = tick(s, 30);
     expect(s.officers.off_chen.retirement).toBeNull();
@@ -467,7 +472,6 @@ describe('offline equivalence with careers and wear', () => {
     turnsSixtyIn(s, 'off_okafor', 400); // announced at day 370, leaves at 400
     s.officers.off_chen.serviceStartDay = 25 - 9 * DAYS; // anniversary on day 25
     s.officers.off_vale.bornDay = 90 - 50 * DAYS; // 50th birthday on day 90
-    s.officers.off_ortiz.stress = 100; // burnout clock runs out at day 20 while recovering at 1/h
     s.officers.off_ortiz.squadId = 'A';
     s.officers.off_park.xp += 160;
     return s;
@@ -507,9 +511,7 @@ describe('offline equivalence with careers and wear', () => {
     sameState(online, offline);
     expect(offline.officers.off_okafor).toBeUndefined(); // retired on day 400
     expect(offline.officers.off_chen.wage).toBe(start.officers.off_chen.wage + 2); // anniversaries on day 25 and 390
-    expect(offline.officers.off_ortiz).toBeUndefined(); // burnout: announced day 20, retired day 50
-    expect(events(offline, 'retirement_announced', 'off_ortiz')[0].detail).toMatch(/burning out/);
-    expect(events(offline, 'retired', 'off_ortiz')).toHaveLength(1);
+    expect(offline.officers.off_ortiz).toBeDefined(); // no burnout stress was applied in this long settlement fixture
     expect(events(offline, 'birthday', 'off_vale')).toHaveLength(1);
     expect(offline.report!.equipment.length).toBeGreaterThan(0);
     // Funding stops with the 24h window, but careers and wear do not.
@@ -614,6 +616,6 @@ describe('budget and recovery tuning stay sensible', () => {
   it('wage steps are small relative to the opening net budget', () => {
     expect(CAREER_TUNING.wageStep).toBeLessThanOrEqual(1);
     expect(ratesAt(createInitialState(T0), T0).net).toBe(620);
-    expect(ECONOMY_TUNING.recoveryPerHour.patrol).toBe(1);
+    expect(ECONOMY_TUNING.recoveryPerHour.standby).toBe(3);
   });
 });

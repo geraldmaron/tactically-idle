@@ -46,7 +46,10 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
         <h3 className="cl-card-title">
           {onOpen ? <button type="button" className="cl-card-button" onClick={onOpen} aria-label={`Open ${card.title}${blurb ? `, ${blurb}` : ''}`}>{card.title}</button> : card.title}
         </h3>
-        {(place || diff) && <p className="cl-card-place">{place}{place && diff ? ' · ' : ''}{diff ? `${DIFFICULTY_WORD[diff.band]} difficulty` : ''}</p>}
+        {(place || diff) && <div className="cl-card-place-row">
+          {place && <span className="cl-card-place-mark" aria-hidden="true"><Icon name={settingIcon(card.setting)} size={20} /></span>}
+          <p className="cl-card-place">{place}{place && diff ? ' · ' : ''}{diff ? `${DIFFICULTY_WORD[diff.band]} difficulty` : ''}</p>
+        </div>}
         <p className="cl-card-hook"><PeopleText text={card.summary} /></p>
         {contentNote}
         {(facts || !scenario) && <div className="cl-card-facts">

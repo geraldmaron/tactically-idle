@@ -105,7 +105,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
     <div className={`cand cand-row${receipt ? ' cand-hired' : ''}`}>
       <div className="cand-top">
         <div className="cand-portrait">
-          <Portrait officer={o} size={40} {...agePortraitProps(g, o, now)} />
+          <Portrait officer={o} size={104} {...agePortraitProps(g, o, now)} />
         </div>
         <div className="cand-id">
           <strong className="cand-name">

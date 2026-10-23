@@ -4,8 +4,34 @@
    game's one motion signal lives on the Ops nav button (app.css .live-dot). */
 
 /* ---- one pinned strip: the call's name, where it is, and everything that runs down or builds up */
-.live .live-head { padding: 10px var(--gutter) 6px; background: var(--ink-0); display: grid; gap: 4px; }
-.live .live-strip { position: sticky; top: 0; z-index: 6; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: var(--ink-1); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
+.live .live-head { padding: var(--sp3) var(--gutter); background: var(--ink-0); display: grid; gap: var(--sp2); }
+.live .live-head.plate > .plate-art { opacity: .25; }
+.live .live-map-access { flex: 0 0 auto; min-height: var(--touch); padding: 0 var(--sp2); font-size: var(--s14); }
+.live .live-choice-access { display: none; }
+.live .live-title-more { white-space: nowrap; }
+.live .live-sub .live-cancel { margin-left: auto; }
+@media (max-width: 374px) {
+  .live .live-choice-access { display: inline-flex; min-height: var(--touch); gap: var(--sp1); font-size: var(--s14); }
+  .live .live-status { margin-left: 0; }
+}
+.live .live-strip { position: relative; z-index: 1; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--line); background: var(--ink-1); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
+/* The measured shell footer reserves space for the next pressure while choices scroll. */
+.live-pressure-cue { padding: var(--sp2) var(--gutter); border-top: 1px solid var(--hair-2); background: var(--ink-1); }
+.live-pressure-cue .threat-pill, .live-pressure-cue .fill-gauge { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp1) var(--sp2); width: 100%; margin: 0; padding: var(--sp2); border: 1px solid var(--warn); border-radius: var(--r2); background: var(--ink-0); color: var(--warn-text); font: 600 var(--s14)/1.25 var(--f-ui); }
+.live-pressure-cue .threat-pill-label { overflow: visible; white-space: normal; }
+.live-pressure-cue .threat-pill-sep { display: none; }
+.live-pressure-cue .threat-pill-min { color: var(--t1); }
+.live-pressure-cue .threat-pill-bar { grid-column: 2 / -1; display: block; height: 4px; overflow: hidden; border-radius: var(--r1); background: var(--hair); }
+.live-pressure-cue .threat-pill-bar i { display: block; height: 100%; background: var(--warn); }
+.live-pressure-cue .fill-gauge { grid-template-columns: minmax(0, 1fr); }
+.live-pressure-cue .fill-gauge-head { display: flex; align-items: center; gap: var(--sp2); min-width: 0; margin: 0; }
+.live-pressure-cue .fill-gauge-label { flex: 1; }
+.live-pressure-cue .fill-gauge-bar { position: relative; display: block; height: 4px; border-radius: var(--r1); background: var(--hair); }
+.live-pressure-cue .fill-gauge-bar i { display: block; height: 100%; border-radius: inherit; background: var(--warn); }
+.live-pressure-cue .fill-gauge-tick { position: absolute; top: 0; width: 2px; height: 4px; background: var(--t2); }
+.live-pressure-cue .pressure-critical { border-color: var(--harm); color: var(--harm-text); }
+.live-pressure-cue .pressure-critical .threat-pill-bar i, .live-pressure-cue .pressure-critical .fill-gauge-bar i { background: var(--harm); }
+.live-pressure-cue .fill-gauge-stopped { border-color: var(--mint); color: var(--good-text); }
 .live .live-strip-head { display: flex; align-items: center; gap: var(--sp2); min-width: 0; }
 .live .live-stepout { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; min-height: var(--touch); margin-left: calc(-1 * var(--sp2)); padding: 0 var(--sp2); border: 0; background: none; color: var(--t2); font: 500 var(--s16)/1 var(--f-ui); cursor: pointer; }
 .live .live-stepout:hover { color: var(--t1); }
@@ -105,15 +131,15 @@
 @media (max-width: 360px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- the story: the decision and its choices, or the result */
-.live-story { display: flex; flex: 1 0 auto; flex-direction: column; min-width: 0; padding-bottom: 20px; }
+.live-story { display: flex; flex: 1 0 auto; flex-direction: column; min-width: 0; padding-bottom: var(--sp4); }
 .live-briefing .situation { margin: 0; }
 .live-officer-card { display: grid; gap: 8px; }
 
 /* The decide beat: the stage kicker, then the moment, then the people, then the choices. */
 .live .operation-choices { margin-top: 4px; }
-.live .operation-choices .operation-stage-prompt { margin: 0 0 12px; padding-left: 12px; font-size: 17.5px; line-height: 1.5; }
-.live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 16px 0 8px; font: 700 14px/1.2 var(--font-cond); color: var(--t3); }
-.live .operation-choices .operation-choice-count span { font: 500 12.5px/1.2 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
+.live .operation-choices .operation-stage-prompt { margin: 0 0 var(--sp3); padding-left: var(--sp3); font-size: var(--s18); line-height: 1.5; }
+.live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp2); margin: var(--sp4) 0 var(--sp2); font: 700 var(--s18)/1.2 var(--f-title); color: var(--t1); }
+.live .operation-choices .operation-choice-count span { font: 500 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; text-transform: none; color: var(--t2); }
 
 /* Last decision: one row above the stage, opening in place to the full record. */
 .live .operation-feedback-folded { margin: 12px var(--gutter) 4px; }
@@ -294,3 +320,28 @@
 /* At 200% text a phone is about 420px tall, and the pinned strip would cover most of it: below that
  * height the strip scrolls with the page instead, so the cards stay reachable. */
 @media (max-height: 520px) { .live .live-strip { position: relative; } }
+
+/* Keep a clear route to the actual choices on ordinary phones. The stream still carries its live
+   count, pressure bar, one-line effect and one readable reaction, but no longer spends the whole
+   first viewport on telemetry before the decision. Full map access remains beside the call name. */
+@media (max-width: 430px) {
+  .live .live-head { padding: var(--sp1) var(--gutter); gap: var(--sp1); }
+  .live .live-strip-head { gap: var(--sp1); }
+  .live .live-stepout, .live .live-map-access { min-height: 40px; padding-inline: var(--sp2); }
+  .live .live-name { font-size: var(--s16); }
+  .live .live-title-more { display: none; }
+  .live .live-sub { gap: var(--sp1); font-size: var(--s14); }
+  .live .live-status { margin-left: auto; gap: var(--sp1); }
+  .live .live-status .hud-pill { padding: var(--sp1) var(--sp1); font-size: var(--s14); }
+  .live .live-choice-access { display: inline-flex; min-height: 44px; gap: var(--sp1); margin-left: auto; padding-inline: var(--sp2); font-size: var(--s14); }
+  .live .live-strip { gap: var(--sp1); padding: var(--sp1) var(--gutter); }
+  .live .live-sources { gap: var(--sp1); margin-top: var(--sp1); }
+  .live .source-ticker { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--sp1); padding: var(--sp1); }
+  .live .source-ticker-head { grid-column: 1; align-items: center; font-size: var(--s14); }
+  .live .source-ticker-count { grid-column: 2; grid-row: 1; flex-wrap: nowrap; gap: var(--sp1); }
+  .live .source-ticker-count b { font-size: var(--s16); }
+  .live .source-ticker-count span { font-size: var(--s14); }
+  .live .source-ticker-bar { grid-column: 1 / -1; height: 4px; }
+  .live .source-ticker-effect { grid-column: 1 / -1; margin: 0; font-size: var(--s14); line-height: 1.2; }
+  .live .source-reactions { grid-column: 1 / -1; height: 1.2em; margin-top: 0; font-size: var(--s14); line-height: 1.2; }
+}

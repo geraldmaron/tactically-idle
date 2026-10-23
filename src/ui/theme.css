@@ -3,17 +3,17 @@
    every other stylesheet names a token (src/ui/design-floors.test.ts). */
 :root {
   /* Ground and surfaces: low-chroma slate. Elevation only on sheets. */
-  --ink-deep: #06090f; /* the stage around the phone frame */
-  --ink-0: #0a0e14;
-  --ink-1: #111821;
-  --ink-2: #18212d;
-  --ink-3: #202b3a;
-  --hair: #242f3e;
-  --hair-2: #33415a;
+  --ink-deep: #050b16; /* the stage around the phone frame */
+  --ink-0: #0b1728;
+  --ink-1: #11243b;
+  --ink-2: #19314d;
+  --ink-3: #223e5b;
+  --hair: #29415b;
+  --hair-2: #47617a;
   /* Text. --t-plate is secondary text set on painted art, a step brighter than --t2 for the scrim. */
-  --t1: #eef2f7;
-  --t2: #aab5c5;
-  --t3: #8a97ac; /* 5.5:1 on --ink-2 and 4.8:1 on --ink-3, the lightest card, so muted text clears 4.5:1 on every surface */
+  --t1: #fff4df;
+  --t2: #b9cad8;
+  --t3: #a3b7c9; /* 5.5:1 on --ink-2 and 4.8:1 on --ink-3, the lightest card, so muted text clears 4.5:1 on every surface */
   --t-plate: #ccd5e1;
   --white: #fff;
   --black: #000;
@@ -25,10 +25,15 @@
   --act-ink: #1a1203;
   --act-soft: rgba(242, 178, 52, 0.12);
   --act-text: #ffe3a6;
-  --good: #45cf8f;
+  --good: #68dfac;
+  --cash-hi: #b9f5c6;
+  --cash-low: #237659;
+  --cash-panel: #153b3b;
+  --cash-edge: #376a63;
+  --button-base: #95601c;
   --good-text: #c2f0d9;
   --good-ink: #06241a;
-  --harm: #ff6a57;
+  --harm: #ff8b7b;
   --harm-text: #ffb4aa;
   --harm-ink: #2a0703;
   --harm-deep: #3a1712;
@@ -37,7 +42,7 @@
   /* Information and the trust stat; not a siren. */
   --info: #9cc4ff;
   /* An officer out on a call, on the HQ roster. */
-  --deployed: #b58cff;
+  --deployed: #c9aaff;
   /* Red and blue sweep on a live call only. */
   --siren-r: #ff3b3b;
   --siren-r-dim: #5a1410;
@@ -55,7 +60,7 @@
   --person: #8d9cb4;
   --officer: #9cc4ff;
   /* Dev-only marks (the candidate switch, test buttons). */
-  --dev-tag: #ff2e88;
+  --dev-tag: #ff5b9f;
 
   /* The blueprint keeps its own palette: paper, ink and chalk. */
   --map: #1f55b8;
@@ -93,7 +98,7 @@
   --f-title: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --f-marker: 'Kalam', 'Comic Sans MS', cursive;
   --s12: 12px; /* meta only */
-  --s14: 14px; /* body */
+  --s14: 14px; /* supporting labels; body uses --s16 */
   --s16: 16px; /* row titles, buttons */
   --s18: 18px; /* story, choice titles */
   --s22: 22px; /* card and sheet titles */
@@ -146,8 +151,8 @@
   --font-display: var(--f-title);
   --font-mono: var(--f-ui); /* the mono face left the interface; numbers use tabular figures */
   --font-marker: var(--f-marker);
-  --shadow-card: none;
-  --panel-grad: var(--ink-1);
+  --shadow-card: 0 5px 12px rgba(1, 7, 18, .28), inset 0 1px 0 rgba(255, 255, 255, .05);
+  --panel-grad: linear-gradient(145deg, var(--ink-2), var(--ink-1));
   --radius: var(--r1);
 }
 
@@ -162,6 +167,7 @@ body,
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
+  font-size: var(--s16);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }

@@ -4,6 +4,7 @@ import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Sheet } from '../components/Sheet';
 import { Row, Segmented } from '../components/ui';
 import { Icon } from '../icons';
+import type { IconName } from '../icons';
 import { useCampaigns } from '../store';
 import { campaignStatus } from '../components/SaveManager';
 import { usePeopleColor } from '../people/PeopleText';
@@ -54,23 +55,23 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
   const chevron = <Icon name="chevronRight" size="md" />;
   return <div className="menu-home">
     <section className="menu-group" aria-labelledby="menu-campaign">
-      <h3 id="menu-campaign" className="menu-heading">{MENU_TEXT.campaign}</h3>
+      <h3 id="menu-campaign" className="menu-heading"><Icon name="bookmark" size={20} />{MENU_TEXT.campaign}</h3>
       <Row className={`menu-row${status.attention ? ' menu-row-attention' : ''}`} lead={<Icon name="bookmark" size="md" />} title={slot?.name ?? status.name}
         detail={slot ? `Slot ${saved.activeSlotId} · ${status.detail}` : status.detail}
         trail={<button type="button" className="menu-link" onClick={onOpenSaves}>{MENU_TEXT.saves}</button>} />
     </section>
     <section className="menu-group" aria-labelledby="menu-settings">
-      <h3 id="menu-settings" className="menu-heading">{SETTINGS_TEXT.settingsTitle}</h3>
+      <h3 id="menu-settings" className="menu-heading"><Icon name="gear" size={20} />{SETTINGS_TEXT.settingsTitle}</h3>
       <Row className="menu-row" lead={<Icon name="eye" size="md" />} title={MENU_TEXT.themes} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
       <Row className="menu-row" lead={<Icon name="warning" size="md" />} title={SETTINGS_TEXT.warningsHeading} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
       <Row className="menu-row" lead={<Icon name="clock" size="md" />} title={SETTINGS_TEXT.timerHeading} detail={TIMER_LABELS[settings.timer].name} trail={chevron} onClick={() => onPage('timer')} />
-      <MenuSwitch label={SETTINGS_TEXT.soundHeading} checked={settings.sound} onChange={(sound) => updateSettings({ sound })} />
-      <MenuSwitch label={SETTINGS_TEXT.flashingHeading} checked={settings.flashing} onChange={(flashing) => updateSettings({ flashing })} />
+      <MenuSwitch icon="radio" label={SETTINGS_TEXT.soundHeading} checked={settings.sound} onChange={(sound) => updateSettings({ sound })} />
+      <MenuSwitch icon="warning" label={SETTINGS_TEXT.flashingHeading} checked={settings.flashing} onChange={(flashing) => updateSettings({ flashing })} />
       {/* A display preference kept in this browser, not in the save (src/ui/people). */}
-      <MenuSwitch label={MENU_TEXT.peopleColor} checked={peopleColor} onChange={setPeopleColor} />
+      <MenuSwitch icon="people" label={MENU_TEXT.peopleColor} checked={peopleColor} onChange={setPeopleColor} />
     </section>
     <section className="menu-group" aria-labelledby="menu-support">
-      <h3 id="menu-support" className="menu-heading">{MENU_TEXT.support}</h3>
+      <h3 id="menu-support" className="menu-heading"><Icon name="heart" size={20} />{MENU_TEXT.support}</h3>
       <Row className="menu-row" lead={<Icon name="heart" size="md" />} title={MENU_TEXT.talk} detail={MENU_TEXT.talkDetail} trail={chevron} onClick={() => onPage('support')} />
     </section>
     <p className="menu-note">{SETTINGS_TEXT.settingsSubtitle}</p>
@@ -78,8 +79,9 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
 }
 
 /** A yes or no setting: the switch sits at the end of its row and the whole row toggles it. */
-function MenuSwitch({ label, detail, checked, onChange }: { label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
+function MenuSwitch({ icon, label, detail, checked, onChange }: { icon: IconName; label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
   return <label className="ui-row menu-row menu-switch">
+    <span className="ui-row-lead"><Icon name={icon} size={20} /></span>
     <span className="ui-row-main">
       <span className="ui-row-title">{label}</span>
       {detail && <span className="ui-row-detail">{detail}</span>}
@@ -108,6 +110,7 @@ function ThemesPage({ settings }: { settings: PlayerSettings }) {
 
 function MenuSwitchBlocked({ theme, on, blocked, onChange }: { theme: (typeof THEME_ORDER)[number]; on: boolean; blocked: boolean; onChange: (on: boolean) => void }) {
   return <label className="ui-row menu-row menu-switch" data-blocked={blocked || undefined}>
+    <span className="ui-row-lead"><Icon name="eye" size={20} /></span>
     <span className="ui-row-main">
       <span className="ui-row-title">{THEME_LABELS[theme].name}</span>
       <span className="ui-row-detail">{THEME_LABELS[theme].detail}</span>

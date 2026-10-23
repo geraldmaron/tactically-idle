@@ -1,7 +1,7 @@
 // The visual-story ratchet (backlog `visual-story`). The Desk and Street redesign once removed
 // pictures as it removed clutter; this list keeps them. Each obligation names a production screen
-// and the fixture state it renders, and fails when that screen loses a picture it is owed: a plate
-// on a tab root, a face, gear art or a kit icon before the text of a row, the tab and resource-bar
+// and the fixture state it renders, and fails when that screen loses a picture it is owed: a
+// screen identity, a face, gear art or a kit icon before the text of a row, the tab and resource-bar
 // icons, an icon on a headed step, a Spot in an empty state.
 //
 // Rules for this file:
@@ -11,9 +11,8 @@
 // - Each obligation asserts that the rows or elements it checks exist, so an empty screen cannot
 //   pass.
 // - Only production screens are rendered. The kit gallery and the harness are never listed.
-// - The owner picks the plate height (`--plate-h` in theme.css) and which tabs carry one
-//   (`TAB_PLATES` in art/tab-plates.ts), in `owner-visual-picks`. A tab that drops its plate drops
-//   its plate obligation in the same commit.
+// - Tab roots use compact headings with their screen art. The former repeated banners are off in
+//   `TAB_PLATES`; the standalone TabPlate component retains its own fallback tests.
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,14 +36,18 @@ import { OpsDebrief } from './screens/OpsDebrief';
 import { OpsPrepare } from './screens/OpsPrepare';
 import { BuildScreen } from './screens/Build';
 import { SquadScreen } from './screens/Squad';
+import { TeamScreen } from './screens/Team';
+import { StoreScreen } from './screens/Store';
 import { plateUrl } from './art/Plates';
-import { TAB_BANNER, TAB_PLATES } from './art/tab-plates';
+import { TAB_PLATES } from './art/tab-plates';
 import { DEFAULT_EQUIPMENT_QUERY } from './storefront/store-query';
 
 let state: GameState = makeState();
 vi.mock('./store', () => ({
   useGame: () => state,
   getState: () => state,
+  getCampaignSnapshot: () => ({ session: 0, activeSlotId: null, campaignId: null }),
+  beforeCampaignSave: () => () => {},
   send: vi.fn(),
   useCampaigns: () => ({ session: 0, activeSlotId: null, slots: [], issue: null, dirty: false }),
   isResponsivePreview: false,
@@ -166,21 +169,32 @@ function rowsLeadWithVisual(page: El, rowClass: string, min: number): string[] {
   return rows.flatMap((row, index) => leadOf(row) === 'visual' ? [] : [`.${rowClass} #${index + 1} (${words(row).slice(0, 40)}) starts with ${leadOf(row)}, not a picture`]);
 }
 
-/** The tab root opens on its plate, painted from its banner, with the tab's icon and name. */
-function plateOn(page: El, tab: keyof typeof TAB_PLATES, banner: string, name: string): string[] {
-  const plates = find(page, (node) => node.attrs['data-tab-plate'] === tab);
-  if (plates.length !== 1) return [`expected one ${tab} plate, found ${plates.length}`];
-  const [plate] = plates;
-  const missing: string[] = [];
-  if (!TAB_PLATES[tab]) missing.push(`TAB_PLATES.${tab} is off: drop this obligation with it`);
-  const art = find(plate, (node) => node.tag === 'img' && classes(node).includes('plate-art'));
-  if (!plateUrl(`banner_${banner}`)) missing.push(`banner_${banner} is not a ready plate`);
-  else if (!art.some((img) => (img.attrs.src ?? '').includes(`banner_${banner}.webp`))) missing.push(`no banner_${banner} painting on the plate`);
-  if (!find(plate, (node) => node.tag === 'svg').length) missing.push('no tab icon on the plate');
-  if (!words(plate).includes(name)) missing.push(`the plate does not name the tab ("${name}")`);
-  if (find(plate, (node) => node.tag === 'p').length) missing.push('the plate carries a paragraph');
-  if (classes(plate).includes('screen-banner')) missing.push('the plate is the old banner');
-  return missing;
+/** Officer cards lead with a portrait and keep the name, specialty, and visible condition together. */
+function officerCards(page: El, min: number): string[] {
+  const cards = byClass(page, 'ocard-tile');
+  if (cards.length < min) return [`expected at least ${min} officer cards, found ${cards.length}`];
+  return cards.flatMap((card, index) => {
+    const missing: string[] = [];
+    if (leadOf(card) !== 'visual') missing.push(`officer card #${index + 1} does not lead with a portrait`);
+    if (byClass(card, 'ocard-name').length !== 1) missing.push(`officer card #${index + 1} has no identity`);
+    if (byClass(card, 'ocard-role').length !== 1) missing.push(`officer card #${index + 1} has no specialty`);
+    const condition = byClass(card, 'ocard-condition');
+    if (condition.length !== 1 || byClass(condition[0], 'kit-mark').length !== 1) missing.push(`officer card #${index + 1} has no visible condition`);
+    return missing;
+  });
+}
+
+/** The tab root names its screen with a compact heading and carries its distinctive screen art. */
+function screenIdentity(page: El, headingClass: string, name: string, icon: IconName): string[] {
+  const headings = byClass(page, headingClass);
+  if (headings.length !== 1) return [`expected one .${headingClass} heading, found ${headings.length}`];
+  const heading = headings[0];
+  const actualIcon = find(heading, (node) => node.tag === 'svg');
+  const expectedIcon = find(parse(renderToStaticMarkup(createElement(Icon, { name: icon, size: 24 }))), (node) => node.tag === 'svg');
+  return [
+    ...(heading.tag === 'h1' && words(heading) === name ? [] : [`the ${name} screen heading is missing or misnamed`]),
+    ...(leadOf(heading) === 'visual' && actualIcon.length === 1 && JSON.stringify(actualIcon[0]) === JSON.stringify(expectedIcon[0]) ? [] : [`the ${name} heading does not lead with its ${icon} icon`]),
+  ];
 }
 
 const spotIn = (page: El, title: string): string[] => {
@@ -199,12 +213,55 @@ const headedWithIcon = (page: El, headingText: string): string[] => {
 const svgOf = (name: IconName, size: number, className?: string) => renderToStaticMarkup(createElement(Icon, { name, size, className }));
 
 const OBLIGATIONS: Obligation[] = [
-  // ---- each tab root opens on a plate
-  { id: 'plate-hq', screen: 'HQ', fixture: 'department with a board', check: () => plateOn(mount(createElement(HQ)), 'hq', TAB_BANNER.hq, 'Westhaven Department') },
-  { id: 'plate-calls', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => plateOn(mount(createElement(OpsBoard, { onOpen: () => {} })), 'calls', TAB_BANNER.calls, 'Calls') },
-  { id: 'plate-officers', screen: 'SquadScreen (Squads)', fixture: 'two squads', check: () => plateOn(mount(createElement(SquadScreen)), 'officers', TAB_BANNER.officers, 'Officers') },
-  { id: 'plate-build-upgrades', screen: 'BuildScreen (Upgrades)', fixture: 'department with a board', check: () => plateOn(mount(createElement(BuildScreen), { tab: 'develop' }), 'build', TAB_BANNER.upgrades, 'Build') },
-  { id: 'plate-build-armory', screen: 'BuildScreen (Armory)', fixture: 'department with a board', check: () => plateOn(mount(createElement(BuildScreen), { tab: 'gear' }), 'build', TAB_BANNER.armory, 'Build') },
+  // ---- each tab root has one visual identity: HQ uses its compact department scene
+  { id: 'identity-hq', screen: 'HQ', fixture: 'department with a board', check: () => {
+    const page = mount(createElement(HQ));
+    const hubs = byClass(page, 'hub');
+    const identity = hubs.flatMap((hub) => byClass(hub, 'hub-identity'));
+    const plates = find(page, (node) => node.attrs['data-tab-plate'] === 'hq');
+    return [
+      ...(hubs.length === 1 ? [] : [`expected one compact HQ scene, found ${hubs.length}`]),
+      ...(identity.length === 1 && words(identity[0]).includes('Westhaven Department') ? [] : ['the HQ scene does not carry one department identity']),
+      ...(plates.length === 0 ? [] : ['HQ duplicates its scene identity with a tab plate']),
+    ];
+  } },
+  { id: 'identity-calls', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => {
+    const page = mount(createElement(OpsBoard, { onOpen: () => {} }));
+    const scenes = byClass(page, 'cl-card-scene');
+    return [
+      ...screenIdentity(page, 'cl-board-title', 'Calls', 'calls'),
+      ...(scenes.length >= 4 && scenes.every((scene) => find(scene, (node) => node.tag === 'img' && classes(node).includes('plate-art')).length === 1) ? [] : ['call cards lost their scene art']),
+    ];
+  } },
+  { id: 'identity-team-swat', screen: 'TeamScreen (SWAT)', fixture: 'two squads', check: () => {
+    const page = mount(createElement(TeamScreen), { tab: 'squad', teamSection: 'swat' });
+    const heads = byClass(page, 'team-head');
+    const swat = byClass(page, 'officers-title');
+    return [
+      ...(heads.length === 1 ? screenIdentity(heads[0], 'section-title', 'Team', 'people') : ['expected one Team header']),
+      ...(swat.length === 1 && swat[0].tag === 'h2' && words(swat[0]) === 'SWAT' ? [] : ['the Team screen does not name its SWAT section']),
+      ...officerCards(page, 8),
+    ];
+  } },
+  { id: 'identity-build-facilities', screen: 'BuildScreen (Facilities)', fixture: 'department with a board', check: () => {
+    const page = mount(createElement(BuildScreen), { tab: 'develop' });
+    const medals = byClass(page, 'dev-medal');
+    const rooms = byClass(page, 'facility-room');
+    return [
+      ...screenIdentity(page, 'build-title', 'Build', 'build'),
+      ...(rooms.length === 5 && rooms.every((room) => leadOf(room) === 'visual') ? [] : ['the five facilities lost their furnishing art']),
+      ...(find(page, (node) => node.tag === 'img' && (node.attrs.src ?? '').includes('scene_facilities_plan.webp')).length === 1 ? [] : ['the department facility plan lost its scene art']),
+      ...(medals.length >= 3 && medals.every((medal) => find(medal, (node) => isVisual(node)).length > 0) ? [] : ['upgrade nodes lost their screen art']),
+    ];
+  } },
+  { id: 'identity-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'department with a board', check: () => {
+    const page = mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' });
+    const objects = byClass(page, 'inv-tile');
+    return [
+      ...screenIdentity(page, 'store-screen-title', 'Store', 'store'),
+      ...(objects.length >= 8 && objects.every((object) => leadOf(object) === 'visual') ? [] : ['equipment tiles lost their object art']),
+    ];
+  } },
 
   // ---- the tabs and the resource bar draw their kit icons
   {
@@ -213,8 +270,15 @@ const OBLIGATIONS: Obligation[] = [
       const html = renderToStaticMarkup(createElement(NavContext.Provider, { value: DEFAULT_NAV }, createElement(BottomNav)));
       const buttons = byClass(parse(html), 'navbtn');
       return [
-        ...(buttons.length === 4 ? [] : [`expected four tabs, found ${buttons.length}`]),
-        ...(['hq', 'calls', 'officers', 'build'] as const).flatMap((key, index) => buttons[index] && html.includes(svgOf(TAB_ICON[key], 24)) && leadOf(buttons[index]) === 'visual' ? [] : [`the ${key} tab does not lead with its ${TAB_ICON[key]} icon`]),
+        ...(buttons.length === 5 ? [] : [`expected five tabs, found ${buttons.length}`]),
+        ...([
+          ['HQ', TAB_ICON.hq], ['Calls', TAB_ICON.calls], ['Team', TAB_ICON.officers], ['Build', TAB_ICON.build], ['Store', 'store'],
+        ] as const).flatMap(([label, icon]) => {
+          const matching = buttons.filter((button) => byClass(button, 'navlabel').some((name) => words(name) === label));
+          const expected = find(parse(svgOf(icon, 24)), (node) => node.tag === 'svg')[0];
+          return matching.length === 1 && leadOf(matching[0]) === 'visual' && find(matching[0], (node) => node.tag === 'svg' && JSON.stringify(node) === JSON.stringify(expected)).length === 1
+            ? [] : [`the ${label} tab does not lead with its ${icon} icon`];
+        }),
       ];
     },
   },
@@ -225,7 +289,8 @@ const OBLIGATIONS: Obligation[] = [
       const stats = byClass(parse(html), 'stat');
       return [
         ...(stats.length === 4 ? [] : [`expected four stats, found ${stats.length}`]),
-        ...(['funds', 'rate', 'trust', 'level'] as const).flatMap((key) => html.includes(svgOf(RESOURCE_ICON[key], 16, 'res-icon')) ? [] : [`the bar has no ${key} icon`]),
+        ...(['rate', 'trust', 'level'] as const).flatMap((key) => html.includes(svgOf(RESOURCE_ICON[key], 16, 'res-icon')) ? [] : [`the bar has no ${key} icon`]),
+        ...(stats.some((stat) => classes(stat).includes('stat-cash') && find(stat, (node) => node.tag === 'img' && classes(node).includes('resource-cash-art') && (node.attrs.src ?? '').includes('tex_cash.webp')).length === 1) ? [] : ['the funding target has no cash art']),
         ...(html.includes(svgOf(RESOURCE_ICON.menu, 20)) ? [] : ['the bar has no menu icon']),
         ...stats.flatMap((stat) => leadOf(stat) === 'visual' ? [] : [`stat "${words(stat)}" does not lead with its icon`]),
       ];
@@ -233,18 +298,21 @@ const OBLIGATIONS: Obligation[] = [
   },
 
   // ---- every listed row type leads with a face, gear art or a kit icon
-  { id: 'rows-officers-squads', screen: 'SquadScreen (Squads)', fixture: 'two squads of four', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'squads' }), 'officer-row', 8) },
-  { id: 'rows-officers-roster', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'officer-row', 8) },
+  { id: 'cards-officers-squads', screen: 'SquadScreen (Squads)', fixture: 'two squads of four', check: () => officerCards(mount(createElement(SquadScreen), { squadSection: 'squads' }), 8) },
+  { id: 'cards-officers-roster', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => officerCards(mount(createElement(SquadScreen), { squadSection: 'roster' }), 8) },
   { id: 'rows-officers-status', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => {
-    const rows = byClass(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'officer-row');
-    return rows.length < 8 ? [`expected 8 officer rows, found ${rows.length}`] : rows.flatMap((row) => byClass(row, 'kit-mark').length ? [] : [`${words(row).slice(0, 30)} has no status mark`]);
+    const rows = byClass(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'ocard-tile');
+    return rows.length < 8 ? [`expected 8 officer cards, found ${rows.length}`] : rows.flatMap((row) => {
+      const condition = byClass(row, 'ocard-condition');
+      return condition.length === 1 && byClass(condition[0], 'kit-mark').length === 1 ? [] : [`${words(row).slice(0, 30)} has no visible condition mark`];
+    });
   } },
   { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-top', 1); } },
   { id: 'rows-training', screen: 'SquadScreen (Training)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'training' }), 'course-tile', 6) },
   { id: 'rows-upgrades', screen: 'BuildScreen (Upgrades)', fixture: 'department with a board', check: () => rowsLeadWithVisual(mount(createElement(BuildScreen), { tab: 'develop' }), 'dev-node', 3) },
-  { id: 'rows-armory-gear', screen: 'BuildScreen (Armory)', fixture: 'department with owned gear', check: () => rowsLeadWithVisual(mount(createElement(BuildScreen), { tab: 'gear' }), 'inv-tile', 8) },
-  { id: 'rows-armory-groups', screen: 'BuildScreen (Armory)', fixture: 'department with owned gear', check: () => {
-    const heads = byClass(mount(createElement(BuildScreen), { tab: 'gear' }), 'store-group-head');
+  { id: 'rows-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'department with owned gear', check: () => rowsLeadWithVisual(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'inv-tile', 8) },
+  { id: 'rows-store-equipment-groups', screen: 'StoreScreen (Equipment)', fixture: 'department with owned gear', check: () => {
+    const heads = byClass(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'store-group-head');
     return heads.length < 3 ? [`expected at least 3 category heads, found ${heads.length}`] : heads.flatMap((head) => leadOf(head) === 'visual' ? [] : [`category "${words(head)}" has no icon`]);
   } },
   { id: 'rows-calls-cards', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => rowsLeadWithVisual(mount(createElement(OpsBoard, { onOpen: () => {} })), 'cl-card', 4) },
@@ -323,7 +391,7 @@ const OBLIGATIONS: Obligation[] = [
   { id: 'empty-hire', screen: 'SquadScreen (Hire)', fixture: 'no candidates', check: () => { state = { ...state, candidates: [] }; return spotIn(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'No candidates right now'); } },
   { id: 'empty-training-officers', screen: 'SquadScreen (Training)', fixture: 'no officers', check: () => { state = { ...state, officers: {}, squads: [] }; return spotIn(mount(createElement(SquadScreen), { squadSection: 'training' }), 'No officers to train'); } },
   { id: 'empty-training-courses', screen: 'SquadScreen (Training)', fixture: 'a search no course matches', check: () => spotIn(mount(createElement(SquadScreen), { squadSection: 'training', trainingDraft: { officerId: '', search: 'no such course' } }), 'No courses match') },
-  { id: 'empty-armory', screen: 'BuildScreen (Armory)', fixture: 'a search no item matches', check: () => spotIn(mount(createElement(BuildScreen), { tab: 'gear', equipmentQuery: { ...DEFAULT_EQUIPMENT_QUERY, search: 'no such item' } }), 'No equipment matches these filters') },
+  { id: 'empty-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'a search no item matches', check: () => spotIn(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment', equipmentQuery: { ...DEFAULT_EQUIPMENT_QUERY, search: 'no such item' } }), 'No equipment matches these filters') },
 ];
 
 /** The deploy step with Alpha chosen, read through the real call flow. */
@@ -347,10 +415,8 @@ describe('visual floors: every screen keeps the pictures it is owed', () => {
     expect(OBLIGATIONS.length, `raise OBLIGATION_FLOOR to ${OBLIGATIONS.length}`).toBe(OBLIGATION_FLOOR);
   });
 
-  it('keeps the plate height in one token and a plate on every tab root', () => {
-    // The plate's height is the one token --plate-h (theme.css), read by one rule in skin.css.
-    expect(Object.keys(TAB_PLATES).sort()).toEqual(['build', 'calls', 'hq', 'officers']);
-    expect(Object.values(TAB_PLATES).every(Boolean), 'a tab dropped its plate: drop its obligation in the same commit').toBe(true);
+  it('keeps the optional legacy tab banners disabled', () => {
+    expect(Object.values(TAB_PLATES).every((plate) => !plate), 'tab roots carry their identity in headings and scene art').toBe(true);
   });
 
   it.each(OBLIGATIONS.map((obligation) => [obligation.id, obligation] as const))('%s', (_id, obligation) => {

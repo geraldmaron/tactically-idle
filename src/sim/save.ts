@@ -1,6 +1,6 @@
 import { parseRecipeKey } from './casebook';
 import { validCommandStaff } from './command-staff';
-import type { ActiveMultiplier, GameState, OperationRun, SaveEnvelope } from './types';
+import type { GameState, OperationRun, SaveEnvelope } from './types';
 import { COMPLETION_DISPOSITIONS, validExternalSupportState } from './external-support';
 import { validCasualtyRecord, validIncidentConsequences, validPersonCasualtyRecord, validPersonConsequences } from './incident-consequences';
 import { validForceOutcome } from './force-risk';
@@ -16,12 +16,12 @@ import { normalizeSquadArrangementState } from './squad-optimizer';
 import { validResponseFailure } from './response-failure';
 import { validPromotions } from './ranks';
 import { RANK_IDS } from '../content/ranks';
-import { MAX_COMBINED_MULTIPLIER, MAX_MULTIPLIER_FACTOR, MAX_MULTIPLIERS, combinedFactor } from './department-taps';
+import { validPatrol } from './patrol';
 
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 17;
+export const CURRENT_SAVE_VERSION = 18;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -68,7 +68,7 @@ function validStressLevels(levels: unknown, deltas: unknown): boolean {
 
 const SQUAD_IDS: readonly string[] = SQUAD_ID_LIST;
 const RATING_KEYS = ['shooting', 'composure', 'communication', 'awareness', 'medical', 'coordination'];
-const DUTIES = ['patrol', 'standby', 'rest'];
+const DUTIES = ['standby', 'rest'];
 const UNIT_STATUSES = ['ready', 'reserved', 'service', 'expired', 'scrapped'];
 const RETIREMENT_REASONS = ['age', 'service', 'burnout'];
 const ROLES = ['comms', 'breach', 'medic', 'recon', 'lead'];
@@ -88,6 +88,7 @@ function validReport(r: unknown): boolean {
     && (r.maintenanceStarted === undefined || isStrings(r.maintenanceStarted))
     && isBool(r.capped) && isStrings(r.recovered) && isStrings(r.shortages)
     && isList(r.completedCourses, (c) => isObj(c) && strings(c, ['officerId', 'courseId']))
+    && (r.patrolTraining === undefined || isList(r.patrolTraining, (entry) => isObj(entry) && strings(entry, ['employeeId', 'profileId']) && (entry.grade === 2 || entry.grade === 3) && isNum(entry.completedAt) && entry.completedAt >= (r.from as number) && entry.completedAt <= (r.to as number)))
     && isList(r.equipment, (e) => isObj(e) && isStr(e.unitId) && oneOf(e.event, ['unreliable', 'failed', 'expired', 'serviced']))
     && isList(r.personnel, (p) => isObj(p) && strings(p, ['officerId', 'detail'])
       && oneOf(p.event, ['retirement_announced', 'retired', 'anniversary', 'birthday', 'promoted']));
@@ -279,19 +280,6 @@ function validUnit(u: unknown, key: string): boolean {
   return true;
 }
 
-/** Desk taps (sim/department-taps.ts): a finite allowance and held multipliers, each id once, with
- * an expiry exactly when it is a power-up. */
-function validTaps(t: unknown): boolean {
-  if (!isObj(t) || !numbers(t, ['credit', 'at']) || (t.credit as number) < 0) return false;
-  const ids = new Set<string>();
-  return isList(t.multipliers, (m) => {
-    if (!isObj(m) || !isStr(m.id) || ids.has(m.id) || !oneOf(m.source, ['upgrade', 'powerup', 'entitlement']) || !numbers(m, ['factor', 'grantedAt'])) return false;
-    ids.add(m.id);
-    if ((m.factor as number) < 1 || (m.factor as number) > MAX_MULTIPLIER_FACTOR) return false;
-    return m.source === 'powerup' ? isNum(m.expiresAt) : m.expiresAt === undefined;
-  }) && t.multipliers.length <= MAX_MULTIPLIERS && combinedFactor(t.multipliers as ActiveMultiplier[]) <= MAX_COMBINED_MULTIPLIER;
-}
-
 /** The roster agrees with itself: a squad lists an officer once, no officer sits in two squads, and
  * each officer's own squad reference names the squad that lists them (null when none does). Only
  * the live roster is checked. A move queued during a call (pendingSquadMoves) leaves membership
@@ -323,8 +311,8 @@ function validBase(s: unknown): s is Record<string, unknown> {
   if (dep.reputation !== undefined && !(isObj(dep.reputation) && isNum(dep.reputation.lean) && Math.abs(dep.reputation.lean) <= 1 && isNum(dep.reputation.choices) && dep.reputation.choices >= 0)) return false;
   if (dep.habits !== undefined && !(isObj(dep.habits) && isNum(dep.habits.stall) && dep.habits.stall >= 0 && dep.habits.stall <= 1 && isNum(dep.habits.decisions) && dep.habits.decisions >= 0)) return false;
   if (dep.ledger !== undefined && !isList(dep.ledger, (e) => isObj(e) && numbers(e, ['seq', 'at', 'amount', 'before', 'after']) && isStr(e.label) && (e.latest === undefined || isNum(e.latest))
-    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail', 'tap']))) return false;
-  if (dep.taps !== undefined && !validTaps(dep.taps)) return false;
+    && oneOf(e.kind, ['payout', 'signing', 'severance', 'purchase', 'training', 'development', 'service', 'salvage', 'restock', 'staff', 'detail', 'patrol']))) return false;
+  if (Object.hasOwn(dep, 'taps') || !validPatrol(s.patrol, dep.level as number, dep.clockHighWater as number)) return false;
   if (dep.service !== undefined && (!Number.isSafeInteger(dep.service) || (dep.service as number) < 0)) return false;
   if (dep.maintenanceBudgetPerHour !== undefined && (!isNum(dep.maintenanceBudgetPerHour) || !Number.isInteger(dep.maintenanceBudgetPerHour) || dep.maintenanceBudgetPerHour < 0 || dep.maintenanceBudgetPerHour > 500)) return false;
   if (!isObj(s.officers)) return false;
@@ -383,9 +371,19 @@ function validState(s: unknown): s is GameState {
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
+  const patrol = s.patrol as GameState['patrol'];
+  const reserved = new Set<string>((s.personnel as GameState['personnel'])?.employedIdentityIds ?? []);
+  for (const officer of Object.values(s.officers as GameState['officers'])) if (officer.identityId) reserved.add(officer.identityId);
+  for (const candidate of s.candidates as GameState['candidates']) if (candidate.officer.identityId) reserved.add(candidate.officer.identityId);
+  for (const record of Object.values((s.commandStaff ?? {}) as NonNullable<GameState['commandStaff']>)) {
+    if (record.post?.holder) reserved.add(record.post.holder.person.identityId);
+    for (const candidate of record.post?.pool ?? []) reserved.add(candidate.person.identityId);
+  }
+  if (patrol.personnel.some((person) => reserved.has(person.profileId))) return false;
   if (s.pendingSquadMoves !== undefined && !isList(s.pendingSquadMoves, (m) => isObj(m) && isStr(m.officerId) && isNum(m.queuedAt)
     && (m.squadId === null || oneOf(m.squadId, SQUAD_IDS)) && (m.dropped === undefined || isStr(m.dropped)))) return false;
   if (s.report !== null && !validReport(s.report)) return false;
+  if (s.report !== null && ((s.report as GameState['report'])!.patrolTraining ?? []).some((row) => !patrol.personnel.some((person) => person.id === row.employeeId && person.profileId === row.profileId && person.grade >= row.grade))) return false;
   if (s.activeRun !== null && !validRun(s.activeRun)) return false;
   if (s.activeRun !== null && !validIncidentConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s.officers as GameState['officers'], s.squads as GameState['squads'], (s.department as GameState['department']).clockHighWater)) return false;
   if (s.activeRun !== null && !validPersonConsequences(s.activeRun as unknown as OperationRun, getScenario((s.activeRun as unknown as OperationRun).scenarioId)!, s as unknown as GameState)) return false;

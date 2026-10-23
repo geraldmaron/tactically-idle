@@ -30,6 +30,19 @@ describe('scannable debrief results', () => {
     expect(html).not.toContain('<details');
   });
 
+  it('places the ending, recorded harm and officer condition ahead of rewards in current and saved debriefs', () => {
+    const debrief = { ...result, decisions: [decision] };
+    const current = renderToStaticMarkup(createElement(DebriefContents, { result: debrief, officers: state.officers }));
+    const saved = renderToStaticMarkup(createElement(SavedDebriefContents, { debrief, officers: state.officers }));
+    for (const html of [current, saved]) {
+      const rewards = html.indexOf('aria-label="Rewards"');
+      expect(html.indexOf(result.endingSummary!)).toBeLessThan(rewards);
+      expect(html.indexOf('A resident was injured during the delay.')).toBeLessThan(rewards);
+      expect(html.indexOf('data-officer-result="off_chen"')).toBeLessThan(rewards);
+      expect(html.match(/aria-label="Rewards"/g)).toHaveLength(1);
+    }
+  });
+
   it('replaces repeated zero-change rows with one collapsed condition group', () => {
     const quiet = { ...result, officerCondition: Object.values(state.officers).map((o) => ({ officerId: o.id, stressBefore: o.stress, stressAfter: o.stress, xpGained: 0 })) };
     const html = renderToStaticMarkup(createElement(OfficerResults, { debrief: quiet, officers: state.officers }));

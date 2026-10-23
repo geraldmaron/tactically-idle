@@ -1,0 +1,39 @@
+{
+  "recorded": "2026-10-22",
+  "prompt_status": "reconstructed_intent",
+  "prompt_note": "Exact historical generation prompts are unavailable. These are intent reconstructions from the session continuity record, not verbatim prompts. Source PNGs have no prompt metadata.",
+  "source_directory": "/Users/geralddagher/.codex/generated_images/01a1658f-878a-7081-b3f9-9e2827e111e4/",
+  "assets": [
+    {
+      "id": "hub_hq",
+      "intent": "Original painted urban department at blue hour, warm dispatch windows, garage and blue van, broad silhouettes, 3:2 composition with a dark lower left area for identity and state. No text, interface graphics, logos or weapons.",
+      "source_file": "exec-b59d5198-34db-46ed-a053-3d4f496a16d8.png",
+      "inspected_source": { "width": 1536, "height": 1024, "mode": "RGB" },
+      "output_file": "public/art/plates/hub_hq.webp",
+      "inspected_output": { "width": 1200, "height": 800, "mode": "RGB" },
+      "recorded_processing": {
+        "basis": "Session continuity record",
+        "resize_to": [1200, 800],
+        "webp_quality": 88,
+        "resampling_filter": "not recorded"
+      },
+      "supersedes": "hub-prompts.json entry hub_hq"
+    },
+    {
+      "id": "tex_cash",
+      "intent": "Fictional mint banknote bundle with an ivory band, chunky painted 2.5D form intended to read at 24 to 48px. Alpha background, no lettering, floating coins or sparkle effects.",
+      "source_file": "exec-53ac1981-af5d-473f-9959-088ef0706b9c.png",
+      "inspected_source": { "width": 1536, "height": 1024, "mode": "RGBA", "alpha_extrema": [0, 254] },
+      "output_file": "public/art/plates/tex_cash.webp",
+      "inspected_output": { "width": 384, "height": 300, "mode": "RGBA", "alpha_extrema": [0, 254] },
+      "recorded_processing": {
+        "basis": "Session continuity record",
+        "source_crop_ltrb": [320, 160, 920, 720],
+        "crop_dimensions": [600, 560],
+        "resize_to": [384, 300],
+        "webp_quality": 90,
+        "resampling_filter": "not recorded"
+      }
+    }
+  ]
+}

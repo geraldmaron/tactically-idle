@@ -86,7 +86,8 @@ describe('campaign identities and succession', () => {
   });
   it('treats a stale targeted refresh as an ordinary empty pool when the reserve is exhausted', () => {
     const exhausted = createInitialState(T0, 1);
-    exhausted.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id);
+    const patrolIds = exhausted.patrol.personnel.map((person) => person.profileId);
+    exhausted.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id).filter((id) => !patrolIds.includes(id));
     exhausted.candidates = [];
     const legacyCommand = { type: 'refreshCandidates', targetRole: 'recon' } as const;
     const result = dispatch(exhausted, legacyCommand, { now: T0 });
@@ -94,15 +95,22 @@ describe('campaign identities and succession', () => {
     expect(result.state.candidates).toEqual([]);
     expect(recruitmentStatus(result.state, T0).exhausted).toBe(true);
   });
-  it('can hire all 92 reserve people across successive careers without resurrecting anyone', () => {
+  it('can hire all 88 reserve people across successive careers without resurrecting anyone', () => {
     for (const seed of [0, 1, 52]) {
       let s = createInitialState(T0, seed);
       s.department.funding = 100_000_000;
+      const patrolIds = new Set(s.patrol.personnel.map((person) => person.profileId));
+      expect(patrolIds.size).toBe(4);
+      const startingSwatIds = new Set(Object.values(s.officers).map((officer) => officer.identityId!));
+      const reserveIds = new Set(PERSONAS.map((person) => person.id).filter((id) => !patrolIds.has(id) && !startingSwatIds.has(id)));
+      expect(reserveIds.size).toBe(88);
       const seen = new Set<string>();
-      for (let n = 0; n < 92; n++) {
+      for (let n = 0; n < reserveIds.size; n++) {
         fillCandidates(s, T0, candidatePoolSize(s));
+        expect(s.candidates.some((candidate) => patrolIds.has(candidate.officer.identityId!))).toBe(false);
         const c = s.candidates[0];
         expect(c).toBeDefined();
+        expect(reserveIds.has(c.officer.identityId!)).toBe(true);
         expect(seen.has(c.officer.identityId!)).toBe(false);
         seen.add(c.officer.identityId!);
         const hired = dispatch(s, { type: 'hire', candidateId: c.id }, { now: T0 });
@@ -112,10 +120,14 @@ describe('campaign identities and succession', () => {
         s = deserialize(serialize(dismissed.state, T0))!;
         expect(s).not.toBeNull();
       }
-      fillCandidates(s, T0, candidatePoolSize(s));
-      expect(s.candidates).toHaveLength(0);
-      expect(s.personnel!.employedIdentityIds).toHaveLength(100);
-      expect(seen.size).toBe(92);
+      expect(seen).toEqual(reserveIds);
+      expect(s.personnel!.employedIdentityIds).toHaveLength(PERSONAS.length - patrolIds.size);
+      for (let n = 0; n < 5; n++) {
+        fillCandidates(s, T0 + n * 4 * HOUR, candidatePoolSize(s));
+        expect(s.candidates).toHaveLength(0);
+        expect(s.candidates.some((candidate) => patrolIds.has(candidate.officer.identityId!))).toBe(false);
+      }
+      expect(recruitmentStatus(s, T0).exhausted).toBe(true);
     }
   });
   it('does not return a dismissed identity even after save and reload', () => {
@@ -144,12 +156,14 @@ describe('campaign identities and succession', () => {
   });
   it('reports genuine finite exhaustion instead of recycling an officer', () => {
     const s = createInitialState(T0);
-    s.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id);
+    const patrolIds = s.patrol.personnel.map((person) => person.profileId);
+    expect(patrolIds).toHaveLength(4);
+    s.personnel!.employedIdentityIds = PERSONAS.map((p) => p.id).filter((id) => !patrolIds.includes(id));
     s.candidates = [];
     fillCandidates(s, T0, candidatePoolSize(s));
     expect(s.candidates).toHaveLength(0);
     expect(recruitmentStatus(s, T0).exhausted).toBe(true);
-    expect(generateBatch({ rng: 1, nextId: 1, unavailable: PERSONAS.map((p) => p.id) }, T0, 3, [], new Set())).toEqual([]);
+    expect(generateBatch({ rng: 1, nextId: 1, unavailable: [...s.personnel!.employedIdentityIds, ...patrolIds] }, T0, 3, [], new Set())).toEqual([]);
   });
   it('round-trips candidate history, birth dates and campaign seed', () => {
     const s = createInitialState(T0, 765);

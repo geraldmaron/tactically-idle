@@ -9,8 +9,8 @@
 .sheet.sheet-tall, .sheet.sheet-short {
   --sheet-bottom: var(--sheet-visible-bottom, 0px);
   --sheet-available-height: max(0px, calc(100% - var(--sheet-visible-top, 0px) - var(--sheet-bottom)));
-  left: var(--sheet-visible-left, 0px);
-  right: var(--sheet-visible-right, 0px);
+  left: max(var(--sheet-visible-left, 0px), env(safe-area-inset-left));
+  right: max(var(--sheet-visible-right, 0px), env(safe-area-inset-right));
   bottom: var(--sheet-bottom);
 }
 .sheet.sheet-tall { max-height: min(88%, var(--sheet-available-height)); }

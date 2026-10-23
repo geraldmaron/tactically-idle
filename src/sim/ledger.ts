@@ -1,7 +1,7 @@
 // The department's books, event by event. Every discrete change to funding (a payout, a signing, a
 // purchase, a fee) goes through postFunding so the player can watch money move and see why.
-// Hourly accrual is not an event: settle() applies it as a rate, and the shift report and the
-// top bar's rate show it. src/sim/ledger.test.ts fails on any other write to funding.
+// Settlement posts actual net accrual through the same ledger, folded within its clock hour.
+// The shift report still explains gross income and costs. No receipt grants money a second time.
 import type { Department, LedgerEntry, LedgerKind } from './types';
 
 export const LEDGER_TUNING = { keep: 60, hourMs: 3_600_000 } as const;
@@ -10,10 +10,10 @@ export const LEDGER_TUNING = { keep: 60, hourMs: 3_600_000 } as const;
  * hour folds into the previous entry only when nothing else moved the balance in between, so every
  * entry's before + amount = after; `latest` keeps the newest posting so a viewer announces only it.
  *
- * `foldAcrossAccrual` is for a line posted many times a minute (desk taps): it also folds when only
+ * `foldAcrossAccrual` is for a line posted many times a minute (service accrual): it also folds when only
  * hourly accrual moved the balance since the previous entry, which is still the newest one, and moves
  * that entry's `before` by the accrual so before + amount = after holds. Without it, every batch of
- * taps between two ticks would push a real event out of the capped history. */
+ * service postings between ticks would push a real event out of the capped history. */
 export function postFunding(dep: Department, amount: number, kind: LedgerKind, label: string, at: number, opts: { foldAcrossAccrual?: boolean } = {}): void {
   if (!Number.isFinite(amount) || amount === 0) return;
   const before = dep.funding;

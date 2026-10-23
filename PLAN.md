@@ -1,14 +1,16 @@
 # Tactically Idle game and first playable plan
 
-**Status:** Current browser-game scope as of 2026-10-20. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
+**Status:** Target design revised 2026-10-22. The NPC patrol economy and dedicated Store are planned, not implemented. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
 
-**Created:** October 1, 2026. **Updated:** October 20, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
+**Created:** October 1, 2026. **Updated:** October 22, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
 
 ## Game overview
 
 Tactically Idle is a portrait mobile department-management game with an idle economy and short branching tactical operations. The player hires officers, develops capabilities, prepares squads and makes decisions on a generated blueprint. Experience, stress, resource use and public trust return to the department.
 
-The browser implementation uses the approved mockup as its visual baseline. Repeat-play and recovery questions are tracked with playtests in [docs/backlog.md](docs/backlog.md).
+The current visual direction is a working department at blue hour: deep blue surfaces, warm interior light, ivory text, amber actions, mint funding, expressive portraits and substantial controls. It supersedes earlier aesthetic restrictions where they conflict. The blueprint remains interactive and driven by operation data. Repeat-play and recovery questions are tracked with playtests in [docs/backlog.md](docs/backlog.md).
+
+The owner removed tapping from the target design on 2026-10-22. A separately staffed NPC Patrol division replaces it and replaces SWAT's routine revenue patrol. SWAT keeps signing costs and wages; “free” meant available between calls. The detailed economy, progression, Store navigation and adversarial controls are in [Patrol workforce and Store redesign](docs/patrol-work.md). Call writing and branching outcomes remain outside this redesign.
 
 ## Standing decisions and source constraints
 
@@ -69,17 +71,17 @@ Do not render the entire interface as one bitmap. Keep portraits and paper textu
 
 ### Screen composition
 
-At the 390 × 844 portrait design target, the blueprint is the largest contiguous content region. Preserve the order: compact resources; mission title and Assess/Adapt/Resolve progress; blueprint; selected squad; decision controls; bottom navigation. On shorter screens, allow deliberate scrolling instead of shrinking every label and portrait.
+At the 390 × 844 portrait design target, live situations and choices precede expanded maps and supporting detail. The full interactive blueprint is immediately accessible. A persistent pressure cue reserves space rather than covering controls. On shorter screens, allow deliberate scrolling instead of shrinking every label and portrait.
 
-Use five destinations matching the reference:
+Use five labeled destinations on management screens. Live calls retain focused navigation:
 
 | Destination | Primary job | Visual treatment |
 | --- | --- | --- |
-| HQ | Review offline progress, department status and Command Staff. | Illustrated department spaces with work and recovery status. |
-| Squad | Compare officers, recruit, dismiss, train, rotate. | Portrait roster, capability indicators, wage and condition detail. |
-| Ops | Prepare, command, and review operations. | Operation board followed by the dominant blueprint screen. |
-| Develop | Choose department capabilities. | Connected branches with visible prerequisites and capability previews. |
-| Gear | Purchase, reserve, equip, maintain, restock. | Illustrated equipment tiles, quantities, and loadout trays. |
+| HQ | Review credited progress, patrol funding, SWAT readiness and the next action. | Compact illustrated station with visible activity and net funding. |
+| Calls | Prepare, command, and review operations. | Distinct scene-led call cards, readable situations and choices, accessible blueprint. |
+| Team | Manage SWAT, Patrol personnel and Command Staff. | Portrait roster with separate tactical condition and patrol output/cost views. |
+| Build | Choose facilities, capabilities and authorized staffing capacity. | Illustrated objects with prerequisites and progression. |
+| Store | Buy equipment, usable boosts and available real-money offers. | Persistent rightmost tab, clear currencies, ownership and confirmed purchases. |
 
 The live portrait strip displays the deployed squad, and the blueprint shows its position and physical moves. Decision buttons retain the illustrated icon, short action title, compact eligibility/consequence line, amber selection treatment, and dark secondary alternative. Expanded detail is available on selection before confirmation.
 
@@ -102,9 +104,9 @@ Session design targets: a quick management visit around one minute, and an opera
 
 Begin with funding and public trust. Funding pays wages, purchases and development; each development can instead be granted free at a milestone (department level, calls resolved or trust). Trust is a standing that affects opportunities, not a spendable currency. There are no development points (removed 2026-10-20).
 
-Funding comes from a base department allocation and routine work. Mission compensation reflects service and responsibilities rather than arrests or casualties. Active missions should accelerate specialist progression without making routine funding useless.
+Funding comes from a base department allocation and a separate NPC patrol workforce. Routine service funding reflects staffed coverage, not arrests, tickets or casualties. NPC hires have onboarding costs, wages and operating costs. Their grades advance through eligible service hours, not money earned; department-level staffing ceilings cannot be purchased past with NPC income. SWAT's routine patrol income and tapping are retired in this target design. SWAT standby, rest, training and deliberate instructor details remain. See [the revised budget and boost contract](docs/patrol-work.md).
 
-Illustrative hourly budget: $1,200 gross minus $380 wages, $120 facilities, and $80 routine supplies yields $620 net. The initial interface's four-hour report would therefore be $2,480. These numbers are examples only.
+The revised proposed starting budget preserves $620/hour net: $600 allocation plus four patrol staff at $210 gross each, less $180 patrol payroll, $60 patrol operations, $380 SWAT payroll and $200 fixed costs. These are balance inputs awaiting simulation. Funding is credited automatically; opening a report or watching an animation never grants it again.
 
 Rules:
 

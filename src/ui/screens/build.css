@@ -1,0 +1,37 @@
+.facility-build-page { gap: var(--sp4); }
+.facility-build-page > .build-title { margin: 0; }
+.facility-plan { min-width: 0; }
+.facility-plan-scene { height: clamp(132px, 39vw, 168px); border: 1px solid var(--hair-2); border-bottom: 0; border-radius: var(--r2) var(--r2) 0 0; }
+.facility-plan-scene > .plate-art { object-position: center 57%; }
+.facility-plan-scene::after { background: none; }
+.facility-plan-label { margin: 0; padding: var(--sp2) var(--sp3); border: 1px solid var(--hair-2); border-bottom: 0; background: var(--ink-2); color: var(--t2); font-size: var(--s14); }
+.facility-building { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 3px solid var(--hair-2); background: var(--ink-3); }
+.facility-room { position: relative; display: flex; flex-direction: column; align-items: stretch; min-width: 0; gap: var(--sp1); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: 0; background: var(--ink-1); color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
+.facility-room:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -4px; }
+.facility-room-logistics { grid-column: 1 / -1; }
+.facility-object { display: grid; place-items: center; min-height: 80px; margin-bottom: var(--sp2); border-bottom: 1px solid var(--hair); background-image: linear-gradient(var(--hair) 1px, transparent 1px), linear-gradient(90deg, var(--hair) 1px, transparent 1px); background-size: 24px 24px; }
+.facility-furnishing { position: relative; display: grid; place-items: center; width: 100%; min-height: 88px; color: var(--t2); }
+.facility-furnishing > .icon { position: relative; z-index: 1; }
+.facility-furnishing-personnel > i:first-child { position: absolute; top: 20%; width: 72%; height: 44%; border: 2px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-3); }
+.facility-furnishing-personnel > i:nth-child(2) { position: absolute; bottom: 6%; width: 28%; height: 22%; border: 2px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-0); }
+.facility-furnishing-field { background: linear-gradient(90deg, transparent 18%, var(--hair-2) 18%, var(--hair-2) 20%, transparent 20%, transparent 80%, var(--hair-2) 80%, var(--hair-2) 82%, transparent 82%); }
+.facility-furnishing-field > i:first-child { position: absolute; top: 10%; width: 42%; height: 52%; border: 2px solid var(--hair-2); border-radius: 50%; background: var(--ink-0); }
+.facility-furnishing-field > i:nth-child(2) { position: absolute; bottom: 8%; width: 60%; border-bottom: 2px solid var(--t3); }
+.facility-furnishing-wellbeing > i { position: absolute; top: 14%; width: 28%; height: 72%; border: 2px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-3); }
+.facility-furnishing-wellbeing > i:first-child { left: 8%; }
+.facility-furnishing-wellbeing > i:nth-child(2) { right: 8%; }
+.facility-room-name { display: flex; align-items: center; justify-content: space-between; gap: var(--sp1); font: 700 var(--s18)/1.15 var(--f-title); }
+.facility-room-name > .icon { flex: none; color: var(--t3); }
+.facility-room-progress { font-size: var(--s14); color: var(--t3); }
+.facility-next { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp1) var(--sp2); margin-top: auto; padding-top: var(--sp2); font-size: var(--s14); color: var(--t2); }
+.facility-next strong { font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
+.facility-room-ready .facility-next strong { color: var(--act-text); }
+.facility-blocker { display: flex; align-items: center; gap: var(--sp1); color: var(--warn-text); font-size: var(--s14); }
+.facility-blocker > .icon { flex: none; }
+.facility-room-logistics .facility-object { min-height: 116px; }
+.build-capacity { display: flex; align-items: flex-start; gap: var(--sp3); padding-top: var(--sp3); border-top: 1px solid var(--hair); }
+.build-capacity > .icon { flex: none; color: var(--good-text); }
+.build-capacity > div { display: grid; gap: var(--sp1); min-width: 0; }
+.build-capacity strong { font-size: var(--s16); }
+.build-capacity span, .build-capacity p { margin: 0; font-size: var(--s14); color: var(--t2); }
+.facility-build-page .develop-page { padding: var(--sp3) 0; }

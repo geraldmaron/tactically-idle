@@ -143,6 +143,7 @@ export function courseFee(state: GameState, cost: number): number {
 /** Identity ids no new staff draw may use: people on the roster, in the officer pool, ever employed, or already in or offered a post. */
 function takenIdentities(state: GameState): Set<string> {
   const taken = new Set<string>(state.personnel?.employedIdentityIds ?? []);
+  for (const person of state.patrol?.personnel ?? []) taken.add(person.profileId);
   for (const officer of Object.values(state.officers)) if (officer.identityId) taken.add(officer.identityId);
   for (const candidate of state.candidates) if (candidate.officer.identityId) taken.add(candidate.officer.identityId);
   for (const record of Object.values(state.commandStaff ?? {})) {

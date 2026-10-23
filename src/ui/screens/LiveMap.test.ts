@@ -9,6 +9,8 @@ import { LiveView, type LiveViewProps } from './LiveView';
 const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
+  useRef: (value: unknown) => ({ current: value }),
+  useLayoutEffect: () => {},
   useState: (initial: unknown) => {
     const index = hooks.cursor++;
     if (!(index in hooks.values)) hooks.values[index] = initial;

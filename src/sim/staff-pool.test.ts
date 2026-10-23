@@ -125,7 +125,7 @@ describe('levers change the loop they name', () => {
   it('Watch Commander: faster recovery for squads they rested, and an earlier return to duty', () => {
     const plain = withLevers('watch_commander', [0, 30]);
     const strong = withLevers('watch_commander', [0.25, 30]);
-    for (const s of [plain, strong]) { s.squads[0].duty = 'rest'; s.commandStaff!.watch_commander.rested.A = 'patrol'; }
+    for (const s of [plain, strong]) { s.squads[0].duty = 'rest'; s.commandStaff!.watch_commander.rested.A = 'standby'; }
     const officer = (s: GameState) => s.officers[s.squads[0].officerIds[0]];
     expect(recoveryRate(strong, officer(strong), T0)).toBeCloseTo(recoveryRate(plain, officer(plain), T0) * 1.25, 9);
     // A squad nobody rested gets no bonus.
@@ -133,10 +133,10 @@ describe('levers change the loop they name', () => {
     expect(recoveryRate(strong, officer(strong), T0)).toBeCloseTo(recoveryRate(plain, officer(plain), T0), 9);
     const late = withLevers('watch_commander', [0, 25]), early = withLevers('watch_commander', [0, 35]);
     for (const s of [late, early]) {
-      s.squads[0].duty = 'rest'; s.commandStaff!.watch_commander.rested.A = 'patrol';
+      s.squads[0].duty = 'rest'; s.commandStaff!.watch_commander.rested.A = 'standby';
       for (const id of s.squads[0].officerIds) s.officers[id].stress = 32;
     }
-    expect(ok(early, { type: 'tick' }, T0 + HOUR_MS).squads[0].duty).toBe('patrol');
+    expect(ok(early, { type: 'tick' }, T0 + HOUR_MS).squads[0].duty).toBe('standby');
     expect(ok(late, { type: 'tick' }, T0 + HOUR_MS).squads[0].duty).toBe('rest');
   });
 

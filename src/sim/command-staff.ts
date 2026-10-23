@@ -304,10 +304,10 @@ function runWatchCommander(d: GameState, t: number): void {
       wc.rested[squad.id] = from;
       log(wc.log, t, `Rested ${squad.name}: ${peak.surname} reached ${Math.floor(peakStress)} stress`);
     } else if (squad.duty === 'rest' && peakStress < returnBelow) {
-      const to = wc.rested[squad.id] ?? 'patrol';
+      const to = 'standby';
       if (!ROSTER_HANDLERS.setSquadDuty(d, squad.id, to).ok) continue;
       delete wc.rested[squad.id];
-      log(wc.log, t, `Returned ${squad.name} to ${to === 'patrol' ? 'Patrol' : 'Standby'}: everyone below ${returnBelow} stress`);
+      log(wc.log, t, `Returned ${squad.name} to Standby: everyone below ${returnBelow} stress`);
     }
   }
 }
@@ -564,6 +564,7 @@ export function staffHireCheck(state: GameState, managerId: ManagerId, candidate
   if (post.holder) return `Replace ${post.holder.person.firstName} ${post.holder.person.surname} first.`;
   const candidate = post.pool.find((c) => c.id === candidateId);
   if (!candidate) return 'That candidate is no longer available';
+  if (state.patrol?.personnel.some((person) => person.profileId === candidate.person.identityId)) return 'That person has served in the patrol workforce';
   if (state.department.funding < candidate.signingCost) return `Needs ${money(candidate.signingCost)} to sign (have ${money(state.department.funding)})`;
   const on = managerId === 'quartermaster' || commandStaffOf(state)[managerId].enabled;
   if (on && netRate(state) - candidate.salaryPerHour < 0) return `Their ${money(candidate.salaryPerHour)}/h salary would leave the department short each hour`;
@@ -739,7 +740,7 @@ export function validCommandStaff(value: unknown): boolean {
   if (typeof restAt !== 'number' || !Number.isInteger(restAt) || restAt < minRestAt || restAt > maxRestAt) return false;
   const optOut = wc.policy.optOut;
   if (!Array.isArray(optOut) || !optOut.every((id) => (SQUAD_IDS as readonly unknown[]).includes(id)) || new Set(optOut).size !== optOut.length) return false;
-  if (!Object.entries(wc.rested).every(([id, duty]) => (SQUAD_IDS as readonly string[]).includes(id) && (duty === 'patrol' || duty === 'standby'))) return false;
+  if (!Object.entries(wc.rested).every(([id, duty]) => (SQUAD_IDS as readonly string[]).includes(id) && duty === 'standby')) return false;
   if (!isObj(ts) || typeof ts.enabled !== 'boolean' || !isObj(ts.policy) || !validLog(ts.log)) return false;
   const { courseId, reserve } = ts.policy;
   if (courseId !== null && !(typeof courseId === 'string' && Object.hasOwn(COURSES, courseId))) return false;

@@ -146,10 +146,9 @@ describe('pure, explainable squad arrangement suggestions', () => {
     expect(applySquadArrangement(s, withReserve)).toEqual({ ok: true }); assertPartition(s);
   });
 
-  it('includes recovery and patrol income effects for moves between duties', () => {
+  it('includes recovery effects for moves between duties without assigning tactical patrol income', () => {
     const p = planSquadArrangement(improvableState(), OPTIONS, dutyRates());
-    expect(p.moves.some((m) => /patrol.*standby|standby.*patrol/.test(m.dutyImpact ?? ''))).toBe(true);
-    expect(p.moves.some((m) => m.dutyImpact?.includes('$150/h'))).toBe(true);
+    expect(p.moves.every((m) => !m.dutyImpact?.includes('$150/h'))).toBe(true);
     expect(p.moves.every((m) => m.reasons.length > 0)).toBe(true);
   });
 

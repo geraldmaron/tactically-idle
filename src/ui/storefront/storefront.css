@@ -1,0 +1,86 @@
+/* Department storefront. Equipment art and receipts stay with the acquired object. */
+.gear-page [hidden], .storefront [hidden] { display: none !important; }
+.storefront, .store-equipment, .store-training { display: flex; flex-direction: column; gap: var(--sp4); min-width: 0; }
+.store-training > p { margin: 0; line-height: 1.45; }
+.storefront .field { min-width: 0; margin: 0; }
+.storefront .field select, .storefront .field input { width: 100%; min-width: 0; }
+.store-equipment { gap: var(--sp4); }
+.store-equipment > .choice-rail .choice-rail-item { flex: 1 1 0; flex-direction: column; gap: var(--sp1); min-width: 0; padding: var(--sp2) var(--sp1); font-size: 14px; }
+.store-collection { display: grid; grid-template-columns: auto minmax(24px, 1fr) auto; align-items: center; gap: var(--sp3); min-height: 62px; padding: var(--sp3) var(--sp4); border: 1px solid var(--hair-2); border-radius: 16px; background: var(--ink-1); box-shadow: var(--shadow-card); }
+.store-collection-label { display: inline-flex; align-items: center; gap: var(--sp2); color: var(--t2); font-size: 14px; font-weight: 650; }
+.store-collection-label .icon { color: var(--amber); }
+.store-collection strong { color: var(--text); font: 700 21px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.store-bar { display: block; height: 8px; min-width: 24px; border-radius: 6px; background: var(--ink-0); overflow: hidden; }
+.store-bar i { display: block; height: 100%; border-radius: inherit; background: var(--mint); }
+.store-equipment .store-search { margin: 0; }
+.store-search input { width: 100%; min-height: 52px; padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 14px; background: var(--ink-0); color: var(--text); font: 400 15px/1.2 var(--f-ui); }
+.store-search input::placeholder { color: var(--t3); }
+.store-search input:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.store-results-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp2); color: var(--t2); }
+.store-results-head > [role="status"] { font-size: 14px; font-weight: 600; }
+.store-sort-inline { display: inline-flex; align-items: center; gap: var(--sp1); margin-left: auto; color: var(--t3); }
+.store-sort-inline select { min-height: 44px; max-width: 150px; padding-inline: var(--sp2); border: 1px solid var(--hair-2); border-radius: 10px; background: var(--ink-1); color: var(--text); font: inherit; font-size: 14px; }
+.store-group { display: grid; gap: var(--sp3); min-width: 0; }
+.store-group-head { display: flex; align-items: center; gap: var(--sp3); margin: var(--sp1) 0 0; color: var(--text); font: 700 16px/1.25 var(--f-ui); }
+.store-group-head > span:first-child { display: inline-flex; align-items: center; gap: var(--sp2); }
+.store-group-head .icon { color: var(--amber); }
+.store-group-head .store-bar { flex: 1; max-width: 64px; margin-left: auto; height: 5px; }
+.store-group-count { color: var(--t3); font-size: 14px; font-variant-numeric: tabular-nums; }
+.store-equipment .inv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp3); }
+.store-tile { grid-template-rows: auto auto auto auto 1fr; align-content: start; gap: var(--sp1); padding: var(--sp4) var(--sp2) var(--sp3); border: 1px solid var(--hair-2); border-radius: 18px; background: linear-gradient(155deg, var(--ink-1), var(--ink-0) 70%); box-shadow: var(--shadow-card); }
+.store-tile .inv-art { align-self: center; min-height: 100px; margin-bottom: var(--sp1); }
+.store-tile .inv-name { display: block; min-height: 2.5em; font: 700 15px/1.25 var(--f-ui); letter-spacing: -.015em; color: var(--text); overflow: visible; }
+.store-tile .inv-count { top: 9px; right: 9px; padding: var(--sp1) var(--sp2); border-color: var(--hair-2); background: var(--ink-0); color: var(--mint); font-size: 14px; }
+.store-tile-stock { color: var(--t2); font-size: 14px; line-height: 1.35; }
+.store-tile-price { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1); width: 100%; margin-top: var(--sp1); padding: var(--sp2) var(--sp1); border: 1px solid color-mix(in srgb, var(--amber) 36%, var(--hair-2)); border-radius: 10px; background: color-mix(in srgb, var(--amber) 12%, var(--ink-1)); color: var(--amber); font: 750 18px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.store-tile-availability { min-height: 2.5em; color: var(--mint); font-size: 14px; line-height: 1.3; padding-top: var(--sp1); }
+.store-tile-short .store-tile-availability { color: var(--warn); }
+.store-tile-short .store-tile-price { color: var(--t2); border-color: var(--hair-2); background: var(--ink-0); }
+.store-tile-locked { border-style: dashed; background: var(--ink-1); box-shadow: none; }
+.store-tile-locked .inv-art { opacity: .65; filter: grayscale(.8); }
+.store-tile-locked .store-tile-price { color: var(--t3); border-color: var(--hair-2); background: var(--ink-0); }
+.store-tile-locked .store-tile-availability { color: var(--t3); }
+.store-tile .inv-alert { left: 9px; top: 9px; width: 21px; height: 21px; }
+.store-tile-cert { position: absolute; right: 10px; top: 45px; display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--hair-2); border-radius: 50%; color: var(--t2); background: var(--ink-0); }
+.store-tile-cert-none { color: var(--warn); }
+.store-tile .inv-cond { top: auto; bottom: 0; height: 4px; }
+.store-tile-acquired { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1); width: 100%; padding: var(--sp2) 0; border-radius: 8px; background: color-mix(in srgb, var(--mint) 16%, var(--ink-1)); color: var(--mint); font-size: 14px; font-weight: 700; }
+
+/* Item sheet. A large object, its stock and its actual purchase receipt. */
+.store-detail-art { display: grid; justify-items: center; align-items: start; gap: var(--sp4); margin-bottom: var(--sp4); padding: var(--sp4) var(--sp3); border: 1px solid var(--hair-2); border-radius: 20px; background: linear-gradient(145deg, var(--ink-1), var(--ink-0)); }
+.store-detail-art > .gear-art-frame { flex-shrink: 0; }
+.store-detail-hero { display: grid; justify-self: stretch; gap: var(--sp3); min-width: 0; }
+.store-detail-hero p { margin: 0; font-size: 15px; line-height: 1.5; }
+.store-detail-acquired { border-color: var(--mint); }
+.store-purchase-receipt { display: flex; align-items: flex-start; gap: var(--sp2); padding: var(--sp3) var(--sp3); border: 1px solid color-mix(in srgb, var(--mint) 45%, var(--hair-2)); border-radius: 14px; background: color-mix(in srgb, var(--mint) 12%, var(--ink-1)); color: var(--mint); }
+.store-purchase-receipt > .icon { flex: none; margin-top: var(--sp1); }
+.store-purchase-receipt strong { display: block; font-size: 16px; line-height: 1.3; }
+.store-purchase-receipt p { margin: var(--sp1) 0 0; color: var(--t2); font-size: 14px; }
+.store-detail-section { margin-top: var(--sp4); padding-top: var(--sp4); border-top: 1px solid var(--hair-2); }
+.store-detail-section h3 { margin: 0 0 var(--sp2); font-size: 15px; }
+.store-detail-section p, .store-detail-section ul { margin: var(--sp2) 0; color: var(--t2); font-size: 14px; line-height: 1.5; }
+.store-detail-section .btn { margin-block: var(--sp1); }
+.store-owned .stock { margin-top: var(--sp2); }
+.store-capabilities { margin-bottom: var(--sp1); }
+.store-detail-more { margin-top: var(--sp4); border-top: 1px solid var(--hair-2); }
+.store-detail-more .store-detail-section:first-of-type { margin-top: var(--sp1); padding-top: 0; border-top: 0; }
+.store-item-sheet .sheet-foot { padding-top: var(--sp3); padding-bottom: max(var(--sp3), env(safe-area-inset-bottom)); }
+.store-purchase { display: flex; flex-direction: column; gap: var(--sp2); }
+.store-purchase-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp4); }
+.store-purchase-line .field { margin: 0; max-width: 106px; }
+.store-purchase-line input { width: 100%; min-height: 46px; }
+.store-purchase-line > div { display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp1); }
+.store-purchase-line > div > strong { color: var(--amber); font: 750 26px/1.1 var(--font-display); }
+.store-purchase .dim, .store-purchase .reason { margin: 0; font-size: 14px; line-height: 1.4; }
+.restock-rule { display: grid; gap: var(--sp3); min-width: 0; margin: 0 0 var(--sp3); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: 16px; background: var(--ink-1); }
+.store-detail-section .restock-rule { margin: 0; }
+.restock-rule-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); }
+.restock-rule-head h3 { margin: 0; font-size: 15px; color: var(--text); }
+.restock-rule .rule-controls { gap: var(--sp3); }
+.restock-rule .num { width: 96px; min-height: 44px; }
+.restock-rule .row-actions { justify-content: flex-end; }
+.unit .disclosure > .disclosure-summary.unit-row { display: grid; padding: var(--sp2) var(--sp2); }
+@media (prefers-reduced-motion: no-preference) {
+  .store-purchase-receipt, .store-tile-acquired { animation: acquired-object .35s ease-out; }
+  @keyframes acquired-object { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+}

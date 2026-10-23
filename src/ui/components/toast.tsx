@@ -4,6 +4,7 @@ import type { Command, HandlerResult } from '../../sim/types';
 import { send } from '../store';
 import { ToastView } from './ToastView';
 import type { ToastItem, ToastTone } from './ToastView';
+import { FundingFeedbackProvider } from './Finance';
 
 export type { ToastTone };
 
@@ -40,7 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const api = useMemo(() => ({ notify, act }), [notify, act]);
 
   return (
-    <Ctx.Provider value={api}>
+    <FundingFeedbackProvider><Ctx.Provider value={api}>
       {children}
       {/* The layer spans the space between the shell's head and foot (the chrome contract), so a
           toast never covers the resource bar, a flow head, the tabs or an action bar. */}
@@ -51,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           ))}
         </div>
       </div>
-    </Ctx.Provider>
+    </Ctx.Provider></FundingFeedbackProvider>
   );
 }
 

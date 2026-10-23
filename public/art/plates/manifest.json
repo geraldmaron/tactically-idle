@@ -10,9 +10,14 @@
     "scene_barricaded",
     "scene_hostage_crisis",
     "scene_protected_rescue",
+    "tex_cash",
     "tex_manila",
     "tex_night_paper",
-    "hub_hq"
+    "hub_hq",
+    "scene_command_room",
+    "scene_patrol_garage",
+    "scene_facilities_plan",
+    "scene_armory_counter"
   ],
   "width": 1200,
   "height": 675

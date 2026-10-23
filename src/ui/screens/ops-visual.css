@@ -133,7 +133,7 @@
 .operation-choices .operation-stage-prompt { margin: 2px 0 10px; padding-left: 12px; border-left: 3px solid var(--hair-2); font-size: 17px; line-height: 1.45; color: var(--t1); }
 .operation-choices .callbtn { min-height: 0; padding: 9px 11px; gap: 10px; }
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
-.operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { font-size: 13.5px; line-height: 1.4; }
+.operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { font-size: var(--s16); line-height: 1.45; }
 .operation-choices .callbtn-forecast { display: grid; gap: 4px; margin-top: 3px; }
 .callbtn-forecast-text { display: flex; flex-wrap: wrap; gap: var(--sp1) var(--sp4); font-size: var(--s14); line-height: 1.35; }
 .callbtn-harm-high { color: var(--warn); }
@@ -183,15 +183,15 @@
 }
 
 /* ------------------------------------------------------------ debrief: outcome first */
-.page.debrief { gap: 12px; }
-.debrief-hero { position: relative; gap: 4px; padding: 12px 12px 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, var(--ink-3), var(--ink-1)); overflow: hidden; }
+.page.debrief { gap: var(--sp4); }
+.debrief-hero { position: relative; gap: var(--sp3); padding: var(--sp5) var(--sp4); border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, var(--ink-3), var(--ink-1)); overflow: hidden; }
 .debrief-hero::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--muted); }
 .debrief-hero-good::before { background: var(--mint); }
 .debrief-hero-mixed::before { background: var(--warn); }
 .debrief-hero-poor::before { background: var(--danger); }
 .debrief-hero .kicker { color: var(--t-plate); }
-.debrief-hero .debrief-title { font-size: 25px; overflow-wrap: anywhere; }
-.debrief-hero .debrief-narrative { margin: 4px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--text-dim); }
+.debrief-hero .debrief-title { font-size: var(--s28); overflow-wrap: anywhere; }
+.debrief-hero .debrief-narrative { margin: var(--sp2) 0 0; font-size: var(--s18); line-height: 1.5; color: var(--t1); }
 .result-summary.card { gap: 12px; }
 .result-scores { gap: 10px; }
 .result-score { display: flex; align-items: center; gap: 10px; }

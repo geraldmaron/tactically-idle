@@ -521,7 +521,7 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     return { ...base, progress: { ...base.progress, threat }, ...patch };
   };
 
-  it('decides on one screen: the threat pinned, then the scene and the squad, then the moment and the choices', () => {
+  it('leads with the threat, moment and choices, with the map immediately accessible and the scene below', () => {
     const html = render(createElement(LiveView, props()));
     expect(html).not.toContain('role="tablist"');
     expect(html).not.toContain('role="tabpanel"');
@@ -532,8 +532,9 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(strip);
     expect(html.indexOf('class="threat-pill ')).toBeLessThan(scene);
     expect(scene).toBeLessThan(map);
-    expect(map).toBeLessThan(prompt);
-    expect(html.indexOf('class="live-squad-faces"')).toBeLessThan(prompt);
+    expect(choice).toBeLessThan(map);
+    expect(choice).toBeLessThan(html.indexOf('class="live-squad-faces"'));
+    expect(html.indexOf('class="hud-btn live-map-access"')).toBeLessThan(prompt);
     expect(prompt).toBeLessThan(choice);
     expect(html).not.toMatch(/id="live-map"[^>]*hidden=""/);
   });

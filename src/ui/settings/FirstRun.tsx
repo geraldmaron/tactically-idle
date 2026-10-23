@@ -3,6 +3,7 @@ import { Button } from '../components/ui';
 import { readSettings, updateSettings, type PlayerSettings } from './prefs';
 import { ADVISORY_THEMES, SETTINGS_TEXT } from './labels';
 import { SettingsControls } from './SettingsControls';
+import { PlateArt, plateUrl } from '../art/Plates';
 
 /** The launch advisory, shown once before the department (owner redesign 2026-10-20, after Xbox
  * Accessibility Guideline 123). It names the game's themes and sets the filters, the card warnings
@@ -11,6 +12,7 @@ export function FirstRun() {
   const [draft, setDraft] = useState<PlayerSettings>(readSettings);
   const t = SETTINGS_TEXT;
   return <main className="first-run" aria-labelledby="first-run-title">
+    <div className="first-run-art plate" aria-hidden="true"><PlateArt src={plateUrl('banner_hq')} /></div>
     <header className="first-run-head">
       <p className="first-run-kicker">{t.advisoryKicker}</p>
       <h1 id="first-run-title" className="first-run-title">{t.advisoryTitle}</h1>

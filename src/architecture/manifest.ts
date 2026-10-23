@@ -134,6 +134,8 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/staff-fixtures.ts', layer: 'qa', system: 'platform' },
   { glob: '/src/sim/outcome-score.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/economy.ts', layer: 'engine', system: 'metric' },
+  // Patrol employees are a department workforce and funding loop. They never join tactical squads.
+  { glob: '/src/sim/patrol.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/department*.ts', layer: 'engine', system: 'metric' },
   { glob: '/src/sim/develop*.ts', layer: 'engine', system: 'metric' },
   // Development milestones: each tier granted free when its UnlockRule holds.

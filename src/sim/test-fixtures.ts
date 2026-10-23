@@ -184,6 +184,7 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   ];
   if (opts.squadC) squads.push({ id: 'C', name: 'Charlie', officerIds: ['off_holt', 'off_dray', 'off_ng', 'off_ibarra'], leaderId: 'off_holt', duty: 'standby', loadoutPreset: {} });
   return {
+    patrol: { personnel: [], nextId: 1, boosts: [] },
     personnel: createPersonnel(opts.rngState ?? 12345, officers),
     saveVersion: CURRENT_SAVE_VERSION,
     contentVersion: 13,

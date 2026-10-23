@@ -7,7 +7,7 @@ import { learnedXp, learningAptitude, learningMultiplier, learningPace } from '.
 import { DETAIL_TUNING, detailCheck, detailRate } from './detail';
 import { deployability } from './officer';
 import { budget } from './department-selectors';
-import { ECONOMY_TUNING } from './economy';
+import { ratesAt } from './economy';
 import type { Command, GameState } from './types';
 
 const T0 = Date.UTC(2026, 0, 1, 8);
@@ -34,13 +34,11 @@ describe('instructor details', () => {
     expect(detailRate({ wage: 50, certs: [] })).toBeNull();
     expect(detailRate({ wage: 60, certs: ['entry_team'] })!).toBeGreaterThan(detailRate({ wage: 40, certs: ['entry_team'] })!);
     expect(detailRate({ wage: 50, certs: ['entry_team', 'surveillance'] })!).toBeGreaterThan(detailRate({ wage: 50, certs: ['entry_team'] })!);
-    // A detail must beat the patrol pay the officer gives up, or it is never worth choosing.
-    expect(detailRate({ wage: 38, certs: ['surveillance'] })!).toBeGreaterThan(ECONOMY_TUNING.patrolPerOfficer);
+    expect(detailRate({ wage: 38, certs: ['surveillance'] })!).toBeGreaterThan(0);
   });
 
-  it('takes the officer off the board and off patrol, then pays its fee through the ledger', () => {
+  it('takes the officer off the board without changing patrol workforce income, then pays its fee through the ledger', () => {
     let s = createInitialState(T0);
-    s = send(s, { type: 'setSquadDuty', squadId: 'A', duty: 'patrol' }).state;
     const before = budget(s).patrol;
     const quote = detailCheck(s, 'off_brooks');
     expect(quote.ok).toBe(true);
@@ -48,7 +46,7 @@ describe('instructor details', () => {
     expect(r.result.ok).toBe(true);
     s = r.state;
     expect(deployability(s.officers.off_brooks, T0).ok).toBe(false);
-    expect(budget(s).patrol).toBe(before - ECONOMY_TUNING.patrolPerOfficer);
+    expect(budget(s).patrol).toBe(before);
     expect(send(s, { type: 'startDetail', officerId: 'off_brooks' }).result.ok).toBe(false);
     const xp = s.officers.off_brooks.xp;
     const done = send(s, { type: 'tick' }, T0 + DETAIL_TUNING.hours * HOUR + 1).state;
@@ -65,12 +63,12 @@ describe('instructor details', () => {
 });
 
 describe('no candidate is a dead option on money', () => {
-  it('a cheaper candidate always costs less on patrol, and a dearer one with as many certifications earns at least as much on a detail', () => {
+  it('candidate wage differences stay separate from patrol revenue, while detail returns follow certifications', () => {
     for (const seed of [1, 7, 42, 719, 12345]) {
       const pool = createInitialState(T0, seed).candidates.map((c) => c.officer);
       for (const a of pool) for (const b of pool) {
         if (a.wage >= b.wage) continue;
-        expect(ECONOMY_TUNING.patrolPerOfficer - a.wage).toBeGreaterThan(ECONOMY_TUNING.patrolPerOfficer - b.wage);
+        expect(ratesAt(createInitialState(T0, seed), T0).patrol).toBe(840);
         if (b.certs.length >= a.certs.length && a.certs.length > 0) expect(detailRate(b)!).toBeGreaterThanOrEqual(detailRate(a)!);
       }
     }

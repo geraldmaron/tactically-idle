@@ -1,3 +1,6 @@
+import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
+import { ActionSheet } from './LiveView';
+import { SupportContext } from './SupportContext';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apply, makeState, NOW, setRun, startRun, unitId } from '../../sim/test-fixtures';
 import { getScenario } from '../../sim/scenario-registry';
@@ -42,8 +45,17 @@ const act = vi.fn((command: Parameters<typeof apply>[1]) => {
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() }) }));
 const render = () => { hooks.cursor = 0; return OpsLive(); };
-// The support panel is the support block's only child: who has been located moved to the briefing sheet.
-const supportOf = (view: ReturnType<typeof render>) => view.props.supportContext.props.children.props;
+type Element = ReactElement<{ children?: ReactNode }>;
+function descendants(node: ReactNode): Element[] {
+  return Children.toArray(node).flatMap((child) => isValidElement<Element['props']>(child) ? [child, ...descendants(child.props.children)] : []);
+}
+function componentOf<Props>(node: ReactNode, type: (props: Props) => ReactNode): Props {
+  const matches = descendants(node).filter((child) => child.type === type);
+  expect(matches, 'exactly one intended component').toHaveLength(1);
+  return (matches[0] as ReactElement<Props>).props;
+}
+const supportOf = (view: ReturnType<typeof render>) => componentOf(view.props.supportContext, SupportContext);
+const actionOf = (view: ReturnType<typeof render>) => componentOf(view.props.children, ActionSheet);
 
 beforeEach(() => {
   hooks.values = [];
@@ -59,7 +71,7 @@ describe('support review panel transitions and repeated confirmations', () => {
     supportOf(first).onOpen();
     const support = render();
     expect(supportOf(support).open).toBe(true);
-    expect(support.props.children[0].props.open).toBe(false);
+    expect(actionOf(support).open).toBe(false);
     supportOf(support).onClose();
     expect(supportOf(render()).open).toBe(false);
 
@@ -69,15 +81,15 @@ describe('support review panel transitions and repeated confirmations', () => {
     supportOf(current).onPickAction(id);
     const action = render();
     expect(supportOf(action).open).toBe(false);
-    expect(action.props.children[0].props.open).toBe(true);
-    expect(action.props.children[0].props.view.id).toBe(id);
-    action.props.children[0].props.onBackToSupport();
+    expect(actionOf(action).open).toBe(true);
+    expect(actionOf(action).view!.id).toBe(id);
+    actionOf(action).onBackToSupport!();
     const returnedSupport = render();
     expect(supportOf(returnedSupport).open).toBe(true);
-    expect(returnedSupport.props.children[0].props.open).toBe(false);
+    expect(actionOf(returnedSupport).open).toBe(false);
     supportOf(returnedSupport).onPickAction(id);
-    render().props.children[0].props.onClose();
-    expect(render().props.children[0].props.open).toBe(false);
+    actionOf(render()).onClose();
+    expect(actionOf(render()).open).toBe(false);
     expect(act).not.toHaveBeenCalled();
     expect(state.activeRun!.revision).toBe(0);
     expect(getScenario(state.activeRun!.scenarioId)).not.toBeNull();
@@ -86,7 +98,7 @@ describe('support review panel transitions and repeated confirmations', () => {
   it('accepts one decision per rendered revision even when Confirm is tapped twice', () => {
     render().props.onSelectAction('ms_gather');
     const before = render();
-    const confirm = before.props.children[0].props.onConfirm;
+    const confirm = actionOf(before).onConfirm;
     confirm();
     const firstRevision = state.activeRun!.revision;
     expect(firstRevision).toBe(1);
@@ -98,7 +110,7 @@ describe('support review panel transitions and repeated confirmations', () => {
     const next = render();
     expect(next.props.selectedAction).toBeNull();
     next.props.onSelectAction(next.props.actions.find((action: { eligible: boolean }) => action.eligible).id);
-    render().props.children[0].props.onConfirm();
+    actionOf(render()).onConfirm();
     expect(act).toHaveBeenCalledTimes(2);
     expect(state.activeRun!.revision).toBe(firstRevision + 1);
   });
@@ -111,10 +123,10 @@ describe('player decisions and inventory are separate', () => {
     const first = render();
     expect(first.props.selectedAction).toBeNull();
     expect(first.props.highlightSpaceIds).toEqual([]);
-    expect(first.props.children[0].props.acting).toEqual([]);
-    first.props.children[0].props.onConfirm();
+    expect(actionOf(first).acting).toEqual([]);
+    actionOf(first).onConfirm();
     first.props.onOpenDetails();
-    render().props.children[0].props.onConfirm();
+    actionOf(render()).onConfirm();
     expect(act).not.toHaveBeenCalled();
     expect(state.activeRun!.history).toEqual([]);
   });
@@ -126,22 +138,22 @@ describe('player decisions and inventory are separate', () => {
     const supported = first.props.actions.find((action: { support: unknown }) => action.support);
     expect(supported.supportSquadIds).toEqual([]);
     first.props.onSelectAction(supported.id);
-    expect(render().props.children[0].props.support).toEqual([]);
-    render().props.children[0].props.onToggleSupport('B');
-    expect(render().props.children[0].props.acting).toEqual(['A']);
-    expect(render().props.children[0].props.support).toEqual(['B']);
+    expect(actionOf(render()).support).toEqual([]);
+    actionOf(render()).onToggleSupport('B');
+    expect(actionOf(render()).acting).toEqual(['A']);
+    expect(actionOf(render()).support).toEqual(['B']);
     render().props.onFocusSquad('B');
-    render().props.children[0].props.onPick(supported.id);
+    actionOf(render()).onPick(supported.id);
     const unchanged = render();
     expect(unchanged.props.selectedAction.id).toBe(supported.id);
     expect(unchanged.props.focusSquadId).toBe('B');
-    expect(unchanged.props.children[0].props.acting).toEqual(['B']);
-    expect(unchanged.props.children[0].props.support).toEqual([]);
+    expect(actionOf(unchanged).acting).toEqual(['B']);
+    expect(actionOf(unchanged).support).toEqual([]);
     expect(unchanged.props.selectedAction).toEqual(previewAction(state, NOW, supported.id, ['B'], []));
-    unchanged.props.children[0].props.onToggleSupport('A');
-    render().props.children[0].props.onPick(supported.id);
-    expect(render().props.children[0].props.acting).toEqual(['B']);
-    expect(render().props.children[0].props.support).toEqual(['A']);
+    actionOf(unchanged).onToggleSupport('A');
+    actionOf(render()).onPick(supported.id);
+    expect(actionOf(render()).acting).toEqual(['B']);
+    expect(actionOf(render()).support).toEqual(['A']);
     expect(state).toEqual(before);
     expect(act).not.toHaveBeenCalled();
     state = setRun(state, { stage: 'adapt' });
@@ -152,12 +164,12 @@ describe('player decisions and inventory are separate', () => {
     state = startRun(makeState(), 'ms_occupancy', ['A', 'B'], { loadouts: { A: {}, B: {} } });
     render().props.onSelectAction('ms_contact_hall');
     render().props.onFocusSquad('B');
-    const blocked = render().props.children[0].props;
+    const blocked = actionOf(render());
     expect(blocked.acting).toEqual(['B']);
-    expect(blocked.resupply.ok).toBe(false);
-    expect(blocked.resupply.reason).toContain('crisis negotiator');
+    expect(blocked.resupply!.ok).toBe(false);
+    expect(blocked.resupply!.reason).toContain('crisis negotiator');
     const beforeRefusal = structuredClone(state);
-    blocked.onResupply();
+    blocked.onResupply!();
     blocked.onConfirm();
     expect(state).toEqual(beforeRefusal);
     expect(act).not.toHaveBeenCalled();
@@ -165,32 +177,32 @@ describe('player decisions and inventory are separate', () => {
     // qualified squad explicitly; the same decision stays open for review.
     render().props.onFocusSquad('A');
     const review = render();
-    const sheet = review.props.children[0].props;
-    expect(sheet.resupply.ok).toBe(true);
+    const sheet = actionOf(review);
+    expect(sheet.resupply!.ok).toBe(true);
     const before = structuredClone(state);
-    const expectedUnits = sheet.resupply.items.map((item: { unitId: string }) => item.unitId);
-    sheet.onResupply();
+    const expectedUnits = sheet.resupply!.items.map((item: { unitId: string }) => item.unitId);
+    sheet.onResupply!();
     expect(act.mock.calls.map(([command]) => command.type)).toEqual(['resupplyAction']);
     expect(state.activeRun!.history).toEqual([]);
     expect(state.activeRun!.squadTasks).toEqual(before.activeRun!.squadTasks);
     expect(state.activeRun!.rngState).toBe(before.activeRun!.rngState);
     expect(state.department.funding).toBe(before.department.funding);
-    expect(state.activeRun!.clock).toBe(before.activeRun!.clock + sheet.resupply.minutes);
+    expect(state.activeRun!.clock).toBe(before.activeRun!.clock + sheet.resupply!.minutes);
     expect(state.reservations.filter((reservation) => expectedUnits.includes(reservation.unitId)).map((reservation) => reservation.squadId)).toEqual(['A']);
     expect(state.reservations.filter(reservation => reservation.squadId === 'B')).toEqual(before.reservations.filter(reservation => reservation.squadId === 'B'));
     expect(expectedUnits).toEqual([unitId('throw_phone')]);
     const delivered = structuredClone(state);
-    sheet.onResupply();
+    sheet.onResupply!();
     expect(state).toEqual(delivered);
     expect(act).toHaveBeenCalledTimes(1);
     const after = render();
     expect(after.props.selectedAction.id).toBe('ms_contact_hall');
-    expect(after.props.children[0].props.acting).toEqual(['A']);
-    expect(after.props.children[0].props.support).toEqual([]);
-    expect(after.props.children[0].props.resupply).toBeNull();
+    expect(actionOf(after).acting).toEqual(['A']);
+    expect(actionOf(after).support).toEqual([]);
+    expect(actionOf(after).resupply).toBeNull();
     expect(after.props.canCancel).toBe(false);
-    after.props.children[0].props.onConfirm();
-    after.props.children[0].props.onConfirm();
+    actionOf(after).onConfirm();
+    actionOf(after).onConfirm();
     expect(act.mock.calls.map(([command]) => command.type)).toEqual(['resupplyAction', 'decide']);
     expect(state.activeRun!.history).toHaveLength(1);
     expect(render().props.selectedAction).toBeNull();
@@ -199,10 +211,10 @@ describe('player decisions and inventory are separate', () => {
   it('refuses stale delivery controls after a decision changes the phase', () => {
     state = startRun(makeState(), 'ms_occupancy', ['A'], { loadouts: { A: {} } });
     render().props.onSelectAction('ms_contact_hall');
-    const stale = render().props.children[0].props.onResupply;
+    const stale = actionOf(render()).onResupply;
     state = apply(state, { type: 'decide', actionId: 'ms_gather', actingSquadIds: ['A'], supportSquadIds: [] }).state;
     const before = structuredClone(state);
-    stale();
+    stale!();
     expect(act).not.toHaveBeenCalled();
     expect(state).toEqual(before);
     expect(render().props.selectedAction).toBeNull();

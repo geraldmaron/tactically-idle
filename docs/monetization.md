@@ -1,4 +1,12 @@
-# Monetization: rewarded ads and paid income multipliers
+# Monetization: historical tap model and retained billing requirements
+
+**Superseded economy, 2026-10-22:** the owner removed tapping and requested an NPC patrol workforce
+and a dedicated Store. [Patrol workforce and Store redesign](patrol-work.md) now owns the income,
+progression and boost contract. The tap products, strain workaround, ×7 ceiling, reward values and
+tap-based offer eligibility below are historical and must not be implemented. The general request
+for rewarded ads and real purchases remains, along with verified entitlements, Restore, clear prices,
+and separation from call odds. New products require patrol-economy balance; no past tap price establishes
+the value of an idle-income multiplier. This planning change does not activate billing or ads.
 
 **Status:** design note, no code. **Written:** October 22, 2026, America/New_York. **Backlog:**
 `monetization-design`. It settles what `rewarded-ads`, `real-purchases` and `tap-multiplier-content` build.
@@ -39,7 +47,7 @@ Each was read in the repo on this branch. Anything marked derived is arithmetic 
 
 | Fact | Value | Where |
 | --- | --- | --- |
-| Pay per tap before multipliers | $1 | `TAP_TUNING.base`, `src/sim/department-taps.ts` |
+| Pay per tap before multipliers | $1 | Historical `TAP_TUNING.base` in the retired `department-taps.ts` module |
 | Strain per tap, split across free patrol officers | 0.1 | `TAP_TUNING.stressPerDollar` times base |
 | Strain line, where taps stop paying | 30 | `DETAIL_STRAIN_LINE` = `STRESS_BANDS.strained`, `src/sim/officer.ts` |
 | Tap rate cap and burst | 20 a second, 1 second | `TAP_TUNING` |
@@ -562,7 +570,7 @@ opened by the session that wrote it on 2026-10-21 and are not reopened here.
 - **M15:** [Google AdMob, U.S. state regulations (Android)](https://developers.google.com/admob/android/privacy/us-states).
 - **Pages that did not answer:** AdMob help pages 6201362 and 7356431 (interstitial rules and ad unit ids), and
   the Google rewarded-ad policy page 7496282 (empty), so the rewarded-ad program policy is **not read**.
-- **Repo facts** read on `claude/monetization-design-8fed11` at `025b5f3`: `src/sim/department-taps.ts`,
+- **Repo facts** read on `claude/monetization-design-8fed11` at `025b5f3`: the retired `department-taps.ts` module,
   `src/sim/player-profile.ts`, `src/sim/officer.ts`, `src/sim/economy.ts`, `src/sim/economy.test.ts`,
   `src/sim/roster.ts` (the duty handler), `src/content/dev-tree.ts` (the recovery tiers),
   `src/architecture/wiring.ts` and `manifest.ts` (the lines quoted), `src/sim/types.ts` (multiplier types).

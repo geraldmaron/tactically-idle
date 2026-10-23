@@ -13,9 +13,10 @@ import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
 import { HQ } from './screens/HQ';
-import { SquadScreen } from './screens/Squad';
+import { TeamScreen } from './screens/Team';
 import { OpsScreen } from './screens/Ops';
 import { BuildScreen } from './screens/Build';
+import { StoreScreen } from './screens/Store';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { SaveManager, SaveWarning } from './components/SaveManager';
 import { WelcomeBack } from './components/WelcomeBack';
@@ -74,9 +75,10 @@ function GameShell() {
                 <main className={`screen screen-${tab}`} key={topTab(tab)}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
                   {tab === 'hq' && <HQ />}
-                  {tab === 'squad' && <SquadScreen />}
+                  {tab === 'squad' && <TeamScreen />}
                   {tab === 'ops' && <OpsScreen />}
-                  {(tab === 'develop' || tab === 'gear') && <BuildScreen />}
+                  {tab === 'develop' && <BuildScreen />}
+                  {(tab === 'store' || tab === 'gear') && <StoreScreen />}
                 </main>
                 <div className="chrome-foot" ref={chrome.setFoot}>
                   {mode === 'desk' && <BottomNav />}

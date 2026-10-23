@@ -3,17 +3,18 @@ import type { TopTab } from './nav';
 import { topTab, useNav } from './nav';
 import { nodeOptions } from '../../sim/department-selectors';
 import { Icon } from '../icons';
+import type { IconName } from '../icons';
 import { TAB_ICON } from '../icons/kit';
-import type { TabKey } from '../icons/kit';
 
-const TABS: { id: TopTab; label: string; icon: TabKey }[] = [
-  { id: 'hq', label: 'HQ', icon: 'hq' },
-  { id: 'ops', label: 'Calls', icon: 'calls' },
-  { id: 'squad', label: 'Officers', icon: 'officers' },
-  { id: 'build', label: 'Build', icon: 'build' },
+const TABS: { id: TopTab; label: string; icon: IconName }[] = [
+  { id: 'hq', label: 'HQ', icon: TAB_ICON.hq },
+  { id: 'ops', label: 'Calls', icon: TAB_ICON.calls },
+  { id: 'squad', label: 'Team', icon: TAB_ICON.officers },
+  { id: 'build', label: 'Build', icon: TAB_ICON.build },
+  { id: 'store', label: 'Store', icon: 'store' },
 ];
 
-/** The four destinations, equal width (docs/ui-ux-audit.md, "Four destinations"). Calls carries a
+/** The five destinations, equal width. Calls carries a
  * count of new calls and, while a call or its debrief waits, the live ring. Other tabs get a dot
  * only for a move the player can make now; HQ never badges. */
 export function BottomNav() {
@@ -26,9 +27,8 @@ export function BottomNav() {
   const dot: Partial<Record<TopTab, string>> = {
     ...(affordable ? { build: 'An upgrade is ready to buy' } : {}),
   };
-  // A dot opens the segment it is about: an upgrade ready to buy opens Upgrades.
   const open = (id: TopTab) => {
-    if (id === 'build') nav.go(dot.build ? 'develop' : nav.buildSegment);
+    if (id === 'build') nav.go('develop');
     else nav.go(id);
   };
   return (
@@ -44,7 +44,7 @@ export function BottomNav() {
             onClick={() => open(t.id)}
           >
             <span className="navicon">
-              <Icon name={TAB_ICON[t.icon]} size={24} />
+              <Icon name={t.icon} size={24} />
               {/* The one motion signal: a call or its debrief waits and the player is looking elsewhere. */}
               {t.id === 'ops' && live && !on && <span className="live-dot" role="img" aria-label={g.activeRun?.status === 'debrief' ? 'A debrief is waiting' : 'A call is waiting on you'} />}
               {t.id === 'ops' && !live && fresh > 0 && !on && (

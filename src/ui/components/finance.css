@@ -45,3 +45,7 @@
 .finance-officer-list li:first-child { border-top: 0; }
 .finance-officer-list b { font-variant-numeric: tabular-nums; font-size: 14px; }
 .stat-cash-value { font-variant-numeric: tabular-nums; }
+
+/* The shell owns confirmed cash in flight. No particle participates in layout or hit testing. */
+.funding-flight-layer { position: absolute; inset: 0; z-index: 30; overflow: hidden; pointer-events: none; contain: layout style; }
+.cash-sprite { position: absolute; left: 0; top: 0; width: 44px; height: 36px; object-fit: contain; pointer-events: none; will-change: transform, opacity; filter: drop-shadow(0 3px 3px color-mix(in srgb, var(--ink-deep) 45%, transparent)); }

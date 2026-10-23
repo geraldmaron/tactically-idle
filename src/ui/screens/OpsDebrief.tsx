@@ -3,10 +3,10 @@ import { Icon } from '../icons';
 import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
 import type { DebriefResult } from '../../sim/types';
 import { getScenario } from '../../sim/scenario-registry';
-import { ActionBar, Button } from '../components/ui';
+import { ActionBar, Button, Card } from '../components/ui';
 import { FlowScreen } from '../components/chrome';
 import { callFlow } from './call-flow';
-import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
+import { DebriefConsequences, DebriefRewards, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
 import { PersonCasualtyList } from '../components/IncidentPeople';
@@ -20,12 +20,13 @@ import { runRoster } from '../../sim/squads';
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
-    <DebriefSummary debrief={d} />
-    <DebriefScore debrief={d} />
-    <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
+    <DebriefSummary debrief={d} includeRewards={false} />
+    <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} />
     <OfficerResults debrief={d} officers={officers} />
+    <Card className="result-department"><DebriefRewards debrief={d} /></Card>
+    <DebriefScore debrief={d} />
     <DebriefEvidence debrief={d} decisions={d.decisions ?? []} officers={officers} />
   </div>;
 }

@@ -53,7 +53,7 @@ export function trackRows(nodes: NodeOption[]): TrackRow[] {
   return rows;
 }
 
-export function DevelopScreen({ highlightedNode, highlightRequest }: { highlightedNode?: Id; highlightRequest?: number }) {
+export function DevelopScreen({ highlightedNode, highlightRequest, openHighlighted = false }: { highlightedNode?: Id; highlightRequest?: number; openHighlighted?: boolean }) {
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const [purchased, setPurchased] = useState<{ nodeId: Id; tier: number } | null>(null);
   const g = useGame();
@@ -74,15 +74,16 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
   useEffect(() => {
     if (!highlightedNode || !DEV_NODES[highlightedNode]) return;
     setBranch(DEV_NODES[highlightedNode].branch);
-    setSelectedId(null);
+    setSelectedId(openHighlighted ? highlightedNode : null);
     setPurchased(null);
+    if (openHighlighted) return;
     const frame = requestAnimationFrame(() => {
       const target = rootRef.current?.querySelector<HTMLElement>(`[data-development-node="${highlightedNode}"]`);
       target?.scrollIntoView({ block: 'nearest' });
       target?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [highlightedNode, highlightRequest]);
+  }, [highlightedNode, highlightRequest, openHighlighted]);
 
   const buyNext = async () => {
     if (!next?.targetTier || !next.quote.ok) { if (next) { setBranch(next.node.branch); open(next.node.id); } return; }
@@ -96,7 +97,7 @@ export function DevelopScreen({ highlightedNode, highlightRequest }: { highlight
     {next && <div className="dev-next" data-ready={next.quote.ok ? 'yes' : undefined}>
       <button type="button" className="dev-next-open" onClick={() => { setBranch(next.node.branch); open(next.node.id); }}
         aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}${next.milestone ? `, or ${milestoneText(next.milestone)}` : ''}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
-        <NodeGlyph option={next} size={44} />
+        <NodeGlyph option={next} size={88} />
         <span className="dev-next-main">
           <span className="sr-only">Next up, {BRANCH_META[next.node.branch].label}</span>
           <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
@@ -232,7 +233,7 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     className={`dev-node${o.currentTier > 0 ? ' dev-node-progress' : ''}${highlighted ? ' store-node-highlight' : ''}`}
     aria-label={label} onClick={onOpen}>
     <span className="dev-medal" data-medal={o.node.id}>
-      <NodeGlyph option={o} size={34} />
+      <NodeGlyph option={o} size={64} />
       {state === 'owned' && <span className="dev-medal-badge dev-badge-owned"><Icon name="check" size={11} strokeWidth={3} /></span>}
       {state === 'locked' && <span className="dev-medal-badge dev-badge-locked"><Icon name="lock" size={11} /></span>}
     </span>

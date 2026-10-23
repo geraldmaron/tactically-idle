@@ -2,6 +2,7 @@
 
 /* ------------------------------------------------------------ board */
 .cl-board { display: flex; flex-direction: column; gap: var(--sp3); }
+.cl-board-title { margin: 0; font: 700 var(--s28)/1.1 var(--f-title); }
 .cl-board-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); flex-wrap: wrap; padding-top: var(--sp2); }
 .cl-board-count { margin: 0; font: 600 var(--s18)/1.2 var(--f-ui); color: var(--t2); }
 .cl-board-meta { display: inline-flex; align-items: center; gap: var(--sp3); margin: 0; font-size: var(--s14); color: var(--t2); }
@@ -14,21 +15,23 @@
 .cl-card { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
 .cl-card-open:hover { border-color: var(--t3); }
 .cl-card-open:focus-within { outline: 2px solid var(--act); outline-offset: 2px; }
-.cl-card-scene { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: 104px; padding: var(--sp3); border-bottom: 1px solid var(--hair); }
+.cl-card-scene { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: 164px; padding: var(--sp4); border-bottom: 1px solid var(--hair); }
 .cl-card-scene.plate::after { background: linear-gradient(0deg, rgba(8, 13, 22, 0.6) 0%, rgba(8, 13, 22, 0.1) 70%); }
 .cl-card-type, .cl-card-left { display: inline-flex; align-items: center; gap: var(--sp2); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: rgba(8, 13, 22, 0.62); color: var(--t1); font-size: var(--s14); font-weight: 600; }
 .cl-card-type .ct-badge-label { font-size: var(--s14); }
 .cl-card-setting { display: inline-flex; align-items: center; gap: var(--sp1); text-transform: capitalize; }
 .cl-card-left { font-variant-numeric: tabular-nums; }
 .cl-card-newmark { position: absolute; top: var(--sp3); right: var(--sp3); padding: 2px var(--sp2); border-radius: var(--r1); background: rgba(8, 13, 22, 0.62); color: var(--act-text); font-size: var(--s12); font-weight: 700; }
-.cl-card-body { display: flex; flex-direction: column; gap: var(--sp2); padding: var(--sp3) var(--sp4) var(--sp3); }
+.cl-card-body { display: flex; flex-direction: column; gap: var(--sp3); padding: var(--sp4); }
 .cl-card-title { margin: 0; font: 600 var(--s22)/1.15 var(--f-title); color: var(--t1); overflow-wrap: anywhere; }
 .cl-card-button { all: unset; cursor: pointer; }
 /* The whole card is the tap target; the title's button stretches over it. */
 .cl-card-button::after { content: ''; position: absolute; inset: 0; z-index: 1; }
 .cl-card-button:focus-visible { outline: none; }
-.cl-card-place { margin: calc(-1 * var(--sp1)) 0 0; font-size: var(--s14); color: var(--t2); }
-.cl-card-hook { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin: 0; font-size: var(--s16); line-height: 1.45; color: var(--t1); }
+.cl-card-place-row { display: flex; align-items: center; gap: var(--sp2); min-width: 0; margin-top: calc(-1 * var(--sp1)); }
+.cl-card-place-mark { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
+.cl-card-place { min-width: 0; margin: 0; font-size: var(--s14); line-height: 1.35; color: var(--t2); }
+.cl-card-hook { margin: 0; font-size: var(--s16); line-height: 1.5; color: var(--t1); }
 .cl-card-warning { margin: 0; font-size: var(--s14); color: var(--t3); }
 .cl-card-facts { display: flex; flex-wrap: wrap; gap: var(--sp1); }
 .cl-card-fact { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--t2); }
@@ -44,6 +47,11 @@
 .cl-card-chevron { flex: 0 0 auto; color: var(--t3); }
 .cl-card .optile-bring { position: relative; z-index: 2; }
 .cl-warn { color: var(--warn-text); }
+@media (max-width: 374px) {
+  .cl-card-foot { flex-wrap: wrap; }
+  .cl-card-ready { flex: 1 1 100%; }
+  .cl-card-pay { margin-left: auto; }
+}
 
 /* ------------------------------------------------------------ a pushed flow (components/chrome.tsx FlowScreen) */
 .cl-flow-body { flex: 1 0 auto; gap: var(--sp5); padding-top: var(--sp4); }

@@ -3,18 +3,23 @@ import type { CertId, Id } from '../../sim/types';
 import { DEFAULT_EQUIPMENT_QUERY, type EquipmentQuery } from '../storefront/store-query';
 import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadView, type SquadViewAction } from './squad-view';
 
-/** Route ids. Four tabs show them (docs/ui-ux-audit.md, "Four destinations"): HQ, Calls (`ops`),
- * Officers (`squad`) and Build, whose two segments keep their own ids (`develop` is Upgrades,
- * `gear` the Armory), so `go('gear')` opens Build on the Armory. */
-export type Tab = 'hq' | 'squad' | 'ops' | 'develop' | 'gear';
-export type TopTab = 'hq' | 'ops' | 'squad' | 'build';
-export const topTab = (tab: Tab): TopTab => tab === 'develop' || tab === 'gear' ? 'build' : tab;
-/** The Officers segments. */
+/** Five player destinations. Older gear links remain valid and resolve to the Store. */
+export type Tab = 'hq' | 'squad' | 'ops' | 'develop' | 'store' | 'gear';
+export type TopTab = 'hq' | 'ops' | 'squad' | 'build' | 'store';
+export const topTab = (tab: Tab): TopTab => tab === 'develop' ? 'build' : tab === 'gear' ? 'store' : tab;
+export type TeamSection = 'swat' | 'patrol' | 'command';
+export type StoreSection = 'equipment' | 'boosts';
+export type PatrolFocus = { kind: 'hire' } | { kind: 'training'; employeeId: Id } | null;
+/** The SWAT sections within Team. */
 export type SquadSection = 'squads' | 'roster' | 'hire' | 'training';
 export interface TrainingFocus { officerId?: Id; certId?: CertId; courseId?: Id }
 export interface PlayerRoute {
   tab: Tab;
+  teamSection: TeamSection;
+  storeSection: StoreSection;
   squadSection: SquadSection;
+  patrolFocus: PatrolFocus;
+  patrolRequest: number;
   equipmentItemId: Id | null;
   /** The officer whose profile is open (officer-profile), over whatever tab is showing. */
   officerId: Id | null;
@@ -23,11 +28,9 @@ export interface PlayerRoute {
   developmentNode?: Id;
   developmentRequest: number;
   returnToItem: Id | null;
-  /** The Build segment the Build tab returns to. */
-  buildSegment: 'develop' | 'gear';
 }
 export const INITIAL_PLAYER_ROUTE: PlayerRoute = {
-  tab: 'hq', squadSection: 'squads', buildSegment: 'develop', equipmentItemId: null, officerId: null,
+  tab: 'hq', teamSection: 'swat', storeSection: 'equipment', squadSection: 'squads', patrolFocus: null, patrolRequest: 0, equipmentItemId: null, officerId: null,
   trainingFocus: {}, trainingRequest: 0, developmentRequest: 0, returnToItem: null,
 };
 export const PLAYER_NAV_HISTORY_KEY = 'tacticallyIdlePlayerRoute';
@@ -44,9 +47,9 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
   };
   const commit = (next: PlayerRoute, replace = false) => {
     if (closing) { pendingRoute = next; return; }
-    if (next.tab === 'develop' || next.tab === 'gear') next = { ...next, buildSegment: next.tab };
+    if (next.tab === 'gear') next = { ...next, tab: 'store', storeSection: 'equipment' };
     if (JSON.stringify(next) === JSON.stringify(route)) return;
-    const detailBack = !!next.equipmentItemId && !route.equipmentItemId && route.tab === 'gear';
+    const detailBack = !!next.equipmentItemId && !route.equipmentItemId && topTab(route.tab) === 'store';
     const officerBack = !!next.officerId && next.officerId !== route.officerId && !replace;
     const value = { ...history.state, [PLAYER_NAV_HISTORY_KEY]: { owner, route: next, detailBack, officerBack } };
     if (replace) history.replaceState(value, ''); else history.pushState(value, '');
@@ -58,10 +61,15 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
       history.replaceState({ ...history.state, [PLAYER_NAV_HISTORY_KEY]: { owner, route } }, '');
     },
     getRoute: () => route,
-    go(tab: Tab) { commit({ ...route, tab, equipmentItemId: null, officerId: null, returnToItem: null }); },
-    setSquadSection(squadSection: SquadSection) { commit({ ...route, tab: 'squad', squadSection, equipmentItemId: null, officerId: null, returnToItem: null }); },
+    go(tab: Tab) { commit({ ...route, tab, patrolFocus: null, equipmentItemId: null, officerId: null, developmentNode: undefined, returnToItem: null }); },
+    setTeamSection(teamSection: TeamSection) { commit({ ...route, tab: 'squad', teamSection, patrolFocus: null, equipmentItemId: null, officerId: null, returnToItem: null }); },
+    setStoreSection(storeSection: StoreSection) { commit({ ...route, tab: 'store', storeSection, equipmentItemId: null, officerId: null, returnToItem: null }); },
+    setSquadSection(squadSection: SquadSection) { commit({ ...route, tab: 'squad', teamSection: 'swat', squadSection, patrolFocus: null, equipmentItemId: null, officerId: null, returnToItem: null }); },
+    openPatrol(patrolFocus: Exclude<PatrolFocus, null> = { kind: 'hire' }) {
+      commit({ ...route, tab: 'squad', teamSection: 'patrol', patrolFocus, patrolRequest: route.patrolRequest + 1, equipmentItemId: null, officerId: null, returnToItem: null });
+    },
     openEquipment(request?: { itemId?: Id }) {
-      commit({ ...route, tab: 'gear', equipmentItemId: request?.itemId ?? null, officerId: null, returnToItem: null });
+      commit({ ...route, tab: 'store', storeSection: 'equipment', equipmentItemId: request?.itemId ?? null, officerId: null, returnToItem: null });
     },
     openOfficer(officerId: Id) { commit({ ...route, officerId }); },
     closeOfficer() {
@@ -75,7 +83,7 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
       else commit({ ...route, equipmentItemId: null }, true);
     },
     openTraining(focus: TrainingFocus = {}) {
-      commit({ ...route, tab: 'squad', squadSection: 'training', officerId: null, trainingFocus: focus, trainingRequest: route.trainingRequest + 1,
+      commit({ ...route, tab: 'squad', teamSection: 'swat', squadSection: 'training', officerId: null, trainingFocus: focus, trainingRequest: route.trainingRequest + 1,
         returnToItem: route.equipmentItemId ?? route.returnToItem, equipmentItemId: null });
     },
     openDevelopment(nodeId?: Id) {
@@ -84,13 +92,13 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
     },
     returnToEquipment() {
       if (!route.returnToItem) return;
-      commit({ ...route, tab: 'gear', equipmentItemId: route.returnToItem, returnToItem: null });
+      commit({ ...route, tab: 'store', storeSection: 'equipment', equipmentItemId: route.returnToItem, returnToItem: null });
     },
     onPop() {
       closing = false;
       const value = owned();
       if (!value) return;
-      route = value.route;
+      route = { ...INITIAL_PLAYER_ROUTE, ...value.route, tab: value.route.tab === 'gear' ? 'store' : value.route.tab };
       onRoute(route);
       if (pendingRoute) { const next = pendingRoute; pendingRoute = null; commit(next); }
     },
@@ -106,7 +114,10 @@ export function createPlayerNavigation(history: HistoryPort, owner: string, onRo
 export interface TrainingDraft { officerId: Id; search: string; request?: number }
 export interface NavApi extends PlayerRoute {
   go: (tab: Tab) => void;
+  setTeamSection: (section: TeamSection) => void;
+  setStoreSection: (section: StoreSection) => void;
   setSquadSection: (section: SquadSection) => void;
+  openPatrol: (focus?: Exclude<PatrolFocus, null>) => void;
   openEquipment: (request?: { itemId?: Id }) => void;
   closeEquipment: () => void;
   openOfficer: (officerId: Id) => void;
@@ -125,7 +136,7 @@ export interface NavApi extends PlayerRoute {
 }
 const noop = () => {};
 export const DEFAULT_NAV: NavApi = {
-  ...INITIAL_PLAYER_ROUTE, go: noop, setSquadSection: noop, openEquipment: noop,
+  ...INITIAL_PLAYER_ROUTE, go: noop, setTeamSection: noop, setStoreSection: noop, setSquadSection: noop, openPatrol: noop, openEquipment: noop,
   closeEquipment: noop, openOfficer: noop, closeOfficer: noop, openTraining: noop, openDevelopment: noop, returnToEquipment: noop,
   equipmentQuery: DEFAULT_EQUIPMENT_QUERY, setEquipmentQuery: noop, equipmentQuantities: {}, setEquipmentQuantity: noop,
   trainingDraft: { officerId: '', search: '' }, setTrainingDraft: noop,

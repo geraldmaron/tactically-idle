@@ -17,6 +17,7 @@ import { Button, Card, EmptyState, Row, Stepper } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Icon } from '../icons';
+import { Disclosure } from '../components/Disclosure';
 import { GEAR_CATEGORY_ICON, GEAR_SOURCE_ICON } from '../icons/kit';
 import { money } from '../format';
 import { hasNodeEffect } from './helpers';
@@ -25,15 +26,15 @@ import './gear-visual.css';
 // The Armory (gear-armory): one list of every item, owned or not. Tapping an item opens one sheet
 // that buys it, shows its stock and units, and sets its restock rule. Standing tools (restock rules,
 // presets, the Quartermaster) open from the header.
-export function GearScreen() {
+export function GearScreen({ compactTools = false }: { compactTools?: boolean }) {
   const g = useGame();
   const opts = storeOptions(g);
   const [tool, setTool] = useState<'rules' | 'presets' | 'reference' | null>(null);
   const nav = useNav();
   return (
-    <div className="page gear-page">
-      <ArmoryHeader onTool={setTool} />
-      <EquipmentStore active />
+    <div className={`page gear-page${compactTools ? ' gear-page-compact' : ''}`}>
+      {compactTools ? <Disclosure name="armory-tools" summary="Armory tools" icon="gear"><ArmoryHeader onTool={setTool} /></Disclosure> : <ArmoryHeader onTool={setTool} />}
+      <EquipmentStore active compactControls={compactTools} />
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
         <RestockSection onOpen={(itemId) => { setTool(null); nav.openEquipment({ itemId }); }} />
       </Sheet>

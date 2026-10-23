@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../sim/department';
 import { COURSES } from '../content/courses';
 import { ITEMS } from '../content/items';
-import { createPlayerNavigation, DEFAULT_NAV, NavContext, PLAYER_NAV_HISTORY_KEY, type NavApi, type PlayerRoute } from './components/nav';
+import { createPlayerNavigation, DEFAULT_NAV, NavContext, PLAYER_NAV_HISTORY_KEY, topTab, type NavApi, type PlayerRoute } from './components/nav';
 import { BottomNav } from './components/BottomNav';
 import { GearScreen } from './screens/Gear';
 import { ManagerSheet } from './components/CommandStaff';
@@ -15,6 +15,9 @@ import { EquipmentStore } from './storefront/EquipmentStore';
 import { Storefront } from './storefront/Storefront';
 import { trainingDraftForRequest } from './storefront/TrainingStore';
 import { DEFAULT_EQUIPMENT_QUERY } from './storefront/store-query';
+import { BuildScreen } from './screens/Build';
+import { StoreScreen } from './screens/Store';
+import { CALL_FLOW_HISTORY_KEY, createCallFlow } from './screens/call-flow';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW, 1);
@@ -30,13 +33,14 @@ function historyFixture() {
   let current: PlayerRoute = { ...DEFAULT_NAV };
   const history = {
     get state() { return entries[position]; },
+    get length() { return entries.length; },
     pushState(data: Record<string, unknown>) { entries.splice(position + 1); entries.push(data); position++; },
     replaceState(data: Record<string, unknown>) { entries[position] = data; },
     back() { backCalls++; },
   };
   const nav = createPlayerNavigation(history, 'campaign-1', (route) => { current = route; });
   nav.initialize();
-  return { nav, entries, route: () => current, backCalls: () => backCalls,
+  return { nav, history, entries, route: () => current, backCalls: () => backCalls,
     back() { position--; nav.onPop(); }, forward() { position++; nav.onPop(); },
     state: () => history.state,
   };
@@ -46,19 +50,46 @@ function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
 }
 
 describe('canonical player navigation', () => {
-  it('keeps exactly HQ, Calls, Officers and Build as top-level destinations', () => {
+  it('keeps exactly HQ, Calls, Team, Build and Store as top-level destinations', () => {
     const html = markup(createElement(BottomNav));
-    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Officers', 'Build']);
+    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Team', 'Build', 'Store']);
   });
 
-  it('opens Build on the segment an old route id names, and the Build tab returns to the last one', () => {
+  it('routes legacy gear links to Store while Build keeps department development', () => {
     const f = historyFixture();
     f.nav.go('gear');
-    expect(f.route()).toMatchObject({ tab: 'gear', buildSegment: 'gear' });
+    expect(f.route()).toMatchObject({ tab: 'store' });
+    expect(topTab('gear')).toBe('store');
+    expect(topTab('store')).toBe('store');
     f.nav.go('hq');
-    expect(f.route()).toMatchObject({ tab: 'hq', buildSegment: 'gear' });
+    expect(f.route()).toMatchObject({ tab: 'hq' });
     f.nav.openDevelopment('patrol_1');
-    expect(f.route()).toMatchObject({ tab: 'develop', buildSegment: 'develop', developmentNode: 'patrol_1' });
+    expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'patrol_1' });
+    expect(topTab(f.route().tab)).toBe('build');
+  });
+
+  it('keeps Team sections and SWAT drafts separate and directs training requests into SWAT', () => {
+    const f = historyFixture();
+    f.nav.setSquadSection('hire');
+    f.nav.setTeamSection('command');
+    expect(f.route()).toMatchObject({ tab: 'squad', teamSection: 'command', squadSection: 'hire' });
+    f.nav.openPatrol({ kind: 'training', employeeId: 'patrol-a' });
+    expect(f.route()).toMatchObject({ teamSection: 'patrol', patrolFocus: { kind: 'training', employeeId: 'patrol-a' }, patrolRequest: 1 });
+    f.nav.openPatrol();
+    expect(f.route()).toMatchObject({ teamSection: 'patrol', patrolFocus: { kind: 'hire' }, patrolRequest: 2 });
+    f.nav.go('hq'); f.nav.go('squad');
+    expect(f.route()).toMatchObject({ teamSection: 'patrol', patrolFocus: null });
+    f.nav.openTraining({ certId: 'drone_operator' });
+    expect(f.route()).toMatchObject({ tab: 'squad', teamSection: 'swat', squadSection: 'training' });
+  });
+
+  it('keeps Store selection for ordinary visits and sends item links back to Equipment', () => {
+    const f = historyFixture();
+    f.nav.setStoreSection('boosts');
+    f.nav.go('hq'); f.nav.go('store');
+    expect(f.route()).toMatchObject({ tab: 'store', storeSection: 'boosts' });
+    f.nav.openEquipment({ itemId: 'trauma_kit' });
+    expect(f.route()).toMatchObject({ tab: 'store', storeSection: 'equipment', equipmentItemId: 'trauma_kit' });
   });
 
   it('routes officer, certification and course requests into Squad Training', () => {
@@ -77,7 +108,7 @@ describe('canonical player navigation', () => {
     f.nav.openDevelopment('intel_drone');
     expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
     f.nav.returnToEquipment();
-    expect(f.route()).toMatchObject({ tab: 'gear', equipmentItemId: 'camera_drone', returnToItem: null });
+    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone', returnToItem: null });
   });
 
   it('browser Back and Forward recover the item and prerequisite destination', () => {
@@ -86,7 +117,7 @@ describe('canonical player navigation', () => {
     f.nav.openEquipment({ itemId: 'camera_drone' });
     f.nav.openDevelopment('intel_drone');
     f.back();
-    expect(f.route()).toMatchObject({ tab: 'gear', equipmentItemId: 'camera_drone' });
+    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone' });
     f.forward();
     expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
   });
@@ -121,7 +152,23 @@ describe('canonical player navigation', () => {
     f.nav.openEquipment({ itemId: 'trauma_kit' });
     f.nav.closeEquipment();
     expect(f.backCalls()).toBe(0);
-    expect(f.route()).toMatchObject({ tab: 'gear', equipmentItemId: null });
+    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: null });
+  });
+
+  it('preserves call preparation and its selected squad through Store and prerequisite detours', () => {
+    const f = historyFixture();
+    const flow = createCallFlow(f.history);
+    flow.openCall('call_1'); flow.goStep('deploy');
+    flow.field('call_1', flow.draft('call_1'), 'chosen')[1](['A']);
+    f.nav.openEquipment({ itemId: 'camera_drone' });
+    f.nav.openTraining({ certId: 'drone_operator' });
+    f.nav.openDevelopment('intel_drone');
+    f.nav.returnToEquipment();
+    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone' });
+    expect(f.history.state[CALL_FLOW_HISTORY_KEY]).toMatchObject({ open: { scenarioId: 'call_1', step: 'deploy' } });
+    f.nav.go('ops');
+    expect(flow.getSnapshot().open).toEqual({ scenarioId: 'call_1', step: 'deploy' });
+    expect(flow.draft('call_1').chosen).toEqual(['A']);
   });
 
   it('explicit main navigation clears a stale return intent and preserves unrelated history', () => {
@@ -135,9 +182,41 @@ describe('canonical player navigation', () => {
     expect(f.state()).toEqual({ unrelated: 'keep' });
     expect(f.state()[PLAYER_NAV_HISTORY_KEY]).toBeUndefined();
   });
+
+  it('does not reopen an earlier upgrade when Build is revisited through main navigation', () => {
+    const f = historyFixture();
+    f.nav.openDevelopment('intel_drone');
+    f.nav.go('store');
+    f.nav.go('develop');
+    expect(f.route().developmentNode).toBeUndefined();
+  });
 });
 
 describe('rendered player destinations and persistent drafts', () => {
+  it('keeps equipment in Store and development in Build', () => {
+    const store = markup(createElement(StoreScreen), { tab: 'store' });
+    expect(store).toContain('Store</h1>');
+    expect(store).toContain('Search equipment');
+    expect(store).not.toContain('Development branches');
+    const build = markup(createElement(BuildScreen), { tab: 'develop' });
+    expect(build).toContain('Development branches');
+    expect(build).not.toContain('Search equipment');
+    expect(build).not.toContain('Build sections');
+    const boosts = markup(createElement(StoreScreen), { tab: 'store', storeSection: 'boosts' });
+    expect(boosts).toContain('patrol-boosts');
+    expect(boosts).not.toContain('Search equipment');
+  });
+
+  it.each([{ level: 1, capacity: 6, next: '8 positions at department level 3' }, { level: 3, capacity: 8, next: '12 positions at department level 6' }, { level: 6, capacity: 12, next: 'All 12 patrol positions authorized' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
+    state.department.level = level;
+    const html = markup(createElement(BuildScreen), { tab: 'develop' });
+    expect(html).toContain(`/ ${capacity} patrol positions filled`);
+    expect(html).toContain(`Department level ${level}`);
+    expect(html).toContain(next);
+    const capacitySection = html.match(/<section class="build-capacity"[\s\S]*?<\/section>/)?.[0];
+    expect(capacitySection).toBeDefined();
+    expect(capacitySection).not.toContain('<button');
+  });
   it('shows one Armory list with owned stock on its tiles and the standing tools in the header (gear-armory)', () => {
     const html = markup(createElement(GearScreen));
     expect(html).not.toContain('aria-label="Gear sections"');
@@ -189,11 +268,11 @@ describe('rendered player destinations and persistent drafts', () => {
     for (const old of ['Store sections', 'Search courses', 'Get Points', 'Test DP', 'Development branches']) expect(html).not.toContain(old);
   });
 
-  it('renders Training under Officers and removes the duplicated officer course catalog', () => {
+  it('renders Training in SWAT and removes the duplicated officer course catalog', () => {
     const id = Object.keys(state.officers)[0];
     const officer = state.officers[id];
     const squad = markup(createElement(SquadScreen), { tab: 'squad', squadSection: 'training', trainingDraft: { officerId: id, search: '' } });
-    expect(squad).toContain('aria-label="Officers sections"');
+    expect(squad).toContain('aria-label="SWAT sections"');
     expect(squad).toContain(`data-training-officer-id="${id}"`);
     expect(squad).toContain('Search courses');
     expect(squad).toContain('Choose officer');
