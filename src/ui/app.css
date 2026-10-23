@@ -3214,17 +3214,6 @@ button.ocard {
   font-size: var(--s12);
   line-height: 1;
 }
-.tier {
-  display: inline-flex;
-  flex-direction: row;
-  gap: 1px;
-}
-.tier-on {
-  color: var(--t1);
-}
-.tier-off {
-  color: var(--line-strong);
-}
 .timeleft {
   display: inline-flex;
   align-items: center;
@@ -3488,25 +3477,11 @@ button.ocard {
 .save-warning span { flex: 1; min-width: 0; }
 .save-warning button { flex: 0 0 auto; min-height: var(--touch); min-width: var(--touch); padding: var(--sp1) var(--sp3); border: 1px solid var(--danger); border-radius: 6px; background: transparent; color: var(--white); font: 600 13px var(--font-cond); letter-spacing: .04em; cursor: pointer; }
 .save-status { display: flex; align-items: center; gap: var(--sp3); margin: 0 0 var(--sp3); padding: var(--sp3) var(--sp3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--ink-1); }
-.save-status > span { display: grid; flex: 1; min-width: 0; }
-.save-status strong { font-size: var(--s14); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.save-status small { font-size: var(--s12); color: var(--text-dim); }
-.save-status-warning small { color: var(--warn); }
 .save-manager .sheet-body { padding-top: var(--sp2); }
 .save-explainer { margin: 0 0 var(--sp3); font-size: var(--s14); line-height: 1.45; }
 .save-actions { display: flex; flex-wrap: wrap; gap: var(--sp2); }
 .save-primary-actions { margin-bottom: var(--sp3); }
 .save-slots { padding: 0; margin: var(--sp3) 0; list-style: none; display: grid; gap: var(--sp3); }
-.save-slot { border: 1px solid var(--line); border-radius: 8px; padding: var(--sp3); background: color-mix(in srgb, var(--black) 13%, transparent); }
-.save-slot-active { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
-.save-slot-head { display: flex; align-items: center; gap: var(--sp2); margin-bottom: var(--sp2); }
-.save-slot-head strong { min-width: 0; overflow-wrap: anywhere; flex: 1; font-size: 15px; }
-.save-slot-number { color: var(--t2); font: 500 17px var(--font-display); }
-.save-slot-summary { margin: 0 0 var(--sp1); font-size: var(--s12); line-height: 1.4; }
-.save-slot-time { margin: 0 0 var(--sp3); font-size: var(--s12); }
-.save-alert, .save-success { padding: var(--sp2); margin: 0 0 var(--sp3); border-radius: 6px; font-size: var(--s14); line-height: 1.45; }
-.save-alert { border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn-text); background: color-mix(in srgb, var(--warn) 8%, transparent); }
-.save-success { color: var(--mint); background: color-mix(in srgb, var(--good) 8%, transparent); }
 .save-edit { display: grid; gap: var(--sp3); padding-bottom: var(--sp2); }
 .save-edit p { margin: 0; line-height: 1.5; }
 .save-edit label { display: grid; gap: var(--sp2); font-size: var(--s14); }
@@ -3521,7 +3496,7 @@ button.ocard {
 
 /* Intrinsic widths must not force cards, forms, or sheets outside the game frame. */
 .section, .stack, .stack-sm, .gear,
-.save-controls, .save-edit, .save-slot, .sheet-head, .sheet-foot, .toggle-text,
+.save-controls, .save-edit, .sheet-head, .sheet-foot, .toggle-text,
 .rule-field, .unit, .career-mini, .adetail {
   min-width: 0;
 }
@@ -3529,7 +3504,7 @@ button.ocard {
   max-width: 100%;
 }
 .section-head > *, .note > span, .kv > *, .fact-line > span, .realrow-line > span,
-.career-effects li > *, .cgroup li > span, .report-net > *, .save-slot-head > * {
+.career-effects li > *, .cgroup li > span, .report-net > * {
   min-width: 0;
 }
 .report-net {
@@ -3539,7 +3514,7 @@ button.ocard {
 .save-edit .save-permanent {
   min-height: var(--touch);
 }
-.save-slot-head .chip, .opcard-icon {
+.opcard-icon {
   flex-shrink: 0;
 }
 
