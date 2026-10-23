@@ -22,7 +22,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { ActionBar, Button, Chip, Stepper, SubHead } from '../components/ui';
+import { ActionBar, Button, Stepper, SubHead } from '../components/ui';
 import { Face } from '../components/Face';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -333,7 +333,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
               disabled={!on && maxSquads > 1 && chosen.length >= maxSquads} onClick={() => toggleSquad(s.id)}>
               <span className="squad-badge">{s.id}</span>
               <span className="cl-squad-main">
-                <strong>{s.name}{s.id === fitId && <Chip tone="good" icon="star">Best fit</Chip>}</strong>
+                <strong>{s.name}{s.id === fitId && <span className="cl-squad-fit"><Icon name="star" size={16} />Best fit</span>}</strong>
                 <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
               </span>
               <span className="cl-faces" aria-hidden="true">

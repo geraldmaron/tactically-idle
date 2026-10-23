@@ -18,6 +18,9 @@
 .sheet.sheet-nonmodal {
   --sheet-bottom: max(var(--sheet-visible-bottom, 0px), calc(var(--nav-h) + env(safe-area-inset-bottom)));
 }
+/* The live call's review sheet keeps its commit button clear of the home indicator even when it
+   sits over the live screen, where no tab bar below takes the inset. */
+.sheet.operation-action-sheet .sheet-foot { padding-bottom: max(var(--sp3), env(safe-area-inset-bottom)); }
 /* A keyboard or zoom can leave less room than a pinned header + footer.
    In that case the entire sheet scrolls, keeping every action reachable. */
 .sheet[data-viewport-constrained] {

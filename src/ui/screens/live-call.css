@@ -65,7 +65,7 @@
   .live-wash i:last-child { transform: translateX(70%); }
 }
 .live .live-status { display: inline-flex; align-items: center; gap: var(--sp2); }
-.live .live-status .hud-pill { padding: 0; border: 0; background: none; font-size: var(--s14); font-variant-numeric: tabular-nums; }
+.live .live-status .hud-pill { min-height: 0; padding: var(--sp1) 0; border: 0; background: none; font-size: var(--s14); font-variant-numeric: tabular-nums; }
 .live .live-status .hud-pill:first-child { min-width: 7ch; }
 .live .steps { padding: 2px 2px 0; }
 .live .step { gap: 2px; }
@@ -209,7 +209,7 @@
 @media (max-height: 700px) {
   .live .live-strip { gap: 2px; padding-bottom: 4px; }
   .live .live-strip .step-label { display: none; }
-  .live .threat-pill { min-height: 36px; padding: 4px 10px 6px; font-size: 13.5px; }
+  .live .threat-pill { min-height: 36px; padding: 6px 10px; font-size: 13.5px; }
   .live .threat-pill-min { font-size: 18px; }
   .live .threat-pill-bar, .live .fill-gauge-bar { height: 9px; }
   .live .fill-gauge { min-height: 36px; padding: 4px 10px 6px; }

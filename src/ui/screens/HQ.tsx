@@ -196,7 +196,7 @@ function SwatReadiness({ g, overview }: { g: GameState; overview: Overview }) {
   return (
     <Section id="hq-duties-h" title="SWAT readiness" icon="people" count={`${overview.deployable} of ${overview.totalOfficers} ready`}
       action={<Button size="sm" variant="quiet" onClick={() => nav.setTeamSection('swat')}>Team</Button>}>
-      {summary.length > 0 && <div className="hq-summary">{summary.map((s) => <button key={s.text} type="button" className="hq-summary-item" onClick={s.onOpen}><Chip tone={s.tone} icon={s.icon}>{s.text}</Chip></button>)}</div>}
+      {summary.length > 0 && <div className="hq-summary">{summary.map((s) => <button key={s.text} type="button" className={`hq-summary-item hq-summary-${s.tone}`} onClick={s.onOpen}><Icon name={s.icon} size={16} />{s.text}</button>)}</div>}
       <div id="hq-duties" className="hq-duties">
       {g.squads.length === 0 ? (
         <EmptyState compact icon="people" title="No squads yet">
@@ -216,8 +216,8 @@ function SwatReadiness({ g, overview }: { g: GameState; overview: Overview }) {
             <button type="button" className="hq-squad-open" onClick={() => nav.setSquadSection('squads')} aria-label={`${s.name}: ${deployed ? 'on a call' : `${readiness.ready} of ${members.length} ready`}. Open the squad`}>
               <span className="hq-faces hq-faces-md" aria-hidden="true">{members.map((officer) => <Face key={officer.id} size="md" kind="officer" officer={officer} />)}</span>
               <span className="hq-squad-name"><strong>{s.name}</strong><Icon name="chevronRight" size={16} /></span>
-              {deployed ? <Chip tone="neutral" icon="bell">On a call</Chip> : <Chip tone={allReady ? 'good' : 'warn'} icon={allReady ? 'check' : 'warning'}>{`${readiness.ready} of ${members.length} ready`}</Chip>}
             </button>
+            <div className="hq-squad-state">{deployed ? <Chip tone="neutral" icon="bell">On a call</Chip> : <Chip tone={allReady ? 'good' : 'warn'} icon={allReady ? 'check' : 'warning'}>{`${readiness.ready} of ${members.length} ready`}</Chip>}</div>
             <p className="hq-squad-note">
               {strained.length > 0
                 ? <span className="hq-squad-strain"><Icon name="warning" size={16} />{strained.map((o) => `${o.surname}: ${STRESS_LABEL[stressBand(o.stress)].toLowerCase()}`).join(', ')}</span>
@@ -314,7 +314,7 @@ function CommandStaffStrip({ g }: { g: GameState }) {
     : [`${hired.length - off} on duty`, off ? `${off} off duty` : '', vacant ? `${vacant.profile.title} vacant` : ''].filter(Boolean).join(' · ');
   return <Section title="Command staff" icon="leadership" count={`${hired.length} of ${views.length} hired`}>
     <Card className="hq-staff" onClick={() => nav.setTeamSection('command')} label={`Command staff: ${hired.length} of ${views.length} hired. ${line}. Open command`}>
-      <span className="hq-staff-faces" aria-hidden="true">{views.map((v) => <span key={v.profile.id} className={`hq-staff-face${v.hired ? (v.on ? '' : ' hq-staff-face-off') : ' hq-staff-face-empty'}`}><ManagerPortrait person={v.holder?.person ?? null} size={40} /></span>)}</span>
+      <span className="hq-staff-faces" aria-hidden="true">{views.map((v) => <span key={v.profile.id} className={`hq-staff-face${v.hired ? (v.on ? '' : ' hq-staff-face-off') : ' hq-staff-face-empty'}`}>{v.holder ? <ManagerPortrait person={v.holder.person} size={40} /> : <span className="hq-staff-seat"><Icon name={v.open ? 'plus' : 'lock'} size={16} /></span>}</span>)}</span>
       <span className="hq-staff-line">{line}</span>
     </Card>
   </Section>;

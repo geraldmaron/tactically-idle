@@ -47,7 +47,9 @@
 .hq-faces-md > * + * { margin-left: calc(-1 * var(--sp4)); }
 
 .hq-summary { display: flex; flex-wrap: wrap; gap: var(--sp1); margin-bottom: var(--sp2); }
-.hq-summary-item { display: inline-flex; align-items: center; min-height: var(--touch); padding: 0; border: 0; background: none; cursor: pointer; }
+.hq-summary-item { display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-1); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
+.hq-summary-warn { border-color: color-mix(in srgb, var(--warn) 55%, transparent); color: var(--warn-text); }
+.hq-summary-harm { border-color: color-mix(in srgb, var(--harm) 55%, transparent); color: var(--harm-text); }
 .hq-summary-item:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
 .hq-duties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
 .hq-duties > .empty { grid-column: 1 / -1; }
@@ -56,6 +58,7 @@
 .hq-squad-open:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
 .hq-squad-name { display: flex; align-items: center; justify-content: space-between; width: 100%; font: 600 var(--s18)/1.2 var(--f-title); color: var(--t1); }
 .hq-squad-name .icon { color: var(--t3); }
+.hq-squad-state { display: flex; }
 .hq-squad-note { display: grid; gap: var(--sp1); margin: 0; font-size: var(--s14); color: var(--t2); }
 .hq-squad-note > span { display: flex; align-items: flex-start; gap: var(--sp1); }
 .hq-squad-note .icon { flex: none; margin-top: var(--sp1); }
@@ -99,7 +102,7 @@
 .hq-staff-faces { display: flex; gap: var(--sp2); }
 .hq-staff-face { display: block; border-radius: 50%; overflow: hidden; }
 .hq-staff-face-off { opacity: 0.6; }
-.hq-staff-face-empty { opacity: 0.6; }
+.hq-staff-seat { display: grid; place-items: center; width: 40px; height: 40px; border: 1px dashed var(--hair-2); border-radius: 50%; color: var(--t3); }
 .hq-staff-line { font-size: var(--s14); color: var(--t2); }
 
 /* The narrowest phones: the duty switch keeps its icons and drops the words; the call's pay chips give way. */

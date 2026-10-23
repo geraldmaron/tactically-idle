@@ -1002,6 +1002,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding-block: var(--sp1);
 }
 .bp-tab-dot {
   width: 5px;
