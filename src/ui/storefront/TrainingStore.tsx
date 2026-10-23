@@ -9,7 +9,7 @@ import { CERT_ICON, RATING_META, ROLE_META } from '../components/labels';
 import { StressDisplay } from '../components/StressDisplay';
 import { Icon, type IconName } from '../icons';
 import { useToast } from '../components/toast';
-import { Button, Chip, EmptyState, RatingBars } from '../components/ui';
+import { Button, Card, Chip, EmptyState, RatingBars, Row } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
 import { duration, moneyFull as money } from '../format';
@@ -146,34 +146,31 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     </div>
     {search && <Button size="sm" variant="ghost" onClick={() => setSearch('')}>Show all training</Button>}
     {!officers.length && <EmptyState spot="noCandidates" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
-    <div className="course-grid">{options.map(({ course, available, reason }) => {
+    <Card className="course-card"><div className="course-grid" data-ui-list>{options.map(({ course, available, reason }) => {
       const locked = !!course.requiresNode && !game.department.unlockedNodes.includes(course.requiresNode);
       const rating = course.grants.rating;
       const cert = course.grants.cert;
       const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
       return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
-        <div className="course-tile-top">
-          <CourseEmblem course={course} locked={locked} />
-          <p className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></p>
+        <Row lead={<CourseEmblem course={course} locked={locked} size={40} />} title={course.name}
+          detail={<span className="course-tile-meta"><span><Icon name="clock" size={14} />{course.hours}h</span><span><Icon name="cash" size={14} />{money(fee(course.cost))}</span></span>}
+          trail={<>{locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`} title="View development program" />}
+            <Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button></>} />
+        <div className="course-tile-more">
+          <div className="course-tile-gains">
+            {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
+            <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
+          </div>
+          {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
+          {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
+          {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}
+          {/* A full department is shown once by the places pips, not repeated on every tile. */}
+          {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
+          {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
+          {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
         </div>
-        <h3>{course.name}</h3>
-        <div className="course-tile-gains">
-          {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
-          <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
-        </div>
-        {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
-        {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
-        {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}
-        {/* A full department is shown once by the places pips, not repeated on every tile. */}
-        {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
-        {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
-        <div className="course-tile-foot">
-          {locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`} title="View development program" />}
-          <Button variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>
-        </div>
-        {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
       </article>;
-    })}</div>
+    })}</div></Card>
     {!options.length && <EmptyState spot="nothingInStock" title="No courses match">Clear the course search to see all training.</EmptyState>}
     <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
       {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} paid={fee(selectedCourse.cost)} onDone={closeChooser} /> : reviewing ? <>
@@ -241,10 +238,10 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
 }
 
 /** Course art when the emblem set lists it as ready; otherwise the certificate or skill icon. */
-export function CourseEmblem({ course, locked = false }: { course: Course; locked?: boolean }) {
+export function CourseEmblem({ course, locked = false, size = 64 }: { course: Course; locked?: boolean; size?: number }) {
   const icon: IconName = course.grants.cert ? CERT_ICON[course.grants.cert] : RATING_META.find((meta) => meta.key === course.grants.rating?.key)?.icon ?? 'mortarboard';
   return <span className={`node-medallion course-emblem${locked ? ' node-medallion-locked' : ''}`} aria-hidden="true">
-    <EmblemArt id={course.id} icon={icon} size={64} iconSize={36} />
+    <EmblemArt id={course.id} icon={icon} size={size} iconSize={Math.round(size * 0.56)} />
     {locked && <span className="node-medallion-badge node-badge-locked"><Icon name="lock" size={16} /></span>}
   </span>;
 }

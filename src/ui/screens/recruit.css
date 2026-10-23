@@ -52,3 +52,23 @@
 .cand-row .cand-meta { font-size: var(--s14); color: var(--t3); }
 .cand-row.cand-hired .cand-meta { color: var(--good-text, var(--good)); }
 .contract-who { display: grid; gap: var(--sp3); }
+
+/* Candidates as one Card of Rows: face lead, name, one detail line, Review hire; signing and shortlist under it. */
+.cand-card { padding: 0; overflow: hidden; }
+.cand-card .cand-list { display: flex; flex-direction: column; gap: 0; }
+.cand.cand-row { gap: var(--sp1); padding: 0 0 var(--sp2); border: 0; border-radius: 0; background: none; border-top: 1px solid var(--hair); }
+.recruit-candidate-slot:first-child .cand.cand-row { border-top: 0; }
+.cand.cand-row.cand-hired { border-color: var(--hair); background: color-mix(in srgb, var(--mint) 8%, transparent); }
+.cand-row .ui-row { padding-inline: var(--sp3); }
+.cand-face { display: block; flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; }
+.cand-face > [data-portrait] { height: 40px !important; }
+.cand-face-lg { width: 72px; height: 72px; border-radius: var(--r2); }
+.cand-face-lg > [data-portrait] { height: 72px !important; }
+.cand-cert { display: inline-flex; vertical-align: -2px; margin-left: var(--sp2); color: var(--good-text, var(--good)); }
+.cand-row .cand-foot { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--sp3) 0 calc(var(--sp3) + 40px + var(--sp3)); border-top: 0; }
+.cand-row .cand-shortlist { position: static; }
+.contract-head { display: flex; align-items: center; gap: var(--sp3); }
+.contract-source { display: inline-flex; align-items: center; gap: var(--sp1); }
+.cand-row .ui-row { border-bottom: 0; min-height: 0; }
+.cand-row .cand-foot { min-height: 0; padding-top: 0; margin-top: calc(var(--sp1) * -1); }
+.cand-row .cand-shortlist { min-height: 36px; }

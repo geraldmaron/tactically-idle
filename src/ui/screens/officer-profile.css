@@ -31,4 +31,15 @@
 /* One readiness line under the name (docs/ui-ux-audit.md, "say it once"). */
 .profile-ready-line { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; font-size: var(--s14); line-height: 1.35; font-weight: 500; }
 .profile-ready-line .icon { flex: none; margin-top: 1px; }
-.profile-portrait img, .profile-portrait canvas { width: 124px; height: 136px; object-fit: cover; }
+.profile-portrait img, .profile-portrait canvas { width: 72px; height: 80px; object-fit: cover; }
+
+/* Compact sheet: a 72px portrait, a one-line value strip, a slim rank card (rank ring is TODO(ring)). */
+.profile { gap: var(--sp3); }
+.profile-hero { gap: var(--sp3); }
+.profile-value > div { padding: var(--sp1) var(--sp3); }
+.profile-value dd, .profile-record dd { font-size: var(--s16); }
+.profile .persona-note { margin: 0; font-size: var(--s14); }
+.profile .officer-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp3); padding: var(--sp3); }
+.profile .xp-ring { width: 44px; height: 44px; }
+.profile .xp-ring-core { width: 36px; height: 36px; }
+.profile .officer-progress-note { font-size: var(--s12); }

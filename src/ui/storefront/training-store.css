@@ -91,3 +91,20 @@
 .training-course-receipt .icon { flex: none; margin-top: var(--sp1); }
 @container game (max-width: 399px) { .training-officer-card .rating-bars { grid-template-columns: minmax(0, 1fr); } }
 @container game (max-width: 359px) { .course-tile { padding: var(--sp3); } .training-person { column-gap: var(--sp2); } .training-officer-card { padding: var(--sp3); } }
+
+/* Courses as one Card of Rows: emblem lead, name, hours and price, Choose officer; gains and notes under it. */
+.course-card { padding: 0; overflow: hidden; }
+.course-grid { display: flex; flex-direction: column; gap: 0; }
+.course-grid > .course-tile { gap: var(--sp2); padding: 0 0 var(--sp3); border: 0; border-top: 1px solid var(--hair); border-radius: 0; background: none; box-shadow: none; }
+.course-grid > .course-tile:first-child { border-top: 0; }
+.course-grid > .course-tile-ready { box-shadow: inset 3px 0 0 var(--mint); }
+.course-grid > .course-tile-locked { opacity: .85; }
+.course-tile .ui-row { padding-inline: var(--sp3); border-bottom: 0; }
+.course-tile .ui-row-trail { display: flex; align-items: center; gap: var(--sp1); }
+.course-tile .ui-row-title { overflow-wrap: normal; }
+.course-tile .course-tile-meta { display: flex; flex-wrap: wrap; gap: var(--sp3); }
+.course-tile .course-tile-meta span:last-child { color: var(--amber); font: 700 var(--s14)/1.2 var(--f-ui); }
+.course-tile .course-emblem { width: 40px; height: 40px; }
+.course-tile-more { display: grid; gap: var(--sp2); padding-inline: var(--sp3); }
+.course-tile-more:empty { display: none; }
+.store-training .training-intro { font-size: var(--s14); }
