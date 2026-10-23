@@ -99,7 +99,7 @@
 .cl-plan-card .cl-kit { padding: var(--sp2) 0; }
 .cl-muted { margin: 0; font-size: var(--s14); color: var(--t3); }
 .cl-kit { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
-.cl-kit-chip { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 32px; padding: 0 var(--sp3); border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
+.cl-kit-chip { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 36px; padding: var(--sp2) var(--sp3); white-space: nowrap; line-height: 1.3; border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
 .cl-kit-short { background: transparent; color: var(--t2); font-weight: 500; border-style: dashed; }
 .cl-kit-warn { border-color: var(--warn); color: var(--warn-text); }
 .cl-kit-workspace .prepsquad-head { display: flex; flex-wrap: wrap; gap: var(--sp2); }
