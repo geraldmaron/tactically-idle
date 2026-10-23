@@ -58,8 +58,8 @@
 .hq-clock-warn .hq-clock-ring { --tone: var(--warn); color: var(--warn-text); }
 .hq-clock-harm .hq-clock-ring { --tone: var(--harm); color: var(--harm); }
 .hq-clock-text { display: grid; gap: 0; min-width: 0; }
-.hq-clock-text strong { font: 600 var(--s14)/1.2 var(--f-ui); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.hq-clock-text span { font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hq-clock-text strong { font: 600 var(--s14)/1.2 var(--f-ui); overflow-wrap: anywhere; }
+.hq-clock-text span { font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
 .hq-clock-warn .hq-clock-text span { color: var(--warn-text); }
 .hq-clock-harm .hq-clock-text span { color: var(--harm-text); }
 .hq-faces { display: inline-flex; }
@@ -106,6 +106,9 @@
 .hq-seat { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border: 1px dashed var(--hair-2); border-radius: 50%; background: var(--ink-1); color: var(--t3); }
 .hq-seat-sm { width: var(--face-sm); height: var(--face-sm); }
 .hq-faces > .hq-seat { margin-left: var(--sp1); }
+.hq-seat-more { font: 600 var(--s14)/1 var(--f-ui); color: var(--t2); }
+.hq-move-faces { flex-wrap: wrap; min-width: 0; }
+.hq-patrol-gross { flex-basis: 100%; font-weight: 500; }
 .hq-patrol-split { display: grid; gap: var(--sp1); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
 .hq-patrol-bar { display: flex; height: 8px; overflow: hidden; border-radius: 4px; background: var(--hair-2); }
 .hq-patrol-kept { background: var(--good); }
@@ -119,17 +122,15 @@
 .hq-patrol-next { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); padding-top: var(--sp2); border-top: 1px solid var(--hair); font-size: var(--s14); color: var(--t2); }
 .hq-patrol-next .btn { flex: none; }
 
-.hq-staff { gap: var(--sp2); padding: var(--sp3); text-align: left; }
-.hq-staff-faces { display: flex; gap: var(--sp2); }
-.hq-staff-face { display: block; border-radius: 50%; overflow: hidden; }
-.hq-staff-face-off { opacity: 0.6; }
-.hq-staff-seat { display: grid; place-items: center; width: 40px; height: 40px; border: 1px dashed var(--hair-2); border-radius: 50%; color: var(--t3); }
-.hq-staff-line { font-size: var(--s14); color: var(--t2); }
+.hq-staff { display: grid; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r1); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.hq-staff-next { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
+.hq-staff-next-text { display: grid; gap: var(--sp1); min-width: 0; font-size: var(--s14); color: var(--t2); }
+.hq-staff-next-text strong { font: 600 var(--s16)/1.2 var(--f-title); color: var(--t1); }
+.hq-staff-next .btn { flex: none; }
 
-/* The narrowest phones: the duty switch keeps its icons and drops the words; the call's pay chips give way. */
+/* The narrowest phones: the call's pay chips give way. The duty switch keeps its words (sol 2026-10-23:
+   a symbol alone is not enough for a duty choice). */
 @container game (max-width: 359px) {
-  .hq-duty-word { display: none; }
   .hq-move-top .chip:nth-child(n + 4) { display: none; }
   .hq-faces-md > * + * { margin-left: calc(-1 * var(--sp5)); }
-  .hq-staff-faces { gap: var(--sp1); }
 }

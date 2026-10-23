@@ -124,3 +124,10 @@
 .command-room-next strong { font-size: var(--s16); line-height: 1.3; }
 .command-room-next span, .command-room-hint { margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.45; }
 @media (max-height: 720px) { .command-room { min-height: 180px; gap: var(--sp2); padding: var(--sp2); } .command-room-support { padding-top: var(--sp2); } .command-room-post-primary .command-room-portrait { width: 52px; height: 55px; } .command-room-post-primary .manager-portrait { transform: scale(.65); } .command-room-support .command-room-portrait { width: 40px; height: 42px; } .command-room-support .manager-portrait { transform: scale(.7692); } .command-room-next { padding: 0; } }
+
+/* HQ's command card (CommandSeats): every post as a compact seat, five across. */
+.command-seats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp1); }
+.command-room-post-compact { padding: 0; }
+.command-room-post-compact .command-room-portrait { width: 40px; height: 42px; }
+.command-room-post-closed .manager-portrait { opacity: 0.75; }
+.manager-seat-icon { color: var(--t2); }

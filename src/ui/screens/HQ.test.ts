@@ -75,6 +75,16 @@ describe('HQ surfaces', () => {
     tiles.forEach((tile, i) => expect(tile.split('hq-squad-name')[0].match(/class="face face-md/g)).toHaveLength(state.squads[i].officerIds.length));
   });
 
+  it('shows every command post as a seat, and opens a closed post as a Build upgrade, not a hire', () => {
+    const page = html();
+    expect(page.match(/command-room-post-compact/g)).toHaveLength(5);
+    expect(page).toContain('Next post · ');
+  });
+
+  it('sends the patrol card to the patrol team', () => {
+    expect(html()).toContain('Open the patrol team');
+  });
+
   it('keeps the income window on the clock, warning as it closes and when it has', () => {
     expect(html()).not.toContain('hq-clock-warn');
     vi.setSystemTime(NOW + 20 * HOUR_MS);

@@ -22,7 +22,7 @@ import { useToast } from './toast';
 import { Button, Chip } from './ui';
 import './command-staff.css';
 
-const LOOP_ICON: Record<ManagerId, IconName> = { watch_commander: 'patrol', training_sergeant: 'mortarboard', quartermaster: 'wrench', peer_support_lead: 'heart', recruiter: 'people' };
+export const LOOP_ICON: Record<ManagerId, IconName> = { watch_commander: 'patrol', training_sergeant: 'mortarboard', quartermaster: 'wrench', peer_support_lead: 'heart', recruiter: 'people' };
 const STATUS_LABEL: Record<ManagerView['status'], string> = { on: 'On', off: 'Off', not_hired: 'Not hired' };
 const statusLabel = (view: ManagerView) => view.status === 'not_hired' && view.open ? 'Vacant' : STATUS_LABEL[view.status];
 const personName = (view: ManagerView) => view.holder ? `${view.holder.person.firstName} ${view.holder.person.surname}` : null;
@@ -65,12 +65,26 @@ export function CommandStaff({ allPosts = false, composition = 'list' }: { allPo
 }
 
 const COMMAND_POST_SHORT: Record<ManagerId, string> = { watch_commander: 'Watch Commander', training_sergeant: 'Training', quartermaster: 'Gear', peer_support_lead: 'Support', recruiter: 'Hiring' };
-function CommandPost({ view, onOpen, primary = false }: { view: ManagerView; onOpen: () => void; primary?: boolean }) {
-  return <button type="button" className={`command-room-post command-room-post-${view.status}${primary ? ' command-room-post-primary' : ''}`} onClick={onOpen} aria-label={`${view.profile.title}, ${personName(view) ?? (view.open ? 'vacant post' : 'post locked')}. ${statusLabel(view)}. Inspect post`} aria-haspopup="dialog">
-    <span className="command-room-portrait"><ManagerPortrait person={view.holder?.person ?? null} size={primary ? 80 : 52} /></span>
-    <strong>{COMMAND_POST_SHORT[view.profile.id]}</strong>
-    <span>{view.holder ? `${view.holder.person.firstName} · ${view.on ? 'On duty' : 'Off duty'}` : view.open ? 'Vacant' : 'Not open'}</span>
+/** A post's state in a few words: who holds it and whether they are on duty, a vacancy, the price to
+ * open it when it can be opened now, or that it is still locked (ManagerView, never assumed). */
+export function postState(view: ManagerView): string {
+  if (view.holder) return `${view.holder.person.firstName} · ${view.on ? 'On duty' : 'Off duty'}`;
+  if (view.open) return 'Vacant';
+  return view.hire && !view.hire.reason ? `Open · ${moneyFull(view.hire.funding)}` : 'Not open';
+}
+
+function CommandPost({ view, onOpen, primary = false, compact = false }: { view: ManagerView; onOpen: () => void; primary?: boolean; compact?: boolean }) {
+  return <button type="button" className={`command-room-post command-room-post-${view.status}${view.open ? '' : ' command-room-post-closed'}${primary ? ' command-room-post-primary' : ''}${compact ? ' command-room-post-compact' : ''}`} onClick={onOpen} aria-label={`${view.profile.title}, ${personName(view) ?? (view.open ? 'vacant post' : 'post not open')}. ${postState(view)}. ${compact ? 'Open command' : 'Inspect post'}`} aria-haspopup={compact ? undefined : 'dialog'}>
+    <span className="command-room-portrait"><ManagerPortrait person={view.holder?.person ?? null} size={compact ? 40 : primary ? 80 : 52} emptyIcon={LOOP_ICON[view.profile.id]} /></span>
+    <strong>{compact && view.profile.id === 'watch_commander' ? 'Watch' : COMMAND_POST_SHORT[view.profile.id]}</strong>
+    <span>{compact && view.holder ? (view.on ? 'On duty' : 'Off duty') : postState(view)}</span>
   </button>;
+}
+
+/** Every command post as one row of seats, for HQ: the holder's face, or the post's own icon on an
+ * empty seat, and its state. Each opens Team's command room. */
+export function CommandSeats({ views, onOpen }: { views: ManagerView[]; onOpen: () => void }) {
+  return <div className="command-seats">{views.map((view) => <CommandPost key={view.profile.id} view={view} onOpen={onOpen} compact />)}</div>;
 }
 
 function StaffRow({ view, now, open, onOpen }: { view: ManagerView; now: number; open: boolean; onOpen: () => void }) {
