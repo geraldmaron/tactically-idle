@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import type { PortraitProps } from '../portraits/Portrait';
-import { Portrait } from '../portraits/Portrait';
+import { currentPortraitKey, portraitSource } from '../portraits/Portrait';
 import { assetUrl } from '../art/assetUrl';
 import { Icon } from '../icons';
 import { FACE_MARK_ICON, type FaceStatus } from './face-status';
@@ -26,19 +26,21 @@ export function Face({ size = 'md', kind = 'person', name, officer, src, classNa
    * simply ready (sim state through face-status.ts). The face then carries meaning, so it is named. */
   status?: FaceStatus | null;
 }) {
-  const [failed, setFailed] = useState(false);
+  // The art to paint: an officer's file portrait, else the given path. A failed load is remembered per
+  // source, so a new source tries again; a missing or failed one is the role silhouette, never initials.
+  const art = officer ? (() => { const key = currentPortraitKey(officer); return key ? portraitSource(key) : null; })() : src ? assetUrl(src) : null;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const px = FACE_PX[size];
-  const painted = !officer && !!src && !failed;
+  const painted = !!art && failedSrc !== art;
   if (status) return <span className={`face-status face-status-${size} face-band-${status.band}${status.mark ? ` face-mark-${status.mark}` : ''}`}
     style={{ '--stress': Math.max(0, Math.min(100, status.stress)) } as CSSProperties} role="img" aria-label={name ? `${name}: ${status.label}` : status.label}>
     <Face size={size} kind={kind} officer={officer} src={src} className={className} />
     {status.mark && <span className="face-badge" aria-hidden="true"><Icon name={FACE_MARK_ICON[status.mark]} size={16} /></span>}
   </span>;
-  return <span className={`face face-${size} face-${kind}${className ? ` ${className}` : ''}`} data-face={officer ? 'portrait' : painted ? 'painted' : 'silhouette'}
+  return <span className={`face face-${size} face-${kind}${className ? ` ${className}` : ''}`} data-face={painted ? (officer ? 'portrait' : 'painted') : 'silhouette'}
     role={name ? 'img' : undefined} aria-label={name} aria-hidden={name ? undefined : true}>
-    {officer ? <Portrait officer={officer} size={px} />
-      : painted ? <img src={assetUrl(src)} alt="" width={px} height={px} draggable={false} onError={() => setFailed(true)} />
-        : <Silhouette kind={kind} />}
+    {painted ? <img key={art} src={art} alt="" width={px} height={px} draggable={false} onError={() => setFailedSrc(art)} />
+      : <Silhouette kind={kind} />}
   </span>;
 }
 
