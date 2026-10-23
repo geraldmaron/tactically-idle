@@ -52,6 +52,9 @@ screen and every session follows these; a package that needs something new adds 
    container; each resource bar pill carries `data-ui-pill`. `npm run check:feel` fails at 320, 390
    and 430 when two items of a `data-ui-list` share a row, when a surface it knows has a variable
    collection renders it without the marker, or when the bar's pills differ in height or value size.
+10. **Live strip.** The live call's strip uses the same pills as the resource bar (owner, 2026-10-23,
+   to bring the first choice above the fold at 390x844); the comms box and the face row's surnames
+   keep their size.
 
 ## Shipped in this slice
 
