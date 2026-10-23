@@ -67,8 +67,9 @@
 .resource-bar .res-suffix { font: 500 var(--s14)/1 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
 .resource-bar .res-suffix.stat-neg { color: var(--harm-text); }
 .resource-bar .res-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.resource-bar .menu-btn { position: relative; isolation: isolate; display: grid; place-items: center; flex: none; width: var(--touch); height: var(--touch); margin: 0 0 0 auto; padding: 0; border: 0; background: none; color: var(--t1); }
-.resource-bar .menu-btn::before { content: ''; position: absolute; z-index: -1; width: 32px; height: 32px; border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); box-sizing: border-box; }
+.resource-bar .menu-btn { position: relative; display: grid; place-items: center; flex: none; box-sizing: border-box; width: 32px; height: 32px; margin: 0 0 0 auto; padding: 0; border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); color: var(--t1); }
+/* The menu is drawn at pill size like the pills (check:feel F8.pill); its hit area is the full 44px. */
+.resource-bar .menu-btn::after { content: ''; position: absolute; inset: calc((100% - var(--touch)) / 2); }
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 .resource-bar .stat-cash-short { display: none; }
 @container game (max-width: 359px) {
@@ -76,10 +77,10 @@
   .resource-bar .stat-cash-short { display: inline; }
   .app .resource-bar { padding: 0 var(--sp1); }
   .resource-bar .stat-trust .res-pill, .resource-bar .stat-level .res-pill { padding-right: var(--sp1); }
-  /* The menu's 44px hit area may run into the bar's edge; its 32px pill stays inside. */
-  .resource-bar .menu-btn { margin-right: calc(-1 * var(--sp1)); }
+  /* Keep the menu's 44px hit area on screen past the narrower bar padding. */
+  .resource-bar .menu-btn { margin-right: var(--sp1); }
 }
-@media (hover: hover) { .resource-bar button:hover .res-pill, .resource-bar .menu-btn:hover::before { filter: brightness(1.12); } }
+@media (hover: hover) { .resource-bar button:hover .res-pill, .resource-bar .menu-btn:hover { filter: brightness(1.12); } }
 .chrome-foot > .bottomnav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); padding: 0 var(--sp1); }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
