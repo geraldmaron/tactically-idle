@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { manageSave, useCampaigns, exportCurrentSave, exportSlotSave, exportSaveRecovery, isResponsivePreview, type SaveAction } from '../store';
 import { Sheet } from './Sheet';
-import { Button, Chip } from './ui';
+import { Button, Card, Chip, ErrorState, LoadingState, Row, Section } from './ui';
 import { Icon } from '../icons';
 import { money } from '../format';
+import '../settings/inset-list.css';
+import './save-manager.css';
 
 type Edit = { type: 'new' | 'copy' | 'rename' | 'delete' | 'import' | 'load'; id: number; name: string; data?: string; permanent?: boolean };
 const timestamp = (at: number) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -44,19 +47,22 @@ export function MenuButton({ onOpen }: { onOpen: () => void }) {
 export function SaveWarning({ onOpen }: { onOpen: () => void }) {
   const saved = useCampaigns();
   if (!saved.issue) return null;
-  return <div className="save-warning" role="alert">
-    <Icon name="warning" size={16} />
-    <span>Progress isn’t being saved. Export a backup before you close this.</span>
-    <button type="button" onClick={onOpen}>Fix</button>
+  return <div className="save-warning">
+    <ErrorState compact title="Progress isn’t being saved. Export a backup before you close this." action={<button type="button" onClick={onOpen}>Fix</button>} />
   </div>;
 }
 
 function SaveStatus() {
   const saved = useCampaigns();
   const status = campaignStatus(saved);
-  return <div className={`save-status${saved.issue ? ' save-status-warning' : ''}`}>
-    <span><strong>{status.name}</strong><small>{status.detail}</small></span>
-  </div>;
+  return <Card className="save-status">
+    <Row className="save-status-row" lead={<Icon name="bookmark" size="md" />} title={status.name} detail={saved.issue || status.attention ? <span className="save-attention">{status.detail}</span> : status.detail} />
+  </Card>;
+}
+
+/** A caution on a form: what a choice will overwrite or discard. Not a failure, so not an alert. */
+function Caution({ children }: { children: ReactNode }) {
+  return <p className="save-caution"><Icon name="warning" size="md" /><span>{children}</span></p>;
 }
 
 export function SaveManager({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -84,10 +90,10 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
   };
   const selected = edit ? saved.slots[edit.id - 1] : null;
   return <Sheet open={open} onClose={close} interactionKey={`${edit?.type ?? 'slots'}:${busy}`} title={edit ? edit.type === 'delete' ? 'Delete save?' : edit.type === 'rename' ? 'Rename save' : edit.type === 'new' ? 'Start a new game' : edit.type === 'load' ? 'Load saved campaign?' : edit.type === 'import' ? 'Import backup' : 'Save a copy' : isResponsivePreview ? 'Temporary test saves' : 'Local saves'} subtitle={isResponsivePreview ? 'Ten in-memory slots · lost when this frame reloads or closes' : 'Ten slots · stored in this browser on this device'} className="save-manager">
-    {saved.issue && <p className="save-alert" role="alert">{saved.issue}</p>}
-    {error && error !== saved.issue && <p className="save-alert" role="alert">{error}</p>}
-    {message && <p className="save-success" role="status">{message}</p>}
-    {busy && <p role="status">Saving locally…</p>}
+    {saved.issue && <ErrorState compact title={saved.issue} />}
+    {error && error !== saved.issue && <ErrorState compact title={error} />}
+    {message && <p className="save-success" role="status"><Icon name="checkcircle" size="md" />{message}</p>}
+    {busy && <LoadingState compact title="Saving locally…" />}
     <fieldset disabled={busy} className="save-controls">
     {edit ? <form className="save-edit" autoComplete="off" onSubmit={(e) => {
       e.preventDefault();
@@ -99,9 +105,9 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
     }}>
       {edit.type === 'delete' || edit.type === 'rename' || edit.type === 'load' ? <p>Slot {edit.id}{selected ? ` · ${selected.name}` : ' · Empty'}</p> : <label>Destination slot<select value={edit.id} onChange={(e) => setEdit({ ...edit, id: Number(e.target.value) })}>{saved.slots.map((slot, i) => <option key={i} value={i + 1} disabled={edit.type === 'import' && saved.activeSlotId === i + 1}>Slot {i + 1} · {slot?.name ?? 'Empty'}</option>)}</select></label>}
       {edit.type !== 'delete' && edit.type !== 'load' && <label>Save name<input autoComplete="off" value={edit.name} maxLength={36} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>}
-      {!saved.activeSlotId && (edit.type === 'new' || edit.type === 'load') && <><p className="save-alert">Your current game is only in memory. Continuing will discard it. Export it now if you want to keep it; your existing save slots stay intact unless you explicitly replace one.</p><Button onClick={() => download(exportCurrentSave(), 'tactically-idle-campaign.json')}>Export current game first</Button></>}
-      {edit.type === 'delete' ? <><p>This removes “{selected?.name}” from slot {edit.id}. The most recent deletion can be undone unless you select permanent deletion.</p><label className="save-permanent"><input type="checkbox" checked={!!edit.permanent} onChange={(e) => setEdit({ ...edit, permanent: e.target.checked })} />Delete permanently to free storage, and clear the previous undo backup</label>{edit.permanent && <p className="save-alert">This cannot be undone. Export a backup first if you need to keep this save.</p>}</> : edit.type !== 'rename' && edit.type !== 'load' && <>
-        {selected && <p className="save-alert">This replaces “{selected.name}” in slot {edit.id}. Its current progress will be overwritten.</p>}
+      {!saved.activeSlotId && (edit.type === 'new' || edit.type === 'load') && <><Caution>Your current game is only in memory. Continuing will discard it. Export it now if you want to keep it; your existing save slots stay intact unless you explicitly replace one.</Caution><Button onClick={() => download(exportCurrentSave(), 'tactically-idle-campaign.json')}>Export current game first</Button></>}
+      {edit.type === 'delete' ? <><p>This removes “{selected?.name}” from slot {edit.id}. The most recent deletion can be undone unless you select permanent deletion.</p><label className="save-permanent"><input type="checkbox" checked={!!edit.permanent} onChange={(e) => setEdit({ ...edit, permanent: e.target.checked })} />Delete permanently to free storage, and clear the previous undo backup</label>{edit.permanent && <Caution>This cannot be undone. Export a backup first if you need to keep this save.</Caution>}</> : edit.type !== 'rename' && edit.type !== 'load' && <>
+        {selected && <Caution>This replaces “{selected.name}” in slot {edit.id}. Its current progress will be overwritten.</Caution>}
         <p>{edit.type === 'new' ? `Start a separate campaign with a fresh roster roll.${saved.activeSlotId ? ' Your current campaign is saved before switching.' : ''}` : edit.type === 'import' ? 'Store this backup in a slot, then load it when you are ready. Your current campaign stays active.' : 'Keep a snapshot of this campaign in the selected slot. Autosaving will continue in that slot.'}</p>
       </>}
       {selected && edit.type !== 'rename' && <Button onClick={() => { const data = exportSlotSave(edit.id); if (data) download(data, `tactically-idle-slot-${edit.id}.json`); }}>Export existing slot {edit.id}</Button>}
@@ -109,18 +115,22 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
     </form> : <>
       <SaveStatus />
       <p className="dim save-explainer">{isResponsivePreview ? 'This test library exists only in memory. New games, copies, renames and loads never read or change normal browser campaigns. Reloading or closing this frame discards every test slot.' : 'The active campaign saves automatically. Loading another slot first saves your current progress. Browser data clearing removes local saves; export a backup to keep a copy.'}</p>
-      <div className="save-actions save-primary-actions"><Button onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
-      {!firstEmpty && <p className="save-alert">All ten slots are occupied. Choose a slot below to replace, or delete a save you no longer need.</p>}
-      <ol className="save-slots">
-        {saved.slots.map((slot, i) => <li className={`save-slot${saved.activeSlotId === i + 1 ? ' save-slot-active' : ''}`} key={i}>
-          <div className="save-slot-head"><span className="save-slot-number">{String(i + 1).padStart(2, '0')}</span><strong>{slot?.name ?? 'Empty slot'}</strong>{saved.activeSlotId === i + 1 && <Chip tone="mint">Active</Chip>}</div>
-          {slot && <><p className="save-slot-summary">{slot.valid ? `Day ${slot.day} · Level ${slot.level} · ${slot.officers} officers · ${money(slot.funding ?? 0)}${slot.operation ? ' · Operation in progress' : ''}` : 'Unreadable save · original data retained'}</p><p className="dim save-slot-time">Saved {timestamp(slot.savedAt)}</p></>}
-          <SlotActions active={saved.activeSlotId === i + 1} filled={!!slot} valid={!!slot?.valid} id={i + 1}
-            onLoad={() => saved.activeSlotId ? run({ type: 'load', id: i + 1 }, 'Campaign loaded.', true) : begin('load', i + 1)}
-            onSave={() => run({ type: 'save' }, 'Current campaign saved.')} onBegin={(type) => begin(type, i + 1)}
-            onExport={() => { const data = exportSlotSave(i + 1); if (data) download(data, `tactically-idle-slot-${i + 1}.json`); }} />
-        </li>)}
-      </ol>
+      <div className="save-actions save-primary-actions"><Button icon="plus" onClick={() => begin('new', firstEmpty || 1)}>New game</Button><Button icon="bookmark" onClick={() => begin('copy', firstEmpty || 1)}>Save a copy</Button></div>
+      {!firstEmpty && <Caution>All ten slots are occupied. Choose a slot below to replace, or delete a save you no longer need.</Caution>}
+      <Section id="save-slots" icon="list" title="Slots" count={`${saved.slots.filter(Boolean).length} of ${saved.slots.length} used`}>
+        <Card className="inset-list slot-list" data-ui-list="">
+          {saved.slots.map((slot, i) => slot ? <div className={`slot${saved.activeSlotId === i + 1 ? ' slot-active' : ''}`} key={i}>
+            <Row className="slot-row" lead={<span className="slot-number">{String(i + 1).padStart(2, '0')}</span>} title={slot.name}
+              detail={slot.valid ? `Day ${slot.day} · Level ${slot.level} · ${slot.officers} officers · ${money(slot.funding ?? 0)}${slot.operation ? ' · Operation in progress' : ''} · Saved ${timestamp(slot.savedAt)}` : 'Unreadable save · original data retained'}
+              trail={saved.activeSlotId === i + 1 ? <Chip tone="mint">Active</Chip> : undefined} />
+            <SlotActions active={saved.activeSlotId === i + 1} filled valid={!!slot.valid} id={i + 1}
+              onLoad={() => saved.activeSlotId ? run({ type: 'load', id: i + 1 }, 'Campaign loaded.', true) : begin('load', i + 1)}
+              onSave={() => run({ type: 'save' }, 'Current campaign saved.')} onBegin={(type) => begin(type, i + 1)}
+              onExport={() => { const data = exportSlotSave(i + 1); if (data) download(data, `tactically-idle-slot-${i + 1}.json`); }} />
+          </div> : <Row key={i} className="slot-empty" lead={<span className="slot-number">{String(i + 1).padStart(2, '0')}</span>} title="Empty slot" detail="Start a new game here"
+            trail={<Icon name="chevronRight" size="md" />} onClick={() => begin('new', i + 1)} />)}
+        </Card>
+      </Section>
       <div className="save-actions">{saved.canUndoDelete && <Button onClick={() => run({ type: 'undoDelete' }, 'Deleted save restored.')}>Undo last deletion</Button>}<Button onClick={() => download(exportCurrentSave(), 'tactically-idle-campaign.json')}>Export current game</Button><label className="btn btn-secondary btn-md save-import">Import backup<input type="file" accept=".json,application/json" onChange={async (e) => {
         const request = ++importRequest.current;
         const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
@@ -133,25 +143,22 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
   </Sheet>;
 }
 
-/** One primary action per slot (load it, save the active one, or start a game in an empty one),
- * and everything else behind More. */
-function SlotActions({ id, active, filled, valid, onLoad, onSave, onBegin, onExport }: {
+/** A saved slot's one primary action (load it, or save the active one) and everything else behind
+ * More. An empty slot is a single row that starts a game in it. */
+function SlotActions({ id, active, valid, onLoad, onSave, onBegin, onExport }: {
   id: number; active: boolean; filled: boolean; valid: boolean;
   onLoad: () => void; onSave: () => void; onBegin: (type: 'new' | 'copy' | 'rename' | 'delete') => void; onExport: () => void;
 }) {
-  const primary = active ? <Button size="sm" onClick={onSave}>Save now</Button>
-    : filled ? <Button size="sm" disabled={!valid} onClick={onLoad}>Load</Button>
-    : <Button size="sm" onClick={() => onBegin('new')}>New game here</Button>;
   return <div className="save-actions save-slot-actions">
-    {primary}
+    {active ? <Button size="sm" onClick={onSave}>Save now</Button> : <Button size="sm" disabled={!valid} onClick={onLoad}>Load</Button>}
     <details className="save-more">
       <summary className="btn btn-quiet btn-sm" aria-label={`More for slot ${id}`}>More</summary>
       <div className="save-more-menu">
-        {filled && <Button size="sm" variant="ghost" onClick={() => onBegin('new')}>New game here</Button>}
+        <Button size="sm" variant="ghost" onClick={() => onBegin('new')}>New game here</Button>
         {!active && <Button size="sm" variant="ghost" onClick={() => onBegin('copy')}>Save this game here</Button>}
-        {filled && <Button size="sm" variant="ghost" onClick={() => onBegin('rename')}>Rename</Button>}
-        {filled && <Button size="sm" variant="ghost" onClick={onExport}>Export</Button>}
-        {filled && !active && <Button size="sm" variant="danger" onClick={() => onBegin('delete')}>Delete</Button>}
+        <Button size="sm" variant="ghost" onClick={() => onBegin('rename')}>Rename</Button>
+        <Button size="sm" variant="ghost" onClick={onExport}>Export</Button>
+        {!active && <Button size="sm" variant="danger" onClick={() => onBegin('delete')}>Delete</Button>}
       </div>
     </details>
   </div>;

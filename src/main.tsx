@@ -3,11 +3,8 @@ import { createRoot } from 'react-dom/client';
 import './ui/theme.css';
 import { loadApp } from 'virtual:game-app';
 import { isLabLocation } from './lab-entry';
-import { initCandidates } from './ui/settings/candidates';
 
 const root = createRoot(document.getElementById('root')!);
-// Dev builds: the design candidates under comparison (docs/ops-experience.md).
-initCandidates();
 
 // Decide before importing either app: the game's store opens, ticks and saves the campaign as soon as
 // it loads, so the lab must never pull it in. A normal build folds the lab branch away.

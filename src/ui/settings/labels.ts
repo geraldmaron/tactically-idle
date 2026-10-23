@@ -76,6 +76,7 @@ export const SETTINGS_TEXT = {
   warningsHeading: 'Call card warnings',
   timerHeading: 'Call timer',
   timerHint: 'How fast time on the call moves while a decision waits on you.',
+  comfortHeading: 'Sound and lights',
   soundHeading: 'Sound',
   soundHint: 'Radio, the crowd and a heartbeat on calls, short chimes when you hire, buy or promote, and a faint hum at HQ and Build. Vibration too, where your phone has it. Quiet when your device asks for reduced motion.',
   soundOn: 'On',

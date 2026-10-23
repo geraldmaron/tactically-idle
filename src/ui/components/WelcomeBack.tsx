@@ -10,13 +10,14 @@ import { fullName } from '../../sim/officer';
 import { COURSES } from '../../content/courses';
 import { useGame } from '../store';
 import { Sheet } from './Sheet';
-import { Button } from './ui';
+import { Button, Card, Row } from './ui';
 import { Disclosure } from './Disclosure';
 import { useToast } from './toast';
 import { ShiftReportCard, EQUIPMENT_EVENT, PERSONNEL_EVENT, grantName } from './ShiftReport';
 import { PlateArt, plateUrl } from '../art/Plates';
 import { Icon, type IconName } from '../icons';
 import { duration, money, signedMoney } from '../format';
+import '../settings/inset-list.css';
 import './welcome-back.css';
 
 /** How long after load or return a report may still arrive and open the sheet. The store settles
@@ -98,14 +99,13 @@ function WelcomeSummary({ report, g }: { report: ShiftReport; g: GameState }) {
   return <div className="welcome">
     <div className="plate plate-grain welcome-hero">
       <PlateArt src={plateUrl('hub_hq')} />
-      <span className="welcome-away"><Icon name="clock" size={14} />{duration(report.to - report.from)} away</span>
+      <span className="welcome-away"><Icon name="clock" size="sm" />{duration(report.to - report.from)} away</span>
       <span className="welcome-net-label">Net funding</span>
       <strong className={`welcome-net ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}>{signedMoney(report.net)}</strong>
       <span className="welcome-flow">{money(report.gross)} earned · {money(expenses)} spent</span>
     </div>
-    {lines.length > 0 ? <ul className="welcome-lines">{lines.map((line) => <li key={line.key} data-tone={line.tone}>
-      <Icon name={line.icon} size={16} /><span>{line.text}</span>
-    </li>)}</ul> : <p className="dim welcome-quiet">A quiet shift. Nothing needs you.</p>}
+    {lines.length > 0 ? <Card className="inset-list welcome-lines">{lines.map((line) => <Row key={line.key} data={{ 'data-tone': line.tone }}
+      lead={<Icon name={line.icon} size="md" />} title={line.text} />)}</Card> : <p className="dim welcome-quiet">A quiet shift. Nothing needs you.</p>}
     <Disclosure name="welcome-full-report" summary="Full shift report" icon="list">
       <ShiftReportCard report={report} g={g} acknowledge={false} />
     </Disclosure>

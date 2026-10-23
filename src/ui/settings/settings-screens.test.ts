@@ -57,7 +57,9 @@ describe('settings screens', () => {
 
   it('offers a switch for every theme a player can avoid, plus the warning and timer choices', () => {
     const html = renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: ['domestic_violence'] }, onChange: () => {} }));
-    expect(html.match(/type="checkbox"/g)).toHaveLength(AVOIDABLE_THEMES.length);
+    // One switch per avoidable theme, plus sound and flashing lights, all the same SwitchRow.
+    expect(html.match(/type="checkbox"/g)).toHaveLength(AVOIDABLE_THEMES.length + 2);
+    expect(html.match(/class="ui-row switch-row"/g)).toHaveLength(AVOIDABLE_THEMES.length + 2);
     for (const theme of AVOIDABLE_THEMES) expect(text(html)).toContain(THEME_LABELS[theme].name);
     for (const l of [...Object.values(WARNING_LABELS), ...Object.values(TIMER_LABELS)]) expect(text(html)).toContain(l.name);
     expect(html).not.toContain(SETTINGS_TEXT.avoidHeading.replace('themes', 'mechanics'));
@@ -120,6 +122,21 @@ describe('settings screens', () => {
   it('the menu always carries a Support row, and settings are rows', () => {
     const html = text(renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} })));
     for (const label of [MENU_TEXT.campaign, MENU_TEXT.saves, MENU_TEXT.themes, SETTINGS_TEXT.warningsHeading, SETTINGS_TEXT.timerHeading, SETTINGS_TEXT.soundHeading, SETTINGS_TEXT.flashingHeading, MENU_TEXT.peopleColor, MENU_TEXT.talk]) expect(html).toContain(label);
+  });
+
+  it('first run and the menu build every switch from the one switch row', () => {
+    const menu = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} }));
+    const themes = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, initialPage: 'themes' }));
+    expect(menu.match(/role="switch"/g)).toHaveLength(3);
+    expect(menu.match(/class="ui-row switch-row"/g)).toHaveLength(3);
+    expect(themes.match(/role="switch"/g)).toHaveLength(AVOIDABLE_THEMES.length);
+    expect(themes.match(/class="ui-row switch-row"/g)).toHaveLength(AVOIDABLE_THEMES.length);
+    expect(`${menu}${themes}`).not.toMatch(/class="toggle[ "]/);
+  });
+
+  it('the saves entry in the menu is a link row with a chevron, not an underlined word', () => {
+    const html = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} }));
+    expect(html).toMatch(/<button[^>]*class="ui-row menu-link"[^>]*>.*?Saves.*?<\/button>/s);
   });
 
   it('the avoid page shows only themes a player can avoid, and names the ones every call carries', () => {
