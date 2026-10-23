@@ -47,10 +47,8 @@ export function MenuButton({ onOpen }: { onOpen: () => void }) {
 export function SaveWarning({ onOpen }: { onOpen: () => void }) {
   const saved = useCampaigns();
   if (!saved.issue) return null;
-  return <div className="save-warning" role="alert">
-    <Icon name="warning" size={16} />
-    <span>Progress isn’t being saved. Export a backup before you close this.</span>
-    <button type="button" onClick={onOpen}>Fix</button>
+  return <div className="save-warning">
+    <ErrorState compact title="Progress isn’t being saved. Export a backup before you close this." action={<button type="button" onClick={onOpen}>Fix</button>} />
   </div>;
 }
 
@@ -58,7 +56,7 @@ function SaveStatus() {
   const saved = useCampaigns();
   const status = campaignStatus(saved);
   return <Card className="save-status">
-    <Row lead={<Icon name="bookmark" size="md" />} title={status.name} detail={saved.issue || status.attention ? <span className="save-attention">{status.detail}</span> : status.detail} />
+    <Row className="save-status-row" lead={<Icon name="bookmark" size="md" />} title={status.name} detail={saved.issue || status.attention ? <span className="save-attention">{status.detail}</span> : status.detail} />
   </Card>;
 }
 

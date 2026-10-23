@@ -1,4 +1,4 @@
 /* An inset grouped list: one Card holding rows split by a hairline, the last row without one
    (docs/game-ux-direction.md, "Component contract"). Menu, Themes, first run, saves and welcome back use it. */
 .inset-list { gap: 0; padding-top: var(--sp1); padding-bottom: var(--sp1); }
-.inset-list > :last-child, .inset-list > .theme-switch:last-child .ui-row { border-bottom: 0; }
+.inset-list > :last-child, .inset-list > .theme-switch:last-child .switch-row { border-bottom: 0; }

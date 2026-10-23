@@ -32,7 +32,7 @@ export function MenuSheet({ open, onClose, onOpenSaves, initialPage = 'menu' }: 
   const settings = useSettings();
   const title = page === 'menu' ? MENU_TEXT.title : page === 'themes' ? MENU_TEXT.themes : page === 'warnings' ? SETTINGS_TEXT.warningsHeading : page === 'timer' ? SETTINGS_TEXT.timerHeading : MENU_TEXT.support;
   return <Sheet open={open} onClose={onClose} title={title} className="menu-sheet" interactionKey={page}>
-    {page !== 'menu' && <button type="button" className="menu-back" onClick={() => setPage('menu')}><Icon name="chevronLeft" size={18} />{MENU_TEXT.title}</button>}
+    {page !== 'menu' && <button type="button" className="menu-back" onClick={() => setPage('menu')}><Icon name="chevronLeft" size="md" />{MENU_TEXT.title}</button>}
     {page === 'menu' && <MenuHome settings={settings} onPage={setPage} onOpenSaves={onOpenSaves} />}
     {page === 'themes' && <ThemesPage settings={settings} />}
     {page === 'warnings' && <ChoicePage hint={null} detail={WARNING_LABELS[settings.cardWarnings].detail}>

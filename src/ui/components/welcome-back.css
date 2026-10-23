@@ -6,7 +6,7 @@
 .welcome-net-label { font: 500 var(--s14)/1.2 var(--font-ui); color: var(--t-plate); text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 90%, transparent); }
 .welcome-net { font: 600 34px/1.05 var(--font-display); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 85%, transparent); overflow-wrap: anywhere; }
 .welcome-flow { font-size: var(--s14); color: var(--t1); text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 90%, transparent); }
-.welcome-lines .ui-row-title { overflow-wrap: anywhere; font-weight: 500; }
+.welcome-lines .ui-row-title { overflow-wrap: anywhere; }
 .welcome-lines [data-tone="mint"] .icon { color: var(--good); }
 .welcome-lines [data-tone="warn"] .icon { color: var(--warn); }
 .welcome-quiet { margin: 0; }
