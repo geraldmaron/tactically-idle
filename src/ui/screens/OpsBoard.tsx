@@ -3,7 +3,8 @@ import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { boardShortages } from '../../sim/board-suggestions';
-import { Chip, EmptyState } from '../components/ui';
+import { Button, Chip, EmptyState } from '../components/ui';
+import { Sheet } from '../components/Sheet';
 import { countdown, useNow } from '../components/incident';
 import { Icon } from '../icons';
 import { relativeTime } from '../format';
@@ -33,6 +34,7 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
   const live = boardPlan(entries);
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
+  const [noteOpen, setNoteOpen] = useState(false);
   const arrival = note.line ?? (note.nextAt ? `Next ${relativeTime(note.nextAt, now)}` : null);
   // Back from a call's brief returns focus to its card (docs/ui-ux-audit.md, exit table).
   useEffect(() => {
@@ -50,9 +52,12 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
         </span>
       </header>
       {live.length > 0 && <p className="cl-board-note">
-        {arrival && <span className="cl-board-next"><Icon name="clock" size={16} />{arrival}</span>}
-        No penalty for skipping a call. One nobody takes goes to another unit.
+        <span className="cl-board-next"><Icon name="clock" size={16} />{arrival ?? 'Skipping a call'}</span>
+        <button type="button" className="cl-info" aria-label="About skipping a call" onClick={() => setNoteOpen(true)}><Icon name="info" size={20} /></button>
       </p>}
+      <Sheet open={noteOpen} onClose={() => setNoteOpen(false)} title="Skipping a call" maxHeight="short" footer={<Button variant="primary" block onClick={() => setNoteOpen(false)}>Done</Button>}>
+        <p>No penalty for skipping a call. One nobody takes goes to another unit.</p>
+      </Sheet>
       {live.length === 0 && <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.{arrival ? ` ${arrival}.` : ''}</EmptyState>}
       <div className="cl-board-list" data-ui-list>
         {live.map((e) => (
