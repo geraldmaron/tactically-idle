@@ -386,11 +386,10 @@ release. The policy is rehearsed across prelaunch builds on the chosen wrapper b
 demonstrated upgrade and recovery is a launch gate. External playtests are told saves may reset,
 but their builds exercise the migration path anyway.
 
-**Work it implies** (backlog items only on the owner's approval): frozen-run snapshots and
-authoritative committed effects; stable ids for calls, situations and every persisted content
-reference; library-wide migrations with golden saves; generational, crash-safe writes; the
-downgrade guard on every writer; durable native storage in `store-wrap`; entitlement
-reconciliation. All touch the save shape, an interface change needing the adversarial review in
+**Work it implies**, in `docs/backlog.md` under "Saves and live content" (owner, 2026-10-23):
+`frozen-runs`, `stable-content-ids`, `save-migrations`, `save-generations`,
+`no-downgrade-overwrite`, `withdrawn-content`, `durable-save-storage` and
+`save-policy-rehearsal`, with entitlement reconciliation added to `real-purchases`. All touch the save shape, an interface change needing the adversarial review in
 `COORDINATION.md`.
 
 ## 8. Risks and controls
