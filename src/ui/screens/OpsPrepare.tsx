@@ -342,6 +342,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
               <span className="cl-faces" aria-hidden="true">
                 {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} name={officer.surname} status={officerFaceStatus(g, officer.id, now)} />)}
               </span>
+              {on && <Icon name="check" size={20} className="cl-squad-check" />}
             </button>
           );
         })}
@@ -412,6 +413,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   const footer = step === 'brief'
     ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => { preselect(); callFlow.goStep('deploy'); } }} />
     : <ActionBar className="cl-actions"
+      summary={chosen.length ? <><span>{names}</span><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span></> : undefined}
       primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
     <FlowScreen title={step === 'brief' ? title : 'Deploy'} icon={step === 'brief' ? <CallTypeBadge type={scenario?.incident?.type} size={24} /> : <Icon name="people" size={20} />} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}

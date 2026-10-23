@@ -19,8 +19,10 @@
 .cl-card-open:focus-within { outline: 2px solid var(--act); outline-offset: 2px; }
 .cl-card-scene { display: flex; flex-direction: column; justify-content: space-between; min-height: var(--plate-h); gap: var(--sp2); padding: var(--sp2) var(--sp3); border-bottom: 1px solid var(--hair); }
 .cl-card-scene.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 85%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 45%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 15%, transparent) 100%); }
-.cl-card-scene-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); }
-.cl-card-scene-end { display: inline-flex; align-items: center; gap: var(--sp2); }
+.cl-card-scene-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp1) var(--sp2); }
+.cl-card-scene-end { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp1) var(--sp2); margin-left: auto; }
+.cl-card-type, .cl-card-left, .cl-card-newmark, .cl-card-tier { white-space: nowrap; }
+.cl-card-tier { display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font-size: var(--s14); font-weight: 600; }
 .cl-card-scene-id { display: grid; gap: 0; min-width: 0; }
 .cl-card-type, .cl-card-left { display: inline-flex; align-items: center; gap: var(--sp2); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font-size: var(--s14); font-weight: 600; }
 .cl-card-type .ct-badge-label { font-size: var(--s14); }
@@ -48,6 +50,12 @@
 .cl-ready-text { min-width: 0; }
 .cl-card-pay { display: grid; justify-items: end; gap: 0; flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
 .cl-card-pay-up { color: var(--t3); }
+.cl-card-pay-top, .cl-card-pay-xp { display: inline-flex; align-items: center; gap: var(--sp1); justify-content: flex-end; }
+.cl-card-pay-top .icon { color: var(--good-text); }
+.cl-card-pay-xp .icon { color: var(--act-text); }
+.cl-ready-faces { display: inline-flex; flex: 0 0 auto; }
+.cl-ready-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
+.cl-card-foot { padding-top: var(--sp2); border-top: 1px solid var(--hair); }
 .cl-card-pay b { font-size: var(--s16); color: var(--t1); }
 .cl-card-chevron { flex: 0 0 auto; color: var(--t3); }
 .cl-card .optile-bring { position: relative; z-index: 2; }
@@ -80,7 +88,8 @@
 .cl-squad:last-child { border-radius: 0 0 var(--r2) var(--r2); }
 .cl-squad:only-child { border-radius: var(--r2); }
 .cl-squad:focus-visible { outline-offset: calc(-1 * var(--sp1)); }
-.cl-squad-on { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
+.cl-squad-on { background: var(--ink-2); box-shadow: inset 3px 0 0 var(--act), inset 0 0 0 1px color-mix(in srgb, var(--act) 55%, transparent); }
+.cl-squad-check { flex: 0 0 auto; color: var(--act-text); }
 .cl-squad-on .squad-badge { background: var(--act); border-color: var(--act); color: var(--act-ink); }
 .cl-squad:disabled { opacity: 0.55; cursor: default; }
 .cl-squad-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
@@ -115,4 +124,5 @@
 .sheet.sheet-short.operation-action-sheet { max-height: min(78%, var(--sheet-available-height)); }
 .operation-action-sheet .operation-commit { display: grid; gap: var(--sp2); }
 .operation-action-sheet .operation-commit-meta { margin: 0; }
-.cl-squad-main strong { display: inline-flex; align-items: center; gap: var(--sp2); }
+.cl-squad-main strong { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); overflow-wrap: normal; }
+.cl-squad-main strong .cl-squad-fit { margin-left: 0; }
