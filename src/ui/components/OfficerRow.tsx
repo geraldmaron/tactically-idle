@@ -39,11 +39,7 @@ export function OfficerRow({ officer, now, leader, squadId, onClick }: { officer
     </span>
     <span className="ui-row-main" aria-hidden="true">
       <span className="ui-row-title officer-row-name">{rankedSurname(officer)}{leader && <Icon name="star" size={14} />}</span>
-      <span className="ui-row-detail officer-row-role"><Icon name={role.icon} size={14} />{role.label} · stress {stress}</span>
-      <span className="officer-row-meta">
-        {officer.certs.length > 0 && <span className="officer-row-certs">{officer.certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}
-        <span>{progress}</span>
-      </span>
+      <span className="ui-row-detail officer-row-role"><Icon name={role.icon} size={14} />{role.short} · stress {stress} · {progress}{officer.certs.length > 0 && <span className="officer-row-certs">{officer.certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={14} />)}</span>}</span>
     </span>
     <span className="ui-row-trail" aria-hidden="true"><StatusMark status={status} /></span>
   </Tag>;

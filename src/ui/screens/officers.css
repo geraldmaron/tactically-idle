@@ -21,3 +21,23 @@
 .squad-block .rename input { flex: 1 1 140px; min-width: 0; min-height: 44px; }
 .squad-sort select { min-height: 44px; }
 .officer-rows { display: flex; flex-direction: column; }
+
+/* Squads: one Card per squad, stacked. The head is a Row; the officers sit under it, two to a row. */
+.squad-list { display: flex; flex-direction: column; gap: var(--sp3); }
+.squadpanel { padding: 0; overflow: hidden; }
+.squadpanel .squad-block { gap: 0; }
+.squadpanel .squad-block-name { font: 600 var(--s16)/1.2 var(--f-ui); }
+.squadpanel .squad-rename { min-height: 24px; }
+.squadpanel .rename { padding: var(--sp3) var(--sp4); }
+.squadpanel .squad-block-issue { margin: 0; padding: 0 var(--sp4) var(--sp2); }
+.squadpanel .officer-character-grid { padding: 0 var(--sp3) var(--sp3); gap: var(--sp2); }
+.officer-roster-card { padding: 0; overflow: hidden; }
+.squadpanel .ui-row, .officer-roster-card .ui-row { padding-inline: var(--sp3); }
+.officer-rows .officer-row-role { display: block; }
+.officer-rows .officer-row-role .icon { display: inline-block; vertical-align: -2px; margin-right: var(--sp1); }
+.officer-rows .officer-row-role .officer-row-certs { margin-left: var(--sp2); }
+.officer-rows .officer-row-certs .icon { margin-right: 0; }
+@media (max-width: 359px) { .officer-rows .officer-row-certs { display: none; } }
+.ocard-tile { padding: var(--sp2) var(--sp3); gap: var(--sp2); }
+.ocard-title { overflow-wrap: normal; }
+.officers-page .section-head .text-link, .officers-page .section-head .squad-sort { margin-left: var(--sp2); }

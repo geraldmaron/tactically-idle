@@ -3,8 +3,9 @@ import { getState, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
 import './officers.css';
-import { Button, EmptyState } from '../components/ui';
+import { Button, Card, Chip, EmptyState, Row, Section } from '../components/ui';
 import { OfficerCard } from '../components/OfficerCard';
+import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
 import { Icon } from '../icons';
@@ -48,22 +49,18 @@ function SquadsView() {
   const full = g.squads.length >= SQUAD_IDS.length;
   const unassigned = officerList(g).filter((o) => o.squadId === null);
   const now = Date.now();
+  const ready = g.squads.reduce((n, squad) => n + squadReadiness(g, squad.id, now).ready, 0);
+  const total = g.squads.reduce((n, squad) => n + squad.officerIds.length, 0);
   return <>
     <QueuedMoves />
-    <div className="officers-head">
-      <h2 className="section-title">{g.squads.length === 1 ? '1 squad' : `${g.squads.length} squads`}</h2>
-      {g.squads.length > 0 && <button type="button" className="text-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button>}
-    </div>
-    {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
-    {g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}
-    {unassigned.length > 0 && <section className="squad-block" aria-labelledby="squad-bench-h">
-      <div className="squad-block-head">
-        <span className="squad-badge" aria-hidden="true"><Icon name="user" size={14} /></span>
-        <h2 id="squad-bench-h" className="squad-block-name">Unassigned</h2>
-        <span className="squad-block-meta">Off duty until in a squad</span>
-      </div>
+    <Section id="squads-h" title="Squads" icon="people" count={g.squads.length > 0 ? `${g.squads.length === 1 ? '1 squad' : `${g.squads.length} squads`} · ${ready} of ${total} ready` : undefined}
+      action={g.squads.length > 0 ? <button type="button" className="text-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button> : undefined}>
+      {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
+      {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
+    </Section>
+    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count="Off duty until in a squad">
       <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} onClick={() => nav.openOfficer(o.id)} />)}</div>
-    </section>}
+    </Section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
       : !full && <Button variant="quiet" icon="plus" onClick={() => setCreating(true)}>New squad</Button>}
     {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
@@ -126,12 +123,14 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   const deployed = g.activeRun?.squadIds.includes(squad.id) && g.activeRun.status !== 'closed';
   const total = r.total || members.length;
   const open = Math.max(0, 4 - members.length);
-  const problems = deployed ? ['On a call'] : [...(r.deployable ? [] : r.issues.slice(0, 2)), ...(r.deployable && r.staysHome.length > 0 ? [staysHomeLine(g, r.staysHome)] : [])];
+  const problems = deployed ? [] : [...(r.deployable ? [] : r.issues.slice(0, 2)), ...(r.deployable && r.staysHome.length > 0 ? [staysHomeLine(g, r.staysHome)] : [])];
 
+  const leader = members.find((o) => o.id === squad.leaderId);
+  const readyChip = deployed ? <Chip tone="neutral" icon="bell">On a call</Chip>
+    : <Chip tone={members.length > 0 && r.ready === members.length ? 'good' : 'warn'} icon={members.length > 0 && r.ready === members.length ? 'check' : 'warning'}>{`${r.ready} of ${total} ready`}</Chip>;
   return (
-    <section className="squad-block squadpanel" aria-label={`Squad ${squad.id}, ${squad.name}`}>
-      <div className="squad-block-head">
-        <span className="squad-badge" aria-hidden="true">{squad.id}</span>
+    <Card className="squadpanel">
+      <section aria-label={`Squad ${squad.id}, ${squad.name}`} className="squad-block">
         {renaming ? (
           <form
             className="rename"
@@ -148,21 +147,22 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
             <Button size="sm" variant="ghost" onClick={finishRename}>Cancel</Button>
           </form>
         ) : (
-          <>
-            <h2 className="squad-block-name">
+          <Row
+            lead={<span className="squad-badge squad-badge-lg" aria-hidden="true">{squad.id}</span>}
+            title={<h2 className="squad-block-name">
               <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
                 requestedFocus.current = 'input';
                 nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
               }}>{squad.name}<Icon name="edit" size={14} /></button>
-            </h2>
-            <span className="squad-block-meta">{DUTY_META[squad.duty].label} · {r.ready} of {total} ready</span>
-          </>
+            </h2>}
+            detail={[DUTY_META[squad.duty].label, leader ? `${leader.surname} leads` : null, open > 0 ? (open === 1 ? '1 open place' : `${open} open places`) : null].filter(Boolean).join(' · ')}
+            trail={readyChip}
+          />
         )}
-      </div>
-      {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
-      <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
-      {open > 0 && <p className="squad-block-open">{open === 1 ? '1 open place' : `${open} open places`}</p>}
-    </section>
+        {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
+        <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
+      </section>
+    </Card>
   );
 }
 
@@ -209,22 +209,19 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
   const leaders = new Set(g.squads.map((squad) => squad.leaderId).filter(Boolean));
   const count = (value: RosterFilter) => filterRoster(officers, value, now).length;
   return (
-    <section className="squad-roster" aria-labelledby="squad-roster-h">
-      <div className="officers-head">
-        <h2 id="squad-roster-h" className="section-title">{officers.length} of {g.department.rosterCap} officers</h2>
-        <label className="squad-sort">
-          <span className="sr-only">Sort roster</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
-            {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>By {ROSTER_SORT_LABEL[value].toLowerCase()}</option>)}
-          </select>
-        </label>
-      </div>
+    <Section id="squad-roster-h" title="Roster" icon="people" count={`${officers.length} of ${g.department.rosterCap} officers`}
+      action={<label className="squad-sort">
+        <span className="sr-only">Sort roster</span>
+        <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
+          {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>By {ROSTER_SORT_LABEL[value].toLowerCase()}</option>)}
+        </select>
+      </label>}>
       <ChoiceRail value={filter} label="Show officers" grow onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
         value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
       }))} />
-      {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <div className="officer-character-grid">
-        {shown.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
-      </div>}
-    </section>
+      {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
+        {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
+      </div></Card>}
+    </Section>
   );
 }
