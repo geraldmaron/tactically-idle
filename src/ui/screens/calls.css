@@ -70,8 +70,8 @@
 /* ------------------------------------------------------------ deploy */
 .cl-section { display: flex; flex-direction: column; gap: var(--sp2); }
 .cl-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); min-height: var(--touch); }
-.cl-section-title { display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
-.cl-section-aside { font-size: var(--s14); color: var(--t3); }
+.cl-section-title { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
+.cl-section-aside { min-width: 0; font-size: var(--s14); color: var(--t3); text-align: right; }
 .cl-link { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
 .cl-squads { display: flex; flex-direction: column; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
 .cl-squad { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--sp3); border: 0; border-bottom: 1px solid var(--hair); background: transparent; color: var(--t1); text-align: left; cursor: pointer; }
