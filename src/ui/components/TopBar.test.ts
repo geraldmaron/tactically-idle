@@ -20,17 +20,19 @@ function elements(node: ReactNode): Element[] {
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 
 describe('department status explanations', () => {
-  it('shows whole dollars, the rate per hour, trust and level in words and no logo, with three named native help buttons, the rate under the funds', () => {
+  it('shows whole dollars with the rate as a suffix, trust and level as uniform pills, with three named native help buttons', () => {
+    // Component contract 5 (owner, 2026-10-23): one row of uniform pills, kit icons in wells, no cash photo.
     const state = makeState();
     state.department.funding = 12400;
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
-    expect(html).toContain('class="resource-cash-art"');
+    expect(html).not.toContain('tex_cash.webp');
     expect(html).toContain('data-funding-target');
     expect(html).toContain('>$12,400</span>');
     expect(html).toContain(`${rate(budget(state).net)}</span>`);
-    expect(html.match(/<svg class="icon res-icon"/g), 'rate, trust and level retain their icons beside the cash illustration').toHaveLength(3);
-    expect(html).toContain(`<span class="res-word">Trust </span>${Math.round(state.department.trust)}</button>`);
-    expect(html).toContain(`<span class="res-word">Level </span>${state.department.level}</button>`);
+    expect(html.match(/data-ui-pill/g)).toHaveLength(3);
+    expect(html.match(/<svg class="icon res-icon"/g), 'funds, trust and level lead with their kit icons').toHaveLength(3);
+    expect(html).toContain(`<span class="res-word">Trust </span><span class="res-value">${Math.round(state.department.trust)}</span>`);
+    expect(html).toContain(`<span class="res-word">Level </span><span class="res-value">${state.department.level}</span>`);
     expect(html).not.toContain('/min');
     expect(html).toContain(`Funding: $12,400, ${budget(state).net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);

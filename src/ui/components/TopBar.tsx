@@ -2,14 +2,13 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import type { GameState } from '../../sim/types';
-import { liveMoney, moneyFull, rate } from '../format';
+import { liveMoney, money, moneyFull, rate } from '../format';
 import { Sheet } from './Sheet';
-import { Meter } from './ui';
+import { Meter, Ring } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
 import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
-import { assetUrl } from '../art/assetUrl';
 import { MenuButton } from './SaveManager';
 import { Icon } from '../icons';
 import { RESOURCE_ICON } from '../icons/kit';
@@ -59,8 +58,10 @@ export function createDepartmentHelpNavigation(history: HistoryPort, owner: stri
   };
 }
 
-/** The resource bar on desk screens: funding, the net rate per hour, trust and level in words,
- * each opening its explanation, and the menu. */
+/** The resource bar on desk screens (component contract, owner 2026-10-23): one 44px row of uniform
+ * 32px pills, each a tinted icon well and a tabular value, each opening its explanation. Cash carries
+ * the net rate as a muted suffix; trust and level carry a ring on the well (trust out of 100, level
+ * toward the next). The menu is an icon button at pill height. */
 export function TopBar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const g = useGame();
   const owner = useId();
@@ -83,6 +84,8 @@ export function TopBar({ onOpenMenu }: { onOpenMenu?: () => void }) {
 export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onOpenMenu, live = { shown: g.department.funding, deltas: [] } }: { fundingRef?: React.Ref<HTMLButtonElement>; g: GameState; topic: DepartmentStat | null; onOpen: (topic: DepartmentStat) => void; onClose: () => void; onOpenMenu?: () => void; live?: ReturnType<typeof useLiveFunding> }) {
   const b = budget(g);
   const d = g.department;
+  const progress = levelProgress(d);
+  const levelFill = progress.next === null ? 100 : (100 * (progress.service - progress.floor)) / (progress.next - progress.floor);
   const helpProps = (stat: DepartmentStat, value: string) => ({
     type: 'button' as const,
     'aria-label': `${STAT_TITLES[stat]}: ${value}. Show explanation`,
@@ -95,18 +98,28 @@ export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onO
     <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
         <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', `${moneyFull(d.funding)}, ${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
-          <img className="resource-cash-art" src={assetUrl('art/plates/tex_cash.webp')} alt="" aria-hidden="true" />
-          <span className="stat-cash-stack">
-            <span className="stat-cash-value">{liveMoney(live.shown)}</span>
-            <span className={`stat-rate${b.net < 0 ? ' stat-neg' : ''}`}><Icon name={RESOURCE_ICON.rate} size={16} className="res-icon" />{rate(b.net)}</span>
+          <span className="res-pill" data-ui-pill>
+            <span className="res-well res-well-cash"><Icon name={RESOURCE_ICON.funds} size={16} className="res-icon" /></span>
+            {/* The narrowest phones show the balance short ($13.4K) so the hourly rate stays readable. */}
+            <span className="res-value stat-cash-value">{liveMoney(live.shown)}</span>
+            <span className="res-value stat-cash-short" aria-hidden="true">{money(live.shown)}</span>
+            <span className={`res-suffix stat-rate${b.net < 0 ? ' stat-neg' : ''}`}>{rate(b.net)}</span>
           </span>
           <FundingDeltas deltas={live.deltas} />
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
-          <Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /><span className="res-word">Trust </span>{Math.round(d.trust)}
+          <span className="res-pill" data-ui-pill>
+            <Ring value={d.trust} size={28} tone="trust"><Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /></Ring>
+            <span className="res-word">Trust </span><span className="res-value">{Math.round(d.trust)}</span>
+          </span>
+        </button></li>
+        <li><button className="stat stat-level" {...helpProps('level', String(d.level))}>
+          <span className="res-pill" data-ui-pill>
+            <Ring value={levelFill} size={28} tone="level"><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" /></Ring>
+            <span className="res-word">Level </span><span className="res-value">{d.level}</span>
+          </span>
         </button></li>
       </ul>
-      <button className="stat stat-level" {...helpProps('level', String(d.level))}><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" /><span className="res-word">Level </span>{d.level}</button>
       {onOpenMenu && <MenuButton onOpen={onOpenMenu} />}
     </header>
     <Sheet open={topic !== null} onClose={onClose} title={topic === 'funding' || topic === 'income' ? 'Finances' : topic ? STAT_TITLES[topic] : 'Department status'} className="department-stat-sheet">

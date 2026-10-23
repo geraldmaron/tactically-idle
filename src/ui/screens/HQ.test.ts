@@ -64,15 +64,17 @@ describe('HQ surfaces', () => {
     const officer = state.officers[first.officerIds[0]];
     state = { ...state, officers: { ...state.officers, [officer.id]: { ...officer, injury: { label: 'Sprained wrist', until: NOW + 3 * HOUR_MS } } } };
     const page = html();
-    expect(page.match(/class="face-status face-status-md/g)?.length).toBeGreaterThanOrEqual(state.squads.reduce((n, s) => n + s.officerIds.length, 0));
+    expect(page.match(/class="face-status face-status-sm/g)?.length).toBeGreaterThanOrEqual(state.squads.reduce((n, s) => n + s.officerIds.length, 0));
     expect(page).toContain('face-mark-injured');
     expect(page).toContain(`${officer.surname} is back`);
   });
 
-  it('stacks every member of a squad on its tile', () => {
-    const tiles = html().split('class="hq-faces hq-faces-md"').slice(1);
-    expect(tiles).toHaveLength(state.squads.length);
-    tiles.forEach((tile, i) => expect(tile.split('hq-squad-name')[0].match(/class="face face-md/g)).toHaveLength(state.squads[i].officerIds.length));
+  it('lists every squad as one row with every member in its face stack', () => {
+    const page = html();
+    expect(page).toContain('data-ui-list');
+    const rows = page.split('class="hq-faces hq-faces-stack"').slice(1);
+    expect(rows).toHaveLength(state.squads.length);
+    rows.forEach((row, i) => expect(row.split('hq-row-link')[0].match(/class="face face-sm/g)).toHaveLength(state.squads[i].officerIds.length));
   });
 
   it('shows every command post as a seat, and opens a closed post as a Build upgrade, not a hire', () => {

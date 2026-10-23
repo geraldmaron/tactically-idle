@@ -1,5 +1,5 @@
 import { useToast } from '../components/toast';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useCampaigns, useGame } from '../store';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import { hqOverview } from '../../sim/hq-selectors';
@@ -14,7 +14,7 @@ import { commandStaffOf, managerView, managerViews } from '../../sim/command-sta
 import { employedPatrol, PATROL_BOOSTS, patrolCandidates, patrolCapacity, patrolHireQuote, patrolProfile, patrolRates, patrolTrainingQuote } from '../../sim/patrol';
 import { stageProgress } from '../../sim/operation-selectors';
 import { bestFitSquad } from './operation-squads';
-import { Button, Card, Chip, EmptyState, Row, Section } from '../components/ui';
+import { Button, Chip, EmptyState, Ring, Row, Section } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { Face } from '../components/Face';
 import { officerFaceStatus, type FaceStatus } from '../components/face-status';
@@ -29,7 +29,6 @@ import { duration, moneyFull, perHour, plural, rate, signedMoney } from '../form
 import { scenarioTitle } from './helpers';
 import { callFlow } from './call-flow';
 import { SavedDebriefReview } from './OpsDebrief';
-import { ScoreRing } from '../components/DebriefResults';
 import { Hub, type HubPin } from '../components/Hub';
 import { ShiftReportCard } from '../components/ShiftReport';
 import { CommandSeats, LOOP_ICON } from '../components/CommandStaff';
@@ -96,6 +95,7 @@ function crewStatus(g: GameState, id: Id, at: number): FaceStatus | null {
   return status && casualty ? { ...status, mark: 'injured', label: `${status.surname}, out of action on this call` } : status;
 }
 
+const runRosterCount = (g: GameState, squadId: SquadId) => g.activeRun ? runRoster(g, g.activeRun, squadId).length : 0;
 const officersFrom = (g: GameState, ids: Id[]) => ids.map((id) => g.officers[id]).filter(present);
 
 /** The one move that matters now: the live call, the debrief, the call closest to expiring, else what
@@ -224,11 +224,11 @@ function Clocks({ g, overview, now, onFinances }: { g: GameState; overview: Over
   }
   people.sort((a, b) => a.at - b.at);
   const clocks = [income, ...call, ...people].slice(0, MAX_CLOCKS);
-  return <Section title="On the clock" icon="clock">
-    <div className="hq-clocks">{clocks.map((clock) => <button key={clock.key} type="button" className={`hq-clock${clock.tone ? ` hq-clock-${clock.tone}` : ''}`} onClick={clock.onOpen} aria-label={`${clock.title}. ${clock.detail}${clock.key === 'income' && incomeLeft <= 0 ? '. Any order resumes it' : ''}`}>
-      <span className={`hq-clock-ring${clock.fraction === null ? ' hq-clock-ring-open' : ''}`} style={{ '--fill': (clock.fraction ?? 0) * 100 } as CSSProperties} aria-hidden="true">{clock.lead}</span>
-      <span className="hq-clock-text"><strong>{clock.title}</strong><span>{clock.detail}</span></span>
-    </button>)}</div>
+  return <Section title="On the clock" icon="clock" count={plural(clocks.length, 'timer')}>
+    <div className="hq-list" data-ui-list>{clocks.map((clock) => <Row key={clock.key} className={`hq-clock${clock.tone ? ` hq-clock-${clock.tone}` : ''}`} onClick={clock.onOpen}
+      label={`${clock.title}. ${clock.detail}${clock.key === 'income' && incomeLeft <= 0 ? '. Any order resumes it' : ''}`}
+      lead={clock.fraction === null ? <span className="hq-clock-open">{clock.lead}</span> : <Ring value={clock.fraction * 100} size={40} tone={clock.tone === 'harm' ? 'harm' : clock.tone === 'warn' ? 'warn' : 'act'}>{clock.lead}</Ring>}
+      title={clock.title} detail={clock.tone ? <span className={`hq-tone-${clock.tone}`}>{clock.detail}</span> : clock.detail} trail={<Icon name="chevronRight" size={16} />} />)}</div>
   </Section>;
 }
 
@@ -266,50 +266,46 @@ function SwatReadiness({ g, overview }: { g: GameState; overview: Overview }) {
   ];
   return (
     <Section id="hq-duties-h" title="SWAT readiness" icon="people" count={`${overview.deployable} of ${overview.totalOfficers} ready`}
-      action={<Button size="sm" variant="quiet" onClick={() => nav.setTeamSection('swat')}>Team</Button>}>
+      action={<button type="button" className="section-link" onClick={() => nav.setTeamSection('swat')}>Team<Icon name="chevronRight" size={16} /></button>}>
       {summary.length > 0 && <div className="hq-summary">{summary.map((s) => <button key={s.text} type="button" className={`hq-summary-item hq-summary-${s.tone}`} onClick={s.onOpen}><Icon name={s.icon} size={16} />{s.text}</button>)}</div>}
-      <div id="hq-duties" className="hq-duties">
       {g.squads.length === 0 ? (
         <EmptyState compact icon="people" title="No squads yet">
           Create a squad in Team.
           <Button size="sm" onClick={() => nav.go('squad')}>Open Team</Button>
         </EmptyState>
-      ) : g.squads.map((s) => {
+      ) : <div id="hq-duties" className="hq-list" data-ui-list>{g.squads.map((s) => {
         const deployed = squadDeployed(g, s.id);
         const readiness = squadReadiness(g, s.id, g.department.clockHighWater);
         const members = s.officerIds.map((id) => g.officers[id]).filter(present);
-        const managed = watch.hired && !policy.optOut.includes(s.id);
         const statuses = members.map((o) => officerFaceStatus(g, o.id, g.department.clockHighWater));
         const strained = statuses.filter((status) => status?.mark === 'strained').length;
         const back = statuses.filter((status): status is FaceStatus & { until: number } => !!status?.until && status.until > g.department.clockHighWater).sort((a, b) => a.until - b.until)[0];
         const last = g.debriefs.find((d) => d.officerCondition.some((c) => s.officerIds.includes(c.officerId)));
         const allReady = !deployed && members.length > 0 && readiness.ready === members.length;
-        const fit = allReady && strained === 0;
-        return (
-          <Card key={s.id} tone={fit ? 'good' : undefined} className="hq-squad hq-duty">
-            <button type="button" className="hq-squad-open" onClick={() => nav.setSquadSection('squads')} aria-label={`${s.name}: ${deployed ? 'on a call' : `${readiness.ready} of ${members.length} ready`}. Open the squad`}>
-              <span className="hq-faces hq-faces-md">{members.map((officer, i) => <Face key={officer.id} size="md" kind="officer" officer={officer} status={deployed ? onScene(statuses[i]) : statuses[i]} />)}</span>
-              <span className="hq-squad-name"><strong>{s.name}</strong><Icon name="chevronRight" size={16} /></span>
-            </button>
-            <div className="hq-squad-state">{deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <>
-              <Chip tone={allReady ? 'good' : 'warn'} icon={allReady ? 'ready' : 'warning'}>{allReady ? `All ${members.length} ready` : `${readiness.ready} of ${members.length} ready`}</Chip>
-            </>}</div>
-            {(back || last) && <p className="hq-squad-note">
-              {back && <span className="hq-squad-strain"><Icon name="clock" size={16} />{`${back.surname} back in ${duration(back.until - g.department.clockHighWater)}`}</span>}
-              {last && <span><Icon name="flag" size={16} />{last.endingTitle}</span>}
-            </p>}
-            {!deployed && <ChoiceRail label={`Duty for ${s.name}`} value={s.duty} grow
-              options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: <><Icon name={DUTY_META[d].icon} size={16} className="hq-duty-icon" /><span className="hq-duty-word">{DUTY_META[d].label}</span></> }))}
-              onChange={(duty) => act({ type: 'setSquadDuty', squadId: s.id, duty })} />}
-            {watch.hired && <label className="hq-duty-auto">
-              <input type="checkbox" role="switch" checked={managed} onChange={(e) => setManaged(s.id, e.target.checked)} />
-              <span className="toggle-ui" aria-hidden="true" />
-              <span>{managed ? `Watch Commander${watch.on ? '' : ', off duty'}` : 'Set by hand'}</span>
-            </label>}
-          </Card>
-        );
-      })}
-      </div>
+        // One line of facts: readiness, strain, who comes back next, and how the squad's last call ended.
+        const facts = [
+          deployed ? `${plural(runRosterCount(g, s.id), 'officer')} on scene` : allReady ? `All ${members.length} ready` : `${readiness.ready} of ${members.length} ready`,
+          strained ? `${strained} strained` : '',
+          back ? `${back.surname} back in ${duration(back.until - g.department.clockHighWater)}` : '',
+          last ? last.endingTitle : '',
+        ].filter(Boolean).join(' · ');
+        return <Row key={s.id} className={`hq-duty hq-squad-row${deployed ? ' hq-squad-out' : ''}`}
+          lead={<span className="hq-faces hq-faces-stack">{members.map((officer, i) => <Face key={officer.id} size="sm" kind="officer" officer={officer} status={deployed ? onScene(statuses[i]) : statuses[i]} />)}</span>}
+          title={<button type="button" className="hq-row-link" onClick={() => nav.setSquadSection('squads')} aria-label={`${s.name}: ${facts}. Open the squad`}>{s.name}<Icon name="chevronRight" size={16} /></button>}
+          detail={facts}
+          trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <ChoiceRail size="sm" label={`Duty for ${s.name}`} value={s.duty}
+            options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: <><Icon name={DUTY_META[d].icon} size={16} /><span>{DUTY_META[d].label}</span></> }))}
+            onChange={(duty) => act({ type: 'setSquadDuty', squadId: s.id, duty })} />} />;
+      })}</div>}
+      {/* The Watch Commander's hand on duty: one switch per squad under the list, not a second trail. */}
+      {watch.hired && g.squads.length > 0 && <div className="hq-watch" role="group" aria-label="Duty set by the Watch Commander">
+        <span className="hq-watch-head"><Icon name="patrol" size={16} />{`Watch Commander${watch.on ? '' : ', off duty'}`}</span>
+        {g.squads.map((s) => { const managed = !policy.optOut.includes(s.id); return <label key={s.id} className="hq-duty-auto">
+          <input type="checkbox" role="switch" checked={managed} onChange={(e) => setManaged(s.id, e.target.checked)} />
+          <span className="toggle-ui" aria-hidden="true" />
+          <span>{s.name}</span>
+        </label>; })}
+      </div>}
     </Section>
   );
 }
@@ -421,8 +417,8 @@ function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['
   return (
     <button type="button" className={`debrief-tile debrief-tile-${tone}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open} aria-label={`Review result: ${d.endingTitle}`}>
       <span className="debrief-rings" aria-hidden="true">
-        <ScoreRing value={d.objective.score}><Icon name="flag" size={16} /></ScoreRing>
-        <ScoreRing value={d.civilianSafety.score}><Icon name="civilian" size={16} /></ScoreRing>
+        <Ring value={d.objective.score}><Icon name="flag" size={16} /></Ring>
+        <Ring value={d.civilianSafety.score}><Icon name="civilian" size={16} /></Ring>
       </span>
       <span className="debrief-tile-main">
         <span className="debrief-tile-kicker">{type && <CallTypeBadge type={type} size={18} />}{scenarioTitle(g, d.scenarioId, now)}</span>
