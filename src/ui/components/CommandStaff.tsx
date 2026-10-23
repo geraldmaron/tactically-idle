@@ -135,8 +135,10 @@ export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: Mana
         </div>
       </div>
       {hireReceipt && <p className="staff-hire-receipt" role="status"><Icon name="check" size={20} />{hireReceipt}</p>}
-      <p>{profile.duty}</p>
-      <p className="dim staff-never"><Icon name="shield" size={16} />{profile.never}</p>
+      <section className="staff-duty" aria-label="What the post does">
+        <p className="staff-duty-text">{profile.duty}</p>
+        <p className="staff-never"><Icon name="shield" size={16} />{profile.never}</p>
+      </section>
       {!view.open ? <HireCard view={view} onHire={() => { onClose(); nav.openDevelopment(profile.nodeId); }} />
         : !holder ? <CandidatePicker id={id} g={g} now={now} view={view} onHired={setHireReceipt} />
           : <>
@@ -153,7 +155,7 @@ export function ManagerSheet({ id, g, now, onClose, inGear = false }: { id: Mana
             <ReplaceCard id={id} g={g} name={personName(view)!} severance={staffSeverance(holder)} />
           </>}
       <section className="staff-log" aria-label={`${profile.title} activity log`}>
-        <h3>Activity log</h3>
+        <h3><Icon name="list" size={16} />Activity log</h3>
         {view.log.length ? <ol>{view.log.map((entry, index) => <li key={`${entry.at}-${index}`}><span>{entry.text}</span><time className="dim">{relativeTime(entry.at, now)}</time></li>)}</ol>
           : <p className="dim">{view.hired ? 'Nothing yet. Actions appear here after each clock-hour check.' : 'Actions appear here once someone is hired.'}</p>}
       </section>

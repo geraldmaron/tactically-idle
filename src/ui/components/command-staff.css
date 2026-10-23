@@ -17,13 +17,13 @@
 .manager-portrait-locked .icon { position: relative; color: var(--muted); }
 
 /* Sheet */
-.staff-detail > p { margin: 0; font-size: 13.5px; line-height: 1.45; }
+.staff-detail > p { margin: 0; font-size: var(--s14); line-height: 1.45; }
 .staff-hero { display: flex; align-items: center; gap: var(--sp4); min-width: 0; padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: 18px; background: linear-gradient(145deg, var(--ink-1), var(--ink-0)); box-shadow: var(--shadow-card); }
 .staff-hero-main { display: grid; justify-items: start; gap: var(--sp1); min-width: 0; }
 .staff-hero-main p { margin: 0; font-size: 14px; line-height: 1.35; }
 .staff-hero-loop { display: inline-flex; align-items: center; gap: var(--sp1); font-weight: 600; color: var(--t2); }
-.staff-never { display: flex; gap: var(--sp1); align-items: flex-start; }
-.staff-never .icon { flex: none; margin-top: var(--sp1); }
+.staff-never { display: flex; gap: var(--sp2); align-items: flex-start; margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.45; }
+.staff-never .icon { flex: none; margin-top: 2px; }
 .staff-switch-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); padding: var(--sp2) var(--sp2) var(--sp2) var(--sp3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .staff-switch-row > span { display: grid; gap: var(--sp1); min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
 .staff-switch { flex: none; display: inline-grid; place-items: center; min-width: 56px; min-height: var(--touch); padding: 0; border: 0; background: none; cursor: pointer; }
@@ -95,7 +95,7 @@
 .staff-more:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .staff-hire-receipt { display: flex; align-items: center; gap: var(--sp2); padding: var(--sp3); border: 1px solid var(--mint); border-radius: 14px; color: var(--mint); background: color-mix(in srgb, var(--mint) 12%, var(--ink-1)); font-weight: 650; }
 .staff-hire-receipt .icon { flex: none; }
-.staff-sheet .staff-policy, .staff-sheet .staff-log { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: 16px; background: var(--ink-1); }
+.staff-sheet .staff-policy { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: 16px; background: var(--ink-1); }
 .staff-pool-head { flex-wrap: wrap; }
 @container game (max-width: 359px) { .staff-hero { flex-direction: column; align-items: flex-start; gap: var(--sp3); padding: var(--sp3); } }
 
@@ -128,3 +128,13 @@
 .command-room-post-compact .command-room-portrait { width: 40px; height: 42px; }
 .command-room-post-closed .manager-portrait { opacity: 0.75; }
 .manager-seat-icon { color: var(--t2); }
+
+/* The command post sheet reads in four groups with room between them: who, what the post does, what
+   you do about it, and the quiet history last. */
+.staff-sheet .staff-detail { gap: var(--sp4); }
+.staff-duty { display: grid; gap: var(--sp3); padding: var(--sp3) var(--sp4); border: 1px solid var(--hair-2); border-radius: 16px; background: var(--ink-1); }
+.staff-duty-text { margin: 0; color: var(--t1); font-size: var(--s16); line-height: 1.5; }
+.staff-duty .staff-never { padding-top: var(--sp3); border-top: 1px solid var(--hair); }
+.staff-sheet .staff-hire { gap: var(--sp3); }
+.staff-sheet .staff-log { padding: var(--sp3) 0 0; border-top: 1px solid var(--hair); }
+.staff-log h3 { display: flex; align-items: center; gap: var(--sp2); margin: 0; font-size: var(--s14); }
