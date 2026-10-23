@@ -31,8 +31,8 @@ export function PaperDefs({ uid, vb }: { uid: string; vb: Rect }) {
         <stop offset="1" stopColor="var(--paper-deep)" />
       </linearGradient>
       <radialGradient id={id.vignette} cx="0.5" cy="0.5" r="0.78">
-        <stop offset="0.55" stopColor="#031a52" stopOpacity="0" />
-        <stop offset="1" stopColor="#031a52" stopOpacity="0.5" />
+        <stop offset="0.55" stopColor="var(--bp-ink)" stopOpacity="0" />
+        <stop offset="1" stopColor="var(--bp-ink)" stopOpacity="0.5" />
       </radialGradient>
       <filter id={id.grain} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
         <feTurbulence type="fractalNoise" baseFrequency="1.9" numOctaves="2" seed="11" result="n" />
@@ -43,7 +43,7 @@ export function PaperDefs({ uid, vb }: { uid: string; vb: Rect }) {
         <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.02  0 0 0 0 0.1  0 0 0 0 0.32  0 0 0 1.5 -0.55" />
       </filter>
       <filter id={id.tapeShadow} x="-20%" y="-40%" width="140%" height="180%">
-        <feDropShadow dx="0.1" dy="0.18" stdDeviation="0.14" floodColor="#020d33" floodOpacity="0.45" />
+        <feDropShadow dx="0.1" dy="0.18" stdDeviation="0.14" floodColor="var(--bp-ink)" floodOpacity="0.45" />
       </filter>
       <filter id={id.glow} x="-10%" y="-10%" width="120%" height="120%">
         <feGaussianBlur stdDeviation="0.5" />
@@ -69,16 +69,16 @@ export function PaperDefs({ uid, vb }: { uid: string; vb: Rect }) {
         <path d="M0 0.5H1" stroke="var(--chalk)" strokeWidth="0.05" strokeOpacity="0.4" fill="none" />
       </pattern>
       <linearGradient id={id.creaseV} x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stopColor="#031a52" stopOpacity="0" />
-        <stop offset="0.45" stopColor="#031a52" stopOpacity="0.34" />
-        <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.16" />
-        <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        <stop offset="0" stopColor="var(--bp-ink)" stopOpacity="0" />
+        <stop offset="0.45" stopColor="var(--bp-ink)" stopOpacity="0.34" />
+        <stop offset="0.55" stopColor="var(--white)" stopOpacity="0.16" />
+        <stop offset="1" stopColor="var(--white)" stopOpacity="0" />
       </linearGradient>
       <linearGradient id={id.creaseH} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor="#031a52" stopOpacity="0" />
-        <stop offset="0.45" stopColor="#031a52" stopOpacity="0.34" />
-        <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.16" />
-        <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        <stop offset="0" stopColor="var(--bp-ink)" stopOpacity="0" />
+        <stop offset="0.45" stopColor="var(--bp-ink)" stopOpacity="0.34" />
+        <stop offset="0.55" stopColor="var(--white)" stopOpacity="0.16" />
+        <stop offset="1" stopColor="var(--white)" stopOpacity="0" />
       </linearGradient>
       <clipPath id={id.clip}>
         <rect x={vb.x} y={vb.y} width={vb.w} height={vb.h} />
@@ -144,9 +144,9 @@ function Tape({ cx, cy, angle, shadow }: { cx: number; cy: number; angle: number
   return (
     <g transform={`translate(${r2(cx)} ${r2(cy)}) rotate(${angle})`} filter={`url(#${shadow})`}>
       <polygon points={pts} fill="var(--tape)" />
-      <polygon points={pts} fill="#fff" opacity="0.1" />
+      <polygon points={pts} fill="var(--white)" opacity="0.1" />
       {[-0.9, -0.3, 0.35, 0.95].map((y, i) => (
-        <line key={i} x1={-L / 2 + 0.6} x2={L / 2 - 0.6} y1={y} y2={y + (i % 2 ? 0.05 : -0.04)} stroke="#6b5a34" strokeOpacity="0.16" strokeWidth="0.06" />
+        <line key={i} x1={-L / 2 + 0.6} x2={L / 2 - 0.6} y1={y} y2={y + (i % 2 ? 0.05 : -0.04)} stroke="var(--manila-ink)" strokeOpacity="0.16" strokeWidth="0.06" />
       ))}
     </g>
   );

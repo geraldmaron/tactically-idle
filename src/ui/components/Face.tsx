@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { PortraitProps } from '../portraits/Portrait';
 import { currentPortraitKey, portraitSource } from '../portraits/Portrait';
+import { Silhouette, type SilhouetteKind } from '../portraits/Silhouette';
 import { assetUrl } from '../art/assetUrl';
 import { Icon } from '../icons';
 import { FACE_MARK_ICON, type FaceStatus } from './face-status';
@@ -10,7 +11,7 @@ import './face.css';
 export type FaceSize = 'sm' | 'md' | 'lg';
 const FACE_PX: Record<FaceSize, number> = { sm: 32, md: 48, lg: 72 };
 /** Who the face stands for; it picks the silhouette and the ring color when there is no photograph. */
-export type FaceKind = 'officer' | 'subject' | 'civilian' | 'person' | 'patrol';
+export type FaceKind = SilhouetteKind;
 
 /** A person's face: the file portrait when there is one, otherwise a silhouette for their role.
  * Never initials. Pass an `officer`, or a `src` (a path under public/), or neither. */
@@ -40,16 +41,6 @@ export function Face({ size = 'md', kind = 'person', name, officer, src, classNa
   return <span className={`face face-${size} face-${kind}${className ? ` ${className}` : ''}`} data-face={painted ? (officer ? 'portrait' : 'painted') : 'silhouette'}
     role={name ? 'img' : undefined} aria-label={name} aria-hidden={name ? undefined : true}>
     {painted ? <img key={art} src={art} alt="" width={px} height={px} draggable={false} onError={() => setFailedSrc(art)} />
-      : <Silhouette kind={kind} />}
+      : <Silhouette kind={kind} className="face-silhouette" />}
   </span>;
-}
-
-/** Head and shoulders, with what marks the role: a cap brim for officers, a hood for the subject. */
-function Silhouette({ kind }: { kind: FaceKind }) {
-  return <svg className="face-silhouette" viewBox="0 0 64 64" aria-hidden="true">
-    {kind === 'subject' ? <path d="M32 8c-9 0-15 6-15 15v4h30v-4c0-9-6-15-15-15z" /> : null}
-    <circle cx="32" cy="26" r="11" />
-    {kind === 'officer' || kind === 'patrol' ? <path d="M19 22c1-9 7-13 13-13s12 4 13 13z M17 22h30v3H17z" /> : null}
-    <path d="M8 64c1-14 10-22 24-22s23 8 24 22z" />
-  </svg>;
 }
