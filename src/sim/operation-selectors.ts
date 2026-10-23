@@ -30,6 +30,7 @@ import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
 import { deployRoster, runRoster } from './squads';
 import { getScenario } from './scenario-registry';
+import { parseIncidentId } from '../gen/incident';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, tagNames, type Evaluation } from './resolution';
 import { ditherCap, stalledRun, teamMinutes } from './clocks';
@@ -65,6 +66,8 @@ export interface Briefing {
   known: string[];
   unknown: string[];
   objectives: string[];
+  /** The same objectives with their ids, in authored order. An id equals the cast id the order is about. */
+  objectiveRefs: { id: Id; label: string }[];
   /** Entry zones squads may start from, with labels. */
   entries: { id: Id; label: string }[];
   /** Equipment tags this scenario's actions can use, for the loadout screen. */
@@ -142,7 +145,7 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
 
 export function briefing(scenarioId: Id, state?: GameState, squadIds?: SquadId[]): Briefing {
   const s = getScenario(scenarioId);
-  if (!s) return { scenarioId, known: [], unknown: [], objectives: [], entries: [], usefulItemIds: [] };
+  if (!s) return { scenarioId, known: [], unknown: [], objectives: [], objectiveRefs: [], entries: [], usefulItemIds: [] };
   const built = getBuilt(s.locationFamilyId, s.locationSeed);
   const known = [...s.briefing.known, ...s.facts.filter((f) => f.initial === 'reported' && f.reportedText).map((f) => f.reportedText as string)];
   const unknown = [...s.briefing.unknown];
@@ -172,9 +175,19 @@ export function briefing(scenarioId: Id, state?: GameState, squadIds?: SquadId[]
     known,
     unknown,
     objectives: s.objectives.map((o) => o.label),
+    objectiveRefs: s.objectives.map((o) => ({ id: o.id, label: o.label })),
     entries: built.location.entries.map((id) => ({ id, label: spaceLabel(built, id) })),
     usefulItemIds,
   };
+}
+
+/**
+ * The call's tier, 1 to 5, read from its id, or null for a call that has none (an authored scenario or an
+ * unparseable id). Higher tiers raise that call type's checks and its pay. It is a tier, not a risk rating:
+ * baselines differ by call type (tree `difficulty.base` and `perTier`), so tiers are not comparable across types.
+ */
+export function callTier(scenarioId: Id): number | null {
+  return parseIncidentId(scenarioId)?.tier ?? null;
 }
 
 export function builtForScenario(scenarioId: Id): BuiltLocation {
