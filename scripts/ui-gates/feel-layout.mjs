@@ -10,6 +10,7 @@
 /** Surfaces that must carry a marked list when they have two or more items. `screen` is the walk's name for it. */
 export const LAYOUT_REGISTRY = [
   { key: 'hq-squads', screen: 'hq', label: 'HQ squads', items: '.hq-duty' },
+  { key: 'hq-patrol', screen: 'hq', label: 'HQ patrol', items: '.hq-patrol-lines > div' },
   { key: 'hq-timers', screen: 'hq', label: 'HQ timers ("On the clock")', items: '.hq-timer' },
   { key: 'team-patrol', screen: 'team-patrol', label: 'the Patrol roster', items: '.patrol-roster > *' },
   { key: 'calls-board', screen: 'board', label: 'the Calls board', items: '.cl-board-list .cl-card' },
@@ -86,21 +87,30 @@ export async function layoutProbe(cfg) {
   const labelOf = (el) => (el.getAttribute('aria-label') ?? el.innerText ?? '').replace(/\s+/g, ' ').trim().slice(0, 28) || describe(el);
   const out = { lists: [], registry: [], bar: null };
   const exempt = (cfg.exempt ?? []).map((e) => e.container);
-  [...document.querySelectorAll('[data-ui-list]')].filter(shown).forEach((list, n) => {
+  // A container with no box of its own (display: contents, uncleared floats) is still measured through its children.
+  [...document.querySelectorAll('[data-ui-list]')].forEach((list, n) => {
     if (exempt.some((sel) => list.matches(sel))) return;
-    const items = [...list.children].filter(shown).map((el) => { const r = rectOf(el); return { label: labelOf(el), top: Math.round(r.top + scrollY), bottom: Math.round(r.bottom + scrollY) }; });
+    // Unrounded, so the 1px tolerance is the only slack.
+    const items = [...list.children].filter(shown).map((el) => { const r = rectOf(el); return { label: labelOf(el), top: r.top + scrollY, bottom: r.bottom + scrollY }; });
+    if (!items.length && !list.children.length) return;
     out.lists.push({ id: `${describe(list)}#${n}`, items });
   });
   for (const e of cfg.registry ?? []) {
     const items = [...document.querySelectorAll(e.items)].filter(shown);
     const lists = new Set(items.map((x) => x.closest('[data-ui-list]')));
-    out.registry.push({ key: e.key, label: e.label, count: items.length, marked: items.length > 0 && !lists.has(null) && lists.size === 1 });
+    // Marked means one list holds them all and each of its direct children holds at most one: a wrapper
+    // around an unmarked grid does not count, because the wrapper's single child is all the list gate sees.
+    const list = lists.size === 1 && !lists.has(null) ? [...lists][0] : null;
+    const oneEach = !!list && [...list.children].every((child) => items.filter((x) => child === x || child.contains(x)).length <= 1);
+    out.registry.push({ key: e.key, label: e.label, count: items.length, marked: items.length > 0 && oneEach });
   }
   if (cfg.pills) {
     const bar = document.querySelector('.resource-bar');
     if (bar) {
       const pills = [...bar.querySelectorAll('[data-ui-pill]')].filter(shown).map((el, i) => {
-        const valueEl = [el, ...el.querySelectorAll('*')].find((x) => [...x.childNodes].some((c) => c.nodeType === 3 && /\d/.test(c.textContent ?? ''))) ?? el;
+        // The value is the largest numeric text in the pill: a smaller suffix (the hourly rate) never stands for it.
+        const numeric = [el, ...el.querySelectorAll('*')].filter((x) => [...x.childNodes].some((c) => c.nodeType === 3 && /\d/.test(c.textContent ?? '')));
+        const valueEl = numeric.sort((a, b) => parseFloat(getComputedStyle(b).fontSize) - parseFloat(getComputedStyle(a).fontSize))[0] ?? el;
         const s = getComputedStyle(valueEl);
         const well = el.querySelector('[data-ui-pill-icon], .pill-icon, .res-well');
         const wr = well ? rectOf(well) : null;

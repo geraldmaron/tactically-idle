@@ -20,6 +20,9 @@ describe('F7.list: items of a marked list never share a row', () => {
     expect(found[0].detail).toContain('"Alpha"');
     expect(found[0].detail).toContain('"Bravo"');
   });
+  it('fails an overlap of a fraction over the 1px tolerance, which rounding must not hide', () => {
+    expect(rowOverlaps([{ label: 'a', top: 0, bottom: 72.3 }, { label: 'b', top: 71.1, bottom: 140 }])).toHaveLength(1);
+  });
   it('fails an odd third item only if it also shares a row, and a single item never fails', () => {
     expect(judgeLists([{ id: 'x', items: [stacked[0]] }])).toEqual([]);
     expect(rowOverlaps(twoUp)).toHaveLength(1);

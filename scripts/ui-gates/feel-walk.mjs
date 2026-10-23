@@ -19,11 +19,17 @@ export const SCENARIOS = [
   { id: 'timer-off', width: 390, height: HEIGHTS[390], timer: 'off', stepOut: true },
   { id: 'timer-relaxed', width: 390, height: HEIGHTS[390], timer: 'relaxed', stepOut: true },
   { id: 'timer-standard', width: 390, height: HEIGHTS[390], timer: 'standard', stepOut: true },
-  // The squad list at the owner's counts (1, and 3 across the three widths). Walks HQ only: `layoutOnly`.
-  { id: 'sq1-390', width: 390, height: HEIGHTS[390], layout: true, layoutOnly: true, squads: 1 },
-  { id: 'sq3-320', width: 320, height: HEIGHTS[320], layout: true, layoutOnly: true, squads: 3 },
-  { id: 'sq3-390', width: 390, height: HEIGHTS[390], layout: true, layoutOnly: true, squads: 3 },
-  { id: 'sq3-430', width: 430, height: HEIGHTS[430], layout: true, layoutOnly: true, squads: 3 },
+  // The squad list with three squads, and the layout gates at the remaining width, height and text combinations.
+  // `layoutOnly` walks HQ, Team and the board only (`stopAfter`). A single squad cannot be seeded: the sim has no way
+  // to remove a squad and an empty one still renders, so HQ always shows the two it starts with.
+  { id: 'sq3-320', width: 320, height: HEIGHTS[320], layout: true, layoutOnly: true, stopAfter: 'hq', squads: 3 },
+  { id: 'sq3-390', width: 390, height: HEIGHTS[390], layout: true, layoutOnly: true, stopAfter: 'hq', squads: 3 },
+  { id: 'sq3-430', width: 430, height: HEIGHTS[430], layout: true, layoutOnly: true, stopAfter: 'hq', squads: 3 },
+  { id: 'lay-320x844', width: 320, height: 844, layout: true, layoutOnly: true, stopAfter: 'board' },
+  { id: 'lay-320x640', width: 320, height: 640, layout: true, layoutOnly: true, stopAfter: 'board' },
+  { id: 'lay-430x640', width: 430, height: 640, layout: true, layoutOnly: true, stopAfter: 'board' },
+  { id: 'lay-320-text200', width: 320, height: HEIGHTS[320], textScale: 2, layout: true, layoutOnly: true, stopAfter: 'board' },
+  { id: 'lay-430-text200', width: 430, height: HEIGHTS[430], textScale: 2, layout: true, layoutOnly: true, stopAfter: 'board' },
   // Every officer unassigned through window.__ti (dev builds), so no squad can deploy. Walks to the Deploy screen only.
   { id: 'blocked', width: 390, height: HEIGHTS[390], blocked: true },
 ];
@@ -145,15 +151,14 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
           await page.locator('nav').waitFor();
           if (sc.textScale) await page.evaluate(scaleType, sc.textScale);
           if (sc.squads) {
-            // Seed the squad count through window.__ti (dev builds): 1 folds B into A, 3 adds Charlie from B's officers.
+            // Seed a third squad through window.__ti (dev builds): Charlie takes two of B's officers.
             const ok = await page.evaluate((count) => {
               const ti = window.__ti, g = ti.getState();
               const byId = (id) => Object.values(ti.getState().officers).filter((o) => o.squadId === id);
-              if (count === 1) { for (const o of byId('B')) ti.send({ type: 'assignToSquad', officerId: o.id, squadId: 'A' }); return true; }
               if (!ti.send({ type: 'createSquad', name: 'Charlie' }).ok) return false;
               const c = ti.getState().squads.find((x) => x.name === 'Charlie');
-              for (const o of byId('B').slice(0, 2)) ti.send({ type: 'assignToSquad', officerId: o.id, squadId: c.id });
-              return g.squads.length === 2;
+              const moved = byId('B').slice(0, 2).map((o) => ti.send({ type: 'assignToSquad', officerId: o.id, squadId: c.id }).ok);
+              return g.squads.length === 2 && moved.length === 2 && moved.every(Boolean) && ti.getState().squads.length === count;
             }, sc.squads);
             if (!ok) throw new Error('could not seed the squad count through window.__ti');
           }
@@ -164,14 +169,14 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         });
         if (sc.cold) { const p = await page.evaluate(() => window.__paint); cold.push({ scenario: sc.id, firstContentfulPaintMs: p['first-contentful-paint'] ?? null, largestContentfulPaintMs: p['largest-contentful-paint'] ?? null, note: 'dev server, art held back 1.2s, not gated' }); }
         const tab = (t) => page.locator('nav.bottomnav').getByText(t, { exact: true }).click();
-        await step('hq', async () => { await tab('HQ'); await measure('hq'); await measureLayout('hq'); if (sc.layoutOnly) throw STOP; });
+        await step('hq', async () => { await tab('HQ'); await measure('hq'); await measureLayout('hq'); if (sc.stopAfter === 'hq') throw STOP; });
         await step('team', async () => {
           if (!sc.layout) return;
           const section = (n) => page.locator('.team-page [aria-label="Team sections"]').getByRole('button', { name: n, exact: true }).click();
           await tab('Team'); await section('Patrol'); await page.locator('.patrol-page').waitFor(); await measureLayout('team-patrol');
           await section('Command'); await page.locator('.team-command .command-room').waitFor(); await measureLayout('team-command');
         });
-        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await measure('board'); await measureLayout('board'); });
+        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await measure('board'); await measureLayout('board'); if (sc.stopAfter === 'board') throw STOP; });
         await step('brief', async () => {
           const welcome = page.locator('.welcome-sheet'); if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
           await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await measure('brief');
