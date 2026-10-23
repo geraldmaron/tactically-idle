@@ -170,8 +170,8 @@ those decisions (backlog `feel-slice`).
 
 | Session | Model | Item | Branch | Writes only |
 |---|---|---|---|---|
-| feel-checks (local_31c01514) | Sonnet | `feel-slice` checks | `claude/great-tereshkova-043339`, rebased to df9a3e9 | `scripts/ui-gates/`, `scripts/check-ui.mjs`, `scripts/play-loop.mjs`, `package.json` scripts |
-| feel-slice (local_16bb6632) | Sonnet | `feel-slice` screens | `claude/lucid-thompson-850b6e`, rebased to df9a3e9 | `src/ui/components/` (TopBar, Hub, toast, new Face), `src/ui/screens/` (HQ, OpsBoard, CallTile, OpsPrepare, PrepBriefing, LiveView, OpsLive, OpsDebrief, DebriefContents) and their CSS incl. `ops-visual.css`, `live-call.css`; `public/` |
+| feel-checks (local_31c01514) | Sonnet | `feel-slice` checks | `claude/feel-checks-tooling`, from df9a3e9 | `scripts/ui-gates/`, `scripts/check-ui.mjs`, `scripts/play-loop.mjs`, `package.json` scripts |
+| feel-slice (local_16bb6632) | Sonnet | `feel-slice` screens | `claude/lucid-thompson-850b6e`, reset to df9a3e9 | `src/ui/components/` (TopBar, Hub, toast, new Face), `src/ui/screens/` (HQ, OpsBoard, CallTile, OpsPrepare, PrepBriefing, LiveView, OpsLive, OpsDebrief, DebriefContents) and their CSS incl. `ops-visual.css`, `live-call.css`; `public/` |
 
 Both sessions started from `main` by mistake and were stopped within a minute and told to reset to
 df9a3e9 before editing. The lead checks each branch's base before merging. The lead regenerates
