@@ -48,6 +48,10 @@ screen and every session follows these; a package that needs something new adds 
    is not a button and not a heading.
 8. **Life without size.** Motion and color carry state, not scale: a ring that fills, a number that
    ticks, a pip that pulses once. Art, faces and icons stay on every surface (see the art contract).
+9. **Checked, not trusted.** A list built from data that can vary carries `data-ui-list` on its
+   container; each resource bar pill carries `data-ui-pill`. `npm run check:feel` fails at 320, 390
+   and 430 when two items of a `data-ui-list` share a row, when a surface it knows has a variable
+   collection renders it without the marker, or when the bar's pills differ in height or value size.
 
 ## Shipped in this slice
 
