@@ -4,8 +4,8 @@
 .squad-navigation { display: flex; align-items: stretch; gap: var(--sp2); min-width: 0; }
 .squad-navigation .choice-rail { flex: 1 1 auto; }
 .squad-tab-name { display: block; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; }
-.squad-add-control { flex: 0 0 44px; min-height: 44px; padding: var(--sp2); border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); cursor: pointer; }
-.squad-add-control:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.squad-add-control { flex: 0 0 44px; min-height: 44px; padding: var(--sp2); border: 1px solid var(--hair); border-radius: 8px; background: var(--ink-1); color: var(--t1); cursor: pointer; }
+.squad-add-control:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .live-squad-rail { padding: var(--sp2) var(--gutter); min-width: 0; }
 .gear-art-frame {
   display: inline-grid; place-items: center; flex-shrink: 0; box-sizing: border-box;
@@ -14,13 +14,13 @@
   box-shadow: inset 0 1px 0 var(--edge-hi), 0 5px 10px color-mix(in srgb, var(--ink-deep) 30%, transparent);
 }
 .store-detail-section h3 {
-  font-family: var(--font-display); font-weight: 500; letter-spacing: .03em;
+  font-family: var(--f-title); font-weight: 500; letter-spacing: .03em;
 }
 .store-equipment .field, .store-training .field { min-width: 0; margin: 0; }
 .store-equipment .field input, .store-equipment .field select,
 .store-training .field input, .store-training .field select { width: 100%; min-width: 0; min-height: 44px; }
 .training-heading { margin: 0; }
-.training-course-highlight { outline: 2px solid var(--amber); outline-offset: 2px; }
+.training-course-highlight { outline: 2px solid var(--act); outline-offset: 2px; }
 
 /* The chrome contract (components/chrome.tsx): a head slot and a foot slot around the screen. The
    shell draws the resource bar and tabs in them on desk screens; a flow puts its head and action
@@ -30,9 +30,9 @@
 .chrome-foot:empty { background: none; }
 /* The foot is measured into --nav-h, so nothing in it may size itself from that variable. */
 .chrome-foot > .bottomnav { flex: none; height: auto; min-height: 64px; box-sizing: border-box; padding: var(--sp2) 0; }
-.chrome-foot > .action-bar { padding-bottom: var(--sp3); }
+.chrome-foot > .action-bar { padding: var(--sp2) var(--gutter); border-top: 0; box-shadow: 0 -1px 0 var(--hair); }
 
-.flow-head { height: 52px; display: flex; align-items: center; gap: var(--sp2); padding: 0 var(--sp4) 0 var(--sp1); border-bottom: 1px solid var(--hair); background: var(--ink-1); }
+.flow-head { height: 44px; display: flex; align-items: center; gap: var(--sp2); padding: 0 var(--sp4) 0 var(--sp1); border-bottom: 1px solid var(--hair); background: var(--ink-1); }
 .flow-back { flex: 1 1 0; min-width: 0; height: 44px; display: inline-flex; align-items: center; gap: var(--sp1); padding: 0 var(--sp2); border: 0; border-radius: var(--r1); background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
 .flow-back > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .flow-back:focus-visible, .flow-title:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
@@ -49,23 +49,24 @@
 .app .toast-layer > .toasts { position: absolute; top: auto; bottom: 10px; left: 12px; right: 12px; }
 .app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
 
-/* Desk chrome: funding has a tangible capsule; the other facts stay single-touch targets. */
-.app .resource-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; min-height: 104px; gap: var(--sp1) var(--sp2); padding: var(--sp2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
-.resource-bar .stats { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-column: 1; grid-row: 1 / 3; min-width: 0; margin: 0; gap: var(--sp1) var(--sp2); }
+/* Desk chrome: one 44px row. Funds and the hourly rate share one chip; trust, level and the menu follow. */
+.app .resource-bar { display: flex; align-items: center; height: 44px; min-height: 44px; gap: var(--sp1); padding: 0 var(--sp2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; gap: var(--sp1); }
 .resource-bar .stats > li { display: flex; min-width: 0; }
-.resource-bar .stats > li:first-child { grid-column: 1 / -1; }
-.resource-bar .stat { position: relative; min-height: 44px; min-width: 44px; padding: 0 5px; border: 1px solid transparent; border-radius: var(--r2); background: none; color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
-.resource-bar .stat-cash { flex: 1; justify-content: flex-start; min-width: 0; padding: 0 var(--sp2) 0 0; border-color: var(--cash-edge); background: linear-gradient(180deg, var(--cash-panel), var(--ink-0)); box-shadow: inset 0 1px 0 var(--edge-hi), 0 2px 4px color-mix(in srgb, var(--ink-deep) 40%, transparent); }
-.resource-cash-art { width: 40px; height: 40px; object-fit: contain; flex: none; pointer-events: none; }
-.stat-cash-value { font: 700 var(--s22)/1 var(--f-title); color: var(--good-text); font-variant-numeric: tabular-nums; }
-.resource-bar .res-icon { flex: none; }
-.resource-bar .res-word { display: none; }
-.resource-bar .stat-rate { color: var(--good-text); font-weight: 500; }
+.resource-bar .stats > li:first-child { flex: 1 1 auto; }
+.resource-bar .stat { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1); min-height: var(--touch); min-width: var(--touch); padding: 0 var(--sp1); border: 0; border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.resource-bar .stat-cash { flex: 1 1 auto; justify-content: flex-start; gap: var(--sp2); min-width: 0; height: 40px; min-height: 40px; padding: 0 var(--sp3) 0 var(--sp1); border: 1px solid var(--cash-edge); background: linear-gradient(180deg, var(--cash-panel), var(--ink-0)); color: var(--t1); box-shadow: inset 0 1px 0 var(--edge-hi); }
+.resource-bar .stat-cash::after { content: ''; position: absolute; inset: -2px 0; }
+.resource-cash-art { width: 32px; height: 32px; object-fit: contain; flex: none; pointer-events: none; }
+.stat-cash-stack { display: grid; gap: 0; min-width: 0; text-align: left; }
+.stat-cash-value { font: 700 var(--s18)/1 var(--f-title); color: var(--good-text); font-variant-numeric: tabular-nums; }
+.resource-bar .stat-rate { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text); font: 500 var(--s14)/1 var(--f-ui); }
 .resource-bar .stat-rate.stat-neg { color: var(--harm-text); }
-.resource-bar .stat-trust, .resource-bar .stat-level { color: var(--t2); }
-.resource-bar .stat-level { grid-column: 2; grid-row: 2; }
-.resource-bar .menu-btn { grid-column: 2; grid-row: 1; margin-right: 0; color: var(--t2); border: 1px solid var(--hair); background: var(--ink-2); }
-.resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.resource-bar .res-icon { flex: none; opacity: 0.85; }
+.resource-bar .res-word { display: none; }
+.resource-bar .stat-level { flex: none; }
+.resource-bar .menu-btn { margin-right: 0; color: var(--t2); }
+.resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
 @media (hover: hover) { .resource-bar button:hover { filter: brightness(1.12); } }
 .chrome-foot > .bottomnav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); padding: 0 var(--sp1); }

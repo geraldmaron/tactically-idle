@@ -197,7 +197,7 @@ export function ActionBar({ summary, primary, quiet, className }: {
       {summary && <p className="action-bar-summary">{summary}</p>}
       <div className="action-bar-buttons">
         {quiet && (() => { const { label, ...props } = quiet; return <Button variant="quiet" {...props}>{label}</Button>; })()}
-        <Button variant="primary" {...primaryProps}>{primaryLabel}</Button>
+        <Button variant="primary" data-primary {...primaryProps}>{primaryLabel}</Button>
       </div>
     </div>
   );

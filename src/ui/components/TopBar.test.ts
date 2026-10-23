@@ -20,25 +20,24 @@ function elements(node: ReactNode): Element[] {
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 
 describe('department status explanations', () => {
-  it('shows whole dollars, the rate per hour, trust and level in words and no logo, with four named native help buttons', () => {
+  it('shows whole dollars, the rate per hour, trust and level in words and no logo, with three named native help buttons, the rate under the funds', () => {
     const state = makeState();
     state.department.funding = 12400;
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
     expect(html).toContain('class="resource-cash-art"');
     expect(html).toContain('data-funding-target');
     expect(html).toContain('>$12,400</span>');
-    expect(html).toContain(`${rate(budget(state).net)}</button>`);
+    expect(html).toContain(`${rate(budget(state).net)}</span>`);
     expect(html.match(/<svg class="icon res-icon"/g), 'rate, trust and level retain their icons beside the cash illustration').toHaveLength(3);
     expect(html).toContain(`<span class="res-word">Trust </span>${Math.round(state.department.trust)}</button>`);
     expect(html).toContain(`<span class="res-word">Level </span>${state.department.level}</button>`);
     expect(html).not.toContain('/min');
-    expect(html).toContain('Funding: $12,400. Show explanation');
-    expect(html).toContain(`Income after costs: ${budget(state).net < 0 ? "minus " : ""}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);
+    expect(html).toContain(`Funding: $12,400, ${budget(state).net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);
     expect(html).toContain(`Department level: ${state.department.level}. Show explanation`);
-    expect(html.match(/<button/g)).toHaveLength(4);
-    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(4);
-    expect(html.match(/aria-expanded="false"/g)).toHaveLength(4);
+    expect(html.match(/<button/g)).toHaveLength(3);
+    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(3);
+    expect(html.match(/aria-expanded="false"/g)).toHaveLength(3);
     expect(html).not.toContain('role="dialog"');
     expect(html).not.toContain('title="Public trust"');
   });
@@ -51,8 +50,8 @@ describe('department status explanations', () => {
     const buttons = elements(tree).filter((element) => element.type === 'button');
     const focus = vi.fn();
     buttons.forEach((button) => button.props.onClick?.({ currentTarget: { focus } } as unknown as MouseEvent<HTMLButtonElement>));
-    expect(onOpen.mock.calls.map(([topic]) => topic)).toEqual(['funding', 'income', 'trust', 'level']);
-    expect(focus).toHaveBeenCalledTimes(4);
+    expect(onOpen.mock.calls.map(([topic]) => topic)).toEqual(['funding', 'trust', 'level']);
+    expect(focus).toHaveBeenCalledTimes(3);
     expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
     const sheets = elements(tree).filter((element) => element.type === Sheet);
     expect(sheets).toHaveLength(1);
@@ -61,11 +60,11 @@ describe('department status explanations', () => {
     expect(g).toEqual(before);
   });
 
-  it.each(['funding', 'income', 'trust', 'level'] as const)('opens exactly one shared dialog for %s and marks only its trigger expanded', (topic) => {
+  it.each(['funding', 'trust', 'level'] as const)('opens exactly one shared dialog for %s and marks only its trigger expanded', (topic) => {
     const html = render(createElement(DepartmentStatusBar, { g: makeState(), topic, onOpen: vi.fn(), onClose: vi.fn() }));
     expect(html.match(/role="dialog"/g)).toHaveLength(1);
     expect(html.match(/aria-expanded="true"/g)).toHaveLength(1);
-    expect(html.match(/aria-expanded="false"/g)).toHaveLength(3);
+    expect(html.match(/aria-expanded="false"/g)).toHaveLength(2);
     expect(html).toContain('>Close</button>');
   });
 

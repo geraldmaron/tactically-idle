@@ -100,13 +100,13 @@ export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onO
     <>
     <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
-        <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', moneyFull(d.funding))}>
+        <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', `${moneyFull(d.funding)}, ${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
           <img className="resource-cash-art" src={assetUrl('art/plates/tex_cash.webp')} alt="" aria-hidden="true" />
-          <span className="stat-cash-value">{liveMoney(live.shown)}</span>
+          <span className="stat-cash-stack">
+            <span className="stat-cash-value">{liveMoney(live.shown)}</span>
+            <span className={`stat-rate${b.net < 0 ? ' stat-neg' : ''}`}><Icon name={RESOURCE_ICON.rate} size={16} className="res-icon" />{rate(b.net)}</span>
+          </span>
           <FundingDeltas deltas={live.deltas} />
-        </button></li>
-        <li><button className={`stat stat-rate${b.net < 0 ? ' stat-neg' : ''}`} {...helpProps('income', `${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
-          <Icon name={RESOURCE_ICON.rate} size={16} className="res-icon" />{rate(b.net)}
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
           <Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /><span className="res-word">Trust </span>{Math.round(d.trust)}

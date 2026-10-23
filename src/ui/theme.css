@@ -118,6 +118,10 @@
   --gutter: var(--sp4);
   /* The tab-root plate (art/TabPlate.tsx). The owner picks its height: 72, 96 or 128. */
   --plate-h: 96px;
+  /* The three face sizes (components/Face.tsx). */
+  --face-sm: 32px;
+  --face-md: 48px;
+  --face-lg: 72px;
   --design-w: 390px;
   --edge-hi: rgba(255, 255, 255, 0.06);
   --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);

@@ -16,6 +16,9 @@ interface ToastApi {
 
 const Ctx = createContext<ToastApi | null>(null);
 
+/** Messages that may wait behind the one on screen. */
+const MAX_QUEUED = 4;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const idRef = useRef(1);
@@ -24,8 +27,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback<ToastApi['notify']>((title, opts) => {
     const id = idRef.current++;
-    // Latest only, above the foot: stacked or top toasts bury the mission header and blueprint.
-    setItems([{ id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [], onSelect: opts?.onSelect }]);
+    // One shows at a time, above the foot (stacked or top toasts bury the mission header and
+    // blueprint); the rest wait their turn, so a second message never erases the first. A repeat of
+    // the newest waiting message is dropped, and a long backlog keeps the shown one and the latest.
+    const item: ToastItem = { id, tone: opts?.tone ?? 'info', title, lines: opts?.lines ?? [], onSelect: opts?.onSelect };
+    setItems((xs) => {
+      const last = xs[xs.length - 1];
+      if (last && last.title === item.title && last.tone === item.tone && last.lines.join('\n') === item.lines.join('\n')) return xs;
+      const all = [...xs, item];
+      return all.length > MAX_QUEUED + 1 ? [all[0], ...all.slice(all.length - MAX_QUEUED)] : all;
+    });
   }, []);
 
   const act = useCallback<ToastApi['act']>(
@@ -47,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           toast never covers the resource bar, a flow head, the tabs or an action bar. */}
       <div className="toast-layer">
         <div className="toasts" role="status" aria-live="polite">
-          {items.map((t) => (
+          {items.slice(0, 1).map((t) => (
             <ToastView key={t.id} item={t} onDone={dismiss} />
           ))}
         </div>
