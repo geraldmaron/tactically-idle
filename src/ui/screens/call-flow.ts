@@ -14,6 +14,8 @@ export interface OpenCall { scenarioId: Id; step: FlowStep }
 /** Everything the player has set on Prepare for one call. */
 export interface PrepareDraft {
   chosen: SquadId[];
+  /** The player has chosen or cleared squads by hand, so the one-squad preselection never returns. */
+  squadsTouched: boolean;
   /** The squad whose kit and staging the deploy step shows when two are chosen. */
   setupSquad: SquadId | null;
   positions: Partial<Record<SquadId, Id>>;
@@ -28,7 +30,7 @@ export interface PrepareDraft {
 }
 
 export const EMPTY_DRAFT: PrepareDraft = {
-  chosen: [], setupSquad: null, positions: {}, loadouts: {}, explicit: {}, autoNote: {}, autoWarnings: [], autoUndo: null, staging: {}, supportUnitId: null, floor: 0,
+  chosen: [], squadsTouched: false, setupSquad: null, positions: {}, loadouts: {}, explicit: {}, autoNote: {}, autoWarnings: [], autoUndo: null, staging: {}, supportUnitId: null, floor: 0,
 };
 
 /** The history key. Other owners spread `history.state` when they push, so a tab detour carries

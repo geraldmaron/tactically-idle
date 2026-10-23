@@ -8,7 +8,9 @@ import type { Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
 import { DifficultyChip, EnvChips } from '../components/incident';
-import { personInitials } from '../components/IncidentPeople';
+import { Face, type FaceKind } from '../components/Face';
+import { PlateArt, sceneFor } from '../art/Plates';
+import { familyBlurb } from '../components/incident';
 import { Icon } from '../icons';
 import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
@@ -31,11 +33,16 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
   const unplaced = (scenario?.briefing.people ?? []).filter((person) => !reported.has(person.personId));
   return (
     <div className="pb">
+      {/* The scene plate: the call's painted place at the shared plate height, then the orders. */}
+      <div className="plate pb-scene">
+        <PlateArt src={sceneFor(scenario?.incident?.type)} />
+        {familyBlurb(scenario?.locationFamilyId ?? null) && <span className="pb-scene-place"><Icon name="pin" size={16} />{familyBlurb(scenario?.locationFamilyId ?? null)}</span>}
+      </div>
       {/* Orders and the threat first (docs/ops-experience.md, Brief), then the cold open whole, then
           who is inside, what is unknown and the conditions. */}
       <section className="pb-block pb-orders-panel" aria-labelledby="pb-orders-h">
         <div className="pb-h-row">
-          <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={15} />Your orders</h3>
+          <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={16} />Your orders</h3>
           {aside && <span className="pb-h-aside">{aside}</span>}
         </div>
         {brief.objectives.length ? <ol className="pb-orders">{brief.objectives.map((text, index) => <li key={index}><span className="pb-order-n" aria-hidden="true">{index + 1}</span><span><PeopleText text={text} /></span></li>)}</ol> : <p className="dim">No orders listed.</p>}
@@ -45,7 +52,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
       <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" />
 
       {(intel.people.length > 0 || unplaced.length > 0) && <section className="pb-block" aria-labelledby="pb-people-h">
-        <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={15} />Who’s inside</h3>
+        <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={16} />Who’s inside</h3>
         <ul className="pb-people">
           {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} role={whoText.get(id)?.role} who={whoText.get(id)?.text} status={line.status} where={line.where} />; })}
           {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
@@ -53,7 +60,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
       </section>}
 
       {brief.unknown.length > 0 && <section className="pb-block pb-unknown" aria-labelledby="pb-unknown-h">
-        <h3 id="pb-unknown-h" className="pb-h"><Icon name="search" size={15} />Still unknown</h3>
+        <h3 id="pb-unknown-h" className="pb-h"><Icon name="search" size={16} />Still unknown</h3>
         <ul>{brief.unknown.map((text, index) => <li key={index}><PeopleText text={text} /></li>)}</ul>
       </section>}
 
@@ -62,13 +69,13 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
           {intel.difficulty && <DifficultyChip band={intel.difficulty.band} />}
           {intel.environment && <EnvChips env={intel.environment} />}
         </div>
-        {!!intel.difficulty?.drivers.length && <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={13} />{driver}</li>)}</ul>}
+        {!!intel.difficulty?.drivers.length && <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={16} />{driver}</li>)}</ul>}
       </section>}
 
       <Disclosure name="prep-briefing" className="pb-more" icon="intel" summary="Full dispatch" count={knownRest.length || undefined}>
         {scenario && <IncidentBriefContext scenario={scenario} />}
         {knownRest.length > 0 && <div className="pb-block">
-          <h4 className="pb-h pb-h-sub"><Icon name="check" size={14} />Reported so far</h4>
+          <h4 className="pb-h pb-h-sub"><Icon name="check" size={16} />Reported so far</h4>
           <ul>{knownRest.map((text, index) => <li key={index}><PeopleText text={text} /></li>)}</ul>
         </div>}
         {intel.threats.length === 0 && <p className="dim">{scenario ? 'No separate weapon details are listed. Check the dispatch account.' : 'No weapon reported. That does not mean none is present.'}</p>}
@@ -81,20 +88,25 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
 function PersonCard({ personId, name, role, who, status, where }: { personId: string; name: string; role?: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
   return <li className="pb-person" data-kind={entry?.kind}>
-    <span className="pb-avatar" aria-hidden="true" title={entry ? peopleLabel(entry.kind, entry.squadName) : undefined}>{personInitials(name)}</span>
+    <Face size="md" kind={faceKind(entry?.kind)} name={entry ? `${name}, ${peopleLabel(entry.kind, entry.squadName)}` : undefined} />
     <div className="pb-person-text">
       <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
       {role && <span className="pb-role">{role}</span>}
       {who && <p><PeopleText text={who} /></p>}
-      {status && <span className="pb-where"><FactStatusChip status={status} />{where && <span className="pb-where-place"><Icon name="pin" size={12} />{where}</span>}</span>}
+      {status && <span className="pb-where"><FactStatusChip status={status} />{where && <span className="pb-where-place"><Icon name="pin" size={16} />{where}</span>}</span>}
     </div>
   </li>;
+}
+
+/** The silhouette a person on scene gets: their public kind, or a plain person when it is withheld. */
+function faceKind(kind: string | undefined): FaceKind {
+  return kind === 'subject' || kind === 'civilian' || kind === 'officer' ? kind : 'person';
 }
 
 /** One weapon report in one line: what the report says and where, then who said it and how sure. */
 function ThreatRow({ line }: { line: IntelLine }) {
   return <li className="pb-threat-row">
-    <Icon name="warning" size={18} className="pb-threat-icon" />
+    <Icon name="warning" size={20} className="pb-threat-icon" />
     <div>
       <p className="pb-threat-claim"><PeopleText text={line.claim.replace(/\.$/, '')} />{line.where ? <span className="pb-threat-where"> · {line.where}</span> : null}</p>
       <p className="pb-threat-source">{line.source ? `Reported by ${line.source}. ` : ''}<FactStatusChip status={line.status} /></p>

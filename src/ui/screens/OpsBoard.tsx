@@ -42,13 +42,13 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
 
   return (<>
     <div className="page cl-board">
-      <h1 className="section-title cl-board-title"><Icon name="calls" size={24} />Calls</h1>
+      <div className="cl-board-top">
+        <h1 className="section-title cl-board-title"><Icon name="calls" size={24} />Calls</h1>
+        <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
+      </div>
       <header className="cl-board-head">
         <h2 className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</h2>
-        <p className="cl-board-meta">
-          {arrival && <span className="cl-board-next"><Icon name="clock" size={14} />{arrival}</span>}
-          <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
-        </p>
+        {arrival && <span className="cl-board-next"><Icon name="clock" size={16} />{arrival}</span>}
       </header>
       {live.length === 0
         ? <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.</EmptyState>
@@ -118,7 +118,7 @@ function BoardCard({ g, entry, now, isNew, onOpen }: { g: GameState; entry: Boar
         facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
         short={short}
         contentNote={<ThemeLine cardId={incident.id} />}
-        warning={card.issues.length > 0 && <p className="cl-card-issue"><Icon name="warning" size={14} />{card.issues[0]}{card.issues.length > 1 ? ` (+${card.issues.length - 1} more)` : ''}</p>}
+        warning={card.issues.length > 0 && <p className="cl-card-issue"><Icon name="warning" size={16} />{card.issues[0]}{card.issues.length > 1 ? ` (+${card.issues.length - 1} more)` : ''}</p>}
         timeLeft={<span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
         readiness={<Readiness g={g} card={card} />}
         onOpen={() => onOpen(card.id)} />

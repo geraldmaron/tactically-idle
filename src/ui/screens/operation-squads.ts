@@ -42,3 +42,11 @@ export function pickLead(participants: readonly Id[], bestFit: Id | null, curren
 /** A squad as the player names it everywhere on a call: its name ("Alpha"), never "Squad A". The
  * letter is the badge beside it. One source for the sim, the screens, the Blueprint and the Lab. */
 export { joinSquadNames as joinNames, squadName } from '../../sim/squad-names';
+
+/** The squad a one-squad call opens its deploy step with: the deployable squad with the most
+ * officers fit to go, the first listed when they tie, or none when no squad can deploy. */
+export function bestFitSquad(squads: readonly { id: SquadId; deployable: boolean; ready: number }[]): SquadId | null {
+  let best: { id: SquadId; ready: number } | null = null;
+  for (const squad of squads) if (squad.deployable && (!best || squad.ready > best.ready)) best = squad;
+  return best?.id ?? null;
+}
