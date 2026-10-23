@@ -27,7 +27,7 @@ describe('weighed choices (choice-weighing)', () => {
     expect(html).not.toContain('The pull:');
     expect(html).not.toContain('callbtn-expand');
     expect(html).not.toContain('callbtn-review');
-    expect(html).toMatch(/<button type="button" class="callbtn callbtn-weighed" data-action-id="weighed" aria-pressed="false" aria-label="Review [^"]+"/);
+    expect(html).toMatch(/<button type="button" class="callbtn callbtn-weighed" data-action-id="weighed"(?: data-primary="true")? aria-pressed="false" aria-label="Review [^"]+"/);
     expect(html).toMatch(/callbtn-harm callbtn-harm-\w+">Harm \w+/);
   });
 

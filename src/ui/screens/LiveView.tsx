@@ -243,7 +243,7 @@ export function LiveView(p: LiveViewProps) {
           <button type="button" className={`live-squad-face${casualty ? ' live-squad-out' : ''}${acting ? ' live-squad-acting' : ''}`} onClick={() => { setOfficerOpen(o.id); p.onSelectOfficer(o.id); }}
             aria-label={`${o.firstName} ${o.surname}${focus?.leaderId === o.id ? ', leads the squad' : ''}, ${casualty ? `injured: ${casualty.label}, out of action` : `stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}. Open their card`}>
             <LeadFace officer={o} size={36} />
-            <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={10} className="live-team-leader" />}</span>
+            <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}</span>
             {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
               : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{whole(o.stress)}</span>}
           </button>
@@ -285,33 +285,33 @@ export function LiveView(p: LiveViewProps) {
         <div className="live-strip-head">
           {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
               comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
-          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={18} />Step out</button>}
-          <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen}>
-            <span className="live-name">{p.title}</span>
-            <span className="live-title-more"><Icon name="info" size={14} />Briefing</span>
-          </button>
-          <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog"><Icon name="blueprint" size={20} />Full map</button>
-        </div>
-        <p className="live-sub">
-          <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
-          <span>{p.subtitle}</span>
-          {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
-          <span className="live-status" aria-label="Call time and pressure">
-            <span className="hud-pill"><Icon name="clock" size={14} />{opMinutes(p.clock)}</span>
-            <span className="hud-pill" title="Situation pressure">
-              <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
-                <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
+          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={20} /><span className="live-stepout-text">Step out</span></button>}
+          <div className="live-title-block">
+            <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
+              <span className="live-name">{p.title}</span>
+              <Icon name="info" size={16} className="live-title-more" />
+              {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
+            </button>
+            <p className="live-sub">
+              <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
+              <span className="live-status" aria-label="Call time and pressure">
+                <span className="hud-pill"><Icon name="clock" size={16} />{opMinutes(p.clock)}</span>
+                <span className="hud-pill" title="Situation pressure">
+                  <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
+                    <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
+                  </span>
+                  <span>{pressureWord(p.pressure)}</span>
+                </span>
               </span>
-              <span>{pressureWord(p.pressure)}</span>
-            </span>
-          </span>
-          {beat === 'decide' && <button type="button" className="hud-btn live-choice-access" data-choices-below onClick={(event) => {
+            </p>
+          </div>
+          {beat === 'decide' && <button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" onClick={(event) => {
             const live = event.currentTarget.closest('.live');
             const firstChoice = live?.querySelector('.operation-choices .callbtn') ?? live?.querySelector('.operation-choice-count');
             firstChoice?.scrollIntoView({ block: 'center' });
-          }}><Icon name="chevronDown" size={16} />Your call</button>}
-          {p.canCancel && <button type="button" className="linkbtn live-cancel" onClick={p.onCancel} aria-label="Cancel the call">Cancel</button>}
-        </p>
+          }}><Icon name="chevronDown" size={20} /></button>}
+          <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog" aria-label="Full map"><Icon name="blueprint" size={20} /></button>
+        </div>
       </header>
       <div className="live-bar live-strip">
         {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
@@ -327,16 +327,16 @@ export function LiveView(p: LiveViewProps) {
           and through the Full map control beside the call title. */}
       <section className="live-scene" aria-label="The scene">
         <div className="live-scene-head">
-          <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={14} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
+          <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={16} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
           <span className="live-scene-actions">
             {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
-              <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={15} />{mapShown ? 'Hide map' : 'Show map'}
+              <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={16} />{mapShown ? 'Hide map' : 'Show map'}
             </button>}
           </span>
         </div>
         <div ref={mapElement} tabIndex={mapFull ? -1 : undefined} className={`live-map${mapFull ? ' live-map-full' : ' live-map-compact'}`} id="live-map" hidden={!mapShown} role={mapFull ? 'dialog' : undefined} aria-modal={mapFull || undefined} aria-label={mapFull ? 'Map of the scene' : undefined}>
           {mapFull && <div className="live-map-full-head">
-            <span className="live-scene-where"><Icon name="pin" size={14} />{whereLine}</span>
+            <span className="live-scene-where"><Icon name="pin" size={16} />{whereLine}</span>
             <button type="button" className="hud-btn" onClick={() => setMapFull(false)} aria-label="Close the map"><Icon name="x" size={16} />Close</button>
           </div>}
           <div className="live-map-inner">
@@ -368,8 +368,8 @@ export function LiveView(p: LiveViewProps) {
         <Sheet open={mapKey} onClose={() => setMapKey(false)} title="Map key" maxHeight="short">
           <div className="map-key-body" aria-label="Map legend">
             <span className="map-key-items">
-              <span><Icon name="user" size={18} className="lg-q legend-reported-person" />Reported</span>
-              <span><Icon name="user" size={18} className="lg-ok" />Confirmed</span>
+              <span><Icon name="user" size={20} className="lg-q legend-reported-person" />Reported</span>
+              <span><Icon name="user" size={20} className="lg-ok" />Confirmed</span>
             </span>
             <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
           </div>
@@ -377,8 +377,9 @@ export function LiveView(p: LiveViewProps) {
         {(beat === 'decide' || sceneOpen) && squadRow}
       </section>
 
-      <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing">
-        <div className="live-briefing">{p.situation}</div>
+      <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing"
+        footer={p.canCancel ? <Button variant="danger" block aria-label="Cancel the call" onClick={() => { setBriefingOpen(false); p.onCancel?.(); }}>Cancel the call</Button> : undefined}>
+        <div className="live-briefing">{p.subtitle && <p className="live-briefing-sub">{p.subtitle}</p>}{p.situation}</div>
       </Sheet>
       <Sheet open={!!officerShown} onClose={() => setOfficerOpen(null)} title={officerShown ? `${officerShown.firstName} ${officerShown.surname}` : 'Officer'} maxHeight="short">
         {officerShown && (() => {
@@ -411,7 +412,7 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
   const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
   return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined}
     aria-label={left <= 0 ? `${label}. It happened` : `Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
-    <Icon name="hourglass" size="md" />
+    <Icon name="hourglass" size={20} />
     <span className="threat-pill-label"><PeopleText text={label} /></span>
     <span className="threat-pill-sep" aria-hidden="true">·</span>
     <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
@@ -426,7 +427,7 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
  * inside its own box. */
 export function ThreatLanded({ text, subjects }: { text: string; subjects: readonly LandingSubject[] }) {
   return <div className="threat-landed">
-    <p className="threat-landed-text"><Icon name="hourglass" size={13} /><span><PeopleText text={text} /></span></p>
+    <p className="threat-landed-text"><Icon name="hourglass" size={16} /><span><PeopleText text={text} /></span></p>
     {subjects.length > 0 && <span className="threat-pill-subjects">{subjects.map((subject) =>
       <span key={subject.id} className="threat-subject" data-subject-stance={subject.stance}>
         <span className="threat-subject-name"><PeopleText text={subject.label} /> · {STANCE_LABEL[subject.stance]}</span>
@@ -471,7 +472,7 @@ export function FillGauge({ view }: { view: FillView }) {
   const urgency = pressureUrgency({ kind: 'fill', view, left: fillMinutesToBite(view) });
   return <div className={`fill-gauge pressure-${urgency}${view.stopped ? ' fill-gauge-stopped' : ''}`} data-fill={view.id} role="group" aria-label={`${view.label}: ${value} of 100${state ? `, ${state.toLowerCase()}` : ''}`}>
     <p className="fill-gauge-head">
-      <Icon name="crowd" size="md" />
+      <Icon name="crowd" size={20} />
       <span className="fill-gauge-label">{view.label}</span>
       {state && <b className="fill-gauge-state">{state}</b>}
     </p>
@@ -559,7 +560,7 @@ export function StageSteps({ progress }: { progress: StageProgress }) {
         <li key={s.id} ref={s.state === 'current' ? current : undefined} className={`step step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined} title={s.label}>
           <span className="step-track">
             <span className={`step-line${i === 0 ? ' step-line-hide' : ''}${s.state !== 'todo' ? ' step-line-on' : ''}`} />
-            <span className="step-dot">{s.state === 'done' && <Icon name="check" size={9} strokeWidth={3.2} />}</span>
+            <span className="step-dot">{s.state === 'done' && <Icon name="check" size={16} strokeWidth={3.2} />}</span>
           </span>
           <span className="step-label">{s.label}</span>
           <span className="sr-only">{s.state === 'done' ? ' complete' : s.state === 'current' ? ' current' : ' upcoming'}</span>
@@ -669,7 +670,7 @@ export function ActionSheet(p: ActionSheetProps) {
       maxHeight="short"
       className="operation-action-sheet"
       title={v ? v.title : ''}
-      subtitle={v && !v.eligible ? <span className="action-sheet-locked"><Icon name="lock" size={14} />Requirements unmet</span> : undefined}
+      subtitle={v && !v.eligible ? <span className="action-sheet-locked"><Icon name="lock" size={16} />Requirements unmet</span> : undefined}
       footer={
         v && (
           <div className="operation-commit">
@@ -697,8 +698,8 @@ export function ActionSheet(p: ActionSheetProps) {
           {v.timeRange && !v.timeLabel && v.timeRange.min !== v.timeRange.max && <p className="operation-note operation-time-range">Takes {v.timeRange.min}–{opMinutes(v.timeRange.max)} depending on the result.</p>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
           {p.officers && v.eligible && <LeadPicker view={v} officers={p.officers} lead={p.lead ?? v.officerIds[0] ?? null} bestFit={p.bestFit ?? null} order={p.leadOrder} marks={p.leadMarks ?? []} blend={p.leadBlend ?? []} certs={p.leadCerts ?? []} onPick={p.onPickLead} />}
-          {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={14} />{v.authority.reason}</p>}
-          {p.targetLabel && <p className="action-sheet-where"><Icon name="pin" size={14} />{p.targetLabel}</p>}
+          {v.eligible && v.authority?.allowed && <p className="operation-command-line"><Icon name="radio" size={16} />{v.authority.reason}</p>}
+          {p.targetLabel && <p className="action-sheet-where"><Icon name="pin" size={16} />{p.targetLabel}</p>}
           {p.preview}
           <dl className="operation-costs">
             <div><dt>Requirements</dt><dd className="chips">{requirementParts(v.requirementLine).map((part) => <Chip key={part} tone={v.eligible ? 'mint' : 'neutral'} icon={v.eligible ? 'check' : 'list'}>{part}</Chip>)}</dd></div>
@@ -760,7 +761,7 @@ export function ActionSheet(p: ActionSheetProps) {
               return (
                 <div key={gr.id} className="cgroup">
                   <h4>
-                    <Icon name={gr.icon} size={15} />
+                    <Icon name={gr.icon} size={16} />
                     <span>{gr.label}</span>
                     <b className={total < 0 ? 'neg' : 'pos'}>{signedPoints(total)}</b>
                   </h4>
@@ -823,7 +824,7 @@ export function LeadPicker({ view, officers, lead, bestFit, order, marks, blend 
   const reads = view.leadReads ?? [];
   return <section className="lead-picker" aria-label="Who leads">
     {/* The best fit is the engine's order: a needed certificate first, then the blend, worn down by stress. */}
-    <span className="picker-label"><Icon name="flag" size={14} />Who leads{blend.length ? <small> · {blend.map((r) => RATING_SHORT[r]).join(' + ')}</small> : keyLabel ? <small> · {keyLabel}</small> : null}</span>
+    <span className="picker-label"><Icon name="flag" size={16} />Who leads{blend.length ? <small> · {blend.map((r) => RATING_SHORT[r]).join(' + ')}</small> : keyLabel ? <small> · {keyLabel}</small> : null}</span>
     {ids.length > 1 && onPick && <div className="lead-choices" role="radiogroup" aria-label="Who leads">
       {ids.map((id) => {
         const officer = officers[id];
@@ -841,7 +842,7 @@ export function LeadPicker({ view, officers, lead, bestFit, order, marks, blend 
         </button>;
       })}
     </div>}
-    <p className="lead-strain"><Icon name="warning" size={14} /><span><b>{leader.surname}</b> leads: carries more strain.</span></p>
+    <p className="lead-strain"><Icon name="warning" size={16} /><span><b>{leader.surname}</b> leads: carries more strain.</span></p>
     {reads.length > 0 && <div className="lead-reads">
       <p>Results here turn on who leads.</p>
       <div className="chips">{reads.map((mark) => {
@@ -864,7 +865,7 @@ export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }
   const remaining = p.squads.filter(squad => !p.acting.includes(squad.id) && !p.support.includes(squad.id));
   return <section className="pickers action-squad-assignment" aria-label="Squads for this decision">
     <div className="picker">
-      <span className="picker-label"><Icon name="people" size={14} />Squad{maxActing > 1 ? 's' : ''} taking action</span>
+      <span className="picker-label"><Icon name="people" size={16} />Squad{maxActing > 1 ? 's' : ''} taking action</span>
       <p className="operation-squad-hint">{maxActing === 1 ? 'Choose one squad. Selecting another replaces the current squad.' : `Choose up to ${maxActing} squads to act together.`}</p>
       <div className="assignment-choices" role="group" aria-label="Acting squads">
         {p.squads.map(squad => {
@@ -881,7 +882,7 @@ export function ActionSquadAssignment(p: ActionSheetProps & { view: ActionView }
       </div>
     </div>
     {!!p.view.support?.maxSquads && <div className="picker">
-      <span className="picker-label"><Icon name="handover" size={14} />Supporting squad ({p.view.support.minSquads > 0 ? `${p.view.support.minSquads} required` : 'optional'})</span>
+      <span className="picker-label"><Icon name="handover" size={16} />Supporting squad ({p.view.support.minSquads > 0 ? `${p.view.support.minSquads} required` : 'optional'})</span>
       {p.supportTask && <p className="operation-squad-hint">Support role: {p.supportTask}. Up to {p.view.support.maxSquads} squad{p.view.support.maxSquads === 1 ? '' : 's'}.</p>}
       <div className="assignment-choices" role="group" aria-label="Supporting squads">
         {p.squads.filter(squad => !p.acting.includes(squad.id)).map(squad => {
@@ -985,7 +986,7 @@ export function RoomSheet(p: RoomSheetProps) {
               <ul className="construction">
                 {construction.map((line, i) => (
                   <li key={i}>
-                    <Icon name={materialIcon(line)} size={18} />
+                    <Icon name={materialIcon(line)} size={20} />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -1036,7 +1037,7 @@ export function RoomSheet(p: RoomSheetProps) {
               {targeting.map((a) => (
                 <li key={a.id}>
                   <button type="button" onClick={() => p.onPickAction(a.id)}>
-                    <Icon name={actionIcon(a.icon)} size={22} />
+                    <Icon name={actionIcon(a.icon)} size={24} />
                     <span>
                       <strong>{a.title}</strong>
                       <span className="dim">{a.eligible ? a.summary : (a.reason ?? 'Unavailable')}</span>
@@ -1086,10 +1087,10 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
         <FactStatusChip status={m.status} />
         <span className="dim">{confirmed ? 'Position confirmed' : 'Approximate position'}</span>
       </div>
-      {m.condition && <p className={`person-condition person-condition-${m.condition}`}><Icon name={m.condition === 'deceased' ? 'x' : 'bandage'} size={14} />{m.condition === 'deceased' ? 'Deceased' : 'Injured'}</p>}
+      {m.condition && <p className={`person-condition person-condition-${m.condition}`}><Icon name={m.condition === 'deceased' ? 'x' : 'bandage'} size={16} />{m.condition === 'deceased' ? 'Deceased' : 'Injured'}</p>}
       {armed ? (
         <p className={`person-arm${armed === 'none' ? ' person-arm-ok' : ''}`}>
-          <Icon name={armed === 'none' ? 'checkcircle' : 'warning'} size={14} />
+          <Icon name={armed === 'none' ? 'checkcircle' : 'warning'} size={16} />
           <span>
             {armamentLabel(armed)} <span className="dim">({confirmed ? 'confirmed' : 'reported, unverified'})</span>
           </span>
@@ -1097,7 +1098,7 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
       ) : (
         isSubject && !hasWeapon && (
           <p className="person-arm person-arm-unk">
-            <Icon name="question" size={14} />
+            <Icon name="question" size={16} />
             <span>Armament not known</span>
           </p>
         )
@@ -1114,14 +1115,14 @@ function FactCard({ f, actions, onPick }: { f: FactView; actions: ActionView[]; 
   return (
     <li className={`fact fact-${f.status}`}>
       <div className="fact-top">
-        <Icon name={f.status === 'confirmed' ? 'check' : f.status === 'disproved' ? 'x' : 'question'} size={18} />
+        <Icon name={f.status === 'confirmed' ? 'check' : f.status === 'disproved' ? 'x' : 'question'} size={20} />
         <strong>{f.label}</strong>
         <FactStatusChip status={f.status} />
       </div>
       <p className="fact-claim">{f.claim}</p>
       {f.source && (
         <p className="fact-line">
-          <Icon name="chat" size={14} />
+          <Icon name="chat" size={16} />
           <span>
             {sourceLead}: {f.source}
           </span>
@@ -1129,14 +1130,14 @@ function FactCard({ f, actions, onPick }: { f: FactView; actions: ActionView[]; 
       )}
       {f.note && (
         <p className="fact-line">
-          <Icon name="info" size={14} />
+          <Icon name="info" size={16} />
           <span>{f.note}</span>
         </p>
       )}
       {!settled && f.verifyActions.length > 0 && (
         <div className="fact-verify">
           <span className="fact-verify-h">
-            <Icon name="search" size={13} />
+            <Icon name="search" size={16} />
             Can be settled by
           </span>
           <ul>
@@ -1145,7 +1146,7 @@ function FactCard({ f, actions, onPick }: { f: FactView; actions: ActionView[]; 
               const icon: IconName = live ? actionIcon(live.icon) : 'search';
               const body = (
                 <>
-                  <Icon name={icon} size={18} />
+                  <Icon name={icon} size={20} />
                   <span className="vtitle">{v.title}</span>
                   <Chip tone={v.availableNow ? 'amber' : 'neutral'} icon="flag">
                     {STAGE_LABEL[v.stage]}

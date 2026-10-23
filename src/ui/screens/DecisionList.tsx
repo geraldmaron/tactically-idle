@@ -108,6 +108,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
               type="button"
               className={`callbtn${on ? ' callbtn-on' : ''}${a.eligible ? '' : ' callbtn-off'}${a.eligible && a.weighing ? ' callbtn-weighed' : ''}`}
               data-action-id={a.id}
+              data-primary={a.eligible && index === decisions.findIndex((d) => d.eligible) ? true : undefined}
               aria-pressed={on}
               aria-label={`Review ${a.title}${a.eligible ? '' : ': requirements unmet'}`}
               aria-describedby={a.eligible ? forecast : undefined}
