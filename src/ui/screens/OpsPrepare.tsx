@@ -22,7 +22,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { ActionBar, Button, Stepper, SubHead } from '../components/ui';
+import { ActionBar, Button, Chip, Stepper, SubHead } from '../components/ui';
 import { Face } from '../components/Face';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -290,6 +290,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       : visibleWarnings.length > 0
         ? { text: `Ready, ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'}`, tone: 'act' }
         : { text: 'Ready', tone: 'good' };
+  const fitId = bestFitSquad(g.squads.map((s) => ({ id: s.id, ...squadReadiness(g, s.id, now) })));
   const takes = `Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} squad${range.max > 1 ? 's' : ''}`;
 
   /** A squad's kit for the summary: what it takes from the Armory, and what it is short of. */
@@ -332,7 +333,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
               disabled={!on && maxSquads > 1 && chosen.length >= maxSquads} onClick={() => toggleSquad(s.id)}>
               <span className="squad-badge">{s.id}</span>
               <span className="cl-squad-main">
-                <strong>{s.name}</strong>
+                <strong>{s.name}{s.id === fitId && <Chip tone="good" icon="star">Best fit</Chip>}</strong>
                 <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
               </span>
               <span className="cl-faces" aria-hidden="true">

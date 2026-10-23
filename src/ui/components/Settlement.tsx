@@ -64,7 +64,7 @@ export function Settlement({ debrief: d, department, still: quiet = false }: { d
         <span className="sr-only">Funding {signedMoney(d.fundingReward)}</span>
       </div>}
       {service !== 0 && <div className="settle-xp">
-        <span className="settle-xp-label"><span>Department XP</span><b>{signed(service)}</b></span>
+        <span className="settle-xp-label"><span>Department XP{from && from.next !== null ? ` · ${Math.max(0, from.next - from.service - service)} to level ${from.level + 1}` : ''}</span><b>{signed(service)}</b></span>
         {from && from.next !== null ? <Meter value={filled ? to : start} tone="mid" label="Service toward the next level" valueText={`${Math.round(to)} percent after this call`} /> : null}
       </div>}
       <div className="chips result-reward-chips">

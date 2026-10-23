@@ -105,3 +105,4 @@
 .sheet.sheet-short.operation-action-sheet { max-height: min(78%, var(--sheet-available-height)); }
 .operation-action-sheet .operation-commit { display: grid; gap: var(--sp2); }
 .operation-action-sheet .operation-commit-meta { margin: 0; }
+.cl-squad-main strong { display: inline-flex; align-items: center; gap: var(--sp2); }

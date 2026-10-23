@@ -58,3 +58,13 @@
 .hq-squad-note > span { display: flex; align-items: center; gap: var(--sp1); }
 .hq-squad-note .icon { flex: none; }
 .hq-squad-strain { color: var(--warn-text); }
+/* On the narrowest phones the cards tighten so two squads still show above the fold: two faces, the
+   duty rail beside the name, and the static duty blurb and the call's pay chips give way. Strain and
+   the last result, which change, stay. */
+@container game (max-width: 359px) {
+  .hq-squad { padding: var(--sp2); }
+  .hq-faces > :nth-child(3) { display: none; }
+  .hq-duty { flex-basis: 8rem; }
+  .hq-squad-note > span:first-child { display: none; }
+  .hq-move-facts { display: none; }
+}
