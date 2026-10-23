@@ -431,6 +431,17 @@ repeated phrase. Done: the output is byte-identical across runs (stable order, a
 of quoted phrase), `npm run verify` and pull-request CI run it, and it passes. The checker is
 deterministic since #57, and the `check:strings` wrapper since #64 (byte-identical across runs).
 
+### gate-server-beside-dev: The gates' own server works beside a dev server in the same worktree
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+Seen by the lead on 2026-10-23: with `lead-5182` running in `.claude/worktrees/feel-lead`, a bare
+`npm run ui:baseline` started its own Vite there (`scripts/ui-gates/serve.mjs`) and every walk step timed
+out from the first-run screen. The same run given `http://127.0.0.1:5182/` walked normally. Suspected,
+not proven: both servers share `node_modules/.vite` and re-optimize under each other. Done: the cause is
+shown, and a bare `check:ui`, `ui:baseline`, `check:feel` and `test:e2e` pass with a dev server already
+running in the same worktree (for example by giving the gate's server its own cache directory).
+
 ## Department and staff
 
 Current owner revision, 2026-10-22: NPC patrol replaces tapping; SWAT costs remain. The prior tap,
