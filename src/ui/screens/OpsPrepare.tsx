@@ -22,7 +22,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { ActionBar, Button, Stepper, SubHead } from '../components/ui';
+import { ActionBar, Button, Card, Row, Stepper, SubHead } from '../components/ui';
 import { Face } from '../components/Face';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -321,7 +321,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   const deployStep = <>
     <section className="cl-section" aria-labelledby="cl-who-h">
       <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title"><Icon name="people" size={20} />Who goes</h2><span className="cl-section-aside">{takes} · <span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span></span></div>
-      {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads">
+      {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads" data-ui-list>
         {g.squads.map((s) => {
           const r = squadReadiness(g, s.id, now);
           const on = chosen.includes(s.id);
@@ -356,14 +356,16 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
           <h2 className="cl-section-title"><Icon name="box" size={20} />{squadName(sid)} carries</h2>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
         </div>
-        {index === 0 && <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>}
-        {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={22} />{item.text}</li>)}</ul>
-          : <p className="cl-muted">Nothing from the Armory.</p>}
+        <Card className="cl-plan-card">
+          {index === 0 && <Row className="cl-plan-row" lead={<span className="cl-well"><Icon name="basicKit" size={24} /></span>} title="Basic kit" detail={BASIC_KIT_LINE} />}
+          {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={24} />{item.text}</li>)}</ul>
+            : <p className="cl-muted cl-plan-empty">Nothing from the Armory.</p>}
+        </Card>
         <div className="cl-section-head">
           <h3 className="cl-section-title"><Icon name="door" size={20} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
         </div>
-        <p className="cl-going"><strong>{way.title}</strong>{way.detail && <span>{way.detail}</span>}</p>
+        <Card className="cl-plan-card"><Row className="cl-plan-row cl-going" lead={<span className="cl-well"><Icon name="map" size={24} /></span>} title={way.title} detail={way.detail} /></Card>
       </section>;
     })}
 

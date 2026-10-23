@@ -72,29 +72,32 @@
 .cl-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); min-height: var(--touch); }
 .cl-section-title { display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
 .cl-section-aside { font-size: var(--s14); color: var(--t3); }
-.cl-link { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t1); font: 600 var(--s16)/1 var(--f-ui); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-.cl-squads { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--gutter)); }
-.cl-squad { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--gutter); border: 0; border-bottom: 1px solid var(--hair); background: transparent; color: var(--t1); text-align: left; cursor: pointer; }
-.cl-squad:first-child { border-top: 1px solid var(--hair); }
+.cl-link { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.cl-squads { display: flex; flex-direction: column; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
+.cl-squad { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--sp3); border: 0; border-bottom: 1px solid var(--hair); background: transparent; color: var(--t1); text-align: left; cursor: pointer; }
+.cl-squad:last-child { border-bottom: 0; }
 .cl-squad-on { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
 .cl-squad-on .squad-badge { background: var(--act); border-color: var(--act); color: var(--act-ink); }
 .cl-squad:disabled { opacity: 0.55; cursor: default; }
 .cl-squad-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
-.cl-squad-main strong { font-size: var(--s18); }
+.cl-squad-main strong { font-size: var(--s16); }
 .cl-squad-fit { display: inline-flex; align-items: center; gap: var(--sp1); margin-left: var(--sp2); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--good-text); vertical-align: middle; }
 .cl-squad-main > span { font-size: var(--s14); color: var(--t2); }
 .cl-squad-main > span.cl-warn { color: var(--warn-text); }
 .cl-faces { display: inline-flex; flex: 0 0 auto; }
 .cl-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
 .cl-basic-kit { margin: 0; font-size: var(--s14); color: var(--t2); }
+.cl-plan-card { padding: 0 var(--sp3); gap: 0; }
+.cl-plan-card .cl-plan-row { padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); }
+.cl-plan-card .cl-plan-row:last-child { border-bottom: 0; }
+.cl-well { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t1); }
+.cl-plan-empty { padding: var(--sp3) 0; }
+.cl-plan-card .cl-kit { padding: var(--sp2) 0; }
 .cl-muted { margin: 0; font-size: var(--s14); color: var(--t3); }
 .cl-kit { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
-.cl-kit-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--sp3); border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
+.cl-kit-chip { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 32px; padding: 0 var(--sp3); border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
 .cl-kit-short { background: transparent; color: var(--t2); font-weight: 500; border-style: dashed; }
 .cl-kit-warn { border-color: var(--warn); color: var(--warn-text); }
-.cl-going { display: flex; flex-direction: column; gap: var(--sp1); margin: 0; }
-.cl-going strong { font-size: var(--s16); color: var(--t1); }
-.cl-going span { font-size: var(--s14); color: var(--t2); }
 .cl-kit-workspace .prepsquad-head { display: flex; flex-wrap: wrap; gap: var(--sp2); }
 .cl-going-workspace { display: flex; flex-direction: column; gap: var(--sp3); }
 
