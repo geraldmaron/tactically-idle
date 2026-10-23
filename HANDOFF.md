@@ -191,6 +191,12 @@ Layout gates merged (a15133a; opt-in until the lead names them in `FEEL_ON`). Sh
 | rollout-calls (local_83d7ec62) | Sonnet | P6 board, brief, deploy | 5193 | P6 files; never `ops-visual.css` |
 | rollout-build (local_e5113dcd) | Sonnet | P4 Build, upgrades, Armory | 5194 | P4 files plus `build.css` and `store.css` |
 
+Rollout merged (2026-10-23): feel-slice to e092397, Calls, Team and Build lanes all on `claude/feel-lead` (tip
+after fd6a0c7). `npm run verify` 3,121 passed on fd6a0c7; baseline regenerated (78 fell), SMALL_TEXT_CEILING 235.
+Open: R15 on deploy (4 chips under 4px inset, held out of the baseline, Calls lane fixing); Build and Store not
+yet in the layout registry; Team sheets (hire contract, training chooser, patrol) unstyled; e2e unrun until the
+owner signs off (selector lists in each lane's READY notes).
+
 Shared files (`theme.css`, `app.css`, `skin.css`, `player-navigation.css`, `ui.tsx`, `ChoiceRail.tsx`,
 icons) change only through the lead, except feel-slice's granted `Ring`, `ChoiceRail` size and bar rules.
 Lead to do at the P4 merge: register `.facility-building`, `.dev-track`, `.store-list`, `.armory-list` once the
