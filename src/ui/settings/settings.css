@@ -34,7 +34,9 @@
   gap: var(--sp5);
   padding: var(--sp4) var(--gutter) calc(var(--sp5) + env(safe-area-inset-bottom));
 }
-.first-run-art { min-height: 172px; border-radius: var(--r2); overflow: hidden; }
+.first-run-art { position: relative; min-height: 172px; border-radius: var(--r2); overflow: hidden; }
+.first-run-team { position: absolute; left: var(--sp3); right: var(--sp3); bottom: var(--sp2); display: flex; gap: var(--sp2); }
+.first-run-member { display: flex; flex-direction: column; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.1 var(--font-cond); color: var(--t1); text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 90%, transparent); }
 .first-run > * {
   flex: 0 0 auto;
 }
