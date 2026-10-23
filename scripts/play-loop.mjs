@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { FEEL_BUDGETS, FEEL_ON, judgeTaps } from './ui-gates/feel.mjs';
 
 /** Automatic patrol funding on the live HQ surface, then the real hire and boost purchase flows.
  * Proves authoritative accrual, HQ-only bounded motion, navigation reconciliation and reduced motion. */
@@ -202,7 +203,10 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const fit = cards.filter(card => readyOf(card) >= 1 && !card.label.includes('not deployable')).sort((x, y) => readyOf(y) - readyOf(x));
     const pick = Math.min(range.max, fit.length);
     assert.ok(pick >= range.min, `${label}: ${range.min} squad${range.min > 1 ? 's' : ''} able to deploy; the cards read ${cards.map(card => `"${card.label}"`).join(', ')}`);
-    for (const card of fit.slice(0, pick)) await page.locator('.cl-squads button.cl-squad').nth(card.index).click();
+    // Deploy preselects the best-fit ready squad, so tap only the cards whose state differs from the pick.
+    const want = new Set(fit.slice(0, pick).map(card => card.index));
+    const pressed = await page.locator('.cl-squads button.cl-squad').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed') === 'true'));
+    for (const [index, on] of pressed.entries()) if (on !== want.has(index)) await page.locator('.cl-squads button.cl-squad').nth(index).click();
     assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Back to the brief and Forward again: the chosen squads are still chosen (the exit table).
     await page.locator('.flow-back').click();
@@ -300,7 +304,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     assert.equal(await page.locator('nav.bottomnav').count(), 0, `${label}: a flow hides the tabs`);
     assert.equal(await page.locator('.result-rewards').count(), 1, `${label}: the debrief lists its rewards`);
     await overflow(`${label} debrief`);
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.getByRole('button', { name: 'Next call', exact: true }).click();
     await casebook.waitFor();
     const after = await state(); assert.equal(after.activeRun, null);
     // Every operation is live: it earns department service and settles its equipment.
@@ -363,14 +367,87 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
   return results;
 }
 
+/** Tap budget (F6.taps, scripts/ui-gates/feel.mjs). Counts the real taps a player makes on two fixed paths:
+ *   board -> first live decision   start: Calls tab with a card open to tap, welcome sheet dismissed
+ *                                  end:   a choice is on screen in `.call-grid`
+ *   debrief -> board               start: the Debrief with its Done button
+ *                                  end:   the Calls board is back (`.cl-board-count`)
+ * A tap is any trusted click, recorded in the page, so a Deploy that needs a squad picked first costs the
+ * extra tap. Squad picks and radio purchases are made as a player would, only when the screen needs them.
+ * Returns { boardToDecision, debriefToBoard } as lists of the taps made. */
+export async function measureTapBudget(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844 } = {}) {
+  await page.clock.setFixedTime(new Date());
+  await page.setViewportSize({ width, height });
+  page.on('dialog', dialog => dialog.accept());
+  await page.addInitScript(() => {
+    window.__taps = [];
+    document.addEventListener('click', event => {
+      if (!event.isTrusted) return;
+      const target = event.target instanceof Element ? event.target.closest('button, a, [role="button"], [role="tab"], label, summary') ?? event.target : null;
+      window.__taps.push(((target?.getAttribute('aria-label') ?? target?.textContent ?? '').replace(/\s+/g, ' ').trim() || target?.tagName || 'tap').slice(0, 32));
+    }, true);
+  });
+  const taps = () => page.evaluate(() => window.__taps.slice());
+  const reset = () => page.evaluate(() => { window.__taps = []; });
+  await page.goto(baseURL);
+  await page.locator('.first-run').waitFor();
+  await page.getByRole('button', { name: 'Continue to headquarters', exact: true }).click();
+  await page.locator('nav').getByRole('button', { name: /Calls|Ops/ }).first().click();
+  await page.locator('.cl-card-button').first().waitFor();
+  const welcome = page.locator('.welcome-sheet');
+  if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
+  await reset();
+  await page.locator('.cl-card-button').first().click();
+  for (let n = 0; n < 12 && !(await page.locator('.call-grid .callbtn').count()); n++) {
+    const choose = page.getByRole('button', { name: 'Choose team', exact: true });
+    if (await choose.count()) { await choose.click(); continue; }
+    const deploy = page.getByRole('button', { name: /^Deploy [A-Z]/ });
+    if (await deploy.count() && await deploy.isEnabled()) { await deploy.click(); await page.locator('.call-grid').waitFor(); break; }
+    if (await page.locator('.cl-squads button[aria-pressed="true"]').count() === 0) { await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click(); continue; }
+    const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / });
+    if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); continue; }
+    await page.waitForTimeout(150);
+  }
+  await page.locator('.call-grid .callbtn').first().waitFor({ timeout: 8000 });
+  const boardToDecision = await taps();
+  for (let n = 0; n < 60 && (await page.evaluate(() => window.__ti.getState().activeRun?.status)) === 'active'; n++) {
+    const proceed = page.locator('.live-continue button');
+    if (await proceed.count()) { await proceed.click(); await page.locator('.call-grid').waitFor(); continue; }
+    const card = page.locator('.call-grid .callbtn:not(.callbtn-off)').first();
+    if (await card.count()) { const review = card.locator('.callbtn-review'); await (await review.count() ? review : card).click(); await page.getByRole('button', { name: /^Confirm / }).click(); await page.waitForTimeout(250); continue; }
+    const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
+    break;
+  }
+  const done = page.getByRole('button', { name: 'Next call', exact: true });
+  await done.waitFor({ timeout: 8000 });
+  await reset();
+  await done.click();
+  await page.locator('.cl-board-count').waitFor({ timeout: 8000 });
+  return { boardToDecision, debriefToBoard: await taps() };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { chromium } = await import('playwright-core');
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
   const results = [];
   // The base URL comes from the first argument, then TI_BASE_URL, then the default (127.0.0.1:5174).
   // Run it on another dev port, e.g. node scripts/play-loop.mjs http://localhost:5182.
-  const baseURL = process.argv[2] ?? process.env.TI_BASE_URL;
+  const baseURL = process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? process.env.TI_BASE_URL;
   try {
+    // `--taps` runs only the tap budget. It reports always, and exits 1 only when F6.taps is switched on
+    // in FEEL_ON.path (scripts/ui-gates/feel.mjs) or `--enforce` is given.
+    if (process.argv.includes('--taps')) {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+      try {
+        const { boardToDecision, debriefToBoard } = await measureTapBudget(await context.newPage(), { baseURL });
+        console.log(`board -> first live decision: ${boardToDecision.length} taps (budget ${FEEL_BUDGETS.tapsBoardToDecision}): ${boardToDecision.join(' > ')}`);
+        console.log(`debrief -> board: ${debriefToBoard.length} taps (budget ${FEEL_BUDGETS.tapsDebriefToBoard}): ${debriefToBoard.join(' > ')}`);
+        const over = [...judgeTaps('board-to-decision', boardToDecision), ...judgeTaps('debrief-to-board', debriefToBoard)];
+        for (const f of over) console.error(`F6.taps ${f.id}: ${f.detail}`);
+        if (over.length && (process.argv.includes('--enforce') || FEEL_ON.path.includes('F6.taps'))) process.exit(1);
+      } finally { await context.close(); await browser.close(); }
+      process.exit(0);
+    }
     const paidContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
     try {
       const patrol = await playPatrolEconomy(await paidContext.newPage(), { width: 390, height: 844, baseURL, captureDir: process.env.TI_CAPTURE_DIR });

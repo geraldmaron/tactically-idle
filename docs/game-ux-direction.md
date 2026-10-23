@@ -1,6 +1,6 @@
 # Game UX direction: visual-first surfaces and Command Staff
 
-**Status:** visual surfaces and Command Staff v1 are implemented. The three managers are on HQ. Work still to do lives only in [docs/backlog.md](backlog.md).
+**Status:** visual surfaces and Command Staff v1 are implemented. Since df9a3e9 (2026-10-22) the three managers live under Team, in its Command section, and the tabs are HQ, Calls, Team, Build and Store; the four-tab entries below are history. Work still to do lives only in [docs/backlog.md](backlog.md).
 
 ## The problem
 
@@ -87,7 +87,7 @@ HQ stat tiles are label, number and sentence. Their visual update is tracked in 
 
 ## Command Staff v1
 
-Command Staff is a visible roster on HQ. Hiring is a Develop purchase. Each manager has a card and detail sheet with policy controls and an activity log. Managers never make tactical choices, and automation has an off switch.
+Command Staff is a visible roster under Team (Command section). Hiring is a Develop purchase. Each manager has a card and detail sheet with policy controls and an activity log. Managers never make tactical choices, and automation has an off switch.
 
 The strongest failure mode is automation removing the decisions that make the game interesting. The current scope is accepted with controls: managers automate department routines with visible policies and logs. Peer Support Lead, Recruiter and the scope of routine patrol work belong to the [backlog owner decisions](backlog.md#owner-decisions).
 

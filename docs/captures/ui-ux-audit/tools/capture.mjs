@@ -165,7 +165,9 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
         await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await shot('19-prepare-brief', { segments: 5 });
         await page.locator('.cl-map-chip').click(); await page.locator('.cl-map-sheet').waitFor(); await shot('19b-brief-map-sheet', { segments: 2 }); await closeSheet(); });
       await step('team', async () => { await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await shot('20-prepare-team-empty', { segments: 2 });
-        await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click(); await shot('21-prepare-team-picked', { segments: 6 });
+        // Deploy preselects the best-fit ready squad; pick one only when nothing is preselected.
+        if (!(await page.locator('.cl-squads button[aria-pressed="true"]').count())) await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click();
+        await shot('21-prepare-team-picked', { segments: 6 });
         const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); } });
       await step('live', async () => { await page.getByRole('button', { name: /^Deploy [A-Z]/ }).click(); await page.locator('.call-grid').waitFor(); await shot('22-live-decide-1', { segments: 4 });
         const choiceJump = page.locator('.live-choice-access');
@@ -198,9 +200,9 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
           const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
           break;
         }
-        await page.getByRole('button', { name: 'Done', exact: true }).waitFor({ timeout: 8000 });
+        await page.getByRole('button', { name: 'Next call', exact: true }).waitFor({ timeout: 8000 });
         await shot('26-debrief', { segments: 6 });
-        await page.getByRole('button', { name: 'Done', exact: true }).click(); await page.waitForTimeout(400);
+        await page.getByRole('button', { name: 'Next call', exact: true }).click(); await page.waitForTimeout(400);
         await shot('27-board-after', { segments: 3 }); });
       await step('hq-after', async () => { await tab('HQ'); await shot('28-hq-after-call', { segments: 5 }); });
       // The states the first pass could not see. They come last, so unlocking spends no funds the earlier frames show.

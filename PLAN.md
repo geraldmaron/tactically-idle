@@ -1,6 +1,6 @@
 # Tactically Idle game and first playable plan
 
-**Status:** Target design revised 2026-10-22. The NPC patrol economy and dedicated Store are planned, not implemented. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
+**Status:** Target design revised 2026-10-22. The NPC patrol economy and the dedicated Store are built (df9a3e9, 2026-10-22); the five tabs are HQ, Calls, Team, Build and Store. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
 
 **Created:** October 1, 2026. **Updated:** October 22, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
 
@@ -214,7 +214,7 @@ Recovery and reserve staffing support roster rotation. Every operation is live; 
 
 ## Current playable scope
 
-The browser game has four squad slots, a 100-officer catalog, 16 Develop nodes, recruitment, payroll, training, gear, recovery and local campaign saves. Command Staff v1 is built on HQ.
+The browser game has four squad slots, a 100-officer catalog, 16 Develop nodes, recruitment, payroll, training, gear, recovery and local campaign saves. Command Staff v1 is built and lives under Team, in its Command section.
 
 Barricade, armed incident, hostage and protected rescue are the current v13 calls. Each takes one squad on a generated building. Choices make physical moves, rescue sightlines use geometry, and force requires a carried firearm and a qualified officer. Content has one current version; old saves are rejected.
 

@@ -484,9 +484,52 @@ screen composition and readability supersede those aesthetic mandates. Fix R16 s
 choices affordance cannot satisfy the first-viewport gate, with a failing negative control. Re-run
 the full gate and deliberately inspect every changed baseline after the new Store/Patrol surfaces land.
 
+### feel-slice: One path from HQ to debrief that feels like one game
+Tags: job=command; journeys=answer-a-call, debrief-explains; probes=none (layout, density and taps, not odds); lane=interface
+Needs: start=none; integrate=none; ship=none
+
+The owner (2026-10-23, after Codex's df9a3e9): the app feels flat, oversized and half baked, and not one
+end-to-end experience. The specs and primitives exist (`docs/ui-ux-audit.md`, ui-primitives); adoption
+stopped about a third of the way, and the gates count declarations instead of size, priority and taps. So
+no new system: one vertical slice on existing primitives, measured, which the owner plays before
+`ui-surfaces` continues. Plan: `/Users/geralddagher/.claude/plans/df9a3e9-is-the-correct-vectorized-pearl.md`.
+Codex rejected the first draft for reversing owner decisions; these stay: the live call is one screen in
+the 4B order, board cards keep the full hook and the warning line (owner re-confirmed 2026-10-23), the
+cold open stays whole, twin Going Live cards stay while only hostage is registered, first run keeps its
+controls, Store stays the rightmost tab with its deep links, officer tiles stay 2-up.
+
+Interface (one builder): a single-row 44px resource bar; HQ with Your move first, squads as face rows
+with `ChoiceRail` duty, patrol as one income row, the repeated chips gone; board cards with the art strip
+at `--plate-h` and one footer row; brief with the scene plate and role-silhouette faces; deploy
+preselecting the one best-fit ready squad; live with a one-row head, no duplicate threat footer, a
+two-line reserved comms box and the first choice reachable; debrief with one settlement beat (no
+celebration after a death) and Next call, which closes through `closeDebrief` and opens the board. Adds
+only `Face` and a toast queue; deletes the bespoke variants it replaces.
+
+Tooling (one builder) extends `scripts/ui-gates/`: reachable primary (fully visible, unobscured,
+enabled), essential content retained (hook, warning, odds, harm unclamped), chrome at most 108px plus
+safe area, density only when items exist (2 board cards, 2 squad rows; skipped at 200% text), plate
+placeholder on first frame with zero layout shift, and tap budgets in `play-loop.mjs` (board to first
+live decision at most 3, debrief to board 1). Matrix: 320, 390 and 430 wide, 640 tall, 200% text, long
+names, empty board, blocked deploy, timer Off, Relaxed and Standard with Step out and re-entry. Each
+check first fails on df9a3e9 and switches on with the slice change that passes it.
+
+Done: `npm run verify`, `npm run check:ui` with the new checks and `npm run test:e2e` pass; the lead plays
+one Going Live call from HQ back to the board at 390x844 and 320x568; a before and after contact sheet;
+Codex reviews the merged diff; the owner plays the slice. Nothing in `ui-surfaces` starts before that.
+
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=ui-gates; integrate=none; ship=none
+Needs: start=ui-gates, feel-slice; integrate=none; ship=none
+
+Each package follows the `feel-slice` rules and passes its checks: existing primitives, the variants it
+replaces deleted, alias tokens migrated (the aliases go after the last package). `feel-slice` covers P6,
+P7 and the HQ part of P2. P3 collapses Team's second tab level only if Hire and Training stay one tap
+away. P4 removes "All upgrades" only after prerequisite discovery, cross-track comparison and
+return-to-item are proven through the rooms, and P8 gives each art set one style (Build mixes line art
+and photoreal props). Idle-game acceptance for every package: every badge maps to an action available
+now and acting clears it; no badge that only a purchase clears; an upgrade's effect is stated before
+purchase; unpaid multi-session pacing, recovery and automation hold (`docs/research/reddit-idle-games.md`).
 
 Astra's packages P2 to P8, one builder each, no shared files: P2 HQ, finance and command staff; P3 squads,
 officer sheet, hire, arrange and training; P4 Build, upgrades and Armory (essential-copy clamps, hidden
@@ -547,7 +590,8 @@ pending/canceled/failed purchase and Restore states. Confirm successful acquisit
 Done: one-press Store entry from management screens; correct context return; 320/390/430px keyboard,
 150% text, safe-area and touch-target checks; persistent labels fit without clipping; resource bar also
 remains readable with enlarged text. These enlargement defects were observed during the blue-hour
-review and must be fixed with the navigation revision. No fake countdowns or unearned badges.
+review and must be fixed with the navigation revision. No fake countdowns or unearned badges. No offer
+or solicitation during a call or after an adverse result, and no badge that only a purchase clears.
 
 ### rewarded-ads: Watching an ad is rewarded, and the watch rate is measured
 Tags: job=build; journeys=hire-and-equip; probes=new:ad-history-blind; lane=engine

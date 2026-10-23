@@ -237,7 +237,7 @@ The placements below describe the current slice; Team and Store replace its Offi
   Officers carries portraits; Build carries development and equipment objects. `TAB_PLATES` records
   whether the optional common banner is active. A disabled plate is not a request to remove the art
   in the screen's content.
-- **Tabs and bar.** The implemented four tabs draw `TAB_ICON`. Funding has its painted banknote bundle;
+- **Tabs and bar.** The five tabs (HQ, Calls, Team, Build, Store) draw `TAB_ICON`. Funding has its painted banknote bundle;
   rate, trust and level use their resource glyphs.
 - **Rows.** Officer cards use faces and status. Training courses lead
   with their emblem, upgrades with gear or emblem art, Armory tiles with gear art, call cards with
