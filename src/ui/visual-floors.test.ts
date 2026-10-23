@@ -54,7 +54,7 @@ vi.mock('./store', () => ({
   isResponsivePreview: false,
 }));
 vi.mock('./components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
-vi.mock('./components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
+vi.mock('./components/Beat', async (importOriginal) => ({ ...(await importOriginal<typeof import('./components/Beat')>()), useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 vi.mock('./components/Sheet', () => ({ Sheet: () => null }));
 vi.mock('./blueprint/Blueprint', () => ({ Blueprint: () => createElement('div', null, 'Map preview') }));
 // The shell draws the flow's head and foot around a screen; here the real head renders inline.
