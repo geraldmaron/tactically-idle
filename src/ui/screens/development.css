@@ -21,7 +21,7 @@
 .dev-node-main { display: grid; gap: 2px; min-width: 0; }
 .dev-node-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .dev-node-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px/1.2 var(--font-cond); letter-spacing: 0.02em; }
-.dev-node-fx { font-size: 12.5px; line-height: 1.3; color: var(--text-dim); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.dev-node-fx { font-size: 12.5px; line-height: 1.3; color: var(--text-dim); }
 .dev-node-needs { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--harm-text); }
 .dev-node-side { display: grid; justify-items: end; gap: 4px; }
 
@@ -126,17 +126,11 @@
 .dev-branch-chip:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .dev-tab-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--act); }
 .dev-branch-blurb { margin: 0; font-size: var(--s14); color: var(--t2); }
-.dev-track { gap: var(--sp3); }
-.dev-track > li { padding-left: calc(var(--depth, 0) * var(--sp3)); }
-.dev-node { min-height: 112px; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
-.dev-node .dev-medal { width: 72px; height: 72px; }
-.dev-node[data-state="owned"], .dev-node[data-state="ready"] { border-color: var(--hair-2); box-shadow: none; }
-.dev-node[data-state="locked"] { border-style: dashed; background: var(--ink-0); }
-.dev-node[data-state="locked"] .dev-node-fx, .dev-node[data-state="locked"] .dev-price { color: var(--t3); }
+.dev-node[data-state="locked"] .dev-node-fx { color: var(--t3); }
 .dev-node-title strong { font: 700 var(--s18)/1.15 var(--f-title); letter-spacing: 0; white-space: normal; overflow: visible; }
 .dev-node-fx { display: block; font-size: var(--s14); color: var(--t2); overflow: visible; }
-.dev-node-needs { font-size: var(--s14); color: var(--t3); }
-.dev-node-needs .icon { display: none; }
+.dev-node-needs { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--warn-text); }
+.dev-node-needs > .icon { flex: none; }
 .dev-price { font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dev-price[data-state="ready"] { color: var(--t1); }
 .dev-price-done { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--good-text, var(--good)); }
@@ -148,3 +142,50 @@
   .dev-node { grid-template-columns: auto minmax(0, 1fr); }
   .dev-node-side { grid-column: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--sp2); }
 }
+
+/* The research track as one grouped list (contract item 2): a card of rows split by hairlines. Rows
+   lead with a 40px medal well and end with one price tag; the effect is never clamped. Edges are
+   drawn from the prerequisite's medal, so each level indents far enough to clear the medal's centre. */
+.dev-track { gap: 0; padding: 0; overflow: visible; }
+.dev-track > li { padding-left: calc(var(--depth, 0) * var(--sp6, 24px)); border-top: 1px solid var(--hair); }
+.dev-track > li:first-child { border-top: 0; }
+.dev-track > li > .dev-node { padding-left: var(--sp3); padding-right: var(--sp3); }
+.dev-node { min-height: 64px; gap: var(--sp3); padding: var(--sp3); border: 0; border-radius: 0; background: none; align-items: start; }
+.dev-node:focus-visible, .dev-node.store-node-highlight { outline-offset: -2px; }
+.dev-node .dev-medal { width: 40px; height: 40px; border-width: 1px; }
+.dev-node-side { align-self: center; }
+.dev-node[data-state="locked"] { border-style: none; background: none; }
+.dev-node-steps { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
+.dev-chip-count { color: var(--t3); font-variant-numeric: tabular-nums; }
+.dev-branch-chip-on .dev-chip-count { color: var(--t2); }
+.segments { display: inline-flex; gap: var(--sp1); min-width: 0; }
+.segments > i { display: block; width: 12px; height: 4px; border-radius: 1px; background: var(--hair-2); }
+.segments > i[data-on] { background: var(--good-text, var(--mint)); }
+.cost-tag { display: grid; justify-items: end; gap: var(--sp1); min-width: 0; max-width: 132px; text-align: right; font-variant-numeric: tabular-nums; }
+.cost-tag-value { display: inline-flex; align-items: center; gap: var(--sp1); font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); white-space: nowrap; }
+.cost-tag-value > .icon { flex: none; color: var(--t3); }
+.cost-tag[data-state="ready"] .cost-tag-value { color: var(--t1); }
+.cost-tag[data-state="owned"] .cost-tag-value { font-size: var(--s14); color: var(--good-text, var(--good)); }
+.cost-tag[data-state="owned"] .cost-tag-value > .icon { color: inherit; }
+.cost-tag[data-state="locked"] .cost-tag-value { color: var(--t3); }
+.cost-tag-note { font-size: var(--s14); line-height: 1.25; color: var(--t3); }
+.cost-tag[data-state="short"] .cost-tag-note { color: var(--warn-text); }
+.cost-tag[data-state="locked"] .cost-tag-note { color: var(--warn-text); }
+.cost-tag-bar { display: block; width: 72px; height: 3px; border-radius: 2px; background: var(--hair-2); overflow: hidden; }
+.cost-tag-bar > i { display: block; height: 100%; background: var(--t1); }
+.cost-tag-bar[data-met] > i { background: var(--good-text, var(--mint)); }
+.dev-chips > li { list-style: none; }
+.dev-chip-action { cursor: pointer; font: inherit; font-size: var(--s14); min-height: 36px; }
+.dev-chip-action:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.dev-buy-effect { display: flex; align-items: flex-start; gap: var(--sp2); flex: 1 1 100%; margin: 0; font-size: var(--s14); color: var(--t2); }
+.dev-buy-effect > .icon { flex: none; margin-top: var(--sp1); color: var(--good-text, var(--mint)); }
+.dev-buy-effect b { color: var(--t1); font-weight: 600; }
+/* Tier ladder: tier and effect on one line, the price under the effect, so nothing is squeezed. */
+.dev-ladder > li { grid-template-columns: 38px minmax(0, 1fr); row-gap: var(--sp1); }
+.dev-ladder-cost { grid-column: 2; text-align: left; white-space: normal; }
+.dev-ladder-cost:empty { display: none; }
+.cost-tag-inline { display: flex; flex-wrap: wrap; align-items: center; justify-items: start; gap: var(--sp1) var(--sp2); max-width: none; text-align: left; }
+.cost-tag-inline:empty { display: none; }
+.cost-tag-inline .cost-tag-note { display: block; }
+.cost-tag-inline .cost-tag-bar { width: 72px; }
+.cost-tag-inline[data-state="locked"] .cost-tag-note::before { content: ''; }

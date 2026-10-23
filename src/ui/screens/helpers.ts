@@ -136,12 +136,12 @@ export function scenarioTitle(g: GameState, scenarioId: Id, now: number): string
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-export function hasNodeEffect(g: GameState, kind: 'loadoutPresets' | 'restockRules'): { unlocked: boolean; reason: string | null } {
+export function hasNodeEffect(g: GameState, kind: 'loadoutPresets' | 'restockRules'): { unlocked: boolean; reason: string | null; nodeId: Id | null; nodeName: string | null } {
   const nodes = nodeOptions(g).filter((n) => n.node.effects.some((e) => e.kind === kind));
-  if (nodes.some((n) => n.status === 'unlocked')) return { unlocked: true, reason: null };
+  if (nodes.some((n) => n.status === 'unlocked')) return { unlocked: true, reason: null, nodeId: null, nodeName: null };
   const n = nodes[0];
-  if (!n) return { unlocked: false, reason: 'Unlock the matching Logistics node in Develop.' };
-  return { unlocked: false, reason: `Locked: unlock "${n.node.name}" in Develop${n.reason ? ` (${n.reason})` : ''}.` };
+  if (!n) return { unlocked: false, reason: 'Unlock the matching Logistics upgrade in Build.', nodeId: null, nodeName: null };
+  return { unlocked: false, reason: `Locked: unlock "${n.node.name}" in Build${n.reason ? ` (${n.reason})` : ''}.`, nodeId: n.node.id, nodeName: n.node.name };
 }
 
 export function topRatings(o: Officer, n = 3): { key: RatingKey; label: string; value: number }[] {
