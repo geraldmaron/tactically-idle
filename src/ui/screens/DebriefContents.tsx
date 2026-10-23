@@ -55,10 +55,12 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
   return <>
     <div className={`debrief-hero debrief-hero-${tone}${scene ? ' plate' : ''}`}>
       <PlateArt src={scene} />
+      <div className="debrief-hero-top">
       {scenario?.incident?.type && <span className="debrief-type"><CallTypeBadge type={scenario.incident.type} size={44} medallion label /></span>}
       <span className={`result-marks${death ? ' result-marks-muted' : ''}`} role="img" aria-label={death ? 'No commendation: someone died on this call' : `Commendation ${marks} of 3${cap < 3 && worst >= 80 ? open ? ', capped because the call is not resolved' : forced ? ', capped because force was used' : ', capped because the call is only partly resolved' : ''}`}>
         {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
       </span>
+      </div>
       <h2 className="debrief-title">{d.endingTitle}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}
       {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}

@@ -18,6 +18,7 @@ import { CONSEQUENCE_LABEL } from './OperationFeedback';
 import { outcomePercentages, visibleDecisions } from './liveModels';
 import { gaugeReachTag, type GaugeReach } from './fill-gauge';
 import { currentPortraitKey, portraitSource } from '../portraits/Portrait';
+import { Silhouette } from '../portraits/Silhouette';
 
 /** The officer facts a lead line reads. */
 export type LeadOfficer = Pick<Officer, 'id' | 'firstName' | 'surname' | 'portrait' | 'role' | 'ratings'> & Pick<Partial<Officer>, 'identityId'>;
@@ -44,13 +45,13 @@ export function leadLine(a: Pick<ActionView, 'officerIds' | 'keyRating'>, office
 }
 
 /** A small face for inline rows (a span, so it can sit inside a card's button): the file portrait,
- * or the initials when there is none. Decorative; the row's text names the officer. */
+ * or an officer silhouette when there is none. Decorative; the row's text names the officer. */
 export function LeadFace({ officer, size = 22 }: { officer: LeadOfficer; size?: number }) {
   const [failed, setFailed] = useState(false);
   const key = currentPortraitKey(officer);
   return <span className="lead-face" aria-hidden="true" style={{ width: size, height: size }}>
     {key && !failed ? <img src={portraitSource(key)} alt="" width={size} height={size} draggable={false} onError={() => setFailed(true)} />
-      : <span className="lead-face-initials">{officer.firstName.slice(0, 1)}{officer.surname.slice(0, 1)}</span>}
+      : <Silhouette kind="officer" className="lead-face-silhouette" seed={`${officer.firstName} ${officer.surname}`} />}
   </span>;
 }
 

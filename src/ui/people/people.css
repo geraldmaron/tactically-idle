@@ -1,8 +1,11 @@
+/* Running prose is calm (2026-10-23: every name in color was loud): a name keeps its kind's weight and
+   takes a tint of its hue over the text's own color, so it stays findable without outshining the sentence.
+   Labels that stand alone (person tiles, glyphs, avatars) keep the full hue. */
 /* People in call text (src/ui/people/PeopleText.tsx, spec 8.2). Color comes from the public kind
    and never carries the meaning alone: every kind also has its own weight, face or slant. Prose
    carries no symbol and no underline (an underline on a phone reads as a link); the glyph is kept
    for names that stand alone as labels (person tiles, legends). Tokens live in theme.css. */
-.people-name { color: var(--people-color); font-weight: 600; }
+.people-name { color: color-mix(in srgb, var(--people-color) 38%, currentColor); font-weight: 600; }
 .people-name[data-kind="subject"], .person-avatar[data-kind="subject"], .people-glyph-tone[data-kind="subject"] { --people-color: var(--people-subject); }
 .people-name[data-kind="civilian"], .person-avatar[data-kind="civilian"], .people-glyph-tone[data-kind="civilian"] { --people-color: var(--people-civilian); }
 .people-name[data-kind="person"], .person-avatar[data-kind="person"], .people-glyph-tone[data-kind="person"] { --people-color: var(--people-person); }

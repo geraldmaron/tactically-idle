@@ -19,7 +19,7 @@ import { OperationFeedback } from './OperationFeedback';
 import { sceneFor } from '../art/Plates';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
-import { IncidentPeopleStatus } from '../components/IncidentPeople';
+import { IncidentPeopleStatus, IncidentPeopleStrip } from '../components/IncidentPeople';
 import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
@@ -220,6 +220,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
       // The briefing sheet holds the reference: the call's briefing and who has been located. The map
       // shows where they are; the story column keeps only what helps the next decision.
       // The people panel reads the subjects as the stall has left them, so it agrees with the strip.
+      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} />}
       situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={g} /></>}
       supportContext={scenario && <><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);

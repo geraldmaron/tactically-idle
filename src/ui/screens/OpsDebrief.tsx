@@ -59,7 +59,8 @@ export function OpsDebrief() {
   // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
   return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page debrief cl-flow-body">
-      <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} department={{ funding: g.department.funding, level: g.department.level, service: g.department.service }} />
+      <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} department={{ funding: g.department.funding, level: g.department.level, service: g.department.service }} />
+      {import.meta.env.DEV && <OpenInLab getState={() => g} />}
     </div>
   </FlowScreen></GamePeopleProvider>;
 }

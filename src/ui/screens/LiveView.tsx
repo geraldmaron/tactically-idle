@@ -106,6 +106,8 @@ export interface LiveViewProps {
   feedback?: ReactNode;
   /** Named external services stay beside the next decision, separate from squad support. */
   supportContext?: ReactNode;
+  /** The people the call is about, as faces under the squad (IncidentPeopleStrip). Left out, none show. */
+  scenePeople?: ReactNode;
   /** The call's summary and briefing, kept in view under the title for the whole operation. */
   situation?: ReactNode;
   /** The call type's painted scene (art/Plates sceneFor), behind the pinned title. */
@@ -356,6 +358,7 @@ export function LiveView(p: LiveViewProps) {
           </div>
         </Sheet>
         {(beat === 'decide' || sceneOpen) && squadRow}
+        {p.scenePeople}
       </section>
   );
 

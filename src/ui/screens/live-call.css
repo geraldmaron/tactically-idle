@@ -5,7 +5,7 @@
 
 /* ---- one pinned strip: the call's name, where it is, and everything that runs down or builds up */
 .live .live-head { padding: var(--sp1) var(--gutter); background: var(--ink-0); }
-.live .live-head.plate > .plate-art { opacity: .25; }
+.live .live-head.plate > .plate-art { opacity: .5; }
 .live .live-map-access, .live .live-choice-access { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: var(--touch); min-width: var(--touch); padding: 0; }
 /* The jump to the first choice shows only where the choices start below the fold. */
 .live .live-choice-access[hidden] { visibility: hidden; }
@@ -324,7 +324,8 @@
   .live .source-ticker-count span { font-size: var(--s14); }
   .live .source-ticker-bar { grid-column: 1 / -1; height: 4px; }
   .live .source-ticker-effect { grid-column: 1 / -1; margin: 0; font-size: var(--s14); line-height: 1.2; }
-  .live .source-reactions { grid-column: 1 / -1; height: 1.2em; margin-top: 0; font-size: var(--s14); line-height: 1.2; }
+  /* Two steady lines (owner): the box is two lines of the 14px text high, so neither is cut through the middle. */
+  .live .source-reactions { grid-column: 1 / -1; height: calc(2 * 1.2em + 2px); margin-top: 0; font-size: var(--s14); line-height: 1.2; }
 }
 
 /* The strip as uniform pills (component contract 10, owner 2026-10-23, option 3): row one is the stage
@@ -364,3 +365,18 @@
 }
 
 .live .live-strip .ring { --ring-w: 3px; }
+
+/* The people the call is about, under the squad's faces. */
+.live .live-scene .scene-people { margin-top: var(--sp2); }
+
+/* The result lands: the card rises into place once and its edge flares in the result's own tone, so a
+   confirmed choice has a beat, not a swap. Still under reduced motion. */
+@keyframes beat-land { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes beat-flare { from { box-shadow: 0 0 0 0 var(--flare); } 35% { box-shadow: 0 0 0 5px var(--flare); } to { box-shadow: 0 0 0 0 transparent; } }
+.live-beat-result .operation-feedback .decision-card { --flare: color-mix(in srgb, var(--hair-2) 55%, transparent); animation: beat-land 0.35s ease-out 1 both, beat-flare 0.9s ease-out 0.15s 1 both; }
+.live-beat-result .operation-feedback .decision-favorable { --flare: color-mix(in srgb, var(--good) 45%, transparent); }
+.live-beat-result .operation-feedback .decision-adverse, .live-beat-result .operation-feedback .decision-force { --flare: color-mix(in srgb, var(--harm) 45%, transparent); }
+@media (prefers-reduced-motion: reduce) { .live-beat-result .operation-feedback .decision-card { animation: none; } }
+
+/* Open in lab is a development aid: quiet, at the foot of the call, never competing with the story. */
+.live [data-open-in-lab] { margin: var(--sp2) var(--gutter) var(--sp3); opacity: .55; font-size: var(--s14); }

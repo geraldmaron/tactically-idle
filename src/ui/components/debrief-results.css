@@ -21,7 +21,8 @@
 .result-officer { display: flex; gap: 11px; min-width: 0; padding: 13px 0; border-bottom: 1px solid var(--hair); }
 .result-officer:last-child { border-bottom: 0; padding-bottom: 0; }
 .result-officer-portrait, .result-officer-fallback { border-radius: 8px; }
-.result-officer-fallback { display: flex; flex-shrink: 0; align-items: center; justify-content: center; border: 1px solid var(--hair); color: var(--t2); background: var(--ink-0); font-family: var(--f-title); font-size: 20px; }
+.result-officer-fallback { display: flex; flex-shrink: 0; align-items: flex-end; justify-content: center; overflow: hidden; border: 1px solid var(--hair); color: var(--officer); background: linear-gradient(160deg, var(--ink-3), var(--ink-1)); }
+.result-officer-silhouette { width: 100%; height: 100%; }
 .result-officer-body { flex: 1; min-width: 0; display: grid; gap: 7px; }
 .result-officer-heading { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; align-items: baseline; }
 .result-officer-heading > div { min-width: 0; }

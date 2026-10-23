@@ -11,6 +11,7 @@ import { Chip } from './ui';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Disclosure } from './Disclosure';
+import './tier.css';
 
 type Tone = 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
 
@@ -76,29 +77,20 @@ export function settingIcon(setting: 'residential' | 'business' | 'apartment' | 
 
 // ---------------------------------------------------------------- tier and difficulty
 
-/** Tier 1 to 5 as chevrons. Filled count = tier. Never colour alone: the number is in the label. */
+/** Tier 1 to 5 as a rank mark: a stack of bright chevrons, one per tier, grown from the bottom like
+ * service stripes, so the height of the stack is the tier. Nothing faint stands in for the tiers a call
+ * does not have. Never colour alone: the number is in the label and beside it in the chip. */
 export function TierChevrons({ tier, max = 5 }: { tier: number; max?: number }) {
   const t = Math.max(0, Math.min(max, Math.round(tier)));
+  const step = 3.4, height = 7.4 + step * Math.max(0, t - 1);
   return (
-    <span className="tier" role="img" aria-label={`Tier ${t} of ${max}`}>
-      {Array.from({ length: max }).map((_, i) => (
-        <svg key={i} viewBox="0 0 12 10" width="12" height="10" className={i < t ? 'tier-on' : 'tier-off'} aria-hidden="true">
-          <path d="M1.5 8L6 3l4.5 5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ))}
+    <span className="tier-mark" role="img" aria-label={`Tier ${t} of ${max}`} data-tier={t}>
+      <svg viewBox={`0 0 16 ${height}`} width="16" height={height} aria-hidden="true" focusable="false">
+        {Array.from({ length: t }).map((_, i) => (
+          <path key={i} d={`M2 ${height - 1.2 - i * step}L8 ${height - 6.2 - i * step}l6 5`} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+      </svg>
     </span>
-  );
-}
-
-export type DifficultyBand = 'low' | 'moderate' | 'high' | 'severe';
-const BAND_TONE: Record<DifficultyBand, Tone> = { low: 'mint', moderate: 'amber', high: 'warn', severe: 'danger' };
-const BAND_WORD: Record<DifficultyBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High', severe: 'Severe' };
-
-export function DifficultyChip({ band }: { band: DifficultyBand }) {
-  return (
-    <Chip tone={BAND_TONE[band]} icon="mountain" title="Expected difficulty, conditional on what is known now">
-      {BAND_WORD[band]} difficulty
-    </Chip>
   );
 }
 
