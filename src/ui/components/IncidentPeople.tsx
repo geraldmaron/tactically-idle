@@ -9,7 +9,7 @@ import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Portrait } from '../portraits/Portrait';
 import { Face, type FaceKind } from './Face';
-import { opMinutes } from '../format';
+import { opMinutes, signed } from '../format';
 import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
 import './incident-people.css';
@@ -86,9 +86,14 @@ function PersonTile({ label, status, tone, icon, avatar, data, personId, childre
   </li>;
 }
 
-export function CivilianOutcomeList({ outcomes }: { outcomes: CivilianOutcome[] }) {
-  return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) =>
-    <PersonTile key={person.id} personId={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }} />)}</ul>;
+/** `values` (the debrief) adds what each person's outcome paid or cost, so it is said on the tile once. */
+export function CivilianOutcomeList({ outcomes, values }: { outcomes: CivilianOutcome[]; values?: ReadonlyMap<string, { trust: number; strain: number }> }) {
+  return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) => {
+    const paid = values?.get(person.id);
+    return <PersonTile key={person.id} personId={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }}>
+      {paid && (paid.trust !== 0 || paid.strain !== 0) && <span className="person-note">{[paid.trust !== 0 ? `${signed(paid.trust, 1)} trust` : '', paid.strain !== 0 ? `${signed(paid.strain, 1)} strain` : ''].filter(Boolean).join(' · ')}</span>}
+    </PersonTile>;
+  })}</ul>;
 }
 
 /** A saved fatality remains deceased even if an older care field says otherwise. */

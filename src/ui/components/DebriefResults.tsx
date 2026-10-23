@@ -18,10 +18,24 @@ type Condition = DebriefResult['officerCondition'][number];
 const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 'lo';
 
 
+/** What each tracked person's own score lines cost or paid, so a person's tile carries it and the
+ * scoring list does not say the same outcome a second time. */
+function personValues(d: DebriefResult): Map<string, { trust: number; strain: number }> {
+  const values = new Map<string, { trust: number; strain: number }>();
+  const ids = new Set((d.civilianOutcomes ?? []).map((person) => person.id));
+  for (const line of d.scoreLines ?? []) {
+    const id = /^person:(.+):[^:]+$/.exec(line.key)?.[1];
+    if (!id || !ids.has(id)) continue;
+    const have = values.get(id) ?? { trust: 0, strain: 0 };
+    values.set(id, { trust: have.trust + line.trust, strain: have.strain + line.strain });
+  }
+  return values;
+}
+
 export function DebriefSummary({ debrief: d, includeRewards = true }: { debrief: DebriefResult; includeRewards?: boolean }) {
   return <Card className="result-summary">
     {d.disposition && <CompletionResult debrief={d} />}
-    {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
+    {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} values={personValues(d)} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
       {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className={`result-score result-score-${scoreTone(result.score)}`} key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
         <Ring value={result.score} size={58}><strong className="result-score-value">{Math.round(result.score)}</strong></Ring>
         <span className="result-score-text">
@@ -54,11 +68,14 @@ export function DebriefRewards({ debrief: d }: { debrief: DebriefResult }) {
 /** V13: what the call was scored on, line by line (the trust lines add up to the trust change before
  * the department's 0 to 100 clamp), and the force the team used, on whom, and why. */
 export function DebriefScore({ debrief: d }: { debrief: DebriefResult }) {
-  if (!d.scoreLines?.length && !d.forceLines?.length) return null;
+  // A tracked person's line is on their tile (People at the call), so it is not listed twice.
+  const onTiles = personValues(d);
+  const scoreLines = (d.scoreLines ?? []).filter((line) => { const id = /^person:(.+):[^:]+$/.exec(line.key)?.[1]; return !(id && onTiles.has(id)); });
+  if (!scoreLines.length && !d.forceLines?.length) return null;
   return <Card className="result-score-lines">
-    {!!d.scoreLines?.length && <section aria-label="How the call was scored">
+    {!!scoreLines.length && <section aria-label="How the call was scored">
       <SubHead icon="gauge">How the call was scored</SubHead>
-      <ul className="score-lines">{d.scoreLines.map((line) => <li key={line.key} className={`score-line${line.key === 'result' ? ' score-line-result' : ''}`} data-score-line={line.key}>
+      <ul className="score-lines">{scoreLines.map((line) => <li key={line.key} className={`score-line${line.key === 'result' ? ' score-line-result' : ''}`} data-score-line={line.key}>
         <span className="score-line-text">{line.text}</span>
         <span className="score-line-values">
           {line.trust !== 0 && <span className={line.trust < 0 ? 'tone-danger' : 'tone-mint'}>{signed(line.trust, 1)} trust</span>}

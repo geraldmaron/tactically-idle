@@ -274,3 +274,9 @@
 .debrief-type { width: fit-content; display: flex; align-items: center; padding: 0 var(--sp3) 0 var(--sp1); border-radius: 999px; background: rgba(8, 13, 22, 0.62); }
 .debrief-type .ct-badge { padding-block: var(--sp1); }
 .debrief-type .ct-badge-label { font-size: var(--s14); white-space: nowrap; }
+
+/* Debrief hero: the call's type and its marks share one row, and the hero gives up the tall plate padding, so
+   the people and the rewards come sooner (section order unchanged, docs/ops-experience.md). */
+.debrief-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp2); }
+.app .debrief-hero.plate.debrief-hero { padding-top: var(--sp4); padding-bottom: var(--sp4); }
+.debrief [data-open-in-lab] { margin: var(--sp2) 0 0; opacity: .55; font-size: var(--s14); }
