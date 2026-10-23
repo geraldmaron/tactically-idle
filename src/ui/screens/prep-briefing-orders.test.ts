@@ -57,4 +57,14 @@ describe('a face on an order', () => {
     expect((orders.match(/class="pb-lead"/g) ?? []).length).toBe(scenario.objectives.filter((o) => orderPerson(o, lexiconFor(scenario, null, []))).length);
     expect((orders.match(/class="pb-n"/g) ?? []).length + (orders.match(/pb-well-n/g) ?? []).length).toBe(scenario.objectives.length);
   });
+  it('shows the plain person on an order face when the provider has names off, whatever else is saved', () => {
+    const scenario = getScenario(testCallId('hostage'))!;
+    const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
+    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built) });
+    const off = renderToStaticMarkup(createElement(PeopleProvider, { lexicon: null, children: page }));
+    const orders = off.slice(off.indexOf('pb-orders'), off.indexOf('What the team faces'));
+    expect(orders).toContain('pb-lead');
+    expect(orders).not.toContain('face-civilian');
+    expect(orders).not.toContain('face-subject');
+  });
 });

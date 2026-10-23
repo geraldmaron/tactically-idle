@@ -16,7 +16,7 @@ import { PlateArt, sceneFor } from '../art/Plates';
 import { Icon } from '../icons';
 import { money } from '../format';
 import { Card, Chip, Row } from '../components/ui';
-import { PeopleGlyph, PeopleText, usePeopleColor, usePeopleEntry } from '../people/PeopleText';
+import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { lexiconFor, peopleLabel, segmentPeople, type Lexicon, type LexiconEntry } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
 import type { Intel, IntelLine } from './intel';
@@ -128,12 +128,13 @@ export function orderPerson(objective: { id: string; label: string }, lexicon: L
 }
 
 /** An order's picture: the person's role silhouette with the order number on its corner, or the
- * number in a well when the order is about nobody the team has located. With "Color names by role"
- * off the face is the plain person, as on the person cards below. */
+ * number in a well when the order is about nobody the team has located. */
 function OrderLead({ n, entry }: { n: number; entry: LexiconEntry | null }) {
-  const colored = usePeopleColor();
+  // The provider decides whether kinds show (the game's preference, the Lab's names switch): with it
+  // off there is no colored entry and the face is the plain person, as on the person cards below.
+  const shown = usePeopleEntry(entry?.id);
   if (!entry) return <span className="pb-well pb-well-n" aria-label={`Order ${n}`}>{n}</span>;
-  const kind = colored ? entry.kind : 'person';
+  const kind = shown?.kind ?? 'person';
   return <span className="pb-lead" data-kind={kind}>
     <Face size="md" kind={faceKind(kind)} name={peopleLabel(kind, entry.squadName)} />
     <b className="pb-n" aria-label={`Order ${n}`}>{n}</b>
