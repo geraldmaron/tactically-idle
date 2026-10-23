@@ -648,6 +648,17 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read
   (owner, 2026-10-22).
 
+Decided 2026-10-23 (live-content save policy, `docs/scenario-framework.md` section 7a): a campaign's
+catalog grows with each release (new calls and chapters reach existing campaigns between calls), and a
+started run is frozen: the save keeps its compiled call, map, execution-contract version and committed
+effects, and it finishes under the contract it started with. Every content reference a save can name gets a
+stable id, kept, mapped or tombstoned; content withdrawn for safety gets a targeted migration or an explicit
+interruption settlement; the whole slot library migrates forward with golden saves, generational crash-safe
+writes and no downgrade overwrites; durable native storage comes with `store-wrap`; purchases reconcile from
+the account, never from a save. The promise starts at the earliest of the store launch or the first
+real-money release, rehearsed on prelaunch builds first, with a demonstrated upgrade and recovery as a launch
+gate. Until then saves stay disposable.
+
 Decided 2026-10-22 (Going Live review): waiting it out is never charged in the debrief; endings show no
 custody (no car, cell or station); epilogues speak only for people on scene, never an institution off screen;
 a held person is offered the phone and decides, never asked to perform a concession; Going Live's line a player

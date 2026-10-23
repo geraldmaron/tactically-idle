@@ -1,5 +1,6 @@
-DRAFT, 2026-10-23. A proposal for the owner, not a rule. Nothing here is built, and the backlog,
-the skills and `docs/content-pipeline.md` are unchanged. Section 11 records sol's three challenges.
+DRAFT, 2026-10-23. A proposal for the owner, not a rule, except section 7a, which the owner adopted
+on 2026-10-23 (recorded in `docs/backlog.md`, Owner decisions). Nothing here is built, and the
+skills and `docs/content-pipeline.md` are unchanged. Section 11 records sol's three challenges.
 
 # Scenario framework: parameters, policies, officers and a catalog
 
@@ -36,7 +37,8 @@ assumes monthly content drops over months of play, and today every content versi
 the save (`deserialize`, `src/sim/save.ts`). That is right while developing and wrong for live
 play, where a release would erase the threads and officer histories the book is made of. Before
 launch the owner picks: additive releases that keep saves, or campaigns pinned to a content revision.
-Section 7a recommends a growing catalog with frozen runs, promised from the store launch or the first real-money release.
+Owner, 2026-10-23: a growing catalog with frozen runs (section 7a), promised from the store launch or
+the first real-money release.
 
 | Part of the proposal | Verdict |
 |---|---|
@@ -334,7 +336,7 @@ regenerated from current content, buildings and compiler at load (`getScenario`,
 with current logic (`traceRun`, `src/sim/operation.ts`). So any content or engine change can
 change a saved call underneath it, which is why the version check rejects.
 
-### Recommendation: a growing catalog with frozen runs
+### Decided (owner, 2026-10-23): a growing catalog with frozen runs
 
 Neither pure option survives sol's third pass. **Pure pinning is rejected**: a campaign that only
 sees its starting content can't grow its book. **Pure additive is rejected as drafted**: keeping
@@ -424,8 +426,8 @@ Each step becomes a backlog item only on the owner's approval, and this section 
 
 ## 10. Owner decisions this needs
 
-1. **Save policy for live content**: a growing catalog with frozen runs (section 7a), promised
-   from the store launch or the first real-money release. Needed before the book can exist.
+1. ~~Save policy for live content~~ **Decided 2026-10-23**: a growing catalog with frozen runs
+   (section 7a), promised from the store launch or the first real-money release.
 2. Run the invariant gate and the authoring trial before more calls after Going Live.
 3. "No child is killed" stays an invariant. Recommended: yes.
 4. The sensitive-combination lists.
