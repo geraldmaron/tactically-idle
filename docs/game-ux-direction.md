@@ -55,6 +55,11 @@ screen and every session follows these; a package that needs something new adds 
 10. **Live strip.** The live call's strip uses the same pills as the resource bar (owner, 2026-10-23,
    to bring the first choice above the fold at 390x844); the comms box and the face row's surnames
    keep their size.
+11. **Tab roots carry no page title.** The tab bar names the screen; a second level of tabs is the
+   compact `ChoiceRail`. Content starts within 100px of the resource bar.
+12. **One officer, one look.** An officer appears through `Face` everywhere, with its stress ring and
+   status mark; stress is not repeated as text beside it. Rows in one list are one height: one
+   title line, one detail line, extra marks in the trail, names truncate rather than wrap.
 
 ## Shipped in this slice
 
