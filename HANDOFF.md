@@ -251,8 +251,8 @@ Not yet in `claude/feel-lead`, merged by the lead after the session above lands 
 
 Parked, kept: the Going Live branches (`going-live-spine-25ad3c`, `spine-pass2-363cdf`, `prose-scene-6a2c7c`,
 `trusting-pasteur-41bc4e`, `happy-wilson-6259de`, `hopeful-pike-69bdac`) and `friendly-leakey-bd79fb`. The
-going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached. Folders of
-archived worktrees still on disk are clean and contained; remove them with `git worktree remove`.
+going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached. The archived
+sessions' worktree folders and Codex's stale 5177 server (`codex/blue-hour-overhaul`, contained) are removed.
 
 ## Locks outside normal ownership
 
