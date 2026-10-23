@@ -37,12 +37,13 @@
 .hq-report .hq-link { color: var(--t1); font-weight: 600; text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; }
 .hq-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp1) var(--sp3); margin-bottom: var(--sp1); }
 .hq-head .section-title { margin: 0; }
-.hq-duties { display: flex; flex-direction: column; }
-.hq-squad { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp2) var(--sp3); padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); }
-.hq-duty { flex: 1 1 11rem; min-width: 0; border-bottom: 0; }
+.hq-duties { display: grid; gap: var(--sp2); }
+.hq-duty .chip { white-space: nowrap; }
+.hq-duty { flex: 1 1 14rem; min-width: 0; border-bottom: 0; }
 .hq-squad > .choice-rail { flex: 0 0 auto; }
 .hq-squad > .hq-duty-auto { flex: 1 0 100%; }
-.hq-squad:last-child { border-bottom: 0; }
+.hq-squad { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--sp2) var(--sp3); padding: var(--sp3); }
+.hq-patrol-card { padding: var(--sp1) var(--sp3); }
 .hq-faces { display: inline-flex; }
 .hq-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
 .hq-duty-auto { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: var(--touch); font-size: var(--s14); color: var(--t2); cursor: pointer; }
@@ -52,3 +53,8 @@
 .hq-duty-auto input:checked + .toggle-ui::after { transform: translateX(18px); background: var(--t1); }
 .hq-duty-auto input:focus-visible + .toggle-ui { outline: 2px solid var(--act); outline-offset: 2px; }
 .hq-patrol-rate strong { color: var(--good-text); font: 700 var(--s18)/1 var(--f-title); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hq-move-facts { display: flex; flex-wrap: wrap; gap: var(--sp1); margin-top: var(--sp1); }
+.hq-squad-note { display: grid; gap: var(--sp1); flex: 1 0 100%; margin: 0; font-size: var(--s14); color: var(--t2); }
+.hq-squad-note > span { display: flex; align-items: center; gap: var(--sp1); }
+.hq-squad-note .icon { flex: none; }
+.hq-squad-strain { color: var(--warn-text); }
