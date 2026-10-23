@@ -186,7 +186,7 @@ export function OverlayLayer({ items, uid, frame }: { items: OverlayItem[]; uid:
           return (
             <g key={it.key} className={`bp-ov bp-ov-${it.kind} bp-ov-${tone}`} data-overlay={it.kind} data-tone={tone}>
               <mask id={mid} maskUnits="userSpaceOnUse" {...region}>
-                <path d={it.d} fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" pathLength={1} className="bp-ov-draw" />
+                <path d={it.d} fill="none" stroke="var(--white)" strokeWidth="2.4" strokeLinecap="round" pathLength={1} className="bp-ov-draw" />
               </mask>
               <g mask={`url(#${mid})`}>
                 <path d={it.d} className="bp-ov-halo" />

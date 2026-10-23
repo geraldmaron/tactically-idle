@@ -107,6 +107,15 @@ describe('external service context beside the next decision', () => {
     expect(html).not.toContain('Confirm:');
   });
 
+  it('leaves the responsibilities to the brief orders: the brief context lists dispatch only', () => {
+    const { scenario } = fixture();
+    const html = render(createElement(IncidentBriefContext, { scenario }));
+    expect(html).toContain('The first crew could not safely reach the resident.');
+    expect(html).not.toContain('Your team’s responsibilities');
+    expect(html).not.toContain('Stay with the resident until care is accepted.');
+    expect(render(createElement(IncidentBriefContext, { scenario, responsibilities: true }))).toContain('Stay with the resident until care is accepted.');
+  });
+
   it('explains a blocked contextual choice while keeping it reviewable', () => {
     const { props } = support(true);
     props.actions[0].eligible = false;

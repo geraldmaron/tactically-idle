@@ -12,9 +12,11 @@ import { Disclosure } from '../components/Disclosure';
 
 type ServiceView = ReturnType<typeof externalSupportViews>[number];
 
-/** The briefing is public authored information, never reconstructed from hidden incident truth. */
-export function IncidentBriefContext({ scenario, compact = false }: { scenario: ScenarioDefinition; compact?: boolean }) {
-  const { dispatchReason, teamResponsibilities } = scenario.briefing;
+/** The briefing is public authored information, never reconstructed from hidden incident truth.
+ *  The responsibilities are listed only where the brief's orders are not on screen (`responsibilities`). */
+export function IncidentBriefContext({ scenario, compact = false, responsibilities = false }: { scenario: ScenarioDefinition; compact?: boolean; responsibilities?: boolean }) {
+  const { dispatchReason } = scenario.briefing;
+  const teamResponsibilities = responsibilities ? scenario.briefing.teamResponsibilities : undefined;
   if (!dispatchReason && !teamResponsibilities?.length) return null;
   const content = <>
     {dispatchReason && <p>{dispatchReason}</p>}
@@ -95,7 +97,7 @@ export function SupportContext({ scenario, run, actions, open, onOpen, onClose, 
       </li>)}</ul>
     </section>
     <Sheet open={open} onClose={onClose} title="Care and support" className="support-context-sheet" footer={<Button block onClick={onClose}>Back to decisions</Button>}>
-      <IncidentBriefContext scenario={scenario} />
+      <IncidentBriefContext scenario={scenario} responsibilities />
       <p className="support-clock-note">Response times use operation minutes. Time moves when you confirm a decision.</p>
       <div className="support-service-details">{services.map((service) => {
         const definition = scenario.externalServices?.find((entry) => entry.id === service.id);

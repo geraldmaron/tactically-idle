@@ -218,9 +218,9 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
             <WallPatternDefs uid={uid} runs={walls.runs} />
           </defs>
           <mask id={id.wallMask} maskUnits="userSpaceOnUse" x={base.x} y={base.y} width={base.w} height={base.h}>
-            <rect x={base.x} y={base.y} width={base.w} height={base.h} fill="#fff" />
+            <rect x={base.x} y={base.y} width={base.w} height={base.h} fill="var(--white)" />
             {walls.cuts.map((c, i) => (
-              <polygon key={i} points={c} fill="#000" />
+              <polygon key={i} points={c} fill="var(--black)" />
             ))}
           </mask>
 
@@ -380,7 +380,7 @@ export function Blueprint({ built: allBuilt, spaces: allSpaces, squadTasks: allS
         </div>
       )}
 
-      <p className="bp-nav-help" id={`${uid}-navigation-help`}>Tap a room to inspect · Drag to pan · Pinch to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to inspect its people and carried items. Use the Rooms list for a text alternative. Scroll to zoom. Double-tap a room to zoom in or fit the map.</span></p>
+      <p className="bp-nav-help" id={`${uid}-navigation-help`}>Tap a room · Drag to pan · Pinch to zoom<span className="bp-sr-only">. Keyboard: + and − to zoom, arrow keys to pan, Home to fit the map. Tab to a room and press Enter to inspect its people and carried items. Use the Rooms list for a text alternative. Scroll to zoom. Double-tap a room to zoom in or fit the map.</span></p>
 
       <div className="bp-zoomctl" role="group" aria-label="Map zoom">
         <button type="button" className="bp-zbtn" aria-label="Zoom in" title="Zoom in (+)" onClick={() => { lastTap.current = null; zoomBy(1.6); }} disabled={zoom >= 3.95}>

@@ -25,8 +25,8 @@ const THEME_FILES = ['/src/ui/theme.css'];
 const SVG_UNITS = { file: '/src/ui/blueprint/blueprint.css', under: 6 };
 const FLOOR_PX = 12;
 const SMALL_PX = 14;
-/** Declarations under 14px, counted 2026-10-23 after the call brief rebuild (223 before it; 347 before the visual-story pass). Only falls. */
-const SMALL_TEXT_CEILING = 218;
+/** Declarations under 14px, counted 2026-10-23 after the providers pass (223 before it; 347 before the visual-story pass). Only falls. */
+const SMALL_TEXT_CEILING = 204;
 const TOUCH_PX = 44;
 const BUTTON_CLASS = /\.(btn|pill|icon-btn|stepper-btn|navbtn|hud-btn|linkbtn|live-cancel)(?![\w-])/;
 
