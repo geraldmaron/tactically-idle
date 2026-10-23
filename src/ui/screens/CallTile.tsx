@@ -2,19 +2,17 @@
 // the player's real card. Store-free. Its styles are calls.css, which the board (and the lab's frame)
 // load; importing them here would move them in the game's cascade.
 import type { JSX, ReactNode } from 'react';
-import type { ScenarioCard } from '../../sim/operation-selectors';
+import { callTier, type ScenarioCard } from '../../sim/operation-selectors';
 import type { BoardShortage } from '../../sim/board-suggestions';
 import { CERT_NAME } from '../../content/certs';
 import { CERT_ICON } from '../components/labels';
 import type { IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
-import { familyBlurb, scenarioFloorCount, settingIcon } from '../components/incident';
+import { familyBlurb, scenarioFloorCount, settingIcon, TierChevrons } from '../components/incident';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { PlateArt, sceneFor } from '../art/Plates';
 import { money } from '../format';
-
-const DIFFICULTY_WORD = { low: 'Low', moderate: 'Moderate', high: 'High', severe: 'Severe' } as const;
 
 /** A call on the board (docs/ui-ux-audit.md, "Calls"): the scene with the call type and the time
  * left, the title and place, the three-line hook, one warning line, then who can go and what it
@@ -28,7 +26,7 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
   readiness?: ReactNode;
   onOpen?: () => void }): JSX.Element {
   const blurb = familyBlurb(familyId);
-  const diff = scenario?.difficulty;
+  const tier = scenario ? callTier(scenario.id) : null;
   const floors = scenarioFloorCount(scenario);
   const place = [blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
   const pay = scenario?.rewards;
@@ -42,6 +40,7 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
             {type ? <CallTypeBadge type={type} size={24} label /> : <span className="cl-card-setting"><Icon name={settingIcon(card.setting)} size={20} />{card.setting}</span>}
           </span>
           <span className="cl-card-scene-end">
+            {tier !== null && <span className="cl-card-tier" title="The call's tier"><TierChevrons tier={tier} />Tier {tier}</span>}
             {isNew && <span className="cl-card-newmark">New</span>}
             {timeLeft && <span className="cl-card-left">{timeLeft}</span>}
           </span>
@@ -50,9 +49,9 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
           <h3 className="cl-card-title">
             {onOpen ? <button type="button" className="cl-card-button" data-primary onClick={onOpen} aria-label={`Open ${card.title}${blurb ? `, ${blurb}` : ''}`}>{card.title}</button> : card.title}
           </h3>
-          {(place || diff) && <div className="cl-card-place-row">
-            {place && <span className="cl-card-place-mark" aria-hidden="true"><Icon name={settingIcon(card.setting)} size={16} /></span>}
-            <p className="cl-card-place">{place}{place && diff ? ' · ' : ''}{diff ? `${DIFFICULTY_WORD[diff.band]} difficulty` : ''}</p>
+          {place && <div className="cl-card-place-row">
+            <span className="cl-card-place-mark" aria-hidden="true"><Icon name={settingIcon(card.setting)} size={16} /></span>
+            <p className="cl-card-place">{place}</p>
           </div>}
         </div>
       </div>
@@ -68,8 +67,8 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
         {(readiness || pay || onOpen) && <div className="cl-card-foot">
           <span className="cl-card-ready">{readiness}</span>
           {pay && <span className="cl-card-pay" aria-label={`Pays up to ${money(pay.funding)} and ${pay.xp} experience. How the call ends sets what it pays.`}>
-            <span className="cl-card-pay-top" aria-hidden="true"><span className="cl-card-pay-up">Up to</span> <b>{money(pay.funding)}</b></span>
-            <span aria-hidden="true">{pay.xp} XP</span>
+            <span className="cl-card-pay-top" aria-hidden="true"><Icon name="funds" size={16} /><span className="cl-card-pay-up">Up to</span> <b>{money(pay.funding)}</b></span>
+            <span className="cl-card-pay-xp" aria-hidden="true"><Icon name="level" size={16} />{pay.xp} XP</span>
           </span>}
           {onOpen && <Icon name="chevronRight" size={20} className="cl-card-chevron" />}
         </div>}

@@ -342,6 +342,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
               <span className="cl-faces" aria-hidden="true">
                 {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} name={officer.surname} status={officerFaceStatus(g, officer.id, now)} />)}
               </span>
+              {on && <Icon name="check" size={20} className="cl-squad-check" />}
             </button>
           );
         })}

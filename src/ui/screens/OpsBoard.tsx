@@ -4,6 +4,9 @@ import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { boardShortages } from '../../sim/board-suggestions';
 import { Button, Chip, EmptyState } from '../components/ui';
+import { Face } from '../components/Face';
+import { officerFaceStatus } from '../components/face-status';
+import { squadReadiness } from '../../sim/department-selectors';
 import { Sheet } from '../components/Sheet';
 import { countdown, useNow } from '../components/incident';
 import { Icon } from '../icons';
@@ -17,7 +20,7 @@ import { lexiconFor } from '../people/lexicon';
 import { cardDescriptors } from '../settings/CardWarning';
 import { CARD_THEME_WORDS, CARD_WARNING_TEXT, joinThemes } from '../settings/labels';
 import { useSettings } from '../settings/SettingsControls';
-import { joinNames, squadName } from './operation-squads';
+import { bestFitSquad, joinNames, squadName } from './operation-squads';
 import { callFlow } from './call-flow';
 import './ops-visual.css';
 
@@ -92,11 +95,14 @@ function useFreshIncidents(g: GameState): Set<Id> {
 
 /** Who can go, on one row: the ready squads by name with their letter, and how many the call takes.
  * The first thing in the way, when something is, in warning colour. */
-function Readiness({ g, card }: { g: GameState; card: ScenarioCard }) {
+function Readiness({ g, card, now }: { g: GameState; card: ScenarioCard; now: number }) {
   const range = card.squadRange.min === card.squadRange.max ? (card.squadRange.min > 1 ? `${card.squadRange.min} squads` : null) : `${card.squadRange.min} to ${card.squadRange.max} squads`;
   const ready = card.eligibleSquadIds;
+  // The faces are the squad the deploy step will open with, so the card shows who goes.
+  const fit = bestFitSquad(ready.map((id) => ({ id, ...squadReadiness(g, id, now) })));
+  const members = (fit ? g.squads.find((s) => s.id === fit)?.officerIds ?? [] : []).map((id) => g.officers[id]).filter((o) => !!o).slice(0, 4);
   return <>
-    <span className="cl-ready-badges" aria-hidden="true">{ready.slice(0, 3).map((id) => <span key={id} className="squad-badge">{id}</span>)}</span>
+    {members.length > 0 && <span className="cl-ready-faces" aria-hidden="true">{members.map((o) => <Face key={o.id} size="sm" kind="officer" officer={o} name={o.surname} status={officerFaceStatus(g, o.id, now)} />)}</span>}
     <span className={`cl-ready-text${ready.length === 0 ? ' cl-warn' : ''}`}>
       {ready.length === 0 ? 'No squad ready' : `${joinNames(ready.map((id) => squadName(g.squads, id)))} ready`}{range ? ` · ${range}` : ''}
     </span>
@@ -126,7 +132,7 @@ function BoardCard({ g, entry, now, isNew, onOpen }: { g: GameState; entry: Boar
         contentNote={<ThemeLine cardId={incident.id} />}
         warning={card.issues.length > 0 && <p className="cl-card-issue"><Icon name="warning" size={16} />{card.issues[0]}{card.issues.length > 1 ? ` (+${card.issues.length - 1} more)` : ''}</p>}
         timeLeft={<span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
-        readiness={<Readiness g={g} card={card} />}
+        readiness={<Readiness g={g} card={card} now={now} />}
         onOpen={() => onOpen(card.id)} />
     </GamePeopleProvider>
   );
