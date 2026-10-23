@@ -23,6 +23,10 @@ export const LAYOUT_REGISTRY = [
   { key: 'build-rooms', screen: 'build', label: 'the Build rooms', items: '.room-list .room-card, .room-list .next-card' },
   { key: 'store-equipment', screen: 'store', label: 'the Store equipment tiles', items: '.inv-grid > *', multi: true },
   { key: 'store-boosts', screen: 'store-boosts', label: 'the Store boosts', items: '.patrol-boosts > *' },
+  // The brief's lists exist on the brief lane's branch (claude/ui-brief-b15dcc); until it merges they match nothing, a count of 0, which passes.
+  { key: 'brief-orders', screen: 'brief', label: 'the brief orders', items: '.pb-orders > *' },
+  { key: 'brief-faces', screen: 'brief', label: 'the brief faces', items: '.pb-faces ul > *' },
+  { key: 'brief-people', screen: 'brief', label: 'the brief people', items: '.pb-people > *' },
   { key: 'command-staff', screen: 'team-command', label: 'Command Staff', items: '.team-command .command-room-post, .team-command .staff-row' },
 ];
 
@@ -32,7 +36,7 @@ export const LAYOUT_EXEMPT = [
 ];
 
 /** Screens the layout probe runs on, in walk order: the registry's screens plus the ones that carry the bar. */
-export const LAYOUT_SCREENS = ['hq', 'team-swat', 'team-roster', 'team-hire', 'team-training', 'team-patrol', 'team-command', 'build', 'store', 'store-boosts', 'board', 'deploy'];
+export const LAYOUT_SCREENS = ['hq', 'team-swat', 'team-roster', 'team-hire', 'team-training', 'team-patrol', 'team-command', 'build', 'store', 'store-boosts', 'board', 'brief', 'deploy'];
 
 /** The resource bar's numbers (contract item 5). */
 export const PILL_BUDGET = { height: 32, heightTol: 1, equalTol: 0.5, minPills: 3, iconWell: 24 };

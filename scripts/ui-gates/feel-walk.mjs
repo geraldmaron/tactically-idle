@@ -206,7 +206,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
           await measure('board'); await measureLayout('board'); if (sc.stopAfter === 'board') throw STOP; });
         await step('brief', async () => {
           const welcome = page.locator('.welcome-sheet'); if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
-          await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await measure('brief');
+          await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await measure('brief'); await measureLayout('brief');
         });
         await step('deploy', async () => {
           await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
