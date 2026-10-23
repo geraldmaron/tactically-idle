@@ -27,12 +27,13 @@
 .squadpanel { padding: 0; overflow: hidden; }
 .squadpanel .squad-block { gap: 0; }
 .squadpanel .squad-block-name { font: 600 var(--s16)/1.2 var(--f-ui); }
-.squadpanel .squad-rename { min-height: 24px; }
-.squadpanel .rename { padding: var(--sp3) var(--sp4); }
-.squadpanel .squad-block-issue { margin: 0; padding: 0 var(--sp4) var(--sp2); }
-.squadpanel .officer-character-grid { padding: 0 var(--sp3) var(--sp3); gap: var(--sp2); }
+.squadpanel .squad-rename { position: relative; min-height: 24px; }
+.squadpanel .squad-rename::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); }
+.squadpanel .rename { padding: var(--sp3) 0; }
+.squadpanel .squad-block-issue { margin: 0; padding: 0 0 var(--sp2); }
+.squadpanel .officer-character-grid { padding: var(--sp2) 0 var(--sp3); gap: var(--sp2); }
 .officer-roster-card { padding: 0; overflow: hidden; }
-.squadpanel .ui-row, .officer-roster-card .ui-row { padding-inline: var(--sp3); }
+.squadpanel .squad-block, .officer-rows { padding-inline: var(--sp3); }
 .officer-rows .officer-row-role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .officer-rows .officer-row-role .icon { display: inline-block; vertical-align: -2px; margin-right: var(--sp1); }
 @media (max-width: 359px) { .officer-row-trail .officer-row-certs { display: none; } }
@@ -49,7 +50,7 @@
 .squadpanel .squad-badge-lg { width: 40px; height: 40px; font-size: var(--s22); }
 .ocard-face { position: relative; }
 .ocard-star { position: absolute; top: -2px; right: -2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ink-3); color: var(--amber); }
-.roster-bar .squad-sort select { min-height: 36px; padding: 0 var(--sp1); border: 0; background: transparent; appearance: none; -webkit-appearance: none; }
+.roster-bar .squad-sort select { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: transparent; appearance: none; -webkit-appearance: none; }
 .roster-bar .squad-sort { min-height: 36px; }
 .ocard-tile { padding: var(--sp2); }
 .ocard-face { width: 36px; }

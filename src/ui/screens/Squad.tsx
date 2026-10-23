@@ -8,6 +8,7 @@ import { OfficerCard } from '../components/OfficerCard';
 import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
+import { officerFaceStatus } from '../components/face-status';
 import type { SquadDuty } from '../../sim/types';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
@@ -60,7 +61,7 @@ function SquadsView() {
       {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
     </Section>
     {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count="Off duty until in a squad">
-      <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} onClick={() => nav.openOfficer(o.id)} />)}</div>
+      <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
     </Section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
       : !full && <Button variant="quiet" icon="plus" onClick={() => setCreating(true)}>New squad</Button>}
@@ -161,7 +162,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           />
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
-        <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
+        <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
       </section>
     </Card>
   );
@@ -224,7 +225,7 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
         </label>
       </div>
       {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
-        {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
+        {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
       </div></Card>}
     </Section>
   );

@@ -122,7 +122,7 @@ export function PatrolBoosts() {
       return <div className="patrol-item" key={id}>
         <Row lead={<Icon name="trend" size={20} />} title={`Community grant · ×${definition.factor} for ${definition.hours}h`}
           detail={active ? `Active · ${duration(active.expiresAt - at)} remaining · extends the current rate` : `${rate(quote.netDelta)} net while active · est. ${moneyFull(quote.incrementalReturn)} back`}
-          trail={<Button size="sm" disabled={!quote.ok} onClick={() => setSelectedId(id)}>{active ? 'Extend' : 'Review'} · {moneyFull(quote.upfront)}</Button>} />
+          trail={<Button size="sm" disabled={!quote.ok} onClick={() => setSelectedId(id)} aria-label={active ? 'Extend grant' : 'Review grant'}>{active ? 'Extend' : 'Review'} · {moneyFull(quote.upfront)}</Button>} />
         {quote.reason && <p className="reason patrol-item-foot">{quote.reason}</p>}
       </div>;
     })}</div></Card>

@@ -47,8 +47,8 @@ describe('officer character card (squad-cards)', () => {
     const officer = structuredClone(state.officers[first]);
     const html = renderToStaticMarkup(createElement(DepartmentContext.Provider, { value: state.department },
       createElement(OfficerCard, { officer, now: NOW, variant: 'tile' })));
-    expect(html).toContain('class="ocard-badge');
-    expect(html).toMatch(/--xp:\d+(\.\d+)?%/);
+    expect(html).toContain('class="ring');
+    expect(html).toMatch(/--ring-fill:\d+(\.\d+)?/);
     expect(html).toMatch(/aria-label="[^"]*, (Probationary Officer|Officer|Corporal|Sergeant)(, \d+% to [A-Z][a-z]+)?|Lieutenant/);
     expect(html).toContain('class="rank-insignia');
     expect(html).not.toMatch(/level/i);

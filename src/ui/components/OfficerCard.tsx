@@ -13,9 +13,8 @@ import { CERT_NAME } from '../../content/certs';
 import { officerGrowth } from './OfficerProgress';
 import { RankInsignia } from './RankInsignia';
 import { Face } from './Face';
-import { officerFaceStatus } from './face-status';
+import type { FaceStatus } from './face-status';
 import { Ring } from './ui';
-import { useGame } from '../store';
 import { RANKS } from '../../content/ranks';
 import { StatusMark } from '../icons/marks';
 
@@ -38,16 +37,16 @@ export interface OfficerCardProps {
   note?: string;
   /** The injury recorded for this officer in the current operation. */
   incidentInjury?: string;
+  /** Tile only: the officer's condition as a face shows it (face-status.ts), computed by the screen that owns the game state. */
+  faceStatus?: FaceStatus | null;
 }
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
-export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId }: OfficerCardProps) {
+export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId, faceStatus }: OfficerCardProps) {
   // The department dates the portrait's age; without one (outside the game) the portrait is unaged.
   const department = useContext(DepartmentContext);
   const age = department ? agePortraitProps({ department }, officer, now) : {};
   const [ref, w] = useWidth<HTMLSpanElement>(80);
-  const g = useGame();
-  const faceStatus = officerFaceStatus(g, officer.id, now);
   const band = bandOf(officer);
   const injured = !!incidentInjury || (!!officer.injury && officer.injury.until > now);
   const trainingOrDeployed: StatusKey | null =

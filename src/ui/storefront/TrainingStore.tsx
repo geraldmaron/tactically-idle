@@ -154,13 +154,13 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
         <Row lead={<CourseEmblem course={course} locked={locked} size={40} />} title={course.name}
           detail={<span className="course-tile-meta"><span><Icon name="clock" size={14} />{course.hours}h</span><span><Icon name="cash" size={14} />{money(fee(course.cost))}</span></span>}
-          trail={<>{locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`} title="View development program" />}
-            <Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button></>} />
+          trail={<Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>} />
         <div className="course-tile-more">
           <div className="course-tile-gains">
             {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
             <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
           </div>
+          {locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`}>View development program</Button>}
           {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
           {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
           {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}

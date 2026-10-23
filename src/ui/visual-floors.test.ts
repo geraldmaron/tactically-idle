@@ -176,7 +176,7 @@ function officerCards(page: El, min: number): string[] {
   return cards.flatMap((card, index) => {
     const missing: string[] = [];
     if (leadOf(card) !== 'visual') missing.push(`officer card #${index + 1} does not lead with a portrait`);
-    if (byClass(card, 'ocard-name').length !== 1) missing.push(`officer card #${index + 1} has no identity`);
+    if (byClass(card, 'ocard-title').length !== 1) missing.push(`officer card #${index + 1} has no identity`);
     if (byClass(card, 'ocard-role').length !== 1) missing.push(`officer card #${index + 1} has no specialty`);
     const condition = byClass(card, 'ocard-condition');
     if (condition.length !== 1 || byClass(condition[0], 'kit-mark').length !== 1) missing.push(`officer card #${index + 1} has no visible condition`);
@@ -241,11 +241,11 @@ const OBLIGATIONS: Obligation[] = [
     ];
   } },
   { id: 'identity-team-swat', screen: 'TeamScreen (SWAT)', fixture: 'two squads', check: () => {
+    // The tab bar names Team; the screen opens on its sections and carries no header of its own.
     const page = mount(createElement(TeamScreen), { tab: 'squad', teamSection: 'swat' });
-    const heads = byClass(page, 'team-head');
     const swat = byClass(page, 'officers-title');
     return [
-      ...(heads.length === 1 ? screenIdentity(heads[0], 'section-title', 'Team', 'people') : ['expected one Team header']),
+      ...(byClass(page, 'team-head').length === 1 ? [] : ['expected the Team section rail']),
       ...(swat.length === 1 && swat[0].tag === 'h2' && words(swat[0]) === 'SWAT' ? [] : ['the Team screen does not name its SWAT section']),
       ...officerCards(page, 8),
     ];
@@ -308,15 +308,15 @@ const OBLIGATIONS: Obligation[] = [
 
   // ---- every listed row type leads with a face, gear art or a kit icon
   { id: 'cards-officers-squads', screen: 'SquadScreen (Squads)', fixture: 'two squads of four', check: () => officerCards(mount(createElement(SquadScreen), { squadSection: 'squads' }), 8) },
-  { id: 'cards-officers-roster', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => officerCards(mount(createElement(SquadScreen), { squadSection: 'roster' }), 8) },
+  { id: 'cards-officers-roster', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'officer-row', 8) },
   { id: 'rows-officers-status', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => {
-    const rows = byClass(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'ocard-tile');
-    return rows.length < 8 ? [`expected 8 officer cards, found ${rows.length}`] : rows.flatMap((row) => {
-      const condition = byClass(row, 'ocard-condition');
-      return condition.length === 1 && byClass(condition[0], 'kit-mark').length === 1 ? [] : [`${words(row).slice(0, 30)} has no visible condition mark`];
+    const rows = byClass(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'officer-row');
+    return rows.length < 8 ? [`expected 8 officer rows, found ${rows.length}`] : rows.flatMap((row) => {
+      const trail = byClass(row, 'officer-row-trail');
+      return trail.length === 1 && byClass(trail[0], 'kit-mark').length === 1 ? [] : [`${words(row).slice(0, 30)} has no visible condition mark`];
     });
   } },
-  { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-top', 1); } },
+  { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-row', 1); } },
   { id: 'rows-training', screen: 'SquadScreen (Training)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'training' }), 'course-tile', 6) },
   { id: 'rows-upgrades', screen: 'BuildScreen (Upgrades)', fixture: 'department with a board', check: () => rowsLeadWithVisual(mount(createElement(BuildScreen), { tab: 'develop' }), 'dev-node', 3) },
   { id: 'rows-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'department with owned gear', check: () => rowsLeadWithVisual(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'inv-tile', 8) },

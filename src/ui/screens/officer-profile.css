@@ -42,4 +42,3 @@
 .profile .officer-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp3); padding: var(--sp3); }
 .profile .xp-ring { width: 44px; height: 44px; }
 .profile .xp-ring-core { width: 36px; height: 36px; }
-.profile .officer-progress-note { font-size: var(--s12); }

@@ -34,10 +34,9 @@
 .patrol-candidates, .patrol-commitment { display: grid; gap: var(--sp4); min-width: 0; }
 .patrol-roster, .patrol-boosts { display: flex; flex-direction: column; min-width: 0; }
 .patrol-roster-card { padding: 0; overflow: hidden; }
-.patrol-item { display: grid; gap: var(--sp2); padding-bottom: var(--sp3); border-top: 1px solid var(--hair); }
+.patrol-item { display: grid; gap: var(--sp2); padding: 0 var(--sp3) var(--sp3); border-top: 1px solid var(--hair); }
 .patrol-item:first-child { border-top: 0; }
-.patrol-item .ui-row { padding-inline: var(--sp3); }
-.patrol-item-foot { display: grid; gap: var(--sp2); margin: 0; padding-inline: var(--sp3); }
+.patrol-item-foot { display: grid; gap: var(--sp2); margin: 0; }
 .patrol-card { display: grid; gap: var(--sp4); }
 .patrol-card-finance { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); }
 .patrol-card-finance > div { display: grid; gap: var(--sp1); min-width: 0; }
