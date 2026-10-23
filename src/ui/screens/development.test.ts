@@ -106,7 +106,7 @@ describe('development browsing and shared detail', () => {
     broke.department.funding = 0;
     const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { funding: 0 }, highlighted: false, onOpen: () => {} }));
     expect(short).toContain('Needs more funding');
-    expect(short).toMatch(/<span class="cost-tag" data-state="short"><span class="cost-tag-value"><svg[\s\S]*?<\/svg>\$4,900<\/span><\/span>/);
+    expect(short).toMatch(/<span class="cost-quote" data-state="short"><span class="cost-quote-value"><svg[\s\S]*?<\/svg>\$4,900<\/span><\/span>/);
     expect(short).toContain('Needs funding');
     const owned = option('personnel_negotiation', 1);
     expect(tileState(owned)).toBe('owned');
@@ -125,7 +125,7 @@ describe('development browsing and shared detail', () => {
     for (const line of ['Standard repair prices', '25% cheaper repairs', '35% cheaper repairs', '45% cheaper repairs', '4 automatic service jobs', 'Open Armory']) expect(manager).toContain(line);
     const drone = detail('intel_drone');
     expect(drone).toContain('Needs first');
-    expect(drone).toMatch(/Thermal imaging<span class="sr-only"> · Required<\/span>/);
+    expect(drone).toMatch(/Thermal imaging<\/span>[\s\S]*?<span class="chip chip-warn">Required<\/span>/);
     expect(drone).toContain('Unlocks');
     expect(drone).toContain('Camera drone');
     expect(drone).toContain('Open Training');

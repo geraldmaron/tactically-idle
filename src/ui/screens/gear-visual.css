@@ -65,10 +65,6 @@
 .qm-row .ui-row-trail { color: var(--t3); }
 .qm-row .ui-row-lead img, .qm-row .ui-row-lead canvas, .qm-row .ui-row-lead > * { border-radius: 50%; }
 
-/* The Store's two disclosures stack: two items never share a row (contract item 2). */
-.gear-page.gear-page-compact { grid-template-columns: minmax(0, 1fr); }
-.gear-page.gear-page-compact > .disclosure, .gear-page.gear-page-compact .equipment-controls { grid-column: 1 / -1; }
-
 /* Armory tools as one grouped list: the Quartermaster, restock rules, presets and the wall guide. */
 .armory-list { padding: 0; overflow: hidden; }
 .armory-list .qm-row, .armory-list .armory-tool { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }

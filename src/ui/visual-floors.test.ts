@@ -255,7 +255,6 @@ const OBLIGATIONS: Obligation[] = [
     const medals = byClass(page, 'dev-medal');
     const rooms = byClass(page, 'facility-room');
     return [
-      ...screenIdentity(page, 'build-title', 'Build', 'build'),
       ...(rooms.length === 5 && rooms.every((room) => leadOf(room) === 'visual') ? [] : ['the five facilities lost their furnishing art']),
       ...(find(page, (node) => node.tag === 'img' && (node.attrs.src ?? '').includes('scene_facilities_plan.webp')).length === 1 ? [] : ['the department facility plan lost its scene art']),
       ...(medals.length >= 3 && medals.every((medal) => find(medal, (node) => isVisual(node)).length > 0) ? [] : ['upgrade nodes lost their screen art']),

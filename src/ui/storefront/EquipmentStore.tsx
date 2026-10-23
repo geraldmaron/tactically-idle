@@ -120,10 +120,10 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
         {entry.needsAttention && <span className="inv-alert"><Icon name="warning" size={16} /></span>}
         {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`}><Icon name="mortarboard" size={16} /></span>}
       </span>
-      <span className="ui-row-detail store-tile-stock">{stock}{quote.blocker && <> · <CostTag part="note" quote={quote} /></>}</span>
+      <span className="ui-row-detail store-tile-stock">{stock}{acquired !== undefined && <> · <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span></>}{quote.blocker && <> · <CostTag part="note" quote={quote} /></>}</span>
     </span>
     <span className="ui-row-trail" aria-hidden="true">
-      {acquired !== undefined ? <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired}</span> : <CostTag part="value" quote={quote} />}
+      <CostTag part="value" quote={quote} />
     </span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
