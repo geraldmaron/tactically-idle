@@ -125,7 +125,7 @@ describe('development browsing and shared detail', () => {
     for (const line of ['Standard repair prices', '25% cheaper repairs', '35% cheaper repairs', '45% cheaper repairs', '4 automatic service jobs', 'Open Armory']) expect(manager).toContain(line);
     const drone = detail('intel_drone');
     expect(drone).toContain('Needs first');
-    expect(drone).toMatch(/Thermal imaging<span class="sr-only"> · Required<\/span>/);
+    expect(drone).toMatch(/Thermal imaging<\/span>[\s\S]*?<span class="chip chip-warn">Required<\/span>/);
     expect(drone).toContain('Unlocks');
     expect(drone).toContain('Camera drone');
     expect(drone).toContain('Open Training');

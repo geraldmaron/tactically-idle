@@ -8,7 +8,7 @@ import { developmentTierDefinition, tierLabel } from '../../sim/development-tier
 import type { DevBranch, Id } from '../../sim/types';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
-import { Button } from '../components/ui';
+import { Button, Chip, Row } from '../components/ui';
 import { BRANCHES, BRANCH_META } from '../components/labels';
 import { Icon } from '../icons';
 import { BRANCH_ICON } from '../icons/kit';
@@ -312,13 +312,14 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
       {o.granted && purchasedTier === null && <p className="development-success"><Icon name="medal" size={14} /> {tiered ? `Tier ${tierLabel(o.currentTier)} was granted` : 'Granted'} at {o.granted.milestone}.</p>}
       {purchasedTier !== null && <p className="development-success" role="status">{tiered ? `Tier ${tierLabel(purchasedTier)} purchased` : 'Program unlocked'}. The benefits below are now active.</p>}
       {o.node.requires.length > 0 && <section aria-labelledby="dev-needs"><h3 id="dev-needs" className="dev-label">Needs first</h3>
-        <ul className="dev-chips">{o.node.requires.map((id) => {
+        <div className="dev-needs card" data-ui-list>{o.node.requires.map((id) => {
           const owned = !missing.includes(id);
-          const name = DEV_NODES[id]?.name ?? id;
-          return <li key={id}>{owned || !onOpenNode
-            ? <span className={`dev-chip dev-chip-${owned ? 'owned' : 'missing'}`}><Icon name={owned ? 'check' : 'lock'} size={16} />{name}<span className="sr-only"> · {owned ? 'Owned' : 'Required'}</span></span>
-            : <button type="button" className="dev-chip dev-chip-missing dev-chip-action" onClick={() => onOpenNode(id)}><Icon name="lock" size={16} />{name}<span className="sr-only"> · Required. Open it</span><Icon name="chevronRight" size={16} /></button>}</li>;
-        })}</ul></section>}
+          const need = DEV_NODES[id];
+          return <Row key={id} className="dev-need" lead={<span className="dev-need-well"><Icon name={owned ? 'check' : 'lock'} size={16} /></span>}
+            title={need?.name ?? id} detail={owned ? 'Owned' : onOpenNode ? 'Open it to buy' : 'Required'}
+            trail={<Chip tone={owned ? 'good' : 'warn'}>{owned ? 'Owned' : 'Required'}</Chip>}
+            onClick={!owned && onOpenNode ? () => onOpenNode(id) : undefined} />;
+        })}</div></section>}
       {unlocks.length > 0 && <section aria-labelledby="dev-unlocks"><h3 id="dev-unlocks" className="dev-label">Unlocks</h3>
         <ul className="dev-chips">{unlocks.map((unlock) => <li key={unlock.key} className="dev-chip">{unlock.itemId ? <GearArt itemId={unlock.itemId} size={22} /> : <Icon name="mortarboard" size={14} />}{unlock.name}</li>)}</ul></section>}
       {gives.length > 0 && <section aria-labelledby="dev-gives"><h3 id="dev-gives" className="dev-label">{o.targetTier ? 'Gives' : 'Active'}</h3><ul className="dev-lines">{gives.map((line, index) => <li key={index}>{line}</li>)}</ul></section>}

@@ -1,6 +1,6 @@
 import { MaterialGuide } from '../art/MaterialGuide';
 import { GearArtFrame } from '../art/GearArt';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useGame } from '../store';
 import { useNav } from '../components/nav';
 import { EquipmentStore } from '../storefront/EquipmentStore';
@@ -60,18 +60,27 @@ function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'refere
       <p className="armory-basic"><Icon name={GEAR_SOURCE_ICON.basic} size={18} />{BASIC_KIT_LINE}</p>
       <div className="armory-list card" data-ui-list>
         <QuartermasterCard />
-        <Row className="armory-tool" onClick={() => onTool('rules')} label={`Restock rules, ${restock.unlocked ? `${g.department.restockRules.length} set` : 'locked'}`}
+        <ToolRow onClick={() => onTool('rules')} label={`Restock rules, ${restock.unlocked ? `${g.department.restockRules.length} set` : 'locked'}`}
           lead={<span className="armory-well"><Icon name={restock.unlocked ? 'refresh' : 'lock'} size={24} /></span>} title="Restock rules"
           detail={restock.unlocked ? 'Refill held stock each hour' : restock.nodeName ? `Unlocks with ${restock.nodeName}` : 'Locked'}
           trail={<Chip tone={restock.unlocked ? 'neutral' : 'warn'} icon={restock.unlocked ? undefined : 'lock'}>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</Chip>} />
-        <Row className="armory-tool" onClick={() => onTool('presets')} label={`Loadout presets, ${presets.unlocked ? `${g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length} set` : 'locked'}`}
+        <ToolRow onClick={() => onTool('presets')} label={`Loadout presets, ${presets.unlocked ? `${g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length} set` : 'locked'}`}
           lead={<span className="armory-well"><Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={24} /></span>} title="Loadout presets"
           detail={presets.unlocked ? 'Specialist gear each squad takes' : presets.nodeName ? `Unlocks with ${presets.nodeName}` : 'Locked'}
           trail={<Chip tone={presets.unlocked ? 'neutral' : 'warn'} icon={presets.unlocked ? undefined : 'lock'}>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</Chip>} />
-        <Row className="armory-tool" onClick={() => onTool('reference')} lead={<span className="armory-well"><Icon name="brick" size={24} /></span>} title="Wall materials" detail="Construction reference" trail={<Icon name="chevronRight" size={18} />} />
+        <ToolRow onClick={() => onTool('reference')} label="Wall materials, construction reference" lead={<span className="armory-well"><Icon name="brick" size={24} /></span>} title="Wall materials" detail="Construction reference" trail={<Icon name="chevronRight" size={18} />} />
       </div>
     </section>
   );
+}
+
+/** Row's markup and classes with aria-haspopup, which Row does not emit: each opens a dialog. */
+function ToolRow({ lead, title, detail, trail, onClick, label }: { lead: ReactNode; title: ReactNode; detail?: ReactNode; trail?: ReactNode; onClick: () => void; label: string }) {
+  return <button type="button" className="ui-row armory-tool" aria-haspopup="dialog" aria-label={label} onClick={onClick}>
+    <span className="ui-row-lead">{lead}</span>
+    <span className="ui-row-main"><span className="ui-row-title">{title}</span>{detail && <span className="ui-row-detail">{detail}</span>}</span>
+    {trail && <span className="ui-row-trail">{trail}</span>}
+  </button>;
 }
 
 function RestockSection({ onOpen, onGo }: { onOpen: (itemId: Id) => void; onGo: () => void }) {

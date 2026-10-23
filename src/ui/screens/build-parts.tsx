@@ -22,13 +22,15 @@ export interface CostQuote {
  * blocker or free route under the row's detail. */
 export function CostTag({ quote, part = 'all' }: { quote: CostQuote; part?: 'all' | 'value' | 'note' }) {
   const { state, price, blocker, free, done } = quote;
-  const caption = state === 'owned' ? null : blocker ?? (free ? `Free at ${free.label}` : null);
+  const live = state !== 'owned';
+  const freeNote = live && free ? `Free at ${free.label}${free.met ? '' : ` · ${free.have}/${free.need}`}` : null;
   return <span className={`cost-quote${part === 'note' ? ' cost-quote-inline' : ''}`} data-state={state}>
     {part !== 'note' && (state === 'owned'
       ? <span className="cost-quote-value"><Icon name="check" size={16} />{done ?? 'Owned'}</span>
       : <span className="cost-quote-value"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{price != null ? money(price) : ''}</span>)}
-    {part !== 'value' && caption && <span className="cost-quote-note">{caption}{!blocker && free && !free.met ? ` · ${free.have}/${free.need}` : ''}</span>}
-    {part !== 'value' && !blocker && free && state !== 'owned' && <span className="cost-quote-bar" data-met={free.met ? 'yes' : undefined}><i style={{ width: `${Math.round(Math.min(1, free.have / Math.max(1, free.need)) * 100)}%` }} /></span>}
+    {part !== 'value' && live && blocker && <span className="cost-quote-note" data-kind="blocker">{blocker}</span>}
+    {part !== 'value' && freeNote && <span className="cost-quote-note">{freeNote}</span>}
+    {part !== 'value' && live && free && <span className="cost-quote-bar" data-met={free.met ? 'yes' : undefined}><i style={{ width: `${Math.round(Math.min(1, free.have / Math.max(1, free.need)) * 100)}%` }} /></span>}
   </span>;
 }
 
