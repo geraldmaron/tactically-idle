@@ -68,12 +68,14 @@ describe('public high-risk preparation intel', () => {
     try {
       const scenario = getScenario(id)!;
       const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: id, onCancel: () => {} }));
-      // The brief: the orders and the threat lead, then the cold open, then who is inside.
-      expect(html.indexOf('Your orders</h3>')).toBeGreaterThan(-1);
-      const peopleSection = html.slice(html.indexOf('Who’s inside</h3>'), html.indexOf('Still unknown</h3>') > 0 ? html.indexOf('Still unknown</h3>') : undefined);
-      // A call with a reported weapon names it under the orders, before who is inside; a rescue with none has no threat list.
-      if (html.includes('aria-label="The threat"')) expect(html.indexOf('aria-label="The threat"')).toBeLessThan(html.indexOf('Who’s inside</h3>'));
-      expect(html.indexOf('Your orders</h3>')).toBeLessThan(html.indexOf('Who’s inside</h3>'));
+      // The brief: the orders lead, then what the team faces, then the cold open, then who is inside.
+      const orders = html.indexOf('Your orders</h3>'), faces = html.indexOf('What the team faces</h3>'), inside = html.indexOf('Who’s inside</h3>');
+      expect(orders).toBeGreaterThan(-1);
+      expect(inside).toBeGreaterThan(-1);
+      expect(orders).toBeLessThan(inside);
+      // A call with a reported weapon or an unknown names it under the orders, before who is inside.
+      if (faces > -1) { expect(faces).toBeGreaterThan(orders); expect(faces).toBeLessThan(inside); }
+      const peopleSection = html.slice(inside);
       for (const person of scenario.civilianOutcomes!) expect(peopleSection).toContain(person.label);
       expect(html).not.toContain('Nobody reported');
       expect(html).not.toContain('No weapon reported');

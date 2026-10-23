@@ -3,14 +3,14 @@
 // on the scenario; a call without them renders nothing here.
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import { PeopleText } from '../people/PeopleText';
-import { Icon } from '../icons';
+import { Icon, type IconName } from '../icons';
 import './depth-brief.css';
 
 /** The scene before the call, set as prose with room to breathe and never clamped. */
-export function ColdOpen({ text, className }: { text: string | undefined; className?: string }) {
+export function ColdOpen({ text, className, icon }: { text: string | undefined; className?: string; /** A picture beside the kicker's words (the brief passes one). */ icon?: IconName }) {
   if (!text) return null;
   return <section className={`cold-open${className ? ` ${className}` : ''}`} aria-label="Before the call">
-    <span className="cold-open-kicker">Before the call</span>
+    <span className="cold-open-kicker">{icon && <Icon name={icon} size={16} />}Before the call</span>
     <p className="cold-open-text"><PeopleText text={text} /></p>
   </section>;
 }

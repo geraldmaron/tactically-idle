@@ -21,7 +21,6 @@ export interface Intel {
   people: IntelLine[];
   threats: IntelLine[];
   environment: EnvironmentDefinition | null;
-  difficulty: ScenarioDefinition['difficulty'] | null;
   /** Briefing sentences already shown as People or Threat lines, so Known does not repeat them. */
   covered: Set<string>;
 }
@@ -39,7 +38,7 @@ function line(f: FactDefinition, built: BuiltLocation, label?: string): IntelLin
 }
 
 export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): Intel {
-  const empty: Intel = { people: [], threats: [], environment: null, difficulty: null, covered: new Set() };
+  const empty: Intel = { people: [], threats: [], environment: null, covered: new Set() };
   if (!s) return empty;
   const told = s.facts.filter((f) => f.initial === 'reported' || f.initial === 'confirmed');
   // V4's individual civilian outcomes link public person reports without adding
@@ -50,5 +49,5 @@ export function buildIntel(s: ScenarioDefinition | null, built: BuiltLocation): 
   const threats = told.filter(isWeaponFact).map((f) => line(f, built));
   const covered = new Set<string>();
   for (const f of told) if ((isPerson(f) || isWeaponFact(f)) && f.reportedText) covered.add(f.reportedText);
-  return { people, threats, environment: s.environment ?? null, difficulty: s.difficulty ?? null, covered };
+  return { people, threats, environment: s.environment ?? null, covered };
 }

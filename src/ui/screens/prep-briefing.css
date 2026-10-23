@@ -1,8 +1,7 @@
-/* The brief: flat sections on the page, not boxes in boxes. The orders lead as numbered rows with
-   the threat under them, then the cold open whole, then the people as cards. */
+/* The brief: flat sections on the page, each list one inset card of hairline rows (the component
+   contract in docs/game-ux-direction.md). The orders lead with the faces of the people they name, the
+   threat and the unknown sit under them, then the cold open in a frame, then the people. */
 .pb { display: grid; gap: var(--sp5); }
-.pb-scene { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp2); height: var(--plate-h); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); }
-.pb-scene-place { min-width: 0; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); }
 .pb-block { display: grid; gap: var(--sp2); }
 .pb-block ul, .pb-block ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp2); }
 .pb-h-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); }
@@ -11,19 +10,49 @@
 .pb-h-sub { font-size: var(--s14); }
 .pb-h-aside { font-size: var(--s14); color: var(--t3); }
 
-.pb-orders-panel ol.pb-orders { gap: 0; }
-.pb-orders li { display: grid; grid-template-columns: 32px 1fr; gap: var(--sp3); align-items: center; min-height: 52px; padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); font-size: var(--s18); font-weight: 600; line-height: 1.35; color: var(--t1); }
-.pb-order-n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r1); background: var(--ink-2); border: 1px solid var(--hair-2); color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); }
+/* The Map control in the flow head: a quiet text button with its icon, not a raised outlined button. */
+.flow-head .cl-map-chip { white-space: nowrap; overflow-wrap: normal; min-height: var(--touch); padding: 0 var(--sp2); border-color: transparent; background: none; box-shadow: none; color: var(--act-text); }
+.flow-head .cl-map-chip:active:not(:disabled) { transform: none; box-shadow: none; }
 
-.pb-threats { margin-top: var(--sp1) !important; }
-.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp2); align-items: start; }
+/* The scene plate at the shared plate height: the place on the left, the board clock on the right. */
+.pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: var(--plate-h); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); }
+.pb-scene-place { min-width: 0; max-width: 70%; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); overflow-wrap: break-word; }
+.pb-scene-time { flex: none; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t-plate); font: 600 var(--s14)/1.2 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pb-scene-time-soon { color: var(--warn-text); }
+
+/* The stakes sit under the plate they belong to. */
+.pb-stakes { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: calc(-1 * var(--sp3)) 0 0; padding: 0; list-style: none; }
+.pb-pay-up { color: var(--t2); font-weight: 500; }
+.pb-pay b { color: var(--t1); font-variant-numeric: tabular-nums; }
+
+/* One card per list: rows split by a hairline, no box inside a box. */
+.pb-card { padding: 0 var(--sp3); gap: 0; background: var(--ink-1); box-shadow: none; }
+.pb-card .pb-list { display: block; }
+.pb-list > li { border-bottom: 1px solid var(--hair); }
+.pb-list > li:last-child { border-bottom: 0; }
+.pb-card .pb-row { min-height: 64px; padding: var(--sp2) 0; border-bottom: 0; }
+.pb-card .pb-row .ui-row-title { overflow-wrap: anywhere; }
+
+/* Orders: a face with the order number on its corner, or the number in a well. */
+.pb-lead { position: relative; display: inline-block; }
+.pb-n { position: absolute; top: calc(-1 * var(--sp1)); left: calc(-1 * var(--sp2)); display: grid; place-items: center; min-width: 24px; min-height: 24px; padding: 0 var(--sp1); border-radius: var(--r1); background: var(--ink-0); border: 1px solid var(--hair-2); color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); }
+.pb-well { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border-radius: var(--r1); background: var(--ink-2); border: 1px solid var(--hair-2); color: var(--t2); font: 600 var(--s16)/1 var(--f-ui); }
+.pb-well-n { color: var(--t1); }
+
+/* What the team faces: the weapon report as an alert row (a harm edge), then what is unknown. */
+.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp3); align-items: start; margin: 0 calc(-1 * var(--sp3)); padding: var(--sp3); border-left: 3px solid var(--harm); }
 .pb-threat-icon { margin-top: var(--sp1); color: var(--harm); }
 .pb-threat-claim { margin: 0; font-size: var(--s16); font-weight: 600; line-height: 1.4; color: var(--t1); }
 .pb-threat-where { font-weight: 500; color: var(--t2); }
 .pb-threat-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); margin: var(--sp1) 0 0; font-size: var(--s14); color: var(--t2); }
 
-.pb-cold-open { margin: 0; }
+/* The cold open reads as story in its own frame: a left rule, a reading measure, whole and never clamped. */
+.pb .pb-cold-open { margin: 0; padding: var(--sp3) var(--sp4); gap: var(--sp2); border: 0; border-left: 3px solid var(--hair-2); border-radius: 0 var(--r2) var(--r2) 0; background: var(--ink-1); }
+.pb .pb-cold-open .cold-open-kicker { display: flex; align-items: center; gap: var(--sp2); font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
+.pb .pb-cold-open .cold-open-kicker .icon { color: var(--t3); }
+.pb .pb-cold-open .cold-open-text { max-width: 36em; font-size: var(--s16); line-height: 1.6; color: var(--t1); }
 
+/* Who is inside. */
 .pb-block ul.pb-people { gap: 0; border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
 .pb-person { display: grid; grid-template-columns: var(--face-md) 1fr; gap: var(--sp3); align-items: start; min-height: 64px; padding: var(--sp3); border-bottom: 1px solid var(--hair); }
 .pb-person:last-child { border-bottom: 0; }
@@ -35,14 +64,11 @@
 .pb-where { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); }
 .pb-where-place { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font-size: var(--s14); color: var(--t2); }
 
-.pb-unknown li { font-size: var(--s16); line-height: 1.45; color: var(--t1); }
-.pb-drivers li { display: flex; gap: var(--sp1); align-items: center; font-size: var(--s14); color: var(--t2); }
 .pb-more { margin-top: calc(-1 * var(--sp1)); }
 
-/* The cold open reads as story on the page, under its own heading. */
-.pb .pb-cold-open { padding: 0; border: 0; background: none; gap: var(--sp2); }
-.pb .pb-cold-open .cold-open-kicker { font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
-.pb .pb-cold-open .cold-open-text { font-size: var(--s18); line-height: 1.55; color: var(--t1); }
-.pb-scene-pay { flex: none; white-space: nowrap; display: inline-flex; align-items: baseline; gap: var(--sp2); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); font-variant-numeric: tabular-nums; }
-.pb-scene-up { color: var(--t3); }
-.pb-scene-pay b { color: var(--t1); font-size: var(--s16); }
+/* Small phones: tighter section gaps so the orders and the threat both reach the first screen. */
+@media (max-width: 359px) {
+  .pb { gap: var(--sp4); }
+  .pb-card .pb-row { min-height: 56px; padding: var(--sp1) 0; }
+  .pb-stakes { margin-top: calc(-1 * var(--sp2)); }
+}

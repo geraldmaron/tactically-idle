@@ -20,25 +20,6 @@
 .prepare .prep-head { gap: 2px; }
 .prepare .prep-head .back { align-self: flex-start; }
 .prepare .section { gap: 6px; }
-.prep-brief.card { gap: 10px; }
-.prep-brief-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
-.prep-brief-stats li { --tone: var(--t2); display: grid; justify-items: center; gap: 1px; min-width: 0; padding: 7px 2px 6px; border: 1px solid var(--hair); border-top: 2px solid var(--tone); border-radius: 7px; background: rgba(8, 13, 24, 0.4); color: var(--tone); }
-.prep-brief-stats li[data-tone='mint'] { --tone: var(--good); }
-.prep-brief-stats li[data-tone='amber'] { --tone: var(--t1); }
-.prep-brief-stats li[data-tone='warn'] { --tone: var(--warn); }
-.prep-brief-stats strong { font-family: var(--f-title); font-size: 20px; line-height: 1.05; color: var(--t1); font-variant-numeric: tabular-nums; }
-.prep-brief-stats span { font-family: var(--f-title); font-size: var(--s12); font-weight: 600; }
-.prep-brief-chips { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
-.prep-brief-chips .envchips { display: contents; }
-.prep-brief-chips .scene-condition-details { flex-basis: 100%; font-size: 13px; }
-.prep-brief .brief { margin: 0; }
-.prep-brief .brief ul { font-size: 14px; padding-left: 18px; }
-.prep-people.incident-people-list { margin-top: 4px; }
-.prep-people .person-tile { padding: 6px 8px; font-size: 12.5px; }
-.prep-people .person-avatar { flex-basis: 30px; width: 30px; height: 30px; font-size: var(--s12); }
-.prep-brief-more { border-top: 1px solid var(--hair); }
-.prep-brief-more[open] { display: grid; gap: 10px; padding-bottom: 4px; }
-.prep-brief-more .incident-context { margin: 0; }
 
 .prepare .squadpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 
@@ -90,7 +71,6 @@
   .prepare .prep-item { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'art main ctl' 'units units units'; }
   .prep-item-ctl .stepper { width: auto; }
   .prepare .squadpick { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .prep-brief-stats span { font-size: var(--s12); letter-spacing: 0.02em; }
 }
 
 /* ------------------------------------------------------------ live operation (layout in live-call.css) */

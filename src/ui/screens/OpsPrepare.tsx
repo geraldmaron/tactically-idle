@@ -33,7 +33,7 @@ import { Icon } from '../icons';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
 import type { IconName } from '../icons';
 import { pct } from '../format';
-import { cardFor, hasNodeEffect, staysHomeLine } from './helpers';
+import { cardFor, hasNodeEffect, incidentsOf, staysHomeLine } from './helpers';
 import { planAuto, preparationEquipmentFix } from './autoPlan';
 import { scenarioActions } from '../../sim/scenario-types';
 import type { Loadouts } from './autoPlan';
@@ -318,7 +318,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   };
 
   const briefStep = <>
-    <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} aside="Step 1 of 2" />
+    <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} aside="Step 1 of 2" openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt} />
   </>;
 
   const deployStep = <>
@@ -415,7 +415,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
     <FlowScreen title={step === 'brief' ? title : 'Deploy'} icon={step === 'brief' ? <CallTypeBadge type={scenario?.incident?.type} size={24} /> : <Icon name="people" size={20} />} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
-      trailing={step === 'brief' ? <Button size="sm" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button> : undefined}>
+      trailing={step === 'brief' ? <Button size="sm" variant="quiet" icon="map" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button> : undefined}>
       <div className="page cl-flow-body prepare" data-step={step}>{step === 'brief' ? briefStep : deployStep}</div>
 
       <Sheet open={sheet?.kind === 'map'} onClose={() => setSheet(null)} title="The building" className="cl-map-sheet">
