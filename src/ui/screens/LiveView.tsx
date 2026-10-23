@@ -167,6 +167,25 @@ export function LiveView(p: LiveViewProps) {
   // 4B, 2026-10-21, docs/ops-experience.md); stage 1 keeps the player's remembered choice.
   const [stageMap, setStageMap] = useState<{ stage: string; open: boolean } | null>(null);
   const [briefingOpen, setBriefingOpen] = useState(false);
+  // The head's "Your call" shortcut shows whenever the first choice sits below the first viewport,
+  // whatever the screen height or text size; its slot is always reserved so the head never shifts.
+  const liveRoot = useRef<HTMLDivElement>(null);
+  const watchedChoice = useRef<{ el: Element; io: IntersectionObserver } | null>(null);
+  const [choicesBelow, setChoicesBelow] = useState(false);
+  useLayoutEffect(() => {
+    const el = liveRoot.current?.querySelector('.operation-choices .callbtn') ?? liveRoot.current?.querySelector('.operation-choices') ?? null;
+    if (watchedChoice.current?.el === el) return;
+    watchedChoice.current?.io.disconnect();
+    watchedChoice.current = null;
+    if (!el) { setChoicesBelow(false); return; }
+    // Measured now as well, so the first frame already shows the shortcut; the observer follows scroll and resize.
+    setChoicesBelow(el.getBoundingClientRect().bottom > innerHeight);
+    // Below means not wholly in view and cut off at the bottom: a choice half under the fold still needs the jump.
+    const io = new IntersectionObserver(([entry]) => setChoicesBelow(entry.intersectionRatio < 1 && entry.boundingClientRect.bottom > (entry.rootBounds?.bottom ?? innerHeight) - 0.5), { threshold: [0, 1] });
+    io.observe(el);
+    watchedChoice.current = { el, io };
+  });
+  useLayoutEffect(() => () => watchedChoice.current?.io.disconnect(), []);
   const [officerOpen, setOfficerOpen] = useState<Id | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
@@ -277,7 +296,7 @@ export function LiveView(p: LiveViewProps) {
       </div>;
 
   const screen = (
-    <div className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
+    <div ref={liveRoot} className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
       <header className={`live-head${p.scene ? ' plate' : ''}`}>
@@ -305,7 +324,7 @@ export function LiveView(p: LiveViewProps) {
               </span>
             </p>
           </div>
-          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide'} onClick={(event) => {
+          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
             const live = event.currentTarget.closest('.live');
             const firstChoice = live?.querySelector('.operation-choices .callbtn') ?? live?.querySelector('.operation-choice-count');
             firstChoice?.scrollIntoView({ block: 'center' });
