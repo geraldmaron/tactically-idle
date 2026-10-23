@@ -1,5 +1,6 @@
 import type { DebriefResult, DecisionView, Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
+import { Silhouette } from '../portraits/Silhouette';
 import { Icon } from '../icons';
 import { opMinutes, signed, signedMoney } from '../format';
 import { Card, Chip, Meter, Ring, SubHead } from './ui';
@@ -101,8 +102,7 @@ export function CompletionResult({ debrief: d }: { debrief: DebriefResult }) {
 export function ResultPortrait({ officerId, officers, size = 48 }: { officerId: string; officers: DebriefOfficers; size?: number }) {
   const officer = officers[officerId];
   if (officer?.role && officer.portrait) return <Portrait officer={{ ...officer, id: officer.id ?? officerId, role: officer.role, portrait: officer.portrait }} size={size} className="result-officer-portrait" />;
-  const initials = officer ? `${officer.firstName.slice(0, 1)}${officer.surname.slice(0, 1)}` : '?';
-  return <span className="result-officer-fallback" role="img" aria-label={officer ? `${officer.firstName} ${officer.surname}; no photo on file` : `Officer ${officerId}; identity no longer on file`} style={{ width: size, height: Math.round(size * 1.04) }}><span aria-hidden="true">{initials}</span></span>;
+  return <span className="result-officer-fallback" role="img" aria-label={officer ? `${officer.firstName} ${officer.surname}; no photo on file` : `Officer ${officerId}; identity no longer on file`} style={{ width: size, height: Math.round(size * 1.04) }}><Silhouette kind="officer" className="result-officer-silhouette" seed={officer ? `${officer.firstName} ${officer.surname}` : officerId} /></span>;
 }
 
 function OfficerChange({ condition: c, officers, casualty }: { condition: Condition; officers: DebriefOfficers; casualty?: NonNullable<DebriefResult['officerCasualties']>[number] }) {

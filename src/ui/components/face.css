@@ -4,7 +4,9 @@
 .face-md { width: var(--face-md); height: var(--face-md); }
 .face-lg { width: var(--face-lg); height: var(--face-lg); }
 .face > img, .face > div { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-.face-silhouette { grid-area: 1 / 1; width: 100%; height: 100%; fill: currentColor; opacity: 0.85; }
+.face-silhouette { grid-area: 1 / 1; width: 100%; height: 100%; fill: currentColor; opacity: 0.95; }
+/* A figure with no photograph stands in a lit room of its own kind's color, so it reads as a person framed, not a pictogram. */
+.face[data-face="silhouette"] { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, currentColor 30%, var(--ink-3)), var(--ink-1) 82%); }
 .face-officer, .face-patrol { color: var(--officer); }
 .face-subject { border-color: var(--subject); color: var(--subject); }
 .face-civilian { border-color: var(--civilian); color: var(--civilian); }

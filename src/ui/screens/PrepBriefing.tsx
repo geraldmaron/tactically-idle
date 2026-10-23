@@ -66,7 +66,7 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
         </div>
         {brief.objectiveRefs.length
           ? <Card className="pb-card"><ul className="pb-list pb-orders" data-ui-list>{brief.objectiveRefs.map((objective, index) => <li key={objective.id}><Row className="pb-row pb-order"
-            lead={<OrderLead n={index + 1} entry={orderPerson(objective, lexicon)} />}
+            lead={<OrderLead n={index + 1} entry={orderPerson(objective, lexicon)} role={whoText.get(objective.id)?.role} />}
             title={<PeopleText text={objective.label} />} /></li>)}</ul></Card>
           : <p className="dim">No orders listed.</p>}
       </section>
@@ -122,14 +122,14 @@ export function orderPerson(objective: { id: string; label: string }, lexicon: L
 
 /** An order's picture: the person's role silhouette with the order number on its corner, or the
  * number in a well when the order is about nobody the team has located. */
-function OrderLead({ n, entry }: { n: number; entry: LexiconEntry | null }) {
+function OrderLead({ n, entry, role }: { n: number; entry: LexiconEntry | null; role?: string }) {
   // The provider decides whether kinds show (the game's preference, the Lab's names switch): with it
   // off there is no colored entry and the face is the plain person, as on the person cards below.
   const shown = usePeopleEntry(entry?.id);
   if (!entry) return <span className="pb-well pb-well-n" aria-label={`Order ${n}`}>{n}</span>;
   const kind = shown?.kind ?? 'person';
   return <span className="pb-lead" data-kind={kind}>
-    <Face size="md" kind={faceKind(kind)} name={peopleLabel(kind, entry.squadName)} />
+    <Face size="md" kind={faceKind(kind)} seed={entry.id} role={role} name={peopleLabel(kind, entry.squadName)} />
     <b className="pb-n" aria-label={`Order ${n}`}>{n}</b>
   </span>;
 }
@@ -146,7 +146,7 @@ function OpenFor({ until }: { until: number }) {
 function PersonCard({ personId, name, role, who, status, where }: { personId: string; name: string; role?: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
   return <li className="pb-person" data-kind={entry?.kind}>
-    <Face size="md" kind={faceKind(entry?.kind)} name={entry ? `${name}, ${peopleLabel(entry.kind, entry.squadName)}` : undefined} />
+    <Face size="md" kind={faceKind(entry?.kind)} seed={personId} role={role} name={entry ? `${name}, ${peopleLabel(entry.kind, entry.squadName)}` : undefined} />
     <div className="pb-person-text">
       <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
       {role && <span className="pb-role">{role}</span>}

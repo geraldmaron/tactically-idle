@@ -15,7 +15,7 @@ export type FaceKind = SilhouetteKind;
 
 /** A person's face: the file portrait when there is one, otherwise a silhouette for their role.
  * Never initials. Pass an `officer`, or a `src` (a path under public/), or neither. */
-export function Face({ size = 'md', kind = 'person', name, officer, src, className, status }: {
+export function Face({ size = 'md', kind = 'person', name, officer, src, className, status, seed, role }: {
   size?: FaceSize;
   kind?: FaceKind;
   /** Read by screen readers only when the face carries meaning; the face is decorative otherwise. */
@@ -26,6 +26,10 @@ export function Face({ size = 'md', kind = 'person', name, officer, src, classNa
   /** An officer's condition: a stress ring around the face and a corner badge for why they are not
    * simply ready (sim state through face-status.ts). The face then carries meaning, so it is named. */
   status?: FaceStatus | null;
+  /** A person's id: with no photograph the silhouette is drawn the same way for them every time. */
+  seed?: string;
+  /** The role's own words ("night manager"): the silhouette gets the one cue they name, if any. */
+  role?: string | null;
 }) {
   // The art to paint: an officer's file portrait, else the given path. A failed load is remembered per
   // source, so a new source tries again; a missing or failed one is the role silhouette, never initials.
@@ -35,12 +39,12 @@ export function Face({ size = 'md', kind = 'person', name, officer, src, classNa
   const painted = !!art && failedSrc !== art;
   if (status) return <span className={`face-status face-status-${size} face-band-${status.band}${status.mark ? ` face-mark-${status.mark}` : ''}`}
     style={{ '--stress': Math.max(0, Math.min(100, status.stress)) } as CSSProperties} role="img" aria-label={name ? `${name}: ${status.label}` : status.label}>
-    <Face size={size} kind={kind} officer={officer} src={src} className={className} />
+    <Face size={size} kind={kind} officer={officer} src={src} className={className} seed={seed} role={role} />
     {status.mark && <span className="face-badge" aria-hidden="true"><Icon name={FACE_MARK_ICON[status.mark]} size={16} /></span>}
   </span>;
   return <span className={`face face-${size} face-${kind}${className ? ` ${className}` : ''}`} data-face={painted ? (officer ? 'portrait' : 'painted') : 'silhouette'}
     role={name ? 'img' : undefined} aria-label={name} aria-hidden={name ? undefined : true}>
     {painted ? <img key={art} src={art} alt="" width={px} height={px} draggable={false} onError={() => setFailedSrc(art)} />
-      : <Silhouette kind={kind} className="face-silhouette" />}
+      : <Silhouette kind={kind} className="face-silhouette" seed={seed} role={role} />}
   </span>;
 }

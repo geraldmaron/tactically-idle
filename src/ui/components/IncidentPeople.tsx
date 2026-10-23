@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Portrait } from '../portraits/Portrait';
+import { Face, type FaceKind } from './Face';
 import { opMinutes } from '../format';
 import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
@@ -65,12 +66,10 @@ export const STANCE_LABEL: Record<Exclude<Stance, 'unheard'>, string> = {
 };
 const STANCE_TONE: Record<Exclude<Stance, 'unheard'>, PersonTone> = { calm: 'ok', yielding: 'ok', tense: 'pending', volatile: 'warn', breaking: 'danger' };
 
-/** Two initials from a name, or the first two letters of a single-word label such as "Resident". */
-export function personInitials(label: string): string {
-  const words = label.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return '?';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+/** The silhouette a person tile draws: their public kind while it is known, otherwise a plain person. */
+function tileFace(kind: string | undefined, tone: PersonTone): FaceKind {
+  if (kind === 'subject' || kind === 'civilian' || kind === 'person') return kind;
+  return tone === 'pending' ? 'person' : 'civilian';
 }
 
 /** `personId` finds the person's public kind while names are colored: a ring around the avatar in
@@ -78,7 +77,7 @@ export function personInitials(label: string): string {
 function PersonTile({ label, status, tone, icon, avatar, data, personId, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; children?: ReactNode }) {
   const who = usePeopleEntry(personId);
   return <li className="person-tile" data-tone={tone} {...data}>
-    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squadName) : undefined}>{avatar ?? personInitials(label)}</span>
+    <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squadName) : undefined}>{avatar ?? <Face size="sm" kind={tileFace(who?.kind, tone)} seed={personId ?? label} />}</span>
     <div className="person-text">
       <strong>{who && <PeopleGlyph kind={who.kind} tone />}{label}</strong>
       <span className="person-status"><Icon name={icon} size={13} />{status}</span>
@@ -101,6 +100,44 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
     const line = fatal ? 'Deceased' : `${person.severity === 'serious' ? 'Serious injury' : 'Wounded'} · ${person.care === 'stabilized' ? 'Stabilized' : person.care === 'accepted' ? 'Care accepted' : 'Needs care'}`;
     return <PersonTile key={person.personId} personId={person.personId} label={person.label} status={line} tone={fatal ? 'danger' : 'warn'} icon={fatal ? 'x' : 'bandage'} data={{ 'data-person-casualty': person.personId, 'data-person-status': status }} />;
   })}</ul>;
+}
+
+/** The one word a person's chip says about them, from the same public outcome the status panel shows. */
+const PERSON_SHORT: Record<PersonStatus, string> = {
+  unaccounted: 'Not located',
+  needs_help: 'Needs help',
+  safe: 'Safe',
+  injured_needs_care: 'Injured',
+  care_accepted: 'In care',
+  accounted_elsewhere: 'Accounted for',
+  deceased: 'Deceased',
+};
+
+function ScenePerson({ id, name, role, word, tone, fallback }: { id: string; name: string; role?: string; word: string; tone: PersonTone; fallback: FaceKind }) {
+  const who = usePeopleEntry(id);
+  const kind = who?.kind === 'subject' || who?.kind === 'civilian' || who?.kind === 'person' ? who.kind : fallback;
+  return <li className="scene-person" data-tone={tone} data-kind={who?.kind}>
+    <Face size="sm" kind={kind} seed={id} role={role} />
+    <span className="scene-person-text"><b>{name.split(/\s+/)[0]}</b><span>{word}</span></span>
+  </li>;
+}
+
+/** The people the call is about, as faces on the live screen: the civilians the team tracks and the
+ * subjects it has heard from, each with one word of how they are. Only what the status panel already
+ * shows, so it never says more than the team knows. */
+export function IncidentPeopleStrip({ scenario, run }: { scenario: ScenarioDefinition; run: OperationRun }) {
+  const civilians = civilianOutcomeViews(scenario, run);
+  const roles = new Map((scenario.briefing.people ?? []).map((person) => [person.personId, person.role]));
+  const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
+    const stance = stanceOf(meters);
+    const person = scenario.incidentPeople?.find((entry) => entry.id === id);
+    return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
+  });
+  if (!civilians.length && !subjects.length) return null;
+  return <ul className="scene-people" aria-label="People at the scene">
+    {subjects.map((subject) => <ScenePerson key={subject.id} id={subject.id} name={subject.label} role={roles.get(subject.id)} word={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} fallback="subject" />)}
+    {civilians.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
+  </ul>;
 }
 
 /** Only tracked public outcomes are shown; a global safety score is never a head count. */

@@ -21,6 +21,7 @@
 .person-avatar { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border: 2px solid var(--tone); border-radius: 50%; overflow: hidden; background: var(--panel-3); color: var(--tone); font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
 .person-tile[data-tone="pending"] .person-avatar { border-style: dashed; background: rgba(245, 155, 66, 0.08); }
 .person-avatar > * { flex-shrink: 0; }
+.person-avatar > .face { width: 100%; height: 100%; border: 0; }
 .person-text { display: grid; gap: 2px; min-width: 0; }
 .person-text strong { font-weight: 600; color: var(--text); }
 .person-status { display: flex; align-items: flex-start; gap: 4px; color: var(--tone); font-weight: 600; }
@@ -42,3 +43,15 @@
 .ocard-casualty .ocard-note { display: block; color: var(--warn); font-weight: 600; white-space: normal; overflow-wrap: anywhere; }
 
 .incident-person-casualties { margin-top: 8px; }
+
+/* The people the call is about, as faces on the live screen: one chip each, wrapping on a narrow phone. */
+.scene-people { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.scene-person { --tone: var(--muted); display: flex; align-items: center; gap: var(--sp2); min-width: 0; padding: var(--sp1) var(--sp3) var(--sp1) var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-1); }
+.scene-person[data-tone="ok"] { --tone: var(--good); }
+.scene-person[data-tone="warn"], .scene-person[data-tone="pending"] { --tone: var(--warn); }
+.scene-person[data-tone="danger"] { --tone: var(--harm); }
+.scene-person > .face { border-color: var(--tone); }
+.scene-person[data-tone="pending"] > .face { border-style: dashed; }
+.scene-person-text { display: grid; min-width: 0; font: 500 var(--s14)/1.2 var(--f-ui); }
+.scene-person-text b { font-weight: 600; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scene-person-text span { color: var(--tone); }

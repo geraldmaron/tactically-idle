@@ -1,0 +1,5 @@
+/* Silhouette (portraits/Silhouette.tsx): the figure takes its parent's color; hair, collars and role cues are
+   shades of that same color, so a figure is one hue however many parts it has. */
+.silhouette .sil-shade { fill: color-mix(in srgb, currentColor 52%, var(--ink-0)); }
+.silhouette .sil-cue { fill: color-mix(in srgb, currentColor 38%, var(--ink-0)); }
+.silhouette .sil-light { fill: color-mix(in srgb, currentColor 55%, var(--t1)); }
