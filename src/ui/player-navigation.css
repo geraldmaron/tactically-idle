@@ -57,7 +57,7 @@
 /* Each control is a 44px hit area around one 32px pill; every pill shares height, radius and type. */
 .resource-bar .stat { position: relative; display: inline-flex; align-items: center; min-width: 0; height: var(--touch); padding: 0; border: 0; background: none; color: var(--t1); font: inherit; cursor: pointer; }
 .resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; height: 32px; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
-.resource-bar .res-well { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; }
+.resource-bar .res-well { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; }
 .resource-bar .res-well-cash { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
 .resource-bar .ring-core { background: var(--ink-2); color: var(--t1); }
 .resource-bar .stat-trust .ring-core { color: var(--good); }
@@ -94,3 +94,5 @@
 .overflow-menu { position: absolute; right: 0; top: calc(100% + var(--sp1)); z-index: 5; min-width: 220px; display: flex; flex-direction: column; gap: var(--sp1); padding: var(--sp1); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-2); box-shadow: 0 12px 32px color-mix(in srgb, var(--black) 50%, transparent); }
 .overflow-up .overflow-menu { top: auto; bottom: calc(100% + var(--sp1)); }
 .overflow-menu .btn { justify-content: flex-start; width: 100%; }
+
+.resource-bar .ring { --ring-w: 3px; }

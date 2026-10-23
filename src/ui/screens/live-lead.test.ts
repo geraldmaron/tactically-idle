@@ -10,7 +10,7 @@ import { previewAction } from '../../sim/operation-selectors';
 import { apply, NOW } from '../../sim/test-fixtures';
 import type { ActionView, GameState } from '../../sim/types';
 import { DecisionList, leadLine, threatTag } from './DecisionList';
-import { LeadPicker, ThreatPill } from './LiveView';
+import { LeadPicker, StagePill, ThreatPill } from './LiveView';
 import { liveDecisions, liveScreen, type LiveUiState } from './live-model';
 import { pickLead } from './operation-squads';
 
@@ -61,9 +61,20 @@ describe('choice cards', () => {
     expect(html).not.toMatch(/<button[^>]*class="callbtn[^"]*"[^>]*>(?:(?!<\/button>).)*<div/);
   });
 
+  it('shows the stage as one pill that names every step and opens the steps', () => {
+    const progress = { stage: 'adapt', prompt: '', exchange: [], threat: null, index: 1, stages: [
+      { id: 'assess', label: 'On the stream', state: 'done' }, { id: 'adapt', label: 'The bag', state: 'current' }, { id: 'resolve', label: 'Way out', state: 'todo' },
+    ] } as unknown as Parameters<typeof StagePill>[0]['progress'];
+    const html = renderToStaticMarkup(createElement(StagePill, { progress, onOpen: () => {} }));
+    expect(html).toContain('data-ui-pill');
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain('Step 2 of 3: The bag. The steps are On the stream, The bag, Way out. Show the steps');
+    expect(html).toContain('>The bag<');
+  });
+
   it('shows the threat as one still line: label and minutes', () => {
     const html = renderToStaticMarkup(createElement(ThreatPill, { label: 'The count reaches zero', minutes: 6 }));
-    expect(html.replace(/<[^>]+>/g, '')).toBe('The count reaches zero·\u20076 min');
+    expect(html.replace(/<[^>]+>/g, '')).toBe('The count reaches zero\u20076 min');
     expect(html).toContain('aria-label="Threat: The count reaches zero in 6 minutes"');
   });
 });
