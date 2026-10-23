@@ -1,14 +1,14 @@
 .patrol-page { gap: var(--sp4); }
 .patrol-summary, .patrol-card, .patrol-boost-card { min-width: 0; padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r3); background: linear-gradient(145deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
 .patrol-summary { display: grid; gap: 0; padding: 0; overflow: hidden; }
-.patrol-summary-net { display: grid; gap: var(--sp1); padding: var(--sp3) var(--sp4); }
-.patrol-summary-net > span { font-size: var(--s16); }
-.patrol-summary-net > strong { color: var(--mint); font: 750 var(--s28)/1.1 var(--f-title); font-variant-numeric: tabular-nums; }
+.patrol-summary-net { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); padding: var(--sp3) var(--sp4); }
+.patrol-summary-net > span { font-size: var(--s14); color: var(--t2); }
+.patrol-summary-net > strong { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .patrol-scene { position: relative; isolation: isolate; display: grid; gap: var(--sp2); min-width: 0; overflow: hidden; padding: var(--sp3) var(--sp2); background: var(--ink-1); }
 .patrol-scene > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center 65%; }
 .patrol-scene::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 25%, transparent), var(--ink-0) 90%); }
-.patrol-scene-activity { display: grid; grid-template-columns: minmax(0, 1fr) 40%; align-items: center; min-height: 116px; gap: var(--sp2); padding-inline: var(--sp2); }
-.patrol-scene-activity h2 { margin: 0 0 var(--sp2); color: var(--t1); font: 750 var(--s22)/1.15 var(--f-title); text-shadow: 0 2px 5px var(--ink-deep); }
+.patrol-scene-activity { display: grid; grid-template-columns: minmax(0, 1fr) 40%; align-items: center; min-height: 64px; gap: var(--sp2); padding-inline: var(--sp2); }
+.patrol-scene-activity h2 { margin: 0 0 var(--sp1); color: var(--t1); font: 700 var(--s18)/1.15 var(--f-title); text-shadow: 0 2px 5px var(--ink-deep); }
 .patrol-scene-activity p { margin: 0; color: var(--t-plate); font-size: var(--s14); line-height: 1.35; }
 .patrol-scene-idle > .plate-art { filter: saturate(.35); }
 .patrol-scene-posts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: stretch; gap: var(--sp1); }
@@ -25,13 +25,19 @@
 .patrol-money-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp3); margin: 0; }
 .patrol-money-grid > div { display: grid; align-content: start; gap: var(--sp1); min-width: 0; }
 .patrol-money-grid dt { color: var(--t2); font-size: var(--s14); line-height: 1.35; }
-.patrol-money-grid dd { margin: 0; color: var(--t1); font-size: var(--s16); font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.patrol-money-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: var(--sp3) var(--sp4); border-top: 1px solid var(--hair); }
+.patrol-money-grid dd { margin: 0; color: var(--t1); font-size: var(--s14); font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.patrol-money-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); padding: var(--sp2) var(--sp4); border-top: 1px solid var(--hair); }
 .patrol-boost-active, .patrol-boost-change { margin: 0; color: var(--mint); font-size: var(--s14); line-height: 1.45; }
 .patrol-roster-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp3); }
 .patrol-roster-head .section-title { margin: 0; }
 .patrol-explanation { margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.5; }
-.patrol-roster, .patrol-candidates, .patrol-commitment, .patrol-boosts { display: grid; gap: var(--sp4); min-width: 0; }
+.patrol-candidates, .patrol-commitment { display: grid; gap: var(--sp4); min-width: 0; }
+.patrol-roster, .patrol-boosts { display: flex; flex-direction: column; min-width: 0; }
+.patrol-roster-card { padding: 0; overflow: hidden; }
+.patrol-item { display: grid; gap: var(--sp2); padding-bottom: var(--sp3); border-top: 1px solid var(--hair); }
+.patrol-item:first-child { border-top: 0; }
+.patrol-item .ui-row { padding-inline: var(--sp3); }
+.patrol-item-foot { display: grid; gap: var(--sp2); margin: 0; padding-inline: var(--sp3); }
 .patrol-card { display: grid; gap: var(--sp4); }
 .patrol-card-finance { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); }
 .patrol-card-finance > div { display: grid; gap: var(--sp1); min-width: 0; }
@@ -44,12 +50,12 @@
 .patrol-person > div > span:not(.chip), .patrol-boost-heading span { color: var(--t2); font-size: var(--s14); line-height: 1.35; }
 .patrol-training-status { margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.5; }
 .patrol-grade-progress { display: grid; gap: var(--sp2); }
-.patrol-grade-progress progress { width: 100%; height: 8px; border: 0; border-radius: var(--r1); background: var(--ink-0); color: var(--mint); overflow: hidden; }
+.patrol-grade-progress progress { width: 100%; height: 6px; border: 0; border-radius: var(--r1); background: var(--ink-0); color: var(--mint); overflow: hidden; }
 .patrol-grade-progress progress::-webkit-progress-bar { background: var(--ink-0); border-radius: var(--r1); }
 .patrol-grade-progress progress::-webkit-progress-value { background: var(--mint); border-radius: var(--r1); }
 .patrol-grade-progress progress::-moz-progress-bar { background: var(--mint); border-radius: var(--r1); }
 .patrol-grade-progress span { color: var(--t2); font-size: var(--s14); line-height: 1.4; }
-.patrol-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp2); }
+.patrol-card-actions { display: flex; align-items: center; gap: var(--sp2); }
 .patrol-card-actions > :first-child { flex: 1; }
 .patrol-boosts > .section-title { margin: 0; }
 .patrol-boost-card { display: grid; gap: var(--sp3); }

@@ -1,7 +1,6 @@
 import { CommandStaff } from '../components/CommandStaff';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { useNav } from '../components/nav';
-import { Icon } from '../icons';
 import { PatrolScreen } from './Patrol';
 import { SquadScreen } from './Squad';
 import './team.css';
@@ -11,8 +10,7 @@ export function TeamScreen() {
   const nav = useNav();
   return <div className="team-page">
     <header className="team-head">
-      <h1 className="section-title"><Icon name="people" size={24} />Team</h1>
-      <ChoiceRail value={nav.teamSection} kind="navigation" label="Team sections" grow onChange={nav.setTeamSection} options={[
+      <ChoiceRail size="sm" value={nav.teamSection} kind="navigation" label="Team sections" grow onChange={nav.setTeamSection} options={[
         { value: 'swat', label: 'SWAT' }, { value: 'patrol', label: 'Patrol' }, { value: 'command', label: 'Command' },
       ]} />
     </header>

@@ -19,6 +19,7 @@ import { useGame } from '../store';
 import type { MilestoneView } from '../../sim/grants';
 import { milestoneShare, milestoneView } from '../../sim/grants';
 import { useDevelopmentPurchase } from '../storefront/useDevelopmentPurchase';
+import { CostTag, Segments, type CostQuote } from './build-parts';
 import './development.css';
 
 export type DevelopmentFilter = 'all' | 'available' | 'owned';
@@ -97,7 +98,7 @@ export function DevelopScreen({ highlightedNode, highlightRequest, openHighlight
     {next && <div className="dev-next" data-ready={next.quote.ok ? 'yes' : undefined}>
       <button type="button" className="dev-next-open" onClick={() => { setBranch(next.node.branch); open(next.node.id); }}
         aria-label={`Next up: ${next.node.name}${next.maxTier > 1 && next.targetTier ? ` tier ${tierLabel(next.targetTier)}` : ''}, ${costText(next)}${next.milestone ? `, or ${milestoneText(next.milestone)}` : ''}. ${next.quote.ok ? 'Ready to buy' : next.reason ?? ''}`}>
-        <NodeGlyph option={next} size={88} />
+        <NodeGlyph option={next} size={48} />
         <span className="dev-next-main">
           <span className="sr-only">Next up, {BRANCH_META[next.node.branch].label}</span>
           <strong>{next.node.name}{next.maxTier > 1 && next.targetTier ? ` ${tierLabel(next.targetTier)}` : ''}</strong>
@@ -114,13 +115,14 @@ export function DevelopScreen({ highlightedNode, highlightRequest, openHighlight
       const { owned, total, ready } = progress(id);
       const name = BRANCH_META[id].label;
       return <button key={id} type="button" role="tab" aria-selected={branch === id} className={`dev-branch-chip${branch === id ? ' dev-branch-chip-on' : ''}`} onClick={() => setBranch(id)}
-        aria-label={`${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`}><Icon name={BRANCH_ICON[id]} size={16} />{name}{ready > 0 && <i className="dev-tab-dot" aria-hidden="true" />}</button>;
+        aria-label={`${name}, ${owned} of ${total} owned${ready ? `, ${ready} ready` : ''}`}><Icon name={BRANCH_ICON[id]} size={16} />{name}<span className="dev-chip-count">{owned}/{total}</span>{ready > 0 && <i className="dev-tab-dot" aria-hidden="true" />}</button>;
     })}</div>
     <p className="dev-branch-blurb">{BRANCH_META[branch].blurb}</p>
     <Track rows={rows} wallet={wallet} nextId={next?.node.id ?? null} highlightedNode={highlightedNode} onOpen={open} />
     {selected && <DevelopmentDetail option={selected} onClose={() => setSelectedId(null)} pending={!!purchases.pendingNode}
       failure={purchases.failure?.nodeId === selected.node.id ? purchases.failure.reason : null}
       purchasedTier={purchased?.nodeId === selected.node.id ? purchased.tier : null}
+      onOpenNode={open}
       onPurchase={async () => {
         const target = selected.targetTier;
         if (!target) return;
@@ -161,7 +163,7 @@ function Track({ rows, wallet, nextId, highlightedNode, onOpen }: { rows: TrackR
   }, [signature]); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="dev-track-wrap">
     <svg className="dev-edges" aria-hidden="true">{edges.map((edge) => <path key={edge.key} d={edge.d} data-owned={edge.owned ? 'yes' : undefined} />)}</svg>
-    <ol ref={ref} className="dev-track">
+    <ol ref={ref} className="dev-track card" data-ui-list>
       {rows.map((row) => <li key={row.option.node.id} data-parent={row.parentId ?? undefined} style={{ '--depth': row.depth } as CSSProperties}>
         <DevelopmentTile option={row.option} budget={wallet} next={row.option.node.id === nextId} highlighted={highlightedNode === row.option.node.id} onOpen={() => onOpen(row.option.node.id)} />
       </li>)}
@@ -212,15 +214,26 @@ export function nodeSummary(o: NodeOption): string {
   return lines[0] ?? o.node.description;
 }
 
+/** The tag a row or card shows, read from the development's own quote: its price, what blocks it
+ * (a missing prerequisite or short funding) and the milestone that grants it free. */
+export function developmentQuote(o: NodeOption, shortFunding: boolean): CostQuote {
+  const state = tileState(o);
+  const cost = o.quote.cost;
+  const missing = o.quote.missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id);
+  const blocker = state === 'locked' ? `Needs ${missing.join(' and ')}` : shortFunding ? 'Needs funding' : undefined;
+  const free = o.milestone ? { label: o.milestone.label, met: o.milestone.met, have: o.milestone.have, need: o.milestone.need } : undefined;
+  return { state, price: cost?.funding ?? null, blocker, free, done: o.maxTier > 1 ? 'Max' : 'Owned' };
+}
+
 export function DevelopmentTile({ option: o, budget, highlighted, next = false, onOpen }: {
   option: NodeOption; budget: DevelopmentBudget; highlighted: boolean; next?: boolean; onOpen: () => void;
 }) {
-  const game = useGame();
   const state = tileState(o);
   const tiered = o.maxTier > 1;
   const cost = o.quote.cost;
   const shortFunding = !!cost && budget.funding < cost.funding;
   const needs = o.quote.missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id);
+  const quote = developmentQuote(o, shortFunding);
   const label = [
     o.node.name,
     state === 'owned' ? (tiered ? 'Fully upgraded' : 'Owned') : state === 'locked' ? `Locked, needs ${needs.join(' and ')}` : state === 'ready' ? 'Ready to buy' : shortFunding ? 'Needs more funding' : 'Not ready',
@@ -233,23 +246,19 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     className={`dev-node${o.currentTier > 0 ? ' dev-node-progress' : ''}${highlighted ? ' store-node-highlight' : ''}`}
     aria-label={label} onClick={onOpen}>
     <span className="dev-medal" data-medal={o.node.id}>
-      <NodeGlyph option={o} size={64} />
+      <NodeGlyph option={o} size={40} />
       {state === 'owned' && <span className="dev-medal-badge dev-badge-owned"><Icon name="check" size={11} strokeWidth={3} /></span>}
       {state === 'locked' && <span className="dev-medal-badge dev-badge-locked"><Icon name="lock" size={11} /></span>}
     </span>
     <span className="dev-node-main" aria-hidden="true">
       <span className="dev-node-title"><strong>{o.node.name}</strong></span>
       <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>
-      {state === 'locked' && <span className="dev-node-needs"><Icon name="lock" size={11} />Needs {needs.join(' and ')}</span>}
-      {o.milestone ? <MilestoneLine view={o.milestone} share={milestoneShare(game, o.milestone)} compact />
-        : o.granted ? <span className="dev-node-granted"><Icon name="medal" size={11} />Granted at {o.granted.milestone}</span> : null}
+      {o.granted && !o.milestone ? <span className="dev-node-granted"><Icon name="medal" size={16} />Granted at {o.granted.milestone}</span> : null}
+      <CostTag part="note" quote={quote} />
+      {tiered && <span className="dev-node-steps"><Segments done={o.currentTier} total={o.maxTier} /><span>Tier {o.currentTier} of {o.maxTier}</span></span>}
     </span>
-    <span className="dev-node-side" aria-hidden="true">
-      {tiered && <span className="dev-pips">{Array.from({ length: o.maxTier }, (_, index) => <i key={index} data-on={index < o.currentTier ? 'yes' : undefined} />)}</span>}
-      {/* Prices stay quiet on rows: the sheet buys, and amber belongs to the one Next card. */}
-      {cost ? <span className="dev-price" data-state={state} data-short={shortFunding ? 'yes' : undefined}>{compactMoney(cost.funding)}</span>
-        : <span className="dev-price dev-price-done"><Icon name="check" size={14} strokeWidth={3} />{tiered ? 'Max' : 'Owned'}</span>}
-    </span>
+    {/* Prices stay quiet on rows: the sheet buys, and amber belongs to the one Next card. */}
+    <span className="dev-node-side" aria-hidden="true"><CostTag part="value" quote={quote} /></span>
   </button>;
 }
 
@@ -261,8 +270,10 @@ const BASELINE: Record<string, string[]> = {
 };
 const UNLOCK_LINE = /^Unlocks (course|purchase):/;
 
-export function DevelopmentDetail({ option: o, onClose, pending, failure, purchasedTier, onPurchase }: {
+export function DevelopmentDetail({ option: o, onClose, pending, failure, purchasedTier, onPurchase, onOpenNode }: {
   option: NodeOption; onClose: () => void; pending: boolean; failure: string | null; purchasedTier: number | null; onPurchase: () => void;
+  /** Opens a prerequisite's own sheet, so a locked development points at what unlocks it. */
+  onOpenNode?: (id: Id) => void;
 }) {
   const nav = useNav();
   const game = useGame();
@@ -281,6 +292,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
   const shortReason = o.reason && !missing.length ? o.reason : null;
   return <Sheet open onClose={onClose} title={o.node.name} subtitle={<>{BRANCH_META[o.node.branch].label} · {o.currentTier ? tiered ? `Tier ${tierLabel(o.currentTier)} of ${tierLabel(o.maxTier)}` : 'Owned' : 'Not owned'}</>} className="development-sheet" footer={
     o.targetTier && o.quote.cost ? <div className="dev-buy">
+      <p className="dev-buy-effect"><Icon name="check" size={16} /><span><b>You get</b> {nodeSummary(o)}</span></p>
       {shortReason && <p className="dev-buy-reason">{shortReason}</p>}
       <div className="dev-buy-ways">
         <div className="dev-buy-way">
@@ -302,7 +314,10 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
       {o.node.requires.length > 0 && <section aria-labelledby="dev-needs"><h3 id="dev-needs" className="dev-label">Needs first</h3>
         <ul className="dev-chips">{o.node.requires.map((id) => {
           const owned = !missing.includes(id);
-          return <li key={id} className={`dev-chip dev-chip-${owned ? 'owned' : 'missing'}`}><Icon name={owned ? 'check' : 'lock'} size={13} />{DEV_NODES[id]?.name ?? id}<span className="sr-only"> · {owned ? 'Owned' : 'Required'}</span></li>;
+          const name = DEV_NODES[id]?.name ?? id;
+          return <li key={id}>{owned || !onOpenNode
+            ? <span className={`dev-chip dev-chip-${owned ? 'owned' : 'missing'}`}><Icon name={owned ? 'check' : 'lock'} size={16} />{name}<span className="sr-only"> · {owned ? 'Owned' : 'Required'}</span></span>
+            : <button type="button" className="dev-chip dev-chip-missing dev-chip-action" onClick={() => onOpenNode(id)}><Icon name="lock" size={16} />{name}<span className="sr-only"> · Required. Open it</span><Icon name="chevronRight" size={16} /></button>}</li>;
         })}</ul></section>}
       {unlocks.length > 0 && <section aria-labelledby="dev-unlocks"><h3 id="dev-unlocks" className="dev-label">Unlocks</h3>
         <ul className="dev-chips">{unlocks.map((unlock) => <li key={unlock.key} className="dev-chip">{unlock.itemId ? <GearArt itemId={unlock.itemId} size={22} /> : <Icon name="mortarboard" size={14} />}{unlock.name}</li>)}</ul></section>}

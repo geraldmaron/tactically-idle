@@ -189,10 +189,12 @@ Layout gates merged (a15133a; opt-in until the lead names them in `FEEL_ON`). Sh
 | feel-slice (local_16bb6632) | Sonnet | P2 HQ, P7 live and debrief, live strip (owner pick b) | 5191 | HQ, TopBar, Hub, Finance, CommandStaff, live and debrief files, `ops-visual.css`, `live-call.css` |
 | rollout-team (local_51fb307c) | Sonnet | P3 Team | 5192 | P3 files in the audit table |
 | rollout-calls (local_83d7ec62) | Sonnet | P6 board, brief, deploy | 5193 | P6 files; never `ops-visual.css` |
-| rollout-build (local_e5113dcd) | Sonnet | P4 Build, upgrades, Armory | 5194 | P4 files plus `build.css` |
+| rollout-build (local_e5113dcd) | Sonnet | P4 Build, upgrades, Armory | 5194 | P4 files plus `build.css` and `store.css` |
 
 Shared files (`theme.css`, `app.css`, `skin.css`, `player-navigation.css`, `ui.tsx`, `ChoiceRail.tsx`,
 icons) change only through the lead, except feel-slice's granted `Ring`, `ChoiceRail` size and bar rules.
+Lead to do at the P4 merge: register `.facility-building`, `.dev-track`, `.store-list`, `.armory-list` once the
+feel walk reaches Build and Store; update `capture.mjs` `.facility-plan [data-facility-branch]` if the attribute moves.
 
 ## Locks outside normal ownership
 

@@ -222,13 +222,13 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(html).not.toContain('aria-label="Gear sections"');
     expect(html).not.toContain('<details');
     expect(html).toContain('aria-label="Show equipment"');
-    expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid"'));
+    expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid '));
     expect(html).toContain('class="ui-row qm-row qm-row-not_hired"');
     expect(html).toContain('Open the post in Build, Upgrades');
     // Owned items show stock on the same tile that buys more; detail lives in each item's sheet.
-    expect(html).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
-    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Restock rules/);
-    expect(html).toMatch(/class="armory-tool"[^>]*>(<svg.*?<\/svg>)?Loadout presets/);
+    expect(html).toMatch(/class="ui-row inv-tile store-tile[^"]*"[^>]* aria-label="Loud hailer[^"]+\d+ owned, \d+ ready, condition \d+%/);
+    expect(html).toMatch(/class="ui-row armory-tool"[^>]*>[\s\S]*?Restock rules/);
+    expect(html).toMatch(/class="ui-row armory-tool"[^>]*>[\s\S]*?Loadout presets/);
     expect(html).not.toContain('Hire manager');
     expect(html).not.toContain('Search courses');
   });
@@ -258,7 +258,7 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(equipment).toContain('class="gear-art-frame"');
     expect(equipment).toContain('Purchase locked');
     expect(equipment).toContain('Purchase unlocked');
-    expect(equipment).toMatch(/class="inv-tile store-tile[^"]*"[^>]* aria-label="[^"]+ \d+ owned, \d+ ready/);
+    expect(equipment).toMatch(/class="ui-row inv-tile store-tile[^"]*"[^>]* aria-label="[^"]+ \d+ owned, \d+ ready/);
     expect(equipment).not.toContain('>Locked</span>');
   });
 

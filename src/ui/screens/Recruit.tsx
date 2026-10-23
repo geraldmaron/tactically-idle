@@ -4,7 +4,8 @@ import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
 import type { Candidate, Id } from '../../sim/types';
-import { Button, Chip, EmptyState, RatingBars, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, RatingBars, Row, Section } from '../components/ui';
+import { GEAR_SOURCE_ICON } from '../icons/kit';
 import { RankChip } from '../components/RankInsignia';
 import { useToast } from '../components/toast';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
@@ -67,7 +68,7 @@ export function Recruit() {
           {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
         </EmptyState>
       ) : (
-        <div className="cand-list">
+        <Card className="cand-card"><div className="cand-list" data-ui-list>
           {candidates.map((c, index) => {
             const receipt = receipts.find((entry) => entry.candidate.id === c.id);
             return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id}
@@ -76,7 +77,7 @@ export function Recruit() {
               onHired={(projection) => setReceipts((previous) => [...previous, { candidate: c, projection, index }])}
               onDone={() => setReceipts((previous) => dismissHireReceipt(previous, c.id))} />;
           })}
-        </div>
+        </div></Card>
       )}
     </Section>
   );
@@ -85,9 +86,7 @@ export function Recruit() {
 export function RecruitRefresh() {
   const { act } = useToast();
   return <div className="recruit-refresh">
-    <Button size="sm" icon="refresh" onClick={() => act({ type: 'refreshCandidates' })}>
-      Refresh candidates
-    </Button>
+    <button type="button" className="section-link" onClick={() => act({ type: 'refreshCandidates' })}>Refresh candidates</button>
   </div>;
 }
 
@@ -103,17 +102,18 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
   return (
     <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
     <div className={`cand cand-row${receipt ? ' cand-hired' : ''}`}>
-      <div className="cand-top">
-        <div className="cand-portrait">
-          <Portrait officer={o} size={104} {...agePortraitProps(g, o, now)} />
-        </div>
-        <div className="cand-id">
-          <strong className="cand-name">
-            {o.firstName} {o.surname}
-          </strong>
-          <span className="cand-facts">{ROLE_META[o.role].label} · Age {career.age} · {perHour(o.wage)}</span>
-          {o.certs.length > 0 && <span className="cand-certs">{o.certs.map((x) => <span key={x}><Icon name={CERT_ICON[x]} size={16} />{CERT_NAME[x]}</span>)}</span>}
-        </div>
+      <Row
+        lead={<span className="cand-face"><Portrait officer={o} size={40} {...agePortraitProps(g, o, now)} /></span>}
+        title={`${o.firstName} ${o.surname}`}
+        detail={<>{ROLE_META[o.role].label} · Age {career.age} · {perHour(o.wage)}{o.certs.map((x) => <span key={x} className="cand-cert" title={CERT_NAME[x]}><Icon name={CERT_ICON[x]} size={14} /></span>)}</>}
+        trail={<Button className="recruit-review-toggle" size="sm" variant={receipt ? 'quiet' : 'secondary'} aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
+          {receipt ? 'Done' : 'Review hire'}
+        </Button>}
+      />
+      <div className="cand-foot">
+        <span className="cand-meta">
+          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
+        </span>
         <button
           type="button"
           className={`icon-btn cand-shortlist${c.shortlisted ? ' icon-btn-on' : ''}`}
@@ -124,14 +124,6 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
         >
           <Icon name="bookmark" size={20} />
         </button>
-      </div>
-      <div className="cand-foot">
-        <span className="cand-meta">
-          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
-        </span>
-        <Button className="recruit-review-toggle" size="sm" variant="quiet" aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
-          {receipt ? 'Done' : 'Review hire'}
-        </Button>
       </div>
       {proj && <HireContract c={c} proj={proj} hired={!!receipt} open={open} onClose={onToggle} onConfirm={() => {
         if (receipt || !proj.ok || hiring.current) return;
@@ -168,7 +160,7 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
         : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire for {money(proj.upfront)}, leaves {money(after)}</Button>}>
       <div className="contract">
         <section className="contract-who" aria-label="Who they are">
-          <div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div>
+          <div className="contract-head"><span className="cand-face cand-face-lg"><Portrait officer={o} size={72} {...agePortraitProps(g, o, Date.now())} /></span><div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div></div>
           <RatingBars ratings={o.ratings} label={`${o.firstName} ${o.surname} ratings`} />
           {(o.certs.length > 0 || o.traits.length > 0) && <div className="chips">
             {o.certs.map((x) => <Chip key={x} tone="good" icon={CERT_ICON[x]}>{CERT_NAME[x]}</Chip>)}
@@ -196,7 +188,7 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
         </section>
         <section className="contract-kit" aria-label="Brings">
           <span className="contract-label">Brings</span>
-          <ul>{[...BASIC_KIT, ...kit].map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{isBasicKit(itemId) && <span className="dim">Basic kit</span>}</li>)}</ul>
+          <ul>{[...BASIC_KIT, ...kit].map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{isBasicKit(itemId) && <span className="dim contract-source"><Icon name={GEAR_SOURCE_ICON.basic} size={16} />Basic kit</span>}</li>)}</ul>
         </section>
         {!hired && !proj.ok && proj.reason && <p className="note note-warn"><Icon name="lock" size={16} />{proj.reason}</p>}
       </div>

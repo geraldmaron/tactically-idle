@@ -91,3 +91,12 @@
 .arrangement-move-path { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); }
 .arrangement-move-path b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 4px; background: var(--ink-2); border: 1px solid var(--hair-2); color: var(--t1); font: 600 12px/1 var(--font-display); }
 .arrangement-squad-option .arrangement-check { flex: 1 1 140px; }
+
+/* Themed checkboxes and tighter groups (Team lane). */
+.arrangement-check input { appearance: none; -webkit-appearance: none; display: grid; place-items: center; width: 24px; height: 24px; border: 1.5px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-0); }
+.arrangement-check input:checked { background: var(--act) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23101828' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat; border-color: var(--act); }
+.arrangement-check input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.arrangement-intro { margin: 0 0 var(--sp3); }
+.arrangement-options { margin: 0 0 var(--sp3); padding: var(--sp1) var(--sp3); }
+.arrangement-check { min-height: 48px; padding: var(--sp1) 0; }
+.arrangement-squad-option { padding-bottom: var(--sp2); }
