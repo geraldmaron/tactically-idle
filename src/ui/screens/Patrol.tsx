@@ -11,6 +11,7 @@ import { personaNote } from '../../content/personas';
 import { rotation, turnIndex } from '../people/story-line';
 import { useStoryClock } from '../people/story-clock';
 import { TeamScene } from './TeamScene';
+import { PlateArt, plateUrl } from '../art/Plates';
 import { patrolEnrolledBeat, patrolSignedBeat } from './team-beats';
 import { Sheet } from '../components/Sheet';
 import { Button, Card, Chip, EmptyState, Meter, Row, Section } from '../components/ui';
@@ -140,7 +141,15 @@ export function PatrolBoosts() {
   const game = useGame();
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const at = game.department.clockHighWater;
+  const rates = patrolRates(game, at);
+  const running = game.patrol.boosts.filter((boost) => boost.expiresAt > at);
   return <Section id="patrol-boosts-h" title="Patrol funding boosts" icon="trend">
+    <div className="patrol-boost-hero plate" data-boost-state={running.length ? 'active' : 'idle'}>
+      <PlateArt src={plateUrl('scene_patrol_garage')} />
+      <p className="patrol-boost-hero-line">{running.length ? <>Boost running: <b>×{rates.factor}</b> patrol gross · {rate(rates.boostAmount)} extra</> : 'No boost running. Patrol earns its base rate.'}</p>
+      <p className="patrol-boost-hero-net"><span>Patrol net</span><strong>{rate(rates.net)}</strong></p>
+      <dl className="patrol-money-grid patrol-boost-hero-strip"><div><dt>Gross</dt><dd>{rate(rates.gross)}</dd></div><div><dt>Payroll</dt><dd>{perHour(rates.wages)}</dd></div><div><dt>Operations</dt><dd>{perHour(rates.operating)}</dd></div></dl>
+    </div>
     <Card className="patrol-roster-card"><div className="patrol-boosts" data-ui-list>{Object.entries(PATROL_BOOSTS).map(([id, definition]) => {
       const quote = patrolBoostQuote(game, id);
       const active = game.patrol.boosts.find((boost) => boost.id === id && boost.expiresAt > at);
@@ -189,7 +198,7 @@ export function PatrolCommitment({ selection, onClose }: { selection: Commitment
   };
   const confirmation = receipt?.kind === 'hire' ? `${who} hired` : receipt?.kind === 'dismiss' ? `${who} dismissed` : receipt?.kind === 'training' ? `${who} enrolled` : 'Community grant activated';
   return <Sheet open onClose={onClose} title={receipt ? 'Patrol update confirmed' : title} subtitle={who} className="patrol-sheet" interactionKey={receipt ? 'receipt' : 'review'} footer={receipt ? <Button block variant="primary" onClick={onClose}>Done</Button> : <div className="patrol-confirm-actions"><Button onClick={onClose}>Cancel</Button><Button variant={selection.kind === 'dismiss' ? 'danger' : 'primary'} disabled={!quote.ok} onClick={submit}>{action} · {moneyFull(quote.upfront)}</Button></div>}>
-    <div className="patrol-commitment">{profileId && <div className="patrol-review-person"><PatrolPortrait profileId={profileId} size={108} /><strong>{who}</strong></div>}
+    <div className="patrol-commitment">{profileId && <div className="patrol-review-person"><PatrolPortrait profileId={profileId} size={108} /><div className="patrol-review-who"><strong>{who}</strong><span>{employee ? `Grade ${employee.grade} · ${PATROL_GRADES[employee.grade].name}` : PATROL_GRADES[1].name}</span><Chip tone={selection.kind === 'dismiss' ? 'warn' : employee?.training ? 'blue' : 'good'} icon={selection.kind === 'hire' ? 'idcard' : employee?.training ? 'mortarboard' : 'check'}>{selection.kind === 'hire' ? 'Candidate' : employee?.training ? 'In training' : 'Covering'}</Chip>{selection.kind === 'hire' && personaNote(profileId) && <p className="patrol-person-note">{personaNote(profileId)}</p>}</div></div>}
       {receipt ? <div className="patrol-receipt" role="status"><Icon name="check" size={16} /><div><strong>{confirmation}</strong><p>{moneyFull(Math.abs(receipt.amount))} funding paid</p>{receipt.endsAt && <p>{receipt.kind === 'training' ? 'Training completes' : 'Grant ends'} {relativeTime(receipt.endsAt, game.department.clockHighWater)}</p>}{receipt.kind === 'training' ? <p>Current grade and payroll remain until training finishes.</p> : <p>{receipt.kind === 'boost' ? 'Net change while active' : 'Unboosted net change'} {rate(receipt.netDelta)}</p>}</div></div>
         : <>{training?.toGrade && <div className="patrol-training-plan"><h3>{PATROL_GRADES[training.toGrade].name}</h3><p>{PATROL_GRADES[training.toGrade].trainingHours}h training · department level {PATROL_GRADES[training.toGrade].departmentLevel} · {PATROL_GRADES[training.toGrade].serviceHours} funded service hours</p><p>Unboosted department net during training {rate(training.trainingNet)}. Wages and operating costs continue.</p><p>After completion</p></div>}<PatrolQuoteRows quote={quote} boost={selection.kind === 'boost'} />{training && quote.paybackHours !== null && <p className="patrol-explanation">Training payback includes the gross funding lost during training.</p>}{selection.kind === 'dismiss' && <p>Severance is paid now. This person leaves coverage and remains in department history.</p>}{selection.kind === 'boost' && <p>The grant affects patrol gross only. Its duration extends when purchased again.</p>}{(failure || quote.reason) && <p className="reason" role="status">{failure ?? quote.reason}</p>}</>}
     </div>

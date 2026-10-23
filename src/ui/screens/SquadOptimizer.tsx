@@ -14,7 +14,8 @@ import { Sheet } from '../components/Sheet';
 import { Button, Chip } from '../components/ui';
 import { DUTY_META } from '../components/labels';
 import { useToast } from '../components/toast';
-import { Portrait } from '../portraits/Portrait';
+import { Face } from '../components/Face';
+import { SquadCrest } from '../components/SquadCrest';
 import { Icon } from '../icons';
 import { getCampaignSnapshot, getState, useCampaigns, useGame } from '../store';
 import { officerList } from './helpers';
@@ -131,6 +132,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
           const deployed = squadDeployed(state, squad.id);
           const locked = saved.squadLocks.includes(squad.id);
           return <div key={squad.id} className="arrangement-squad-option">
+            <SquadCrest id={squad.id} size={40} />
             <label className="arrangement-check">
               <input type="checkbox" aria-label={`Include squad ${squad.id}, ${squad.name}`} checked={selectedIds.includes(squad.id)} onChange={(event) => updateOptions({ squadIds: event.target.checked ? [...options.squadIds.filter((id) => id !== squad.id), squad.id] : options.squadIds.filter((id) => id !== squad.id) })} />
               <span><strong>{squadName(state, squad.id)}</strong><FaceStack state={state} ids={squad.officerIds} leaderId={squad.leaderId} /><small>{squad.officerIds.length} officers · {DUTY_META[squad.duty].label}{deployed ? ' · On a call, officers out stay put' : ''}{locked ? ' · Locked, stays fixed' : ''}</small></span>
@@ -148,7 +150,7 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
         {officerList(state).map((officer) => {
           const locked = saved.officerLocks.includes(officer.id);
           return <li key={officer.id}>
-            <Portrait officer={officer} size={34} />
+            <Face size="sm" kind="officer" officer={officer} />
             <span><strong>{fullName(officer)}</strong><small>{squadName(state, officer.squadId)}</small></span>
             <Button aria-label={`${locked ? 'Unlock' : 'Lock'} ${fullName(officer)}`} aria-pressed={locked} onClick={() => act({ type: 'setSquadArrangementLock', target: { kind: 'officer', officerId: officer.id }, locked: !locked })}>{locked ? 'Unlock' : 'Lock'}</Button>
           </li>;
@@ -205,7 +207,7 @@ export function SquadArrangementReview({ state, preview, stale = false }: { stat
       <h4>Proposed moves</h4>
       {preview.moves.length === 0 ? <p className="dim">No officer moves are proposed.</p> : <ol>
         {preview.moves.map((move) => <li key={move.officerId}>
-          <div className="arrangement-move-head">{state.officers[move.officerId] && <Portrait officer={state.officers[move.officerId]} size={34} />}<span><strong>{officerName(state, move.officerId)}</strong><span className="arrangement-move-path"><b>{move.from ?? <Icon name="user" size={12} />}</b><Icon name="arrowRight" size={13} /><b>{move.to ?? <Icon name="user" size={12} />}</b><span className="sr-only">{squadName(state, move.from)} → {squadName(state, move.to)}</span></span></span></div>
+          <div className="arrangement-move-head">{state.officers[move.officerId] && <Face size="sm" kind="officer" officer={state.officers[move.officerId]} />}<span><strong>{officerName(state, move.officerId)}</strong><span className="arrangement-move-path"><b>{move.from ?? <Icon name="user" size={12} />}</b><Icon name="arrowRight" size={13} /><b>{move.to ?? <Icon name="user" size={12} />}</b><span className="sr-only">{squadName(state, move.from)} → {squadName(state, move.to)}</span></span></span></div>
           <ul>{move.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>
           <p className={move.dutyImpact ? 'tone-amber' : 'dim'}><strong>Duty impact:</strong> {move.dutyImpact ?? 'No change to this officer’s duty.'}</p>
         </li>)}
@@ -228,7 +230,7 @@ export function SquadArrangementReview({ state, preview, stale = false }: { stat
 
 function FaceStack({ state, ids, leaderId }: { state: GameState; ids: Id[]; leaderId: Id | null }) {
   if (!ids.length) return null;
-  return <span className="arrangement-faces" aria-hidden="true">{ids.map((id) => state.officers[id] && <span key={id} className={`arrangement-face${id === leaderId ? ' arrangement-face-lead' : ''}`}><Portrait officer={state.officers[id]} size={26} /></span>)}</span>;
+  return <span className="arrangement-faces" aria-hidden="true">{ids.map((id) => state.officers[id] && <span key={id} className={`arrangement-face${id === leaderId ? ' arrangement-face-lead' : ''}`}><Face size="sm" kind="officer" officer={state.officers[id]} /></span>)}</span>;
 }
 
 function SquadSummary({ state, summary, label }: { state: GameState; summary: SquadArrangementPreview['before'][number]; label: string }) {
@@ -240,7 +242,7 @@ function SquadSummary({ state, summary, label }: { state: GameState; summary: Sq
     <ul className="arrangement-roster">
       {summary.officerIds.map((id) => {
         const officer = state.officers[id];
-        return <li key={id} className={summary.leaderId === id ? 'arrangement-roster-lead' : ''}>{officer && <Portrait officer={officer} size={30} />}<span>{officer ? fullName(officer) : 'Officer no longer on roster'}{summary.leaderId === id && <small><Icon name="star" size={11} /> Leader</small>}</span></li>;
+        return <li key={id} className={summary.leaderId === id ? 'arrangement-roster-lead' : ''}>{officer && <Face size="sm" kind="officer" officer={officer} />}<span>{officer ? fullName(officer) : 'Officer no longer on roster'}{summary.leaderId === id && <small><Icon name="star" size={11} /> Leader</small>}</span></li>;
       })}
       {summary.officerIds.length === 0 && <li className="dim">No assigned officers</li>}
     </ul>

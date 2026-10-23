@@ -48,3 +48,10 @@
 .profile .profile-note { margin: 0; color: var(--t1); font: italic 400 var(--s16)/1.35 var(--f-ui); }
 .profile-lastcall { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.4; }
 .profile-lastcall .icon { flex: none; }
+
+/* Station finish: the hero is a card with a face ringed by its stress; Care sections are cards. */
+.profile-hero { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
+.profile-portrait .face-status, .profile-portrait .face { flex: none; }
+.profile-portrait .profile-leader { right: -6px; top: -6px; z-index: 1; }
+.profile-care-card { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); }
+.profile-care-card > .profile-head { display: flex; align-items: center; gap: var(--sp2); color: var(--t2); font: 700 var(--s14)/1.2 var(--f-title); letter-spacing: .06em; text-transform: uppercase; }

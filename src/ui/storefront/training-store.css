@@ -49,9 +49,11 @@
 .training-selected-officer .training-clear { grid-column: 3; grid-row: 1 / 3; }
 .training-clear { min-width: 44px; padding: 0; }
 .training-person { position: relative; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: var(--sp2) var(--sp2); min-width: 0; }
-.training-person > .training-portrait { grid-row: 1 / 3; }
-.training-person > .stress-mini { grid-column: 2; }
-.training-person > .training-select, .training-person > .training-selected-label { grid-column: 3; grid-row: 1 / 3; }
+.training-person > .face-status, .training-person > .training-portrait { grid-row: 1; }
+.training-person > .training-select, .training-person > .training-selected-label { grid-column: 3; grid-row: 1; align-self: start; }
+.training-person-name > .stress-mini { justify-content: flex-start; gap: var(--sp2); }
+.training-officer-card { background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
+.training-officer-selected { box-shadow: inset 3px 0 0 var(--mint), var(--shadow-card); }
 .training-portrait { border-radius: 13px; }
 .training-person-name { display: flex; flex-direction: column; min-width: 0; gap: var(--sp1); }
 .training-person-name > strong { font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }

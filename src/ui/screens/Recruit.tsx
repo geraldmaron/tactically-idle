@@ -17,6 +17,7 @@ import { signedBeat } from './team-beats';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
+import { Face } from '../components/Face';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime, yearsText } from '../format';
@@ -197,7 +198,7 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
           <SquadPlacement officer={g.officers[o.id]} />
         </section>}
         <section className="contract-who" aria-label="Who they are">
-          <div className="contract-head"><span className="cand-face cand-face-lg"><Portrait officer={o} size={72} {...agePortraitProps(g, o, Date.now())} /></span><div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div></div>
+          <div className="contract-head"><Face size="lg" kind="officer" officer={o} className="contract-face" /><div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div></div>
           <RatingBars ratings={o.ratings} label={`${o.firstName} ${o.surname} ratings`} />
           {(o.certs.length > 0 || o.traits.length > 0) && <div className="chips">
             {o.certs.map((x) => <Chip key={x} tone="good" icon={CERT_ICON[x]}>{CERT_NAME[x]}</Chip>)}
@@ -206,12 +207,12 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
           {personaNote(o.identityId) && <p className="dim persona-note">{personaNote(o.identityId)}</p>}
         </section>
         <section className="contract-sign" aria-label="Due at signing">
-          <span className="contract-label">Due at signing</span>
+          <span className="contract-label"><Icon name="cash" size={16} />Due at signing</span>
           <strong className="contract-hero">{money(proj.upfront)}</strong>
           {kitCost > 0 && <span className="dim">Includes {money(kitCost)} of issue kit</span>}
         </section>
         <section className="contract-rate" aria-label="Every hour">
-          <span className="contract-label">Every hour</span>
+          <span className="contract-label"><Icon name="clock" size={16} />Every hour</span>
           <span className="contract-rate-row"><span>Wages</span><b className="tone-danger">-{perHour(proj.wageDelta)}</b></span>
           <span className="contract-gauge" role="img" aria-label={`Department net ${rate(proj.netBefore)} now, ${rate(proj.netAfter)} after hiring`}>
             <span className="contract-gauge-row"><span>Now</span><span className="contract-gauge-bar"><i className={proj.netBefore < 0 ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netBefore) / scale) * 100}%` }} /></span><b className={proj.netBefore < 0 ? 'tone-danger' : 'tone-mint'}>{rate(proj.netBefore)}</b></span>
@@ -219,12 +220,12 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
           </span>
         </section>
         <section className="contract-value" aria-label="Value">
-          <span className="contract-label">Value</span>
+          <span className="contract-label"><Icon name="trend" size={16} />Value</span>
           <span className="contract-rate-row"><span>Learns from calls</span><b className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</b></span>
           <span className="contract-rate-row"><span>Instructor detail</span><b className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'Needs a certification' : `+${perHour(detail)}`}</b></span>
         </section>
         <section className="contract-kit" aria-label="Brings">
-          <span className="contract-label">Brings</span>
+          <span className="contract-label"><Icon name="hardcase" size={16} />Brings</span>
           <ul>{[...BASIC_KIT, ...kit].map((itemId, i) => <li key={`${itemId}-${i}`}><GearArtFrame itemId={itemId} size={30} /><span>{ITEMS[itemId]?.name ?? itemId}</span>{isBasicKit(itemId) && <span className="dim contract-source"><Icon name={GEAR_SOURCE_ICON.basic} size={16} />Basic kit</span>}</li>)}</ul>
         </section>
         {!hired && !proj.ok && proj.reason && <p className="note note-warn"><Icon name="lock" size={16} />{proj.reason}</p>}
