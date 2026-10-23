@@ -42,7 +42,7 @@ export function MarkerLoop({ m, draw }: { m: MarkerItem; draw: boolean }) {
         </text>
         {m.sub && <text x={r2(m.sub.x)} y={r2(m.sub.y)} className="bp-marker-sub" fill={color}>{m.sub.text}</text>}
         <g transform={`translate(${r2(m.glyphAt.x)} ${r2(m.glyphAt.y)})`}>
-          <circle r="0.8" className="bp-mline" stroke={color} fill="rgba(10,30,90,0.55)" />
+          <circle r="0.8" className="bp-mline" stroke={color} />
           {m.tone === 'mint' ? <path d="M-0.4 0.05 L-0.1 0.4 L0.45 -0.36" className="bp-mline bp-check" stroke={color} /> : <text y="0.36" textAnchor="middle" className="bp-glyph-q" fill={color}>?</text>}
         </g>
       </g>

@@ -56,20 +56,20 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         {chip && <span className="ocard-chip">{chip}</span>}
         {status && statusKey && (
           <span className={`ocard-status band-${injured ? 'recovery' : statusKey === 'training' || statusKey === 'detail' || statusKey === 'deployed' ? 'strained' : statusKey}`}>
-            <Icon name={status.icon} size={11} />
+            <Icon name={status.icon} size="sm" />
             {status.label}
           </span>
         )}
         {leader && (
           <span className="ocard-leader" title="Squad leader">
-            <Icon name="star" size={11} />
+            <Icon name="star" size="sm" />
           </span>
         )}
         <span className="ocard-name">{officer.surname}</span>
       </span>
       <span className="ocard-row">
         <span className="ocard-role">
-          <Icon name={role.icon} size={14} />
+          <Icon name={role.icon} size="sm" />
           <span>{variant === 'strip' ? role.short : role.label}</span>
         </span>
         <ReadinessBar stress={officer.stress} />

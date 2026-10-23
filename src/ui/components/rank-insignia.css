@@ -3,5 +3,5 @@
 .rank-chevron { fill: none; stroke: var(--info); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
 .rank-chevron-empty { stroke: var(--text-dim); stroke-width: 1.6; stroke-dasharray: 2 2.4; }
 .rank-bar { fill: var(--amber-2); stroke: var(--act-lo); stroke-width: 1; }
-.rank-chip { gap: 5px; color: var(--chalk); border-color: rgba(207, 224, 255, 0.35); background: rgba(70, 110, 190, 0.16); }
+.rank-chip { gap: var(--sp1); color: var(--chalk); border-color: color-mix(in srgb, var(--info) 35%, transparent); background: color-mix(in srgb, var(--map) 16%, transparent); }
 .rank-chip-lieutenant { border-color: var(--hair-2); background: var(--ink-2); color: var(--t1); }
