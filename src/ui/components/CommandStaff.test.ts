@@ -1,9 +1,10 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, type FunctionComponent, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../../sim/department';
 import { DEVELOP_HANDLERS } from '../../sim/develop';
-import { COMMAND_STAFF } from '../../sim/command-staff';
+import { COMMAND_STAFF, MANAGERS, MANAGER_IDS } from '../../sim/command-staff';
+import { seatPreview } from '../screens/team-model';
 import type { GameState } from '../../sim/types';
 import { CommandStaff, ManagerSheet } from './CommandStaff';
 import { fillOpenPostsForTest } from '../../sim/staff-fixtures';
@@ -13,6 +14,7 @@ const NOW = Date.UTC(2026, 9, 3, 12);
 let state: GameState = createInitialState(NOW, 1);
 vi.mock('../store', () => ({ useGame: () => state }));
 vi.mock('./toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
+vi.mock('./Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 vi.mock('./Sheet', () => ({ Sheet: ({ open, title, children }: { open: boolean; title: string; children: ReactNode }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children) : null }));
 
 function hire(nodeId: string) {
@@ -78,3 +80,40 @@ describe('Command Staff on HQ', () => {
     expect(sheet).not.toContain('role="switch"');
   });
 });
+
+describe('Command Staff in the Team command room', () => {
+  const Staff = CommandStaff as FunctionComponent<{ allPosts?: boolean; composition?: 'list' | 'room'; scene?: (posts: ReactNode) => ReactNode }>;
+  const room = (scene = (posts: ReactNode) => createElement('div', { className: 'scene' }, posts)) => renderToStaticMarkup(createElement(Staff, { allPosts: true, composition: 'room', scene }));
+
+  it('puts the posts in the scene it is given, with every seat present and the section heading kept for readers', () => {
+    state = createInitialState(NOW, 1);
+    const html = room();
+    expect(html).toContain('<div class="scene">');
+    expect(html).not.toContain('command-room" aria-label');
+    expect((html.match(/class="command-room-post /g) ?? [])).toHaveLength(MANAGER_IDS.length);
+    expect(html).toContain('id="command-staff-title"');
+  });
+
+  it('says on each empty seat what the post would do now, from the post’s own duty text', () => {
+    state = createInitialState(NOW, 1);
+    const html = room();
+    for (const id of MANAGER_IDS) expect(html).toContain(seatPreview(state, id, MANAGERS[id].duty).replace(/'/g, '&#x27;'));
+    expect(html).toContain('Would fill ');
+  });
+
+  it('shows a hired manager’s last logged action from their seat', () => {
+    state = createInitialState(NOW, 1);
+    hire(COMMAND_STAFF.watchCommander.nodeId);
+    state.commandStaff!.watch_commander.log.unshift({ at: state.department.clockHighWater - 2 * 3_600_000, text: 'Rested Alpha: Lim reached 64 stress' });
+    const html = room();
+    expect(html).toContain('Rested Alpha: Lim reached 64 stress, ');
+    expect(html).toContain('src="/art/managers/watch_commander.webp"');
+  });
+
+  it('keeps HQ’s compact seats to their one short state', () => {
+    state = createInitialState(NOW, 1);
+    const html = room();
+    expect(html).not.toContain('command-room-post-compact');
+  });
+});
+

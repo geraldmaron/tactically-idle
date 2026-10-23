@@ -8,11 +8,13 @@ import { HOUR_MS } from '../../sim/economy';
 import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
 import { TrainingEnrolmentActions, TrainingEnrolmentReceipt, TrainingOfficerCard, TrainingStore } from './TrainingStore';
 import { trainingCandidates } from './training-officers';
+import { splitCourses } from './training-picks';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = establishedDepartment(NOW, 1);
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
+vi.mock('../components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 beforeEach(() => { state = establishedDepartment(NOW, 1); });
 
 function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
@@ -31,9 +33,39 @@ describe('course-first Training presentation', () => {
     expect(html).toContain('$600');
     expect(html).toContain('4h');
     expect(html).toContain('+20 XP');
-    expect(html).toContain('+50 XP');
     expect(html).toContain('0 of 1 training places in use');
-    expect(html).toContain('Earn Drone operator');
+    expect(html).toContain('Earns Drone operator');
+  });
+
+  it('splits Start now from Opens later, and a course that is not open never offers Choose officer', () => {
+    const html = markup(createElement(TrainingStore));
+    const { start, later } = splitCourses(state, Object.values(COURSES));
+    expect(start.length).toBeGreaterThan(0);
+    expect(later.length).toBeGreaterThan(0);
+    expect(html.indexOf('Start now')).toBeGreaterThan(-1);
+    expect(html.indexOf('Start now')).toBeLessThan(html.indexOf('Opens later'));
+    for (const { course } of later) {
+      expect(html).not.toContain(`Choose officer for ${course.name}`);
+      expect(html).toContain(`aria-label="${course.name}, opens later"`);
+    }
+    for (const { course } of start) expect(html).toContain(`Choose officer for ${course.name}`);
+    // A locked course teases what it needs and links to the Build room that opens it.
+    expect(html).toContain('Opens with Negotiation training in Build');
+    expect(html).toContain('View development program for Crisis negotiation');
+    expect(html).toContain('Open in Build');
+  });
+
+  it('shows the two officers an open course would help most, with the course data’s own gains', () => {
+    const html = markup(createElement(TrainingStore));
+    expect(html).toContain('Most to gain:');
+    expect(html).toMatch(/Review [A-Z][^"]+ for Communication refresher/);
+  });
+
+  it('says so when an open course has nobody free to take it', () => {
+    Object.values(state.officers).forEach((o) => { o.assignment = { kind: 'operation', runId: 'run-1' }; });
+    const html = markup(createElement(TrainingStore));
+    expect(html).toContain('Nobody is free to take this now.');
+    expect(html).not.toContain('Most to gain:');
   });
 
   it('preserves an officer deep link as a portrait summary and a course-specific preview', () => {
@@ -81,7 +113,7 @@ describe('course-first Training presentation', () => {
     state.officers = {};
     const empty = markup(createElement(TrainingStore));
     expect(empty).toContain('No officers to train');
-    expect([...empty.matchAll(/disabled=""/g)]).toHaveLength(Object.keys(COURSES).length);
+    expect([...empty.matchAll(/disabled=""/g)]).toHaveLength(splitCourses(state, Object.values(COURSES)).start.length);
     const noResults = markup(createElement(TrainingStore), { trainingDraft: { officerId: '', search: 'no-such-course' } });
     expect(noResults).toContain('No courses match');
     expect(noResults).toContain('Show all training');

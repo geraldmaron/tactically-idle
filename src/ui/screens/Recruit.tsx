@@ -7,10 +7,13 @@ import type { Candidate, GameState, Id, Role } from '../../sim/types';
 import { ROLES } from '../../content/recruits';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { SquadPlacement } from '../components/SquadPlacement';
-import { Button, Card, Chip, EmptyState, RatingBars, Row, Section } from '../components/ui';
+import { Button, Chip, EmptyState, RatingBars, Section } from '../components/ui';
 import { GEAR_SOURCE_ICON } from '../icons/kit';
 import { RankChip } from '../components/RankInsignia';
 import { useToast } from '../components/toast';
+import { useBeat } from '../components/Beat';
+import { hireTerms, standoutLine } from './team-model';
+import { signedBeat } from './team-beats';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
 import { Portrait } from '../portraits/Portrait';
@@ -67,20 +70,19 @@ export function Recruit() {
       title="Candidates"
       icon="idcard"
       id="recruit-h"
-      count={pool.length > 0 ? `${pool.length} to choose from` : undefined}
       action={<RecruitRefresh />}
       hint={`${full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour and joins Unassigned until you place them.`}${unassigned ? ` ${unassigned === 1 ? '1 officer is' : `${unassigned} officers are`} unassigned now.` : ''}`}
     >
-      {roles.length > 1 && <ChoiceRail size="sm" value={role} label="Show candidates by role" onChange={setRole} options={[
+      {roles.length > 1 && <div className="cand-role-rail"><ChoiceRail size="sm" value={role} label="Show candidates by role" onChange={setRole} options={[
         { value: 'all' as const, accessibleLabel: `All roles, ${pool.length}`, label: <>All<span className="choice-rail-count">{pool.length}</span></> },
         ...roles.map((r) => { const n = pool.filter((c) => c.officer.role === r).length; return { value: r, accessibleLabel: `${ROLE_META[r].label}, ${n}`, label: <><Icon name={ROLE_META[r].icon} size={16} /><span className="choice-rail-count">{n}</span></> }; }),
-      ]} />}
+      ]} /></div>}
       {candidates.length === 0 ? (
         <EmptyState spot="noCandidates" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
           {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
         </EmptyState>
       ) : (
-        <Card className="cand-card"><div className="cand-list" data-ui-list>
+        <div className="cand-list" data-ui-list>
           {candidates.map((c, index) => {
             const receipt = receipts.find((entry) => entry.candidate.id === c.id);
             return <CandidateCard key={c.id} c={c} now={now} open={hireFor === c.id}
@@ -89,7 +91,7 @@ export function Recruit() {
               onHired={(projection) => setReceipts((previous) => [...previous, { candidate: c, projection, index }])}
               onDone={() => setReceipts((previous) => dismissHireReceipt(previous, c.id))} />;
           })}
-        </div></Card>
+        </div>
       )}
     </Section>
   );
@@ -108,29 +110,34 @@ export function RecruitRefresh() {
   </div>;
 }
 
+/** One candidate as a dossier (station rebuild, people first): a tall portrait, the person's own note, the one
+ * thing they stand out for, and the terms in small print. Review hire opens the contract (the money, the kit);
+ * signing there plays SIGNED over the screen and offers the squads right on the card. */
 export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone }: { c: Candidate; now: number; open: boolean; onToggle: () => void; onHired: (projection: Projection) => void; receipt?: Projection; onDone?: () => void }) {
   const g = useGame();
   const { act } = useToast();
+  const beat = useBeat();
   const hiring = useRef(false);
   const slot = useRef<HTMLDivElement>(null);
   const [receiptHeight, setReceiptHeight] = useState(0);
   const o = c.officer;
   const proj = receipt ?? (open ? projectHire(g, c.id) : null);
   const career = useCareerSnapshot(o);
+  const note = personaNote(o.identityId);
+  const hired = receipt ? g.officers[o.id] : undefined;
   return (
     <div ref={slot} className="recruit-candidate-slot" style={receipt && receiptHeight ? { minHeight: receiptHeight } : undefined}>
-    <div className={`cand cand-row${receipt ? ' cand-hired' : ''}`}>
-      <Row
-        lead={<span className="cand-face"><Portrait officer={o} size={40} {...agePortraitProps(g, o, now)} /></span>}
-        title={`${o.firstName} ${o.surname}`}
-        detail={<>{ROLE_META[o.role].label} · Age {career.age} · {perHour(o.wage)}{o.certs.map((x) => <span key={x} className="cand-cert" title={CERT_NAME[x]}><Icon name={CERT_ICON[x]} size={14} /></span>)}</>}
-        trail={<Button className="recruit-review-toggle" size="sm" variant={receipt ? 'quiet' : 'secondary'} aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
-          {receipt ? 'Done' : 'Review hire'}
-        </Button>}
-      />
-      <div className="cand-foot">
-        <span className="cand-meta">
-          {receipt ? <>Signing {money(receipt.upfront)} paid · {placedIn(g, o.id)}</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
+    <article className={`cand cand-dossier${receipt ? ' cand-hired' : ''}`} aria-label={`${o.firstName} ${o.surname}, ${ROLE_META[o.role].label}`} data-candidate={c.id}>
+      <span className="dossier-portrait"><Portrait officer={o} size={96} {...agePortraitProps(g, o, now)} /></span>
+      <div className="dossier-body">
+        <h3 className="dossier-name">{o.firstName} {o.surname}</h3>
+        <p className="dossier-role"><Icon name={ROLE_META[o.role].icon} size={16} /><span className="dossier-role-name">{ROLE_META[o.role].label}</span><span className="dossier-age">Age {career.age}</span></p>
+        {note && <p className="dossier-note">{note}</p>}
+        <p className="dossier-stand">Stands out: {standoutLine(o)}</p>
+      </div>
+      <div className="dossier-terms">
+        <span className="dossier-terms-text">
+          {receipt ? <>Signing {money(receipt.upfront)} paid · {placedIn(g, o.id)}</> : <>{hireTerms(c)} · leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
         <button
           type="button"
@@ -142,15 +149,23 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
         >
           <Icon name="bookmark" size={20} />
         </button>
+        <Button className="recruit-review-toggle" size="sm" variant={receipt ? 'quiet' : 'primary'} aria-haspopup={receipt ? undefined : 'dialog'} aria-expanded={receipt ? undefined : open} aria-label={`${receipt ? 'Done reviewing hire for' : 'Review hire for'} ${o.firstName} ${o.surname}`} onClick={(event) => { if (event.detail > 1) return; if (receipt) onDone?.(); else onToggle(); }}>
+          {receipt ? 'Done' : 'Review'}
+        </Button>
       </div>
+      {hired && <section className="dossier-place" aria-label={`Squad for ${o.surname}`}>
+        <span className="contract-label">Put {o.firstName} in a squad</span>
+        <SquadPlacement officer={hired} />
+      </section>}
       {proj && <HireContract c={c} proj={proj} hired={!!receipt} open={open} onClose={onToggle} onConfirm={() => {
         if (receipt || !proj.ok || hiring.current) return;
         hiring.current = true;
         const height = slot.current?.getBoundingClientRect().height ?? 0;
-        if (act({ type: 'hire', candidateId: c.id }, `${o.surname} hired`).ok) { setReceiptHeight(height); onHired(proj); }
+        // SIGNED replaces the success toast: the beat is the one announcement.
+        if (beat.act({ type: 'hire', candidateId: c.id }, signedBeat(o)).ok) { setReceiptHeight(height); onHired(proj); }
         else hiring.current = false;
       }} />}
-    </div>
+    </article>
     </div>
   );
 }

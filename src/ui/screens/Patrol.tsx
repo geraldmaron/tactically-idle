@@ -5,10 +5,13 @@ import {
 } from '../../sim/patrol';
 import type { Command, GameState, Id, PatrolEmployee, PatrolGrade, PatrolReceipt } from '../../sim/types';
 import { ManagerPortrait } from '../art/ManagerArt';
-import { PlateArt, plateUrl } from '../art/Plates';
+import { useBeat } from '../components/Beat';
 import { useNav } from '../components/nav';
+import { personaNote } from '../../content/personas';
+import { storyLine } from '../people/story-line';
+import { TeamScene } from './TeamScene';
+import { patrolEnrolledBeat, patrolSignedBeat } from './team-beats';
 import { Sheet } from '../components/Sheet';
-import { useToast } from '../components/toast';
 import { Button, Card, Chip, EmptyState, Meter, Row, Section } from '../components/ui';
 import { duration, moneyFull, perHour, rate, relativeTime } from '../format';
 import { Icon } from '../icons';
@@ -38,45 +41,52 @@ export function PatrolScreen() {
     if (nav.patrolFocus?.kind === 'hire') setSelection({ kind: 'candidates' });
     else if (nav.patrolFocus?.kind === 'training') setSelection({ kind: 'training', employeeId: nav.patrolFocus.employeeId });
   }, [nav.patrolRequest]);
-  return <div className="page patrol-page">
-    <PatrolSummary game={game} onHire={() => setSelection({ kind: 'candidates' })} />
-    <Section id="patrol-team-h" title="Patrol team" icon="people" count={`${employees.length} of ${patrolCapacity(game)} positions`} hint="Coverage runs automatically. Patrol staff stay separate from SWAT squads."
-      action={<button type="button" className="section-link" onClick={() => setSelection({ kind: 'candidates' })}>Hire patrol</button>}>
+  return <>
+    <PatrolScene game={game} onHire={() => setSelection({ kind: 'candidates' })} />
+    <div className="page patrol-page">
+    <PatrolSummary game={game} />
+    <Section id="patrol-team-h" title="Patrol team" icon="people" hint="Coverage runs automatically. Patrol staff stay separate from SWAT squads.">
       {employees.length === 0 ? <EmptyState spot="noCandidates" title="No patrol staff">Hire into an authorized position to begin patrol coverage.</EmptyState>
         : <Card className="patrol-roster-card"><div className="patrol-roster" data-ui-list>{employees.map((employee) => <PatrolEmployeeCard key={employee.id} employee={employee} game={game} onReview={(kind) => setSelection({ kind, employeeId: employee.id })} />)}</div></Card>}
     </Section>
     <PatrolBoosts />
     {selection?.kind === 'candidates' ? <PatrolHiring onClose={() => setSelection(null)} onChoose={(profileId) => setSelection({ kind: 'hire', profileId })} />
       : selection && <PatrolCommitment key={JSON.stringify(selection)} selection={selection} onClose={() => setSelection(null)} />}
-  </div>;
+    </div>
+  </>;
 }
 
-export function PatrolSummary({ game, onHire }: { game: GameState; onHire?: () => void }) {
+export function PatrolSummary({ game }: { game: GameState }) {
   const at = game.department.clockHighWater;
   const rates = patrolRates(game, at);
   return <section className="patrol-summary" aria-label="Patrol division">
-    <PatrolScene game={game} onHire={onHire} />
     <div className="patrol-summary-net"><span>Patrol net after payroll and operations</span><strong>{rate(rates.net)}</strong></div>
     <dl className="patrol-money-grid patrol-money-strip"><div><dt>Gross</dt><dd>{rate(rates.gross)}</dd></div><div><dt>Payroll</dt><dd>{perHour(rates.wages)}</dd></div><div><dt>Operations</dt><dd>{perHour(rates.operating)}</dd></div></dl>
     {rates.factor > 1 && <p className="patrol-boost-active">×{rates.factor} patrol gross · {rate(rates.boostAmount)} extra</p>}
   </section>;
 }
 
+/** The garage scene (station rebuild, a place): the section switch over the garage, one line of counts, who is
+ * covering and who is in training, and the patrol posts as people. An open post is a tap to hire. */
 function PatrolScene({ game, onHire }: { game: GameState; onHire?: () => void }) {
   const employees = employedPatrol(game);
   const rates = patrolRates(game, game.department.clockHighWater);
-  const training = employees.filter((employee) => employee.training).length;
-  return <div className={`patrol-scene${rates.productive === 0 ? ' patrol-scene-idle' : ''}`} data-patrol-scene-state={employees.length === 0 ? 'empty' : training ? 'training' : 'covering'}>
-    <PlateArt src={plateUrl('scene_patrol_garage')} />
-    <div className="patrol-scene-activity"><div><h2>Patrol division</h2><p>{rates.productive > 0 ? `${rates.productive} providing coverage` : employees.length ? 'Coverage paused for training' : 'Patrol positions are open'}</p>{training > 0 && <p>{training} in training</p>}</div></div>
-    <div className="patrol-scene-posts" aria-label={`${employees.length} of ${patrolCapacity(game)} patrol positions filled`}>
-      {Array.from({ length: patrolCapacity(game) }, (_, index) => {
-        const employee = employees[index];
-        return employee ? <button type="button" key={employee.id} className={`patrol-scene-post${employee.training ? ' patrol-scene-post-training' : ''}`} aria-label={`View ${profileName(employee.profileId)}, ${employee.training ? 'in training' : 'providing coverage'}`} onClick={() => { const card = document.querySelector<HTMLElement>(`[data-patrol-employee="${employee.id}"]`); card?.scrollIntoView({ block: 'center' }); card?.focus({ preventScroll: true }); }}><PatrolPortrait profileId={employee.profileId} size={40} /><span>{patrolProfile(employee.profileId)?.firstName ?? 'Employee'}</span>{employee.training && <Icon name="mortarboard" size={16} />}</button>
-          : <button type="button" className="patrol-scene-post patrol-scene-post-open" key={`open-${index}`} onClick={onHire} disabled={!onHire} aria-label={`Hire into open patrol position ${index + 1}`}><span className="patrol-scene-open-slot" aria-hidden="true"><Icon name="plus" size={24} /></span><span>Open</span></button>;
-      })}
+  const training = employees.filter((employee) => employee.training);
+  const covering = employees.filter((employee) => !employee.training);
+  const first = (employee: PatrolEmployee) => patrolProfile(employee.profileId)?.firstName ?? 'Employee';
+  const line = `${employees.length} of ${patrolCapacity(game)} positions · ${rates.productive > 0 ? `${rates.productive} providing coverage` : employees.length ? 'coverage paused for training' : 'positions open'}`;
+  return <TeamScene section="patrol" line={line} label="Patrol garage" action={onHire ? <button type="button" className="section-link" onClick={onHire}>Hire patrol</button> : undefined}>
+    <div className={`patrol-scene${rates.productive === 0 ? ' patrol-scene-idle' : ''}`} data-patrol-scene-state={employees.length === 0 ? 'empty' : training.length ? 'training' : 'covering'}>
+      {employees.length > 0 && <p className="patrol-scene-who">{covering.length > 0 && <span>Covering: {covering.map(first).join(', ')}.</span>}{training.length > 0 && <span> In training: {training.map(first).join(', ')}.</span>}</p>}
+      <div className="patrol-scene-posts" aria-label={`${employees.length} of ${patrolCapacity(game)} patrol positions filled`}>
+        {Array.from({ length: patrolCapacity(game) }, (_, index) => {
+          const employee = employees[index];
+          return employee ? <button type="button" key={employee.id} className={`patrol-scene-post${employee.training ? ' patrol-scene-post-training' : ''}`} aria-label={`View ${profileName(employee.profileId)}, ${employee.training ? 'in training' : 'providing coverage'}`} onClick={() => { const card = document.querySelector<HTMLElement>(`[data-patrol-employee="${employee.id}"]`); card?.scrollIntoView({ block: 'center' }); card?.focus({ preventScroll: true }); }}><PatrolPortrait profileId={employee.profileId} size={40} /><span>{first(employee)}</span>{employee.training && <Icon name="mortarboard" size={16} />}</button>
+            : <button type="button" className="patrol-scene-post patrol-scene-post-open" key={`open-${index}`} onClick={onHire} disabled={!onHire} aria-label={`Hire into open patrol position ${index + 1}`}><span className="patrol-scene-open-slot" aria-hidden="true"><Icon name="plus" size={24} /></span><span>Open</span></button>;
+        })}
+      </div>
     </div>
-  </div>;
+  </TeamScene>;
 }
 
 function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmployee; game: GameState; onReview: (kind: 'dismiss' | 'training') => void }) {
@@ -86,12 +96,15 @@ function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmpl
   const readyToTrain = patrolTrainingQuote(game, employee.id).ok;
   const name = profileName(employee.profileId);
   const hours = next ? Math.min(employee.serviceHours, next.serviceHours) : 0;
+  // A recorded fact about this person: their state, their note, or their hours on patrol (people/story-line.ts).
+  const story = storyLine({ kind: 'patrol', employee, gradeName: (grade) => PATROL_GRADES[grade].name }, game.department.clockHighWater);
   return <article className="patrol-item" data-patrol-employee={employee.id} tabIndex={-1} aria-label={name}>
     <Row lead={<Face size="sm" kind="patrol" src={patrolProfile(employee.profileId)?.portrait} />} title={name}
       detail={`Grade ${employee.grade} · ${grade.name} · ${training ? '$0/h' : perHour(grade.gross)}`}
       trail={<Chip tone={training ? 'blue' : 'good'} icon={training ? 'mortarboard' : 'check'}>{training ? 'In training' : 'Covering'}</Chip>} />
     <div className="patrol-item-foot">
-      {training ? <p className="patrol-training-status">{PATROL_GRADES[training.toGrade].name} · {duration(Math.max(0, training.endsAt - game.department.clockHighWater))} remaining. Grade changes when training finishes.</p>
+      {story && <p className="patrol-item-story" data-story={story.kind}>{story.text}</p>}
+      {training ? <p className="patrol-training-status">Grade changes when training finishes.</p>
         : next ? <div className="patrol-grade-progress"><span>{Math.floor(employee.serviceHours)} / {next.serviceHours} funded hours · Level {next.departmentLevel} required</span><Meter value={(hours / next.serviceHours) * 100} label={`Service toward ${next.name}`} valueText={`${Math.floor(employee.serviceHours)} of ${next.serviceHours} funded hours`} /></div>
           : <p className="patrol-training-status">Highest patrol grade</p>}
       <div className="patrol-card-actions">{next && <Button size="sm" variant={readyToTrain ? 'primary' : 'secondary'} onClick={() => onReview('training')} disabled={!!training} aria-label={`Review training for ${name}`}>{readyToTrain ? 'Train for next grade' : 'Review training'}</Button>}<Button size="sm" variant="ghost" onClick={() => onReview('dismiss')} aria-label={`Review dismissal for ${name}`}>Dismiss</Button></div>
@@ -105,7 +118,7 @@ function PatrolHiring({ onClose, onChoose }: { onClose: () => void; onChoose: (p
   return <Sheet open onClose={onClose} title="Hire patrol" subtitle={`${employedPatrol(game).length} of ${patrolCapacity(game)} authorized positions filled`} className="patrol-sheet">
     <div className="patrol-candidates">{candidates.length === 0 ? <EmptyState spot="noCandidates" title="No patrol candidates">Every available identity is already employed or offered elsewhere.</EmptyState> : candidates.map((person) => {
       const quote = patrolHireQuote(game, person.id);
-      return <article className="patrol-card" data-patrol-candidate={person.id} key={person.id}><div className="patrol-person"><PatrolPortrait profileId={person.id} size={76} /><div><h3>{profileName(person.id)}</h3><span>{PATROL_GRADES[1].name}</span></div></div><div className="patrol-candidate-terms"><span>Payroll {perHour(quote.wageDelta)} · Operations {perHour(quote.operatingDelta)}</span><strong>{rate(quote.netDelta)} unboosted net</strong></div>{quote.reason && <p className="reason">{quote.reason}</p>}<Button variant="primary" block disabled={!quote.ok} onClick={() => onChoose(person.id)} aria-label={`Review hire for ${profileName(person.id)}`}>Review hire · {moneyFull(quote.upfront)}</Button></article>;
+      return <article className="patrol-card" data-patrol-candidate={person.id} key={person.id}><div className="patrol-person"><PatrolPortrait profileId={person.id} size={76} /><div><h3>{profileName(person.id)}</h3><span>{PATROL_GRADES[1].name}</span>{personaNote(person.id) && <p className="patrol-person-note">{personaNote(person.id)}</p>}</div></div><div className="patrol-candidate-terms"><span>Payroll {perHour(quote.wageDelta)} · Operations {perHour(quote.operatingDelta)}</span><strong>{rate(quote.netDelta)} unboosted net</strong></div>{quote.reason && <p className="reason">{quote.reason}</p>}<Button variant="primary" block disabled={!quote.ok} onClick={() => onChoose(person.id)} aria-label={`Review hire for ${profileName(person.id)}`}>Review hire · {moneyFull(quote.upfront)}</Button></article>;
     })}</div>
   </Sheet>;
 }
@@ -134,9 +147,9 @@ function PatrolQuoteRows({ quote, boost = false }: { quote: PatrolQuote; boost?:
   return <div className="patrol-quote"><dl className="patrol-money-grid"><div><dt>Cost now</dt><dd>{moneyFull(quote.upfront)}</dd></div><div><dt>{boost ? 'Net change while active' : 'Unboosted net change'}</dt><dd>{rate(quote.netDelta)}</dd></div>{!boost && <><div><dt>Payroll change</dt><dd>{rate(quote.wageDelta)}</dd></div><div><dt>Operations change</dt><dd>{rate(quote.operatingDelta)}</dd></div></>}</dl><p className="patrol-projection">Department net{boost ? '' : ' without boosts'}<strong>{rate(quote.netBefore)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {rate(quote.netAfter)}</strong></p>{quote.paybackHours !== null && <p>Estimated payback {Math.round(quote.paybackHours * 10) / 10} productive hours</p>}</div>;
 }
 
-function PatrolCommitment({ selection, onClose }: { selection: Commitment; onClose: () => void }) {
+export function PatrolCommitment({ selection, onClose }: { selection: Commitment; onClose: () => void }) {
   const game = useGame();
-  const { act } = useToast();
+  const beat = useBeat();
   const busy = useRef(false);
   const [receipt, setReceipt] = useState<PatrolReceipt | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -151,7 +164,14 @@ function PatrolCommitment({ selection, onClose }: { selection: Commitment; onClo
     if (busy.current || !quote.ok) return;
     busy.current = true;
     const command: Command = selection.kind === 'hire' ? { type: 'hirePatrol', profileId: selection.profileId } : selection.kind === 'dismiss' ? { type: 'dismissPatrol', employeeId: selection.employeeId } : selection.kind === 'training' ? { type: 'startPatrolTraining', employeeId: selection.employeeId } : { type: 'activatePatrolBoost', boostId: selection.boostId };
-    const result = act(command);
+    // A hire or a training start plays its beat in place of the success toast; the sheet still shows the receipt.
+    const profile = profileId ? patrolProfile(profileId) : undefined;
+    const result = beat.act(command, (res) => {
+      if (!profile || !res.patrolReceipt) return null;
+      if (selection.kind === 'hire') return patrolSignedBeat(profile, PATROL_GRADES[1].name);
+      if (selection.kind === 'training' && training?.toGrade) return patrolEnrolledBeat(profile, PATROL_GRADES[training.toGrade].name, PATROL_GRADES[training.toGrade].trainingHours * 3_600_000);
+      return null;
+    });
     if (result.ok && result.patrolReceipt) setReceipt(result.patrolReceipt);
     else { setFailure(result.ok ? 'The update completed without a receipt. Check the current roster.' : result.reason); busy.current = false; }
   };

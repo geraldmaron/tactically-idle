@@ -10,6 +10,7 @@ import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadViewAction } from '../co
 import { Button } from '../components/ui';
 import { SquadPanel, SquadScreen } from './Squad';
 import { App } from '../App';
+import { certLegend, rosterCounts, rosterLine, squadCrest, tileStatus } from './team-model';
 
 const NOW = Date.UTC(2026, 9, 5);
 let state = createInitialState(NOW, 120);
@@ -23,6 +24,7 @@ const act = vi.fn((command: Command) => {
 });
 vi.mock('../store', () => ({ useGame: () => state, getState: () => state, useCampaigns: () => ({ session }) }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() }) }));
+vi.mock('../components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 
 type Element = ReactElement<ComponentProps<'input'> & ComponentProps<'form'> & { children?: ReactNode }>;
 function elements(node: ReactNode): Element[] {
@@ -107,6 +109,46 @@ describe('squads as blocks with separate rename drafts', () => {
     expect(squads.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
     const roster = capture(SquadScreen, { squadSection: 'roster' }).html;
     expect(roster.match(/ui-row officer-row/g)).toHaveLength(officers);
+  });
+
+  it('opens on the locker-room scene with one line of counts and one segmented row, Hire and Training one tap away', () => {
+    const html = capture(SquadScreen).html;
+    expect(html).toContain('data-team-scene="swat"');
+    expect(html).toContain('aria-label="Team sections"');
+    expect(html).toContain('aria-label="SWAT sections"');
+    for (const name of ['Squads', 'Roster', 'Hire', 'Training']) expect(html).toContain(name);
+    expect(html).toContain(rosterLine(rosterCounts(Object.values(state.officers), Date.now())));
+    // The counts are visual badges; each segment keeps its plain name.
+    expect(html).toContain(`<span class="team-scene-count" aria-hidden="true">${state.candidates.length}</span>`);
+    expect(html).not.toContain('aria-label="Hire,');
+  });
+
+  it('gives each squad its crest and callsign, and a quiet two-choice duty control', () => {
+    const html = capture(SquadScreen).html;
+    for (const squad of state.squads) {
+      expect(html).toContain(squadCrest(squad.id));
+      expect(html).toContain(`aria-label="Duty for ${squad.name}"`);
+    }
+    expect(html).not.toContain('role="switch"');
+  });
+
+  it('shows a tile status only when an officer is not ready, and explains the qualification marks', () => {
+    const [first, second] = Object.values(state.officers);
+    first.stress = 40;
+    second.assignment = { kind: 'training', courseId: 'composure_workshop', startedAt: NOW, endsAt: NOW + 3_600_000 };
+    const html = capture(SquadScreen).html;
+    const tiles = new Map([...html.matchAll(/<button[^>]*data-officer-tile="([^"]+)"[\s\S]*?<\/button>/g)].map((m) => [m[1], m[0]]));
+    expect(tiles.size).toBe(Object.keys(state.officers).length);
+    // A flag on exactly the officers who are not simply ready, and never one that says Ready.
+    for (const officer of Object.values(state.officers)) {
+      expect(tiles.get(officer.id)!.includes('otile-flag'), officer.surname).toBe(tileStatus(officer, Date.now()) !== null);
+    }
+    expect(tiles.get(first.id)).toContain('otile-flag');
+    expect(tiles.get(second.id)).toContain('otile-flag');
+    expect([...tiles.values()].filter((tile) => tile.includes('kit-mark-label">Ready<'))).toHaveLength(0);
+    // The glyphs are explained: a legend lists each qualification held, and each tile names them aloud.
+    expect(html).toContain('What the qualification marks mean');
+    for (const entry of certLegend(Object.values(state.officers))) expect(html).toContain(entry.name);
   });
 
   it('recreates the navigation owner on New and Load even though campaigns share squad A/B ids', () => {

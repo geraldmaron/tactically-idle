@@ -3,7 +3,7 @@
   "static": {
     "R1": {
       "target": 0,
-      "total": 731,
+      "total": 728,
       "counts": {
         "src/ui/app.css": 14,
         "src/ui/blueprint/blueprint.css": 25,
@@ -32,10 +32,10 @@
         "src/ui/screens/ops-visual.css": 104,
         "src/ui/screens/preparation-options.css": 4,
         "src/ui/screens/preparation-support.css": 5,
-        "src/ui/screens/recruit.css": 11,
+        "src/ui/screens/recruit.css": 9,
         "src/ui/screens/situation-panel.css": 12,
         "src/ui/screens/squad-optimizer.css": 75,
-        "src/ui/screens/squad-visual.css": 64,
+        "src/ui/screens/squad-visual.css": 63,
         "src/ui/screens/support-context.css": 27,
         "src/ui/settings/candidates.css": 4,
         "src/ui/settings/menu.css": 2,
@@ -117,7 +117,7 @@
     },
     "R3": {
       "target": 0,
-      "total": 234,
+      "total": 231,
       "counts": {
         "src/ui/app.css": 4,
         "src/ui/blueprint/blueprint.css": 7,
@@ -142,10 +142,10 @@
         "src/ui/screens/operation-feedback.css": 8,
         "src/ui/screens/operation-squads.css": 3,
         "src/ui/screens/ops-visual.css": 42,
-        "src/ui/screens/recruit.css": 8,
+        "src/ui/screens/recruit.css": 6,
         "src/ui/screens/situation-panel.css": 4,
         "src/ui/screens/squad-optimizer.css": 10,
-        "src/ui/screens/squad-visual.css": 31,
+        "src/ui/screens/squad-visual.css": 30,
         "src/ui/screens/support-context.css": 7,
         "src/ui/settings/candidates.css": 1,
         "src/ui/settings/menu.css": 2,
@@ -183,7 +183,7 @@
     },
     "R7.sub14": {
       "target": 0,
-      "total": 224,
+      "total": 223,
       "counts": {
         "src/ui/app.css": 27,
         "src/ui/blueprint/blueprint.css": 9,
@@ -214,7 +214,7 @@
         "src/ui/screens/recruit.css": 3,
         "src/ui/screens/situation-panel.css": 3,
         "src/ui/screens/squad-optimizer.css": 7,
-        "src/ui/screens/squad-visual.css": 21,
+        "src/ui/screens/squad-visual.css": 20,
         "src/ui/screens/support-context.css": 6,
         "src/ui/settings/candidates.css": 1,
         "src/ui/settings/settings.css": 2,
@@ -223,7 +223,7 @@
     },
     "R8": {
       "target": 0,
-      "total": 171,
+      "total": 169,
       "counts": {
         "src/ui/blueprint/blueprint.css": 22,
         "src/ui/blueprint/Blueprint.tsx": 2,
@@ -244,7 +244,7 @@
         "src/ui/screens/live-call.css": 58,
         "src/ui/screens/operation-feedback.css": 1,
         "src/ui/screens/ops-visual.css": 21,
-        "src/ui/screens/squad-visual.css": 9,
+        "src/ui/screens/squad-visual.css": 7,
         "src/ui/screens/support-context.css": 1,
         "src/ui/settings/candidates.css": 2
       }
@@ -265,7 +265,7 @@
     },
     "R9.size": {
       "target": 0,
-      "total": 51,
+      "total": 50,
       "counts": {
         "src/ui/components/Career.tsx": 2,
         "src/ui/components/chrome.tsx": 1,
@@ -282,7 +282,7 @@
         "src/ui/screens/DecisionList.tsx": 5,
         "src/ui/screens/Gear.tsx": 2,
         "src/ui/screens/LiveFeed.tsx": 1,
-        "src/ui/screens/OfficerSheet.tsx": 7,
+        "src/ui/screens/OfficerSheet.tsx": 6,
         "src/ui/screens/SituationPanel.tsx": 1,
         "src/ui/screens/Squad.tsx": 1,
         "src/ui/screens/SquadOptimizer.tsx": 4,
@@ -478,18 +478,14 @@
     },
     "R9.rendered": {
       "target": 0,
-      "total": 88,
+      "total": 84,
       "counts": {
         "03-finance-sheet@320": 1,
         "03-finance-sheet@390": 1,
         "03-finance-sheet@430": 1,
-        "05-team-command@320": 1,
         "06-officer-sheet-career@320": 5,
         "06-officer-sheet-career@390": 5,
         "06-officer-sheet-career@430": 5,
-        "06-officer-sheet@320": 1,
-        "06-officer-sheet@390": 1,
-        "06-officer-sheet@430": 1,
         "10-develop@320": 1,
         "10-develop@390": 1,
         "10-develop@430": 1,

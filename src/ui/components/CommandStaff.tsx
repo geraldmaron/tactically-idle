@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { COURSES } from '../../content/courses';
 import { COMMAND_STAFF, MANAGERS, commandStaffOf, leverLines, managerView, managerViews, staffHireCheck, staffRefreshAt, staffSeverance, type ManagerId, type ManagerView } from '../../sim/command-staff';
 import { courseFee, staffLever, type StaffArchetype, type StaffCandidate } from '../../sim/staff-pool';
@@ -12,6 +12,9 @@ import { ROLES } from '../../content/recruits';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { PlateArt, plateUrl } from '../art/Plates';
 import { duration, money, moneyFull, perHour, rate, relativeTime } from '../format';
+import { lastActionLine, seatPreview } from '../screens/team-model';
+import { staffSignedBeat } from '../screens/team-beats';
+import { useBeat } from './Beat';
 import { Icon, type IconName } from '../icons';
 import { useGame } from '../store';
 import { ChoiceRail } from './ChoiceRail';
@@ -33,7 +36,7 @@ const ARCHETYPE: Record<StaffArchetype, { label: string; line: string }> = {
 };
 
 /** The same posts and detail sheets support a compact list and Team's full command hierarchy. */
-export function CommandStaff({ allPosts = false, composition = 'list' }: { allPosts?: boolean; composition?: 'list' | 'room' } = {}) {
+export function CommandStaff({ allPosts = false, composition = 'list', scene }: { allPosts?: boolean; composition?: 'list' | 'room'; scene?: (posts: ReactNode) => ReactNode } = {}) {
   const g = useGame();
   const nav = useNav();
   const [openId, setOpenId] = useState<ManagerId | null>(null);
@@ -43,17 +46,17 @@ export function CommandStaff({ allPosts = false, composition = 'list' }: { allPo
   const hired = views.filter((view) => view.hired).length;
   const shown = allPosts || all ? views : views.slice(0, Math.min(views.length, hired + 1));
   const next = views.find((view) => view.open && !view.hired) ?? views.find((view) => !view.open);
+  const posts = <>
+    <div className="command-room-primary">{views.filter((view) => view.profile.id === 'watch_commander').map((view) => <CommandPost key={view.profile.id} view={view} g={g} now={now} onOpen={() => setOpenId(view.profile.id)} primary />)}</div>
+    <div className="command-room-support">{views.filter((view) => view.profile.id !== 'watch_commander').map((view) => <CommandPost key={view.profile.id} view={view} g={g} now={now} onOpen={() => setOpenId(view.profile.id)} />)}</div>
+  </>;
   return <section className="command-staff" aria-labelledby="command-staff-title">
-    <div className="section-head">
+    <div className={scene ? 'section-head sr-only' : 'section-head'}>
       <h2 id="command-staff-title" className="section-title">Command staff</h2>
       <span className="section-count">{hired} of {views.length} hired</span>
     </div>
     {composition === 'room' ? <>
-      <div className="command-room" aria-label="Command room">
-        <PlateArt src={plateUrl('scene_command_room')} />
-        <div className="command-room-primary">{views.filter((view) => view.profile.id === 'watch_commander').map((view) => <CommandPost key={view.profile.id} view={view} onOpen={() => setOpenId(view.profile.id)} primary />)}</div>
-        <div className="command-room-support">{views.filter((view) => view.profile.id !== 'watch_commander').map((view) => <CommandPost key={view.profile.id} view={view} onOpen={() => setOpenId(view.profile.id)} />)}</div>
-      </div>
+      {scene ? scene(posts) : <div className="command-room" aria-label="Command room"><PlateArt src={plateUrl('scene_command_room')} />{posts}</div>}
       {next && <div className="command-room-next"><div><strong>{next.open ? 'Choose a candidate' : `Next post · ${next.profile.title}`}</strong><span>Automates {next.profile.loop.toLowerCase()}</span></div><Button variant="primary" onClick={() => next.open ? setOpenId(next.profile.id) : nav.openDevelopment(next.profile.nodeId)}>{next.open ? 'Choose' : `Open${next.hire ? ` · ${moneyFull(next.hire.funding)}` : ''}`}</Button></div>}
       <p className="command-room-hint">Open a post to compare candidates. Select a person or vacant seat to inspect its duties and costs.</p>
     </> : <ul className="staff-list">
@@ -73,11 +76,15 @@ export function postState(view: ManagerView): string {
   return view.hire && !view.hire.reason ? `Open · ${moneyFull(view.hire.funding)}` : 'Not open';
 }
 
-function CommandPost({ view, onOpen, primary = false, compact = false }: { view: ManagerView; onOpen: () => void; primary?: boolean; compact?: boolean }) {
-  return <button type="button" className={`command-room-post command-room-post-${view.status}${view.open ? '' : ' command-room-post-closed'}${primary ? ' command-room-post-primary' : ''}${compact ? ' command-room-post-compact' : ''}`} onClick={onOpen} aria-label={`${view.profile.title}, ${personName(view) ?? (view.open ? 'vacant post' : 'post not open')}. ${postState(view)}. ${compact ? 'Open command' : 'Inspect post'}`} aria-haspopup={compact ? undefined : 'dialog'}>
+function CommandPost({ view, onOpen, g, now = 0, primary = false, compact = false }: { view: ManagerView; onOpen: () => void; g?: GameState; now?: number; primary?: boolean; compact?: boolean }) {
+  // From its seat (station rebuild): a hired manager says what they last did; an empty seat says what the post
+  // would do now, in words from the post's own duty text. HQ's compact seats keep to the one short state.
+  const said = compact || !g ? null : view.holder ? (view.log[0] ? `${view.log[0].text}, ${relativeTime(view.log[0].at, now)}` : lastActionLine([], view.activity)) : seatPreview(g, view.profile.id, view.profile.duty);
+  return <button type="button" className={`command-room-post command-room-post-${view.status}${view.open ? '' : ' command-room-post-closed'}${primary ? ' command-room-post-primary' : ''}${compact ? ' command-room-post-compact' : ''}`} onClick={onOpen} aria-label={`${view.profile.title}, ${personName(view) ?? (view.open ? 'vacant post' : 'post not open')}. ${postState(view)}. ${said ? `${said} ` : ''}${compact ? 'Open command' : 'Inspect post'}`} aria-haspopup={compact ? undefined : 'dialog'}>
     <span className="command-room-portrait"><ManagerPortrait person={view.holder?.person ?? null} size={compact ? 40 : primary ? 80 : 52} emptyIcon={LOOP_ICON[view.profile.id]} /></span>
-    <strong>{compact && view.profile.id === 'watch_commander' ? 'Watch' : COMMAND_POST_SHORT[view.profile.id]}</strong>
-    <span>{compact && view.holder ? (view.on ? 'On duty' : 'Off duty') : postState(view)}</span>
+    <strong>{compact && view.profile.id === 'watch_commander' ? 'Watch' : compact ? COMMAND_POST_SHORT[view.profile.id] : view.profile.title}</strong>
+    <span className="command-room-state">{compact && view.holder ? (view.on ? 'On duty' : 'Off duty') : postState(view)}</span>
+    {said && <span className="command-room-said">{said}</span>}
   </button>;
 }
 
@@ -184,7 +191,7 @@ function CandidatePicker({ id, g, now, view, onHired }: { id: ManagerId; g: Game
 }
 
 function CandidateCard({ id, g, candidate, net, onHired }: { id: ManagerId; g: GameState; candidate: StaffCandidate; net: number; now: number; onHired: (message: string) => void }) {
-  const { act } = useToast();
+  const beat = useBeat();
   const { person } = candidate;
   const name = `${person.firstName} ${person.surname}`;
   const reason = staffHireCheck(g, id, candidate.id);
@@ -207,9 +214,9 @@ function CandidateCard({ id, g, candidate, net, onHired }: { id: ManagerId; g: G
     </div>
     {reason && <p className="reason">{reason}</p>}
     <Button variant="primary" block disabled={!!reason} onClick={() => {
-      const message = `${name} hired as ${MANAGERS[id].title}`;
-      const result = act({ type: 'hireStaff', managerId: id, candidateId: candidate.id }, message);
-      if (result.ok) onHired(message);
+      // SIGNED replaces the success toast; the sheet still keeps its receipt line.
+      const result = beat.act({ type: 'hireStaff', managerId: id, candidateId: candidate.id }, staffSignedBeat(person, MANAGERS[id].title));
+      if (result.ok) onHired(`${name} hired as ${MANAGERS[id].title}`);
     }}>Hire {person.firstName} · {moneyFull(candidate.signingCost)}</Button>
   </li>;
 }

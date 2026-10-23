@@ -24,6 +24,7 @@ const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW, 1);
 vi.mock('./store', () => ({ useGame: () => state, getState: () => state, send: vi.fn() }));
 vi.mock('./components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
+vi.mock('./components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 vi.mock('./components/Sheet', () => ({ Sheet: ({ open, title, children, footer }: { open: boolean; title: string; children: ReactNode; footer?: ReactNode }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children, footer) : null }));
 beforeEach(() => { state = createInitialState(NOW, 1); });
 

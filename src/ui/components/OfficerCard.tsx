@@ -1,30 +1,19 @@
 import { useContext } from 'react';
 import type { ReactNode } from 'react';
-import type { Officer, SquadId } from '../../sim/types';
+import type { Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
 import { agePortraitProps } from '../screens/helpers';
 import { DepartmentContext } from './department-context';
 import { Icon } from '../icons';
 import { useWidth } from './hooks';
-import { CERT_ICON, ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
+import { ROLE_META, bandOf, BAND_SHORT, STATUS_META } from './labels';
 import type { StatusKey } from './labels';
 import { ReadinessBar } from './ui';
-import { CERT_NAME } from '../../content/certs';
-import { officerGrowth } from './OfficerProgress';
-import { RankInsignia } from './RankInsignia';
-import { Face } from './Face';
-import type { FaceStatus } from './face-status';
-import { Ring } from './ui';
-import { RANKS } from '../../content/ranks';
-import { StatusMark } from '../icons/marks';
 
 export interface OfficerCardProps {
   officer: Officer;
   now: number;
-  /** `tile` is the dense roster grid: portrait, role icon, stress and qualification pips. */
-  variant?: 'strip' | 'roster' | 'tile';
-  /** Tile only: show the officer's squad letter (null shows nothing). */
-  squadId?: SquadId | null;
+  variant?: 'strip' | 'roster';
   selected?: boolean;
   onClick?: () => void;
   /** Top-left overlay, e.g. a "+12 COMMS" capability chip. */
@@ -37,12 +26,10 @@ export interface OfficerCardProps {
   note?: string;
   /** The injury recorded for this officer in the current operation. */
   incidentInjury?: string;
-  /** Tile only: the officer's condition as a face shows it (face-status.ts), computed by the screen that owns the game state. */
-  faceStatus?: FaceStatus | null;
 }
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
-export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId, faceStatus }: OfficerCardProps) {
+export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury }: OfficerCardProps) {
   // The department dates the portrait's age; without one (outside the game) the portrait is unaged.
   const department = useContext(DepartmentContext);
   const age = department ? agePortraitProps({ department }, officer, now) : {};
@@ -56,32 +43,6 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
   const role = ROLE_META[officer.role];
   const size = Math.max(40, w);
   const Tag = onClick ? 'button' : 'div';
-  if (variant === 'tile') {
-    const statusText = incidentInjury ? `injured: ${incidentInjury}` : status ? status.label.toLowerCase() : BAND_SHORT[band].toLowerCase();
-    const certs = officer.certs.slice(0, 3);
-    // The character-card badge (squad-cards, officer-ranks): the rank insignia, its ring the XP
-    // toward the next rank, the same numbers as the profile. The name carries the rank's short form.
-    const growth = officerGrowth(officer);
-    const xp = growth.capped ? 100 : Math.max(0, Math.min(100, growth.progress));
-    const growthText = `, ${RANKS[growth.rank].title}${growth.capped ? '' : `, ${Math.floor(xp)}% to ${RANKS[growth.next!].title}`}`;
-    return (
-      <Tag
-        type={onClick ? 'button' : undefined}
-        className={`ocard ocard-tile${selected ? ' ocard-on' : ''}${statusKey ? ` ocard-tile-${statusKey}` : ''}`}
-        onClick={onClick}
-        aria-pressed={onClick && selected !== undefined ? selected : undefined}
-        aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${growthText}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
-      >
-        <span className="ocard-face" aria-hidden="true"><Face size="sm" kind="officer" officer={officer} status={faceStatus} />{leader && <span className="ocard-star"><Icon name="star" size={16} /></span>}</span>
-        <span className="ocard-body" aria-hidden="true">
-          <span className="ocard-title"><Ring value={xp} size={20} tone="level"><RankInsignia rank={growth.rank} size={12} /></Ring><span className="ocard-surname">{officer.surname}</span>{squadId && <span className="ocard-squad">{squadId}</span>}</span>
-          <span className="ocard-role"><Icon name={role.icon} size={16} />{role.short}</span>
-          <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} />{certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}</span>
-        </span>
-        {footer}
-      </Tag>
-    );
-  }
   return (
     <Tag
       type={onClick ? 'button' : undefined}

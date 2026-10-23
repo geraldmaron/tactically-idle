@@ -35,35 +35,10 @@
 .squadpanel .squad-block, .officer-rows { padding-inline: var(--sp3); }
 .officer-rows .officer-row-role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .officer-rows .officer-row-role .icon { display: inline-block; vertical-align: -2px; margin-right: var(--sp1); }
-@media (max-width: 359px) { .officer-row-trail .officer-row-certs { display: none; } }
-.ocard-tile { padding: var(--sp2) var(--sp3); gap: var(--sp2); }
-.ocard-title { overflow-wrap: normal; }
-.officers-page .section-head .text-link, .officers-page .section-head .squad-sort { margin-left: var(--sp2); }
-
-/* Section headers on Team: the quiet count and the action sit together on the right edge. */
-.team-page .section-count { margin-left: auto; }
-.roster-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); min-width: 0; }
-.squad-sort { min-height: 36px; padding: 0; border: 0; background: none; color: var(--t2); }
-.squad-sort select { min-height: 36px; min-width: 0; padding: 0 var(--sp1); border: 0; background: transparent; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); }
-.squadpanel .squad-block-name { display: flex; align-items: center; gap: var(--sp2); }
-.squadpanel .squad-badge-lg { width: 40px; height: 40px; font-size: var(--s22); }
-.ocard-face { position: relative; }
-.ocard-star { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-3); color: var(--amber); }
-.roster-bar .squad-sort select { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: transparent; appearance: none; -webkit-appearance: none; }
-.roster-bar .squad-sort { min-height: 36px; }
-.ocard-tile { padding: var(--sp2); }
-.ocard-face { width: 36px; }
-.roster-bar .squad-sort { padding: 0; border: 0; background: none; }
-.ocard-tile .ocard-condition { white-space: nowrap; min-width: 0; }
-.ocard-tile .ocard-condition .mark-label, .ocard-tile .ocard-condition > :first-child { white-space: nowrap; }
-@media (max-width: 359px) {
-  .ocard-tile { gap: var(--sp1); padding: var(--sp2) var(--sp1); }
-  .ocard-title .ring, .ocard-tile .ocard-certs { display: none; }
-}
 .roster-bar .squad-sort { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--t2); cursor: pointer; }
 .roster-bar .squad-sort select { font: 600 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); cursor: pointer; }
 
 /* An open place in a squad: same footprint as an officer tile, opens the Unassigned picker. */
-.open-place { display: flex; align-items: center; justify-content: center; gap: var(--sp2); min-height: var(--touch); padding: var(--sp2) var(--sp3); border: 1px dashed var(--hair-2); border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
+.open-place { display: flex; align-items: center; justify-content: center; gap: var(--sp2); min-height: calc(var(--sp6) * 4); padding: var(--sp2) var(--sp3); border: 1px dashed var(--hair-2); border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
 .open-place:hover { border-color: var(--act); color: var(--t1); }
 .open-place:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }

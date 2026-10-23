@@ -8,7 +8,10 @@ import type { CertId, Course, Id, Officer } from '../../sim/types';
 import { CERT_ICON, RATING_META, ROLE_META } from '../components/labels';
 import { StressDisplay } from '../components/StressDisplay';
 import { Icon, type IconName } from '../icons';
-import { useToast } from '../components/toast';
+import { useBeat } from '../components/Beat';
+import { Face } from '../components/Face';
+import { enrolledBeat } from '../screens/team-beats';
+import { picksLine, splitCourses } from './training-picks';
 import { Button, Card, Chip, EmptyState, RatingBars, Row } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { Portrait } from '../portraits/Portrait';
@@ -45,7 +48,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const game = useGame();
   // The fee actually charged: the Training Sergeant's discount, when one is in post.
   const fee = (cost: number) => courseFee(game, cost);
-  const { act } = useToast();
+  const beat = useBeat();
   const nav = useNav();
   const focus = nav.trainingFocus;
   const certId = requestedCert ?? focus.certId;
@@ -102,6 +105,11 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     setFeedback(null);
     chooser.current?.open(id);
   };
+  /** A pick's face goes straight to the review for that officer, so the confirm still shows the cost. */
+  const openReview = (id: Id, pickedOfficerId: Id) => {
+    openChooser(id);
+    chooser.current?.review(pickedOfficerId);
+  };
   const backToCandidates = () => {
     const selected = choice?.reviewOfficerId;
     chooser.current?.review(null);
@@ -119,7 +127,8 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const enrol = () => {
     if (!reviewing || !selectedCourse || !reviewing.option.available || submitting.current) return;
     submitting.current = true;
-    const result = act({ type: 'startCourse', officerId: reviewing.officer.id, courseId: selectedCourse.id }, `${fullName(reviewing.officer)} started ${selectedCourse.name}`);
+    // ENROLLED replaces the success toast: the beat is the one announcement.
+    const result = beat.act({ type: 'startCourse', officerId: reviewing.officer.id, courseId: selectedCourse.id }, enrolledBeat(reviewing.officer, selectedCourse));
     setFeedback({ courseId: selectedCourse.id, ok: result.ok, text: result.ok ? `${fullName(reviewing.officer)} is training for ${selectedCourse.hours} real hours.` : result.reason });
     if (result.ok) {
       const assignment = getState().officers[reviewing.officer.id]?.assignment;
@@ -130,10 +139,9 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const freePlaces = Math.max(0, game.department.trainingSlots - inTraining);
   return <div ref={root} className="store-training">
     <div className="training-top">
-      <h2 className="section-title training-heading" tabIndex={-1}>Training</h2>
+      <h2 className="section-title training-heading sr-only" tabIndex={-1}>Training</h2>
       <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
     </div>
-    <p className="dim training-intro">Pick a course, then compare officers. Gains arrive when training finishes.</p>
     {officer && <section className="training-selected-officer" aria-label="Officer to train" data-training-officer-id={officer.id}>
       <Portrait officer={officer} size={44} className="training-portrait" />
       <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label} · {trainingOfficerCondition(officer, game.department.clockHighWater)}</span><span className="training-strengths">Highest ratings: {trainingStrongestRatings(officer).map((rating) => `${rating.short} ${officer.ratings[rating.key]}`).join(' · ')}</span></div>
@@ -146,31 +154,72 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
     </div>
     {search && <Button size="sm" variant="ghost" onClick={() => setSearch('')}>Show all training</Button>}
     {!officers.length && <EmptyState spot="noCandidates" title="No officers to train">Recruit an officer before starting a course.</EmptyState>}
-    <Card className="course-card"><div className="course-grid" data-ui-list>{options.map(({ course, available, reason }) => {
-      const locked = !!course.requiresNode && !game.department.unlockedNodes.includes(course.requiresNode);
-      const rating = course.grants.rating;
-      const cert = course.grants.cert;
-      const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
-      return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
-        <Row lead={<CourseEmblem course={course} locked={locked} size={40} />} title={course.name}
-          detail={<span className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></span>}
-          trail={<Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>} />
-        <div className="course-tile-more">
-          <div className="course-tile-gains">
-            {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
-            <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
-          </div>
-          {locked && <Button size="sm" variant="ghost" icon="unlock" className="course-tile-develop" onClick={() => openDevelopment(course.requiresNode!)} aria-label={`View development program for ${course.name}`}>View development program</Button>}
-          {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
-          {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
-          {!!course.requiresCerts?.length && <p className="course-tile-note">Needs {course.requiresCerts.map((required) => CERT_NAME[required]).join(' + ')}</p>}
-          {/* A full department is shown once by the places pips, not repeated on every tile. */}
-          {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
-          {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
-          {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
-        </div>
-      </article>;
-    })}</div></Card>
+    {(() => {
+      const split = splitCourses(game, options.map(({ course }) => course));
+      const optionOf = (id: Id) => options.find(({ course }) => course.id === id)!;
+      return <>
+        {split.start.length > 0 && <section className="course-group" aria-labelledby="course-start-h">
+          <h3 id="course-start-h" className="course-group-label">Start now<span>{split.start.length}</span></h3>
+          <Card className="course-card"><div className="course-grid" data-ui-list>{split.start.map(({ course, picks }) => {
+            const { available, reason } = optionOf(course.id);
+            const rating = course.grants.rating;
+            const cert = course.grants.cert;
+            const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
+            const line = picksLine(picks);
+            return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
+              <Row lead={<CourseEmblem course={course} size={40} />} title={course.name}
+                detail={<span className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></span>}
+                trail={<Button size="sm" variant="primary" disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>} />
+              <div className="course-tile-more">
+                <div className="course-tile-gains">
+                  {cert ? <Chip tone="mint" icon={CERT_ICON[cert]}>Earn {CERT_NAME[cert]}</Chip> : rating ? <Chip tone="mint" icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
+                  <Chip icon="trend">+{courseXpGain(course.hours)} XP</Chip>
+                </div>
+                {line && <div className="course-picks">
+                  <span className="course-picks-faces">{picks.map((pick) => <button type="button" key={pick.officer.id} className="course-pick" aria-label={`Review ${fullName(pick.officer)} for ${course.name}`} onClick={() => openReview(course.id, pick.officer.id)}><Face size="sm" kind="officer" officer={pick.officer} /></button>)}</span>
+                  <span className="course-picks-line">{line}</span>
+                </div>}
+                {!line && officers.length > 0 && <p className="course-tile-note">Nobody is free to take this now.</p>}
+                {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
+                {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
+                {/* A full department is shown once by the places pips, not repeated on every tile. */}
+                {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
+                {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
+                {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
+              </div>
+            </article>;
+          })}</div></Card>
+        </section>}
+        {split.later.length > 0 && <section className="course-group" aria-labelledby="course-later-h">
+          <h3 id="course-later-h" className="course-group-label">Opens later<span>{split.later.length}</span></h3>
+          <Card className="course-card"><div className="course-grid" data-ui-list>{split.later.map(({ course, gate }) => {
+            const rating = course.grants.rating;
+            const cert = course.grants.cert;
+            const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
+            const via = gate.kind === 'cert' && gate.via ? COURSES[gate.via] : null;
+            // A course held back by a qualification links to the course that grants it, or to the Build room that opens that one.
+            const viaNode = via?.requiresNode && !game.department.unlockedNodes.includes(via.requiresNode) ? via.requiresNode : null;
+            return <article className={`course-tile training-course course-tile-locked${courseId === course.id ? ' training-course-highlight' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={`${course.name}, opens later`}>
+              <Row lead={<CourseEmblem course={course} locked size={40} />} title={course.name}
+                detail={<span className="course-tile-meta"><span className="course-tile-need"><Icon name="lock" size={16} />{gate.line}</span></span>}
+                trail={gate.kind === 'node'
+                  ? <Button size="sm" variant="secondary" icon="unlock" aria-label={`View development program for ${course.name}`} onClick={() => openDevelopment(gate.nodeId)}>Open in Build</Button>
+                  : via ? <Button size="sm" variant="secondary" icon="arrowRight" aria-label={`See ${via.name}, the course that opens ${course.name}`} onClick={() => {
+                    if (viaNode) openDevelopment(viaNode);
+                    else { const target = root.current?.querySelector<HTMLElement>(`[data-course-id="${via.id}"]`); target?.scrollIntoView({ block: 'center' }); target?.focus({ preventScroll: true }); }
+                  }}>{viaNode ? 'Open in Build' : `See ${via.name}`}</Button> : null} />
+              <div className="course-tile-more">
+                <div className="course-tile-gains">
+                  {cert ? <Chip icon={CERT_ICON[cert]}>Earns {CERT_NAME[cert]}</Chip> : rating ? <Chip icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
+                  <Chip icon="clock">{course.hours}h</Chip>
+                  <Chip icon="cash">{money(fee(course.cost))}</Chip>
+                </div>
+              </div>
+            </article>;
+          })}</div></Card>
+        </section>}
+      </>;
+    })()}
     {!options.length && <EmptyState spot="nothingInStock" title="No courses match">Clear the course search to see all training.</EmptyState>}
     <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
       {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} paid={fee(selectedCourse.cost)} onDone={closeChooser} /> : reviewing ? <>

@@ -131,9 +131,9 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
         for (const t of ['Career', 'Care']) { const b = page.locator('.sheet').getByRole('tab', { name: t, exact: true }).first(); if (await b.count()) { await b.click(); await shot(`06-officer-sheet-${t.toLowerCase()}`, { segments: 1 }); } }
         await closeSheet(); });
       await step('arrange', async () => { const b = page.getByRole('button', { name: /Arrange/ }).first(); await b.click(); await shot('07-arrange-sheet', { segments: 2 }); await closeSheet(); });
-      await step('hire', async () => { await page.locator('.squad-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Hire', exact: true }).click(); await shot('08-hire', { segments: 2 }); const b = page.getByRole('button', { name: /Review hire/ }).first(); await b.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
+      await step('hire', async () => { await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Hire', exact: true }).click(); await shot('08-hire', { segments: 2 }); const b = page.getByRole('button', { name: /Review hire/ }).first(); await b.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
         await shot('08-recruit-card', { segments: 1 }); await b.click(); await shot('08-hire-contract-sheet', { segments: 2 }); await closeSheet(); });
-      await step('training', async () => { await page.locator('.squad-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Training', exact: true }).click(); await shot('09-training', { segments: 3 }); });
+      await step('training', async () => { await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Training', exact: true }).click(); await shot('09-training', { segments: 3 }); });
       await step('develop', async () => { await tab('Build'); await shot('10-develop', { segments: 6 }); });
       await step('develop-sheet', async () => { await page.locator('.room-list [data-room]').first().click(); await shot('11-develop-sheet', { segments: 2 }); await closeSheet(); });
       await step('gear', async () => { await tab('Store'); await page.locator('.store-screen-head').waitFor(); await shot('12-store', { segments: 6 });
@@ -146,7 +146,7 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
       await step('saves', async () => { await page.locator('.resource-bar .menu-btn').click(); await page.waitForTimeout(300); await page.locator('.menu-sheet .menu-link').click(); await page.waitForTimeout(400); await shot('16b-saves-sheet', { segments: 3 }); await closeSheet(); });
       await step('team-patrol', async () => {
         await tab('Team'); await teamSection('Patrol'); await page.locator('.patrol-page').waitFor(); await shot('05-patrol', { segments: 6 });
-        await page.locator('.patrol-page').getByRole('button', { name: 'Hire patrol', exact: true }).click(); await shot('05-patrol-hiring', { segments: 3 });
+        await page.locator('.team-page').getByRole('button', { name: 'Hire patrol', exact: true }).click(); await shot('05-patrol-hiring', { segments: 3 });
         const offer = page.locator('[data-patrol-candidate]').first().getByRole('button', { name: /^Review hire for / });
         if (await offer.count()) {
           await offer.click(); await shot('05-patrol-hire-review', { segments: 2 });

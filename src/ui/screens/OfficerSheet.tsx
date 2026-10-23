@@ -34,6 +34,7 @@ import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
+import { lastCallLine, lastCallOf } from './team-model';
 
 export type ProfileTab = 'overview' | 'career' | 'care';
 
@@ -64,7 +65,6 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
     : o.assignment?.kind === 'detail' ? `Teaching, back ${relativeTime(o.assignment.endsAt, now)}` : o.assignment?.kind === 'operation' ? 'On a call' : undefined;
   const pace = learningPace(o);
   const detail = detailRate(o);
-  const persona = personaNote(o.identityId);
   return (
     <div className="profile">
       <section className="profile-hero" aria-label="Officer">
@@ -87,7 +87,6 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
         <div><dt>Learns</dt><dd className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</dd></div>
         <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : `+${perHour(detail)}`}</dd></div>
       </dl>
-      {persona && <p className="dim persona-note">{persona}</p>}
       <ChoiceRail value={tab} kind="tabs" grow label="Profile sections" panelId="profile-panel" onChange={setTab} options={[
         { value: 'overview', label: 'Overview' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
       ]} />
@@ -101,19 +100,27 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
 }
 
 function Overview({ o }: { o: Officer }) {
+  const g = useGame();
+  const persona = personaNote(o.identityId);
+  const call = lastCallOf(g, o.id, Date.now());
   return <div className="profile-stack">
-    <OfficerProgress officer={o} />
-    <section aria-label="Skills"><h3 className="profile-head">Skills</h3><RatingBars ratings={o.ratings} label="Skills out of 100" /></section>
-    <section aria-label="Qualifications and traits">
-      <h3 className="profile-head">Qualifications and traits</h3>
-      {o.certs.length > 0 ? <div className="chips">{o.certs.map((c) => <Chip key={c} tone="mint" icon={CERT_ICON[c]}>{CERT_NAME[c]}</Chip>)}</div>
-        : <p className="dim">No qualifications yet. Courses grant them on completion, and a qualified officer can teach.</p>}
+    {/* The person first: their note, the traits they have earned and why, and the last call the game recorded. */}
+    <section className="profile-person" aria-label="Who they are">
+      {persona && <p className="profile-note persona-note">{persona}</p>}
       {o.traits.length > 0 && <ul className="profile-traits">{o.traits.map((t) => {
         // A trait a promotion granted names its cause (swat-officer-stories: earned traits cite the call).
         const earned = o.promotions?.find((p) => RANKS[p.rank].trait === t);
-        return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={14} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
+        return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={16} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
           {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {earned.cause}, {formatGameDate(earned.day)}.</span>}</li>;
       })}</ul>}
+      <p className="profile-lastcall"><Icon name="flag" size={16} />{call ? lastCallLine(call) : o.career.operations > 0 ? `${o.career.operations} ${o.career.operations === 1 ? 'call' : 'calls'} worked with this department.` : 'No calls with this department yet.'}</p>
+    </section>
+    <OfficerProgress officer={o} />
+    <section aria-label="Skills"><h3 className="profile-head">Skills</h3><RatingBars ratings={o.ratings} label="Skills out of 100" /></section>
+    <section aria-label="Qualifications">
+      <h3 className="profile-head">Qualifications</h3>
+      {o.certs.length > 0 ? <div className="chips">{o.certs.map((c) => <Chip key={c} tone="mint" icon={CERT_ICON[c]}>{CERT_NAME[c]}</Chip>)}</div>
+        : <p className="dim">No qualifications yet. Courses grant them on completion, and a qualified officer can teach.</p>}
     </section>
     <section aria-label="Squad"><h3 className="profile-head">Squad</h3><SquadControls o={o} /></section>
   </div>;

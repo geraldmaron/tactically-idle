@@ -16,7 +16,7 @@ Each image was generated separately with Codex's built-in image generation (`cod
 | `crests/alpha.webp` fox, `bravo.webp` owl, `charlie.webp` bear, `delta.webp` stag | 512 x 512 RGBA, 65 to 92 KB | Round enamel medallions in the emblem finish, rim colour amber, cobalt, teal-green, dusty violet. Alpha range 0 to 255, corners fully transparent |
 | `managers/recruiter.webp`, `peer_support_lead.webp` | 512 x 532 RGB, 15 to 17 KB | Same frame as the three existing managers |
 
-New folder `public/art/crests/` is registered in `scripts/validate-art.mjs` (ids `alpha`, `bravo`, `charlie`, `delta`) and in the test fixture in `src/ui/art/validate-art.test.ts`. The plate id pattern now accepts `room_<personnel|training|information|recovery|equipment|garage>_<lit|dark>`, and the manager id list gains `recruiter` and `peer_support_lead`. The sim's staff pool (`src/sim/staff-pool.ts`) was not touched: the two portraits are art for the posts, and the names below are art-direction proposals.
+New folder `public/art/crests/` is registered in `scripts/validate-art.mjs` (ids `alpha`, `bravo`, `charlie`, `delta`) and in the test fixture in `src/ui/art/validate-art.test.ts`. The plate id pattern now accepts `room_<personnel|training|information|recovery|equipment|garage>_<lit|dark>`, and the manager id list gains `recruiter` and `peer_support_lead`. The two portraits are wired into the staff pool (`src/sim/staff-pool.ts`, `AUTHORED_STAFF`) as the first candidate for their posts. The art brief's proposed names Ines Carvalho and Anders Holm collide with civilian names in the call trees (a test forbids that), so the authored people are Helena Teixeira and Lennart Lindahl; the portraits are unchanged.
 
 ## Room vignettes
 
@@ -50,8 +50,8 @@ Reference `managers/quartermaster`; the prompt uses the officer-portrait frame f
 
 | Post | Brief | Result |
 | --- | --- | --- |
-| Recruiter, Ines Carvalho (she, 41) | Brazilian woman of Portuguese descent, light olive-tan skin, oval face with high cheekbones, dark hazel eyes, thick dark-brown wavy hair in a loose low ponytail with one curl at the temple, small gold hoops, laugh lines, no glasses, an open attentive half-smile | Matches |
-| Peer Support Lead, Anders Holm (he, 58) | Man of Swedish descent, fair ruddy skin, long rounded face, pale blue-grey eyes, thinning white-blond hair brushed back, trimmed white beard, deep smile creases, no glasses, a gentle steady listening expression | Matches |
+| Recruiter, Helena Teixeira (she, 41) | Brazilian woman of Portuguese descent, light olive-tan skin, oval face with high cheekbones, dark hazel eyes, thick dark-brown wavy hair in a loose low ponytail with one curl at the temple, small gold hoops, laugh lines, no glasses, an open attentive half-smile | Matches |
+| Peer Support Lead, Lennart Lindahl (he, 58) | Man of Swedish descent, fair ruddy skin, long rounded face, pale blue-grey eyes, thinning white-blond hair brushed back, trimmed white beard, deep smile creases, no glasses, a gentle steady listening expression | Matches |
 
 The first choice for the recruiter, Priya Raman, is already one of the 100 officer personas, so it was dropped. The two names were checked against `src/content/personas.json`: no first-name and surname match. The look-alike check against the roster and the three existing managers was by eye only, not a structured pass.
 

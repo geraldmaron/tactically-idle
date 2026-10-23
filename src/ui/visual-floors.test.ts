@@ -54,6 +54,7 @@ vi.mock('./store', () => ({
   isResponsivePreview: false,
 }));
 vi.mock('./components/toast', () => ({ useToast: () => ({ act: vi.fn(), notify: vi.fn() }) }));
+vi.mock('./components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: vi.fn() }) }));
 vi.mock('./components/Sheet', () => ({ Sheet: () => null }));
 vi.mock('./blueprint/Blueprint', () => ({ Blueprint: () => createElement('div', null, 'Map preview') }));
 // The shell draws the flow's head and foot around a screen; here the real head renders inline.
@@ -177,10 +178,10 @@ function officerCards(page: El, min: number): string[] {
   return cards.flatMap((card, index) => {
     const missing: string[] = [];
     if (leadOf(card) !== 'visual') missing.push(`officer card #${index + 1} does not lead with a portrait`);
-    if (byClass(card, 'ocard-title').length !== 1) missing.push(`officer card #${index + 1} has no identity`);
-    if (byClass(card, 'ocard-role').length !== 1) missing.push(`officer card #${index + 1} has no specialty`);
-    const condition = byClass(card, 'ocard-condition');
-    if (condition.length !== 1 || byClass(condition[0], 'kit-mark').length !== 1) missing.push(`officer card #${index + 1} has no visible condition`);
+    if (byClass(card, 'otile-title').length !== 1) missing.push(`officer card #${index + 1} has no identity`);
+    if (byClass(card, 'otile-role').length !== 1) missing.push(`officer card #${index + 1} has no specialty`);
+    // The condition is the stress strip on every tile; a status mark is added only when the officer is not ready.
+    if (byClass(card, 'otile-stress').length !== 1) missing.push(`officer card #${index + 1} has no visible condition`);
     return missing;
   });
 }
@@ -246,7 +247,7 @@ const OBLIGATIONS: Obligation[] = [
     const page = mount(createElement(TeamScreen), { tab: 'squad', teamSection: 'swat' });
     const swat = byClass(page, 'officers-title');
     return [
-      ...(byClass(page, 'team-head').length === 1 ? [] : ['expected the Team section rail']),
+      ...(byClass(page, 'team-scene').length === 1 ? [] : ['expected the Team scene header with its section switch']),
       ...(swat.length === 1 && swat[0].tag === 'h2' && words(swat[0]) === 'SWAT' ? [] : ['the Team screen does not name its SWAT section']),
       ...officerCards(page, 8),
     ];
@@ -313,11 +314,14 @@ const OBLIGATIONS: Obligation[] = [
   { id: 'rows-officers-status', screen: 'SquadScreen (Roster)', fixture: 'eight officers', check: () => {
     const rows = byClass(mount(createElement(SquadScreen), { squadSection: 'roster' }), 'officer-row');
     return rows.length < 8 ? [`expected 8 officer rows, found ${rows.length}`] : rows.flatMap((row) => {
+      // A mark only when the officer is not ready; every row says its condition aloud either way.
       const trail = byClass(row, 'officer-row-trail');
-      return trail.length === 1 && byClass(trail[0], 'kit-mark').length === 1 ? [] : [`${words(row).slice(0, 30)} has no visible condition mark`];
+      const marks = trail.length === 1 ? byClass(trail[0], 'kit-mark').length : -1;
+      const aloud = /ready|strained|overloaded|recovery|injured|training|detail|deployed/.test(row.attrs['aria-label'] ?? '');
+      return marks >= 0 && marks <= 1 && aloud ? [] : [`${words(row).slice(0, 30)} does not state its condition`];
     });
   } },
-  { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-row', 1); } },
+  { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-dossier', 1); } },
   { id: 'rows-training', screen: 'SquadScreen (Training)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'training' }), 'course-tile', 6) },
   { id: 'rows-upgrades', screen: 'BuildScreen (Rooms and index)', fixture: 'department with a board', check: () => {
     const page = mount(createElement(BeatContext.Provider, { value: { play: () => {}, act: () => ({ ok: true as const }) } }, createElement(BuildScreen)), { tab: 'develop' });
