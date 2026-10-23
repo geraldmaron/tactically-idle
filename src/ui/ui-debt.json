@@ -3,7 +3,7 @@
  "static": {
   "R1": {
    "target": 0,
-   "total": 676,
+   "total": 626,
    "counts": {
     "src/ui/app.css": 14,
     "src/ui/components/choice-rail.css": 7,
@@ -13,11 +13,8 @@
     "src/ui/components/incident-people.css": 23,
     "src/ui/components/officer-progress.css": 7,
     "src/ui/components/officer-row.css": 2,
-    "src/ui/components/open-in-lab.css": 3,
-    "src/ui/components/point-packs.css": 9,
     "src/ui/components/topbar-help.css": 5,
     "src/ui/components/transcript.css": 6,
-    "src/ui/components/welcome-back.css": 10,
     "src/ui/screens/casebook.css": 2,
     "src/ui/screens/gear-visual.css": 23,
     "src/ui/screens/live-call.css": 72,
@@ -33,9 +30,6 @@
     "src/ui/screens/squad-optimizer.css": 75,
     "src/ui/screens/squad-visual.css": 63,
     "src/ui/screens/support-context.css": 27,
-    "src/ui/settings/candidates.css": 4,
-    "src/ui/settings/menu.css": 2,
-    "src/ui/settings/settings.css": 22,
     "src/ui/skin.css": 3
    }
   },
@@ -53,27 +47,24 @@
   },
   "R10.redefinition": {
    "target": 0,
-   "total": 13,
+   "total": 10,
    "counts": {
     "src/ui/components/command-staff.css": 2,
-    "src/ui/components/point-packs.css": 1,
     "src/ui/screens/gear-visual.css": 1,
     "src/ui/screens/officer-profile.css": 1,
     "src/ui/screens/operation-feedback.css": 3,
     "src/ui/screens/preparation-options.css": 1,
     "src/ui/screens/squad-optimizer.css": 1,
-    "src/ui/screens/support-context.css": 1,
-    "src/ui/settings/menu.css": 2
+    "src/ui/screens/support-context.css": 1
    }
   },
   "R10.switch": {
    "target": 0,
-   "total": 5,
+   "total": 3,
    "counts": {
     "src/ui/components/CommandStaff.tsx": 1,
     "src/ui/screens/HQ.tsx": 1,
-    "src/ui/settings/SettingsControls.tsx": 1,
-    "src/ui/settings/SettingsSheet.tsx": 2
+    "src/ui/settings/SwitchRow.tsx": 1
    }
   },
   "R11.empty": {
@@ -101,16 +92,15 @@
   },
   "R11.error": {
    "target": 0,
-   "total": 9,
+   "total": 2,
    "counts": {
-    "src/ui/components/SaveManager.tsx": 7,
     "src/ui/screens/SquadOptimizer.tsx": 1,
     "src/ui/storefront/EquipmentStore.tsx": 1
    }
   },
   "R3": {
    "target": 0,
-   "total": 212,
+   "total": 196,
    "counts": {
     "src/ui/app.css": 4,
     "src/ui/components/choice-rail.css": 2,
@@ -120,11 +110,8 @@
     "src/ui/components/incident-people.css": 8,
     "src/ui/components/officer-progress.css": 2,
     "src/ui/components/officer-row.css": 1,
-    "src/ui/components/open-in-lab.css": 1,
-    "src/ui/components/point-packs.css": 2,
     "src/ui/components/topbar-help.css": 1,
     "src/ui/components/transcript.css": 3,
-    "src/ui/components/welcome-back.css": 4,
     "src/ui/screens/gear-visual.css": 9,
     "src/ui/screens/live-call.css": 24,
     "src/ui/screens/officer-profile.css": 8,
@@ -135,10 +122,7 @@
     "src/ui/screens/situation-panel.css": 4,
     "src/ui/screens/squad-optimizer.css": 10,
     "src/ui/screens/squad-visual.css": 30,
-    "src/ui/screens/support-context.css": 7,
-    "src/ui/settings/candidates.css": 1,
-    "src/ui/settings/menu.css": 2,
-    "src/ui/settings/settings.css": 6
+    "src/ui/screens/support-context.css": 7
    }
   },
   "R5.basic-kit": {
@@ -164,7 +148,7 @@
   },
   "R7.sub14": {
    "target": 0,
-   "total": 204,
+   "total": 195,
    "counts": {
     "src/ui/app.css": 27,
     "src/ui/components/command-staff.css": 9,
@@ -174,10 +158,7 @@
     "src/ui/components/incident-people.css": 4,
     "src/ui/components/officer-progress.css": 4,
     "src/ui/components/officer-row.css": 1,
-    "src/ui/components/open-in-lab.css": 1,
-    "src/ui/components/point-packs.css": 2,
     "src/ui/components/transcript.css": 1,
-    "src/ui/components/welcome-back.css": 3,
     "src/ui/player-navigation.css": 1,
     "src/ui/screens/calls.css": 1,
     "src/ui/screens/casebook.css": 1,
@@ -194,14 +175,12 @@
     "src/ui/screens/squad-optimizer.css": 7,
     "src/ui/screens/squad-visual.css": 20,
     "src/ui/screens/support-context.css": 6,
-    "src/ui/settings/candidates.css": 1,
-    "src/ui/settings/settings.css": 2,
     "src/ui/skin.css": 3
    }
   },
   "R8": {
    "target": 0,
-   "total": 125,
+   "total": 117,
    "counts": {
     "src/ui/components/command-staff.css": 11,
     "src/ui/components/debrief-results.css": 3,
@@ -210,19 +189,17 @@
     "src/ui/components/officer-progress.css": 5,
     "src/ui/components/topbar-help.css": 1,
     "src/ui/components/transcript.css": 2,
-    "src/ui/components/welcome-back.css": 6,
     "src/ui/screens/gear-visual.css": 3,
     "src/ui/screens/live-call.css": 58,
     "src/ui/screens/operation-feedback.css": 1,
     "src/ui/screens/ops-visual.css": 21,
     "src/ui/screens/squad-visual.css": 7,
-    "src/ui/screens/support-context.css": 1,
-    "src/ui/settings/candidates.css": 2
+    "src/ui/screens/support-context.css": 1
    }
   },
   "R9.size": {
    "target": 0,
-   "total": 48,
+   "total": 46,
    "counts": {
     "src/ui/components/Career.tsx": 2,
     "src/ui/components/chrome.tsx": 1,
@@ -233,7 +210,6 @@
     "src/ui/components/IncidentPeople.tsx": 2,
     "src/ui/components/states.tsx": 1,
     "src/ui/components/ToastView.tsx": 1,
-    "src/ui/components/WelcomeBack.tsx": 1,
     "src/ui/screens/Casebook.tsx": 1,
     "src/ui/screens/DecisionList.tsx": 6,
     "src/ui/screens/Gear.tsx": 2,
@@ -243,7 +219,6 @@
     "src/ui/screens/Squad.tsx": 1,
     "src/ui/screens/SquadOptimizer.tsx": 4,
     "src/ui/screens/SupportContext.tsx": 1,
-    "src/ui/settings/SettingsSheet.tsx": 1,
     "src/ui/storefront/ItemUnits.tsx": 7
    }
   },
@@ -415,7 +390,7 @@
   },
   "R9.rendered": {
    "target": 0,
-   "total": 66,
+   "total": 63,
    "counts": {
     "03-finance-sheet@320": 1,
     "03-finance-sheet@390": 1,
@@ -426,9 +401,6 @@
     "13-gear-item-sheet@320": 3,
     "13-gear-item-sheet@390": 3,
     "13-gear-item-sheet@430": 3,
-    "17-themes-page@320": 1,
-    "17-themes-page@390": 1,
-    "17-themes-page@430": 1,
     "19-prepare-brief@320": 1,
     "19-prepare-brief@390": 1,
     "19-prepare-brief@430": 1,
