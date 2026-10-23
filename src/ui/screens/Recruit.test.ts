@@ -10,6 +10,8 @@ import { ROLE_META } from '../components/labels';
 import { money, perHour, rate } from '../format';
 import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, HireContract, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
 import { CERT_NAME } from '../../content/certs';
+import { personaNote } from '../../content/personas';
+import { hireTerms, standoutLine } from './team-model';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW);
@@ -20,6 +22,9 @@ const act = vi.fn((command: Command, _message?: string) => {
 });
 vi.mock('../store', () => ({ useGame: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act }) }));
+// A beat replaces the success toast: its act sends the command and plays the beat. The test records the beat spec.
+const beatAct = vi.fn((command: Command, _beat: unknown) => act(command));
+vi.mock('../components/Beat', () => ({ useBeat: () => ({ play: vi.fn(), act: beatAct }) }));
 vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer }: { open: boolean; title: string; children: ReactNode; footer: ReactNode }) => open ? createElement('section', { role: 'dialog', 'aria-label': title }, children, footer) : null }));
 
 type CapturedElement = ReactElement<{ children?: ReactNode; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }>;
@@ -52,6 +57,7 @@ const confirmHire = (view: ReturnType<typeof card>) => ({ props: { disabled: but
 beforeEach(() => {
   state = createInitialState(NOW);
   act.mockClear();
+  beatAct.mockClear();
 });
 
 describe('ordinary recruitment refresh', () => {
@@ -71,6 +77,19 @@ describe('ordinary recruitment refresh', () => {
     expect(html).not.toContain('Hire…');
   });
 
+  it('shows each candidate as a dossier: their own note, one standout strength and the terms', () => {
+    const html = renderToStaticMarkup(createElement(Recruit));
+    for (const c of state.candidates) {
+      expect(html).toContain(`data-candidate="${c.id}"`);
+      expect(html).toContain(`Stands out: ${standoutLine(c.officer)}`);
+      expect(html).toContain(hireTerms(c).replace(/'/g, '&#x27;'));
+      const note = personaNote(c.officer.identityId);
+      if (note) expect(html).toContain(note.replace(/'/g, '&#x27;'));
+    }
+    // One standout each, not a ratings table, on the list.
+    expect(html).not.toContain('rating-bars');
+  });
+
   it('only refreshes the candidate pool after the explicit refresh action', () => {
     const before = structuredClone(state);
     const { tree } = capture(() => RecruitRefresh());
@@ -86,11 +105,12 @@ describe('candidate hire review', () => {
   it('opens the contract as a sheet and closes it without hiring or charging', () => {
     const before = structuredClone(state);
     const closed = card(false);
-    expect(closed.html).toContain('>Review hire</button>');
+    expect(closed.html).toContain('>Review</button>');
+    expect(closed.html).toContain(`aria-label="Review hire for ${closed.c.officer.firstName} ${closed.c.officer.surname}"`);
     expect(closed.html).toContain('aria-expanded="false"');
     expect(closed.html).toContain('aria-haspopup="dialog"');
     expect(closed.html).not.toContain('Confirm hire');
-    button(closed.tree, 'Review hire').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
+    button(closed.tree, 'Review').props.onClick?.({ detail: 0 } as MouseEvent<HTMLButtonElement>);
     expect(closed.onToggle).toHaveBeenCalledOnce();
 
     const open = card(true);
@@ -117,7 +137,9 @@ describe('candidate hire review', () => {
     const confirm = confirmHire(view);
     confirm.props.onClick({ detail: 0 });
     confirm.props.onClick({ detail: 0 });
-    expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'hire', candidateId: view.c.id }, `${view.c.officer.surname} hired`);
+    // SIGNED replaces the success toast: the hire goes through the beat, with the officer's face and the hire sting.
+    expect(beatAct).toHaveBeenCalledExactlyOnceWith({ type: 'hire', candidateId: view.c.id }, expect.objectContaining({ stamp: 'Signed', sting: 'hire', face: expect.objectContaining({ name: `${view.c.officer.firstName} ${view.c.officer.surname}` }) }));
+    expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'hire', candidateId: view.c.id });
     expect(view.onHired).toHaveBeenCalledOnce();
     expect(state.department.funding).toBe(before - view.c.signingCost);
     expect(state.candidates.some((c) => c.id === view.c.id)).toBe(false);
@@ -188,6 +210,10 @@ describe('candidate hire review', () => {
     expect(receipt.html).toContain(`Signing ${money(projection.upfront)} paid`);
     expect(receipt.html).toContain('Unassigned');
     expect(receipt.html).toContain('Put them in a squad');
+    // The squads are offered right on the card too, with the unassigned wage note until they are placed.
+    expect(receipt.html).toContain(`Put ${original.c.officer.firstName} in a squad`);
+    expect(receipt.html).toContain(`aria-label="Squad for ${original.c.officer.surname}"`);
+    expect(receipt.html).toContain('Still paid');
     expect(receipt.html).not.toContain('leaves ');
     contract.props.onConfirm();
     expect(act).toHaveBeenCalledOnce();

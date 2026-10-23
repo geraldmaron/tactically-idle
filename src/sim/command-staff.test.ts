@@ -1,5 +1,6 @@
 import { fillOpenPostsForTest } from './staff-fixtures';
-import { AUTHORED_STAFF } from './staff-pool';
+import { AUTHORED_STAFF, drawStaffPool } from './staff-pool';
+import managersManifest from '../../public/art/managers/manifest.json';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
@@ -304,6 +305,19 @@ describe('Quartermaster', () => {
 describe('manager identity', () => {
   it('carries each authored manager’s pronouns from the portrait briefs', () => {
     expect(Object.fromEntries((['watch_commander', 'training_sergeant', 'quartermaster'] as const).map(id => [id, AUTHORED_STAFF[id]!.pronouns]))).toEqual({ watch_commander: 'she', training_sergeant: 'he', quartermaster: 'they' });
+  });
+
+  it('wires the Recruiter and Peer Support Lead portraits, each a painted file listed in the art manifest, offered first for the post', () => {
+    for (const id of ['recruiter', 'peer_support_lead'] as const) {
+      const person = AUTHORED_STAFF[id]!;
+      expect(person.portrait).toBe(`art/managers/${id}.webp`);
+      expect(managersManifest.readyIds).toContain(id);
+      expect(person.identityId).toBe(`manager:${id}`);
+      const pool = drawStaffPool(createInitialState(T0), id, 0);
+      expect(pool[0].person).toEqual(person);
+      expect(pool).toHaveLength(3);
+    }
+    expect([AUTHORED_STAFF.recruiter!.pronouns, AUTHORED_STAFF.peer_support_lead!.pronouns]).toEqual(['she', 'he']);
   });
 });
 

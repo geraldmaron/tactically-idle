@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../../sim/department';
 import type { ShiftReport } from '../../sim/types';
 import { welcomeLines } from './WelcomeBack';
-import { OfficerCard } from './OfficerCard';
+import { OfficerTile } from './OfficerTile';
 import { DepartmentContext } from './department-context';
 
 const NOW = Date.UTC(2026, 9, 3);
@@ -46,7 +46,7 @@ describe('officer character card (squad-cards)', () => {
   it('badges the rank with an XP ring toward the next rank and says both aloud, with no invented level', () => {
     const officer = structuredClone(state.officers[first]);
     const html = renderToStaticMarkup(createElement(DepartmentContext.Provider, { value: state.department },
-      createElement(OfficerCard, { officer, now: NOW, variant: 'tile' })));
+      createElement(OfficerTile, { officer, now: NOW })));
     expect(html).toContain('class="ring');
     expect(html).toMatch(/--ring-fill:\d+(\.\d+)?/);
     expect(html).toMatch(/aria-label="[^"]*, (Probationary Officer|Officer|Corporal|Sergeant)(, \d+% to [A-Z][a-z]+)?|Lieutenant/);

@@ -4,12 +4,16 @@ import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
 import './officers.css';
 import { Button, Card, Chip, EmptyState, Row, Section } from '../components/ui';
-import { OfficerCard } from '../components/OfficerCard';
+import { DUTY_META } from '../components/labels';
+import type { SquadDuty } from '../../sim/types';
+import { OfficerTile } from '../components/OfficerTile';
+import { SquadCrest } from '../components/SquadCrest';
+import { CertLegend } from '../components/CertLegend';
+import { TeamScene, type SubView } from './TeamScene';
+import { rosterCounts, rosterLine, squadDetail } from './team-model';
 import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
-import { DUTY_META } from '../components/labels';
 import { officerFaceStatus } from '../components/face-status';
-import type { SquadDuty } from '../../sim/types';
 import { Icon } from '../icons';
 import { Sheet } from '../components/Sheet';
 import { perHour } from '../format';
@@ -26,22 +30,34 @@ import './squad-visual.css';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
-/** The SWAT section: Squads, Roster, Hire and Training. Each officer shows once per view.
- * Tapping an officer opens their sheet, the one
- * place an officer is moved between squads or made leader; Arrange proposes a whole arrangement. */
+/** The SWAT section: the locker-room scene with its one segmented row (Squads, Roster, Hire, Training), then
+ * the view. Each officer shows once per view. Tapping an officer opens their sheet, the one place an officer
+ * is moved between squads or made leader; Arrange proposes a whole arrangement. */
 export function SquadScreen() {
+  const g = useGame();
   const nav = useNav();
+  const [arranging, setArranging] = useState(false);
+  const now = Date.now();
+  const officers = officerList(g);
+  const freePlaces = Math.max(0, g.department.trainingSlots - officers.filter((o) => o.assignment?.kind === 'training').length);
+  const candidates = g.candidates.length;
+  const views: SubView[] = [
+    { value: 'squads', label: 'Squads' },
+    { value: 'roster', label: 'Roster' },
+    { value: 'hire', label: 'Hire', count: candidates > 0 ? String(candidates) : undefined },
+    { value: 'training', label: 'Training', count: freePlaces > 0 ? String(freePlaces) : undefined },
+  ];
   return (<>
+    <TeamScene section="swat" line={rosterLine(rosterCounts(officers, now))} subViews={views}
+      action={nav.squadSection === 'squads' && g.squads.length > 0 ? <button type="button" className="section-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button> : undefined} />
     <div className="page squad-page officers-page">
       <h2 className="sr-only officers-title">SWAT</h2>
-      <ChoiceRail size="sm" value={nav.squadSection} kind="navigation" label="SWAT sections" grow onChange={nav.setSquadSection} options={[
-        { value: 'squads', label: 'Squads' }, { value: 'roster', label: 'Roster' }, { value: 'hire', label: 'Hire' }, { value: 'training', label: 'Training' },
-      ]} />
       {nav.squadSection === 'training' ? <TrainingStore />
         : nav.squadSection === 'hire' ? <Recruit />
         : nav.squadSection === 'roster' ? <RosterList onOpen={nav.openOfficer} />
         : <SquadsView />}
     </div>
+    {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
   </>);
 }
 
@@ -49,26 +65,21 @@ function SquadsView() {
   const g = useGame();
   const nav = useNav();
   const [creating, setCreating] = useState(false);
-  const [arranging, setArranging] = useState(false);
   const full = g.squads.length >= SQUAD_IDS.length;
   const unassigned = officerList(g).filter((o) => o.squadId === null);
   const now = Date.now();
-  const ready = g.squads.reduce((n, squad) => n + squadReadiness(g, squad.id, now).ready, 0);
-  const total = g.squads.reduce((n, squad) => n + squad.officerIds.length, 0);
   return <>
     <QueuedMoves />
-    <Section id="squads-h" title="Squads" icon="people" count={g.squads.length > 0 ? `${g.squads.length === 1 ? '1 squad' : `${g.squads.length} squads`} · ${ready} of ${total} ready` : undefined}
-      action={g.squads.length > 0 ? <button type="button" className="section-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button> : undefined}>
-      {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
-      {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
-    </Section>
+    <h2 id="squads-h" className="sr-only">Squads</h2>
+    {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
+    {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
     {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count={`Paid ${perHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, can't deploy`}
-      hint="Unassigned officers rest and draw their wage but never go on a call. Open one to put them in a squad or swap them for someone.">
-      <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
+      hint="Open one to put them in a squad or swap them for someone.">
+      <div className="officer-character-grid">{unassigned.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
     </Section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
       : !full && <Button variant="quiet" icon="plus" onClick={() => setCreating(true)}>New squad</Button>}
-    {arranging && <SquadOptimizer open onClose={() => setArranging(false)} />}
+    <CertLegend officers={officerList(g)} />
   </>;
 }
 
@@ -152,22 +163,20 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           </form>
         ) : (
           <Row className="hq-duty hq-squad-row"
-            lead={<span className="squad-badge squad-badge-lg" aria-hidden="true">{squad.id}</span>}
+            lead={<SquadCrest id={squad.id} size={40} />}
             title={<h2 className="squad-block-name">
               <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
                 requestedFocus.current = 'input';
                 nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
               }}>{squad.name}<Icon name="edit" size={16} /></button>
             </h2>}
-            detail={[deployed ? 'On a call' : r.ready === members.length && members.length > 0 ? `All ${members.length} ready` : `${r.ready} of ${total} ready`, leader ? `${leader.surname} leads` : null, open > 0 ? (open === 1 ? '1 open place' : `${open} open places`) : null].filter(Boolean).join(' · ')}
-            trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <ChoiceRail size="sm" label={`Duty for ${squad.name}`} value={squad.duty}
-              options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: <><Icon name={DUTY_META[d].icon} size={16} /><span>{DUTY_META[d].label}</span></> }))}
-              onChange={(duty) => act({ type: 'setSquadDuty', squadId: squad.id, duty })} />}
+            detail={squadDetail({ deployed: !!deployed, ready: r.ready, total, members: members.length, leader: leader?.surname ?? null })}
+            trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <DutyControl squad={squad} />}
           />
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
         <div className="officer-character-grid">
-          {members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
+          {members.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
           {!deployed && open > 0 && <button type="button" className="open-place" aria-haspopup="dialog" aria-label={`Fill ${open === 1 ? 'the open place' : `${open} open places`} in ${squad.name}`} onClick={() => setFilling(true)}>
             <Icon name="plus" size={20} /><span>{open === 1 ? 'Open place' : `${open} open places`}</span>
           </button>}
@@ -176,6 +185,15 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
       {filling && <FillPlace squad={squad} onClose={() => setFilling(false)} />}
     </Card>
   );
+}
+
+/** Duty as a quiet two-choice control (component contract 6): Standby or Rest, words only, so it never outweighs
+ * the faces below it. A squad on a call shows a chip instead (the sim refuses duty changes there). */
+function DutyControl({ squad }: { squad: Squad }) {
+  const { act } = useToast();
+  return <ChoiceRail size="sm" label={`Duty for ${squad.name}`} value={squad.duty}
+    options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: DUTY_META[d].label }))}
+    onChange={(duty) => act({ type: 'setSquadDuty', squadId: squad.id, duty })} />;
 }
 
 /** Fill a squad's open place from Unassigned in one tap, or go to Hire when nobody is waiting. */
@@ -256,6 +274,7 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
       {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
         {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
       </div></Card>}
+      <CertLegend officers={shown} />
     </Section>
   );
 }

@@ -1,0 +1,28 @@
+/* Team's scene header (screens/TeamScene.tsx): the painting, the section switch as its title line, one line of
+   counts, and for SWAT one segmented row at its foot. Edge to edge; the first face is a short scroll below. */
+.team-scene { position: relative; isolation: isolate; display: grid; align-content: end; gap: var(--sp2); min-width: 0; padding: var(--sp1) var(--gutter) var(--sp3); overflow: hidden; background: var(--ink-1); }
+.team-scene > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; }
+.team-scene::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 20%, transparent), color-mix(in srgb, var(--ink-0) 92%, transparent) 78%); }
+
+/* The rails keep their 44px hit area (the ::after box) but not the amber underline drawn on it. */
+.team-scene .choice-rail-navigation .choice-rail-item::after { background: none; border-radius: 0; }
+
+/* The section switch: the current section is the title, the others sit beside it as small words. */
+.team-scene > .choice-rail-navigation:first-of-type { gap: var(--sp1); overflow: visible; margin-inline: calc(-1 * var(--sp3)); border: 0; }
+.team-scene > .choice-rail-navigation:first-of-type .choice-rail-item { position: relative; min-height: var(--touch); padding: 0 var(--sp3); border: 0; border-radius: var(--r1); background: none; box-shadow: none; color: var(--t-plate); font: 600 var(--s14)/1.2 var(--f-ui); text-shadow: 0 2px 5px var(--ink-deep); }
+.team-scene > .choice-rail-navigation:first-of-type .choice-rail-selected { color: var(--t1); font: 700 var(--s28)/1 var(--f-title); }
+.team-scene > .choice-rail-navigation:first-of-type .choice-rail-selected::before { content: ''; position: absolute; left: var(--sp3); right: var(--sp3); bottom: var(--sp1); height: 3px; border-radius: 3px; background: var(--act); }
+.team-scene-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); min-width: 0; }
+.team-scene-meta .section-link { flex: none; text-shadow: 0 2px 5px var(--ink-deep); }
+.team-scene-line { margin: 0; color: var(--t-plate); font-size: var(--s14); line-height: 1.35; text-shadow: 0 2px 5px var(--ink-deep); }
+
+/* The SWAT sub-views: one pill-shaped segmented row, each choice with a 44px hit area. */
+.team-scene > .choice-rail-navigation ~ .choice-rail-navigation { gap: var(--sp1); padding: var(--sp1); overflow: visible; border: 1px solid var(--hair); border-radius: var(--r3); background: color-mix(in srgb, var(--ink-deep) 78%, transparent); }
+.team-scene > .choice-rail-navigation ~ .choice-rail-navigation .choice-rail-item { flex: 1 1 0; min-width: 0; min-height: var(--touch); padding: 0 var(--sp1); border: 0; border-radius: var(--r3); background: none; box-shadow: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); }
+.team-scene > .choice-rail-navigation ~ .choice-rail-navigation .choice-rail-selected { background: var(--ink-3); color: var(--t1); }
+.team-scene > .choice-rail-navigation ~ .choice-rail-navigation .choice-rail-selected::before { content: none; }
+.team-scene-count { margin-left: var(--sp1); color: var(--act-text); font-variant-numeric: tabular-nums; }
+@container game (max-width: 359px) { .team-scene-count { display: none; } }
+
+/* Command: the same scene, holding the posts. */
+.team-scene.command-room { min-height: 0; gap: var(--sp3); padding: var(--sp1) var(--gutter) var(--sp4); border: 0; border-radius: 0; align-content: start; }

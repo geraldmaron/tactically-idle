@@ -42,3 +42,9 @@
 .profile .officer-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp3); padding: var(--sp3); }
 .profile .xp-ring { width: 44px; height: 44px; }
 .profile .xp-ring-core { width: 36px; height: 36px; }
+
+/* Overview opens on the person (station rebuild): their note, the traits they earned and why, their last call. */
+.profile-person { display: grid; gap: var(--sp2); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.profile .profile-note { margin: 0; color: var(--t1); font: italic 400 var(--s16)/1.35 var(--f-ui); }
+.profile-lastcall { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.4; }
+.profile-lastcall .icon { flex: none; }

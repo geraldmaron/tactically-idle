@@ -1,6 +1,6 @@
 // Command Staff posts and the people who fill them. A Develop purchase opens a post; the post then
 // offers three candidates, one of each archetype, drawn from the authored persona pool (or, for the
-// three managers with painted portraits, the authored manager first). Each candidate trades price
+// managers with painted portraits, the authored manager first). Each candidate trades price
 // against two levers that change how that manager's loop runs. Archetype ranges never overlap in a
 // way that lets one candidate match or beat another on both levers, and price rises with the levers,
 // so no candidate in a pool is dominated (tested in staff-pool.test.ts).
@@ -15,7 +15,7 @@ export type StaffPostId = 'watch_commander' | 'training_sergeant' | 'quartermast
 export type StaffArchetype = 'seasoned' | 'specialist' | 'steady';
 
 export interface StaffPerson {
-  /** A persona id, or `manager:<post>` for the three authored managers. */
+  /** A persona id, or `manager:<post>` for the five authored managers. */
   identityId: string;
   firstName: string;
   surname: string;
@@ -106,11 +106,13 @@ export const STAFF_POOL = {
 
 const ARCHETYPES: StaffArchetype[] = ['seasoned', 'specialist', 'steady'];
 
-/** The three managers with painted art, offered first for their posts. */
+/** The managers with painted art, offered first for their posts. */
 export const AUTHORED_STAFF: Partial<Record<StaffPostId, StaffPerson>> = {
   watch_commander: { identityId: 'manager:watch_commander', firstName: 'Sam', surname: 'Navarro', pronouns: 'she', portrait: 'art/managers/watch_commander.webp', note: null },
   training_sergeant: { identityId: 'manager:training_sergeant', firstName: 'Jordan', surname: 'Pike', pronouns: 'he', portrait: 'art/managers/training_sergeant.webp', note: null },
   quartermaster: { identityId: 'manager:quartermaster', firstName: 'Robin', surname: 'Kessler', pronouns: 'they', portrait: 'art/managers/quartermaster.webp', note: null },
+  recruiter: { identityId: 'manager:recruiter', firstName: 'Helena', surname: 'Teixeira', pronouns: 'she', portrait: 'art/managers/recruiter.webp', note: null },
+  peer_support_lead: { identityId: 'manager:peer_support_lead', firstName: 'Lennart', surname: 'Lindahl', pronouns: 'he', portrait: 'art/managers/peer_support_lead.webp', note: null },
 };
 
 export function emptyPost(): StaffPost {

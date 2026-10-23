@@ -32,41 +32,32 @@
 .contract-kit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .contract-kit li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 14px; }
 
-/* Candidates as rows (docs/ui-ux-audit.md, "Officers"): who they are on one line, the signing on
-   the next, and the contract (skills, cost, kit) in its sheet. */
-.cand-list { gap: var(--sp4); }
-.cand.cand-row { gap: var(--sp3); padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
-.cand.cand-row.cand-hired { border-color: var(--mint); }
-.cand-row .cand-top { align-items: center; gap: var(--sp3); }
-.cand-row .cand-portrait { width: 104px; height: 112px; border: 0; border-radius: var(--r2); }
-.cand-row .cand-portrait > [data-portrait] { width: 104px !important; height: 112px !important; }
-.cand-row .cand-name { font: 700 var(--s22)/1.1 var(--f-title); }
-.cand-row .cand-shortlist { position: absolute; top: var(--sp2); right: var(--sp2); }
-.cand-row { position: relative; }
-.cand-row .cand-id { padding-top: var(--sp4); }
-.cand-row .cand-id { gap: 2px; }
-.cand-row .cand-facts { display: block; font-size: var(--s14); color: var(--t2); }
-.cand-certs { display: flex; flex-wrap: wrap; gap: 2px var(--sp3); font-size: var(--s14); color: var(--good-text, var(--good)); }
-.cand-certs > span { display: inline-flex; align-items: center; gap: var(--sp1); }
-.cand-row .cand-foot { padding: var(--sp3) 0 0; border-top: 1px solid var(--hair); }
-.cand-row .cand-meta { font-size: var(--s14); color: var(--t3); }
-.cand-row.cand-hired .cand-meta { color: var(--good-text, var(--good)); }
 .contract-who { display: grid; gap: var(--sp3); }
-
-/* Candidates as one Card of Rows: face lead, name, one detail line, Review hire; signing and shortlist under it. */
-.cand-card { padding: 0; overflow: hidden; }
-.cand-card .cand-list { display: flex; flex-direction: column; gap: 0; }
-.cand.cand-row { gap: var(--sp1); padding: 0 var(--sp3) var(--sp2); border: 0; border-radius: 0; background: none; border-top: 1px solid var(--hair); }
-.recruit-candidate-slot:first-child .cand.cand-row { border-top: 0; }
-.cand.cand-row.cand-hired { border-color: var(--hair); background: color-mix(in srgb, var(--mint) 8%, transparent); }
 .cand-face { display: block; flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; }
 .cand-face > [data-portrait] { height: 40px !important; }
 .cand-face-lg { width: 72px; height: 72px; border-radius: var(--r2); }
 .cand-face-lg > [data-portrait] { height: 72px !important; }
-.cand-cert { display: inline-flex; vertical-align: -2px; margin-left: var(--sp2); color: var(--good-text, var(--good)); }
-.cand-row .cand-foot { display: flex; align-items: center; justify-content: space-between; padding: 0; border-top: 0; }
-.cand-row .cand-shortlist { position: static; }
 .contract-head { display: flex; align-items: center; gap: var(--sp3); }
 .contract-source { display: inline-flex; align-items: center; gap: var(--sp1); }
-.cand-row .cand-foot { min-height: 0; }
-.cand-row .cand-shortlist { min-height: 36px; }
+
+/* Candidates as dossiers (station rebuild, people first): a tall portrait, the person's own note, the one thing
+   they stand out for, the terms in small print, and once signed the squads right on the card. */
+.cand-list { display: flex; flex-direction: column; gap: var(--sp3); }
+.cand.cand-dossier { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp3); padding: var(--sp3); overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.cand.cand-dossier.cand-hired { border-color: var(--mint); }
+.dossier-portrait { display: block; border-radius: var(--r1); overflow: hidden; }
+.dossier-body { display: grid; align-content: start; gap: var(--sp1); min-width: 0; }
+.dossier-name { margin: 0; font: 700 var(--s22)/1.1 var(--f-title); overflow-wrap: anywhere; }
+.dossier-role { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp1); margin: 0; color: var(--t2); font-size: var(--s14); }
+.dossier-role-name { white-space: nowrap; }
+.dossier-age { margin-left: var(--sp2); color: var(--t3); }
+.dossier-note { margin: 0; color: var(--t1); font: italic 400 var(--s16)/1.35 var(--f-ui); }
+.dossier-stand { margin: 0; color: var(--good-text); font-size: var(--s14); line-height: 1.35; }
+.dossier-terms { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp2); padding-top: var(--sp2); border-top: 1px dashed var(--hair-2); }
+.dossier-terms-text { flex: 1 1 auto; min-width: 0; color: var(--t3); font-size: var(--s14); line-height: 1.35; }
+.cand.cand-dossier.cand-hired .dossier-terms-text { color: var(--good-text); }
+.dossier-place { grid-column: 1 / -1; display: grid; gap: var(--sp2); padding-top: var(--sp2); border-top: 1px dashed var(--hair-2); }
+.cand-dossier .cand-shortlist { flex: none; }
+
+/* The role filter holds six choices; at 320 the counts step aside (each choice still says its count aloud) so the row fits without scrolling sideways. */
+@container game (max-width: 359px) { .cand-role-rail .choice-rail-count { display: none; } }

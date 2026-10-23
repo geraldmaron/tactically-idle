@@ -38,6 +38,7 @@ export function OfficerRow({ officer, now, leader, squadId, faceStatus, onClick,
       <span className="ui-row-title officer-row-name"><Ring value={pct} size={20} tone="level"><RankInsignia rank={growth.rank} size={12} /></Ring><span className="officer-row-surname">{officer.surname}</span>{leader && <Icon name="star" size={16} />}</span>
       <span className="ui-row-detail officer-row-role"><Icon name={role.icon} size={16} />{role.short}{progress ? ` · ${progress}` : ''}</span>
     </span>
-    <span className="ui-row-trail officer-row-trail" aria-hidden="true">{officer.certs.length > 0 && <span className="officer-row-certs">{officer.certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}<StatusMark status={status} /></span>
+    {/* A status mark only when the officer is not simply ready: nine copies of Ready hide the one who is strained. Each glyph names its certification. */}
+    <span className="ui-row-trail officer-row-trail" aria-hidden="true">{officer.certs.length > 0 && <span className="officer-row-certs">{officer.certs.map((cert) => <span key={cert} className="officer-row-cert" title={CERT_NAME[cert]} data-cert={cert}><Icon name={CERT_ICON[cert]} size={16} /></span>)}</span>}{status !== 'ready' && <StatusMark status={status} />}</span>
   </Tag>;
 }

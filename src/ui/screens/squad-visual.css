@@ -19,25 +19,6 @@
 
 /* ---------------------------------------------------------------- officer tile */
 .ogrid-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-/* The tile is a short horizontal card: face with its rank ring, rank and surname, role and stress, status. Two to a row. */
-.ocard-tile { flex-direction: row; align-items: center; gap: var(--sp3); padding: var(--sp3); border-radius: var(--r2); }
-.ocard-tile:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.ocard-tile:active { transform: scale(.98); }
-.ocard-face { display: grid; flex: none; place-items: center; width: 40px; height: 40px; }
-.ocard-body { display: grid; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
-.ocard-title { display: flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); }
-.ocard-title .ring { flex: none; }
-.ocard-surname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ocard-title .icon { flex: none; color: var(--amber); }
-.ocard-tile .ocard-role { font: 500 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); }
-.ocard-tile .ocard-role span, .ocard-tile .ocard-role { white-space: nowrap; }
-.ocard-tile .ocard-condition { display: flex; align-items: center; gap: var(--sp2); padding: 0; font-size: var(--s14); }
-.ocard-certs { display: inline-flex; align-items: center; gap: 2px; min-width: 0; color: var(--mint); overflow: hidden; }
-.ocard-squad { flex: none; display: grid; place-items: center; width: 16px; height: 16px; margin-left: auto; border-radius: 4px; background: var(--ink-3); color: var(--t1); font: 600 var(--s12)/1 var(--font-display); }
-.ocard-tile-training { border-color: rgba(110, 168, 255, .55); }
-.ocard-tile-deployed { border-color: var(--hair-2); }
-.ocard-tile-injured, .ocard-tile-recovery { border-color: rgba(255, 107, 90, .55); }
-.ocard-tile-injured .ocard-face, .ocard-tile-recovery .ocard-face { opacity: .7; }
 .oslot-tile { min-height: 0; aspect-ratio: 1 / 1.3; gap: 2px; border-width: 1px; font-size: 12px; }
 
 /* ---------------------------------------------------------------- squad panel */

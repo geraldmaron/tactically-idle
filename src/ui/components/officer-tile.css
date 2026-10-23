@@ -1,0 +1,45 @@
+/* One officer as a person first (components/OfficerTile.tsx): a portrait big enough to read, the surname and
+   role over its foot, a status flag only when not ready, a stress bar along the foot, and one personal line
+   under it that turns over every few seconds. Two to a row. */
+.ocard.otile { position: relative; display: flex; flex-direction: column; gap: 0; min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); color: var(--t1); text-align: left; cursor: pointer; }
+.ocard.otile:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.ocard.otile:active { transform: scale(.98); }
+.otile-art { position: relative; display: block; height: calc(var(--sp6) * 4); overflow: hidden; background: var(--ink-2); }
+.otile-art::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--ink-deep) 92%, transparent)); }
+.otile-art > div { position: absolute; inset: 0 auto auto 0; }
+.otile-name { position: absolute; z-index: 2; left: var(--sp3); right: var(--sp3); bottom: var(--sp2); display: grid; gap: var(--sp1); min-width: 0; }
+.otile-title { display: flex; align-items: center; gap: var(--sp1); min-width: 0; }
+.otile-title .ring { flex: none; }
+.otile-surname { font: 700 var(--s18)/1.1 var(--f-title); overflow-wrap: anywhere; text-shadow: 0 1px 4px var(--ink-deep); }
+.otile-role { display: flex; align-items: center; gap: var(--sp1); font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t-plate); }
+.otile-role .icon { flex: none; }
+.otile-lead, .otile-flag, .otile-squad { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); font: 700 var(--s14)/1.2 var(--f-title); }
+.otile-lead { top: var(--sp2); left: var(--sp2); background: var(--act); color: var(--act-ink); }
+.otile-flag { top: var(--sp2); right: var(--sp2); background: color-mix(in srgb, var(--ink-deep) 85%, transparent); }
+.otile-squad { top: var(--sp2); right: var(--sp2); background: var(--ink-3); color: var(--t1); }
+.otile-flag ~ .otile-squad { display: none; }
+.otile-stress { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: var(--sp1); background: color-mix(in srgb, var(--ink-deep) 70%, transparent); }
+.otile-stress::before { content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--stress) * 1%); background: var(--mint); }
+.otile-stress[data-band='strained']::before { background: var(--act); }
+.otile-stress[data-band='overloaded']::before, .otile-stress[data-band='recovery']::before { background: var(--danger); }
+.otile-line { display: block; min-height: calc(var(--s14) * 1.35 * 3 + var(--sp3)); padding: var(--sp2) var(--sp3); color: var(--t2); font: 400 var(--s14)/1.35 var(--f-ui); }
+.otile-line-text { display: block; }
+.otile-line-turned { animation: otile-line-in 400ms ease-out; }
+@keyframes otile-line-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .otile-line-turned { animation: none; } .ocard.otile:active { transform: none; } }
+.otile-training { border-color: color-mix(in srgb, var(--info) 55%, transparent); }
+.otile-injured, .otile-recovery { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.otile-injured .otile-art > div, .otile-recovery .otile-art > div { opacity: .7; }
+
+/* The squad crest, in a round enamel frame, with the squad's letter as the fallback. */
+.squad-crest { display: grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; }
+.squad-crest-40 { width: calc(var(--sp1) * 10); height: calc(var(--sp1) * 10); }
+.squad-crest-48 { width: calc(var(--sp1) * 12); height: calc(var(--sp1) * 12); }
+.squad-crest-64 { width: calc(var(--sp1) * 16); height: calc(var(--sp1) * 16); }
+.squad-crest img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.squad-crest-letter { display: grid; place-items: center; width: 100%; height: 100%; background: var(--ink-3); color: var(--t1); font: 700 var(--s22)/1 var(--f-title); }
+
+/* What the qualification marks mean. */
+.cert-legend { display: grid; gap: var(--sp2); margin: 0; padding: var(--sp2) 0; list-style: none; }
+.cert-legend li { display: flex; align-items: center; gap: var(--sp2); color: var(--t2); font-size: var(--s14); }
+.officer-row-cert { display: inline-flex; }

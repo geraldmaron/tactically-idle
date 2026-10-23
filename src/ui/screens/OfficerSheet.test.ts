@@ -2,6 +2,7 @@
 // view, three tabs, and the actions that change something (teach, dismiss, move, retain) behave
 // exactly once and only through the engine.
 import { rankedName } from '../components/OfficerRow';
+import { personaNote } from '../../content/personas';
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -51,6 +52,37 @@ const press = (buttons: El[], label: RegExp) => {
 beforeEach(() => {
   state = createInitialState(NOW);
   act.mockClear();
+});
+
+describe('the officer sheet opens on the person', () => {
+  it('puts the note, the earned traits with their cause and the last recorded call above the numbers', () => {
+    const o = state.officers.off_brooks;
+    o.traits = ['mentor'];
+    o.promotions = [{ rank: 'sergeant', day: 300, cause: 'after Barricade on Wren Court' }];
+    state.debriefs = [{ runId: 'run_9', scenarioId: 'barricade_wren_court', endingId: 'e', endingTitle: 'Everyone Safe', officerCondition: [{ officerId: o.id, stressBefore: 10, stressAfter: 18, xpGained: 40 }] } as never];
+    const page = html(o.id);
+    const note = personaNote(o.identityId);
+    const person = page.indexOf('aria-label="Who they are"');
+    expect(person).toBeGreaterThan(-1);
+    expect(person).toBeLessThan(page.indexOf('aria-label="Skills"'));
+    expect(person).toBeLessThan(page.indexOf('class="officer-progress'));
+    if (note) expect(page.indexOf(note.replace(/'/g, '&#x27;'))).toBeGreaterThan(person);
+    expect(page).toContain('Earned on promotion to Sergeant, after Barricade on Wren Court');
+    expect(page).toContain('Last call: ');
+    expect(page).toContain('Everyone Safe. Stress 10 to 18. 40 XP.');
+    // The note no longer sits above the tabs in the hero.
+    const hero = page.slice(0, page.indexOf('aria-label="Profile sections"'));
+    if (note) expect(hero).not.toContain(note.replace(/'/g, '&#x27;'));
+  });
+
+  it('falls back to the recorded call count, then to saying there are none', () => {
+    const o = state.officers.off_brooks;
+    state.debriefs = [];
+    o.career.operations = 3;
+    expect(html(o.id)).toContain('3 calls worked with this department.');
+    o.career.operations = 0;
+    expect(html(o.id)).toContain('No calls with this department yet.');
+  });
 });
 
 describe('officer profile', () => {
