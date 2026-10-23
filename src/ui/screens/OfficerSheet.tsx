@@ -11,7 +11,8 @@ import { useGame } from '../store';
 import { careerInfo, projectDismiss, recoveryInfo } from '../../sim/department-selectors';
 import { learningPace } from '../../sim/career';
 import { detailCheck, detailRate } from '../../sim/detail';
-import type { Id, Officer, SquadId } from '../../sim/types';
+import type { Id, Officer } from '../../sim/types';
+import { SquadPlacement } from '../components/SquadPlacement';
 import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { ChoiceRail } from '../components/ChoiceRail';
@@ -124,26 +125,13 @@ function SquadControls({ o }: { o: Officer }) {
   const squad = o.squadId ? g.squads.find((s) => s.id === o.squadId) : undefined;
   // An officer out on a call keeps their squad until it ends; the move waits and shows as queued.
   const onCall = o.assignment?.kind === 'operation';
-  const queued = g.pendingSquadMoves?.find((m) => m.officerId === o.id && !m.dropped);
-  const moveTo = (squadId: SquadId | null) => {
-    const target = squadId ? g.squads.find((s) => s.id === squadId)?.name : undefined;
-    const done = !onCall ? undefined : squadId === o.squadId ? 'Queued move withdrawn' : target ? `${o.surname} joins ${target} when the call ends` : `${o.surname} leaves the squad when the call ends`;
-    act({ type: 'assignToSquad', officerId: o.id, squadId }, done);
-  };
   return (
     <div className="stack-sm">
-      {queued && <p className="note squad-queued-note"><Icon name="clock" size={14} />After this call, {queued.squadId ? `joins ${g.squads.find((s) => s.id === queued.squadId)?.name ?? `squad ${queued.squadId}`}` : 'leaves the squad'}</p>}
+      <SquadPlacement officer={o} />
       <div className="chips">
-        {g.squads.map((s) => (
-          <Button key={s.id} size="sm" variant={o.squadId === s.id ? 'primary' : 'secondary'} aria-pressed={o.squadId === s.id}
-            onClick={() => (o.squadId !== s.id || queued) && moveTo(s.id as SquadId)}>
-            {s.id} · {s.name}{queued?.squadId === s.id ? ' · queued' : ''}
-          </Button>
-        ))}
-        {g.squads.length === 0 && <span className="dim">Create a squad first on the Squad tab.</span>}
-        {o.squadId && <Button size="sm" variant="ghost" icon="x" onClick={() => moveTo(null)}>{onCall ? 'Remove after the call' : 'Remove from squad'}</Button>}
+        {o.squadId && <Button size="sm" variant="ghost" icon="x" onClick={() => act({ type: 'assignToSquad', officerId: o.id, squadId: null }, onCall ? `${o.surname} leaves the squad when the call ends` : `${o.surname} moved to Unassigned`)}>{onCall ? 'Remove after the call' : 'Remove from squad'}</Button>}
+        {squad && squad.leaderId !== o.id && <Button size="sm" icon="star" onClick={() => act({ type: 'setLeader', squadId: squad.id, officerId: o.id }, `${o.surname} now leads ${squad.name}`)}>Set as leader</Button>}
       </div>
-      {squad && squad.leaderId !== o.id && <Button size="sm" icon="star" onClick={() => act({ type: 'setLeader', squadId: squad.id, officerId: o.id }, `${o.surname} now leads ${squad.name}`)}>Set as leader</Button>}
     </div>
   );
 }
@@ -222,9 +210,13 @@ export function DismissConfirm({ officer, onCancel, onDone }: { officer: Officer
   const g = useGame();
   const { act } = useToast();
   const p = projectDismiss(g, officer.id, Date.now());
+  const squad = officer.squadId ? g.squads.find((s) => s.id === officer.squadId) : undefined;
+  const left = squad ? squad.officerIds.filter((id) => id !== officer.id) : [];
+  const nextLead = squad?.leaderId === officer.id && left[0] ? g.officers[left[0]] : undefined;
   return (
     <div className="confirm profile-dismiss">
       <p>Dismiss {officer.firstName} {officer.surname}? Severance {money(p.upfront)}, wages {signedMoney(p.wageDelta)}/h, department {rate(p.netBefore)} becomes {rate(p.netAfter)}.</p>
+      {squad && <p className="dim">{squad.name} drops to {left.length} of 4{nextLead ? ` and ${nextLead.surname} takes the lead` : squad.leaderId === officer.id ? ' with no leader' : ''}. Fill the place from Unassigned or Hire.</p>}
       {!p.ok && p.reason && <p className="note note-warn">{p.reason}</p>}
       <div className="row-actions">
         <Button variant="secondary" onClick={onCancel}>Keep</Button>

@@ -1,3 +1,4 @@
+import { RECRUIT_TUNING } from '../content/recruits';
 import { describe, expect, it } from 'vitest';
 import { PERSONAS, PERSONA_BY_ID, shuffledPersonas } from '../content/personas';
 import { startingOfficers } from '../content/officers';
@@ -23,8 +24,8 @@ describe('campaign-wide identity selection', () => {
       const state = createInitialState(NOW, seed);
       const roster = ids(state), pool = poolIds(state);
       expect(roster).toHaveLength(8);
-      expect(pool).toHaveLength(3);
-      expect(new Set([...roster, ...pool]).size).toBe(11);
+      expect(pool).toHaveLength(RECRUIT_TUNING.basePool);
+      expect(new Set([...roster, ...pool]).size).toBe(8 + RECRUIT_TUNING.basePool);
       expect(new Set(state.personnel!.employedIdentityIds)).toEqual(new Set(roster));
       expect(new Set(Object.values(state.officers).map((o) => o.role))).toEqual(new Set(ROLES));
       expect(Object.values(state.officers).reduce((sum, o) => sum + o.wage, 0)).toBe(380);
@@ -56,7 +57,8 @@ describe('campaign-wide identity selection', () => {
       expect(count.roster).toBeGreaterThan(15);
       expect(count.roster).toBeLessThan(70);
       expect(count.pool).toBeGreaterThan(0);
-      expect(count.pool).toBeLessThan(40);
+      // About 512 x 10 / 100 = 51 appearances each on average.
+      expect(count.pool).toBeLessThan(110);
     }
     let rosterOverlap = 0, poolOverlap = 0, pairs = 0;
     for (let a = 0; a < rosters.length; a++) for (let b = a + 1; b < rosters.length; b++) {
@@ -64,11 +66,11 @@ describe('campaign-wide identity selection', () => {
       poolOverlap += overlap(pools[a], pools[b]);
       pairs++;
     }
-    // Independent samples of 8/100 and 3/100 share about 0.64 and 0.09 people.
+    // Independent samples of 8/100 and 10/100 share about 0.64 and 1.0 people.
     expect(rosterOverlap / pairs).toBeGreaterThan(0.55);
     expect(rosterOverlap / pairs).toBeLessThan(0.75);
     expect(poolOverlap / pairs).toBeGreaterThan(0.05);
-    expect(poolOverlap / pairs).toBeLessThan(0.14);
+    expect(poolOverlap / pairs).toBeLessThan(1.3);
   });
 
   it('lets every identity fill every opening role across 2048 campaign seeds', () => {

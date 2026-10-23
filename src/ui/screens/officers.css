@@ -62,3 +62,8 @@
 }
 .roster-bar .squad-sort { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--t2); cursor: pointer; }
 .roster-bar .squad-sort select { font: 600 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); cursor: pointer; }
+
+/* An open place in a squad: same footprint as an officer tile, opens the Unassigned picker. */
+.open-place { display: flex; align-items: center; justify-content: center; gap: var(--sp2); min-height: var(--touch); padding: var(--sp2) var(--sp3); border: 1px dashed var(--hair-2); border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
+.open-place:hover { border-color: var(--act); color: var(--t1); }
+.open-place:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }

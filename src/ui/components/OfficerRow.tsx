@@ -18,7 +18,7 @@ export const rankedName = (officer: Officer) => `${RANKS[officerGrowth(officer).
 /** One officer as a row (docs/ui-ux-audit.md, "Officers"): a 40px face, the name by rank with the
  * leader's star, role and stress, the qualifications and the progress to the next rank, and one
  * status at the end. It carries what the portrait tiles carried, in type that holds at 320. */
-export function OfficerRow({ officer, now, leader, squadId, faceStatus, onClick }: { officer: Officer; now: number; leader?: boolean; squadId?: SquadId | null; faceStatus?: FaceStatus | null; onClick?: () => void }) {
+export function OfficerRow({ officer, now, leader, squadId, faceStatus, onClick, actionLabel }: { officer: Officer; now: number; leader?: boolean; squadId?: SquadId | null; faceStatus?: FaceStatus | null; onClick?: () => void; actionLabel?: string }) {
   const status = officerStatus(officer, now);
   const meta = STATUS_META[status];
   const role = ROLE_META[officer.role];
@@ -29,7 +29,7 @@ export function OfficerRow({ officer, now, leader, squadId, faceStatus, onClick 
   const injury = status === 'injured' && officer.injury ? `, ${officer.injury.label}` : '';
   const label = `${rankedName(officer)}, ${role.label}, ${meta.label.toLowerCase()}${injury}, stress ${stress}, ${RANKS[growth.rank].title}${growth.capped ? '' : `, ${Math.floor(growth.progress)}% to ${RANKS[growth.next!].title}`}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`;
   const Tag = onClick ? 'button' : 'div';
-  return <Tag type={onClick ? 'button' : undefined} className={`ui-row officer-row officer-row-${status}`} onClick={onClick} aria-label={label}>
+  return <Tag type={onClick ? 'button' : undefined} className={`ui-row officer-row officer-row-${status}`} onClick={onClick} aria-label={actionLabel ? `${actionLabel}. ${label}` : label}>
     <span className="ui-row-lead officer-row-face" aria-hidden="true">
       <Face size="sm" kind="officer" officer={officer} status={faceStatus} />
       {squadId && <span className="officer-row-squad">{squadId}</span>}

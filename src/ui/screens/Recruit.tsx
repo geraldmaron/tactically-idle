@@ -3,7 +3,10 @@ import { personaNote } from '../../content/personas';
 import { useRef, useState } from 'react';
 import { useGame } from '../store';
 import { projectHire, sortedCandidates, type Projection } from '../../sim/department-selectors';
-import type { Candidate, Id } from '../../sim/types';
+import type { Candidate, GameState, Id, Role } from '../../sim/types';
+import { ROLES } from '../../content/recruits';
+import { ChoiceRail } from '../components/ChoiceRail';
+import { SquadPlacement } from '../components/SquadPlacement';
 import { Button, Card, Chip, EmptyState, RatingBars, Row, Section } from '../components/ui';
 import { GEAR_SOURCE_ICON } from '../icons/kit';
 import { RankChip } from '../components/RankInsignia';
@@ -49,8 +52,12 @@ export function Recruit() {
   const g = useGame();
   const [hireFor, setHireFor] = useState<Id | null>(null);
   const [receipts, setReceipts] = useState<HireReceipt[]>([]);
-  const candidates = [...receipts].sort((a, b) => a.index - b.index).reduce(candidatesWithHireReceipt, sortedCandidates(g));
+  const [role, setRole] = useState<Role | 'all'>('all');
+  const pool = [...receipts].sort((a, b) => a.index - b.index).reduce(candidatesWithHireReceipt, sortedCandidates(g));
+  const candidates = role === 'all' ? pool : pool.filter((c) => c.officer.role === role);
+  const roles = ROLES.filter((r) => pool.some((c) => c.officer.role === r));
   const roster = Object.keys(g.officers).length;
+  const unassigned = Object.values(g.officers).filter((o) => o.squadId === null).length;
   const full = roster >= g.department.rosterCap;
   const now = Date.now();
   const recruitment = recruitmentStatus(g, now);
@@ -60,9 +67,14 @@ export function Recruit() {
       title="Candidates"
       icon="idcard"
       id="recruit-h"
+      count={pool.length > 0 ? `${pool.length} to choose from` : undefined}
       action={<RecruitRefresh />}
-      hint={full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour.`}
+      hint={`${full ? `Roster full at ${roster}/${g.department.rosterCap}. Dismiss someone or expand capacity to hire.` : `Roster ${roster}/${g.department.rosterCap}. Each hire adds their wage every hour and joins Unassigned until you place them.`}${unassigned ? ` ${unassigned === 1 ? '1 officer is' : `${unassigned} officers are`} unassigned now.` : ''}`}
     >
+      {roles.length > 1 && <ChoiceRail size="sm" value={role} label="Show candidates by role" onChange={setRole} options={[
+        { value: 'all' as const, accessibleLabel: `All roles, ${pool.length}`, label: <>All<span className="choice-rail-count">{pool.length}</span></> },
+        ...roles.map((r) => { const n = pool.filter((c) => c.officer.role === r).length; return { value: r, accessibleLabel: `${ROLE_META[r].label}, ${n}`, label: <><Icon name={ROLE_META[r].icon} size={16} /><span className="choice-rail-count">{n}</span></> }; }),
+      ]} />}
       {candidates.length === 0 ? (
         <EmptyState spot="noCandidates" title={recruitment.exhausted ? "Recruitment reserve exhausted" : "No candidates right now"}>
           {recruitment.exhausted ? "Every available person in this campaign has served or reached retirement age. Retired officers will not return under a new name." : "Refresh the pool to see new recruits. New personnel arrive as existing officers move through their careers."}
@@ -81,6 +93,12 @@ export function Recruit() {
       )}
     </Section>
   );
+}
+
+/** Where a just-hired officer sits now, for the receipt row. */
+function placedIn(g: GameState, officerId: Id): string {
+  const squadId = g.officers[officerId]?.squadId;
+  return squadId ? `In ${g.squads.find((s) => s.id === squadId)?.name ?? `squad ${squadId}`}` : 'Unassigned';
 }
 
 export function RecruitRefresh() {
@@ -112,7 +130,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
       />
       <div className="cand-foot">
         <span className="cand-meta">
-          {receipt ? <>Signing {money(receipt.upfront)} paid · Added to roster</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
+          {receipt ? <>Signing {money(receipt.upfront)} paid · {placedIn(g, o.id)}</> : <>Signing {money(c.signingCost)} · leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
         <button
           type="button"
@@ -159,6 +177,10 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
         ? <><p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster{kit.length ? ', with their kit in the Armory' : ''}.</p><Button variant="primary" block onClick={onClose}>Done</Button></>
         : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire for {money(proj.upfront)}, leaves {money(after)}</Button>}>
       <div className="contract">
+        {hired && g.officers[o.id] && <section className="contract-place" aria-label="Squad">
+          <span className="contract-label">Put them in a squad</span>
+          <SquadPlacement officer={g.officers[o.id]} />
+        </section>}
         <section className="contract-who" aria-label="Who they are">
           <div className="contract-head"><span className="cand-face cand-face-lg"><Portrait officer={o} size={72} {...agePortraitProps(g, o, Date.now())} /></span><div className="chips"><RankChip rank={career.rank} /><Chip icon="medal">{yearsText(career.service)} prior service</Chip>{career.retirement && <RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact />}</div></div>
           <RatingBars ratings={o.ratings} label={`${o.firstName} ${o.surname} ratings`} />

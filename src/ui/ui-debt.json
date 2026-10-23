@@ -271,7 +271,7 @@
     },
     "R9.size": {
       "target": 0,
-      "total": 57,
+      "total": 56,
       "counts": {
         "src/ui/components/Career.tsx": 2,
         "src/ui/components/chrome.tsx": 1,
@@ -289,7 +289,7 @@
         "src/ui/screens/Develop.tsx": 5,
         "src/ui/screens/Gear.tsx": 2,
         "src/ui/screens/LiveFeed.tsx": 1,
-        "src/ui/screens/OfficerSheet.tsx": 8,
+        "src/ui/screens/OfficerSheet.tsx": 7,
         "src/ui/screens/SituationPanel.tsx": 1,
         "src/ui/screens/Squad.tsx": 1,
         "src/ui/screens/SquadOptimizer.tsx": 4,

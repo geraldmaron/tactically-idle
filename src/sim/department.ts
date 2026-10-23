@@ -4,7 +4,7 @@ import { candidatePoolSize, hasEffect, isNodeUnlocked, netRate, settle } from '.
 import { ITEMS } from '../content/items';
 import { DEVELOP_HANDLERS } from './develop';
 import { EQUIPMENT_HANDLERS, createStartingUnits } from './equipment';
-import { fillCandidates, ROSTER_HANDLERS } from './roster';
+import { fillCandidates, ROSTER_HANDLERS, topUpCandidates } from './roster';
 import { RECRUIT_TUNING } from '../content/recruits';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
@@ -18,6 +18,9 @@ import { startDetail } from './detail';
 import { activatePatrolBoost, createPatrolState, dismissPatrol, hirePatrol, seedPatrol, startPatrolTraining } from './patrol';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
+
+/** Opening candidates drawn from the department rng; see createInitialState. */
+const OPENING_SHARED_DRAW = 3;
 
 // Department standing orders that its upgrades unlock: a squad's loadout preset and supply restocking.
 function setLoadoutPreset(d: GameState, squadId: SquadId, items: Record<Id, number>): HandlerResult {
@@ -60,6 +63,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   tick: (d, _cmd, ctx) => {
     if (ctx.exclusion) dropExcludedCards(d, ctx.exclusion);
     settle(d, ctx.now, ctx.exclusion);
+    topUpCandidates(d, d.department.clockHighWater, candidatePoolSize(d));
     return { ok: true };
   },
   acknowledgeReport: (d) => {
@@ -76,6 +80,7 @@ export const DEPARTMENT_HANDLERS: HandlerMap<DepartmentCommandType> = {
   createSquad: (d, c) => ROSTER_HANDLERS.createSquad(d, c.name),
   renameSquad: (d, c) => ROSTER_HANDLERS.renameSquad(d, c.squadId, c.name),
   assignToSquad: (d, c) => ROSTER_HANDLERS.assignToSquad(d, c.officerId, c.squadId),
+  swapSquadMembers: (d, c) => ROSTER_HANDLERS.swapSquadMembers(d, c.officerId, c.withId),
   cancelPendingSquadMove: (d, c) => ROSTER_HANDLERS.cancelPendingSquadMove(d, c.officerId),
   setSquadArrangementLock: (d, c) => ROSTER_HANDLERS.setSquadArrangementLock(d, c.target, c.locked),
   applySquadArrangement: (d, c) => ROSTER_HANDLERS.applySquadArrangement(d, c.proposal),
@@ -143,7 +148,10 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
   };
   seedPatrol(state, now);
   createStartingUnits(state, now);
-  fillCandidates(state, now, candidatePoolSize(state));
+  // The department rng draws the opening three, as it always has, so the incident board seeded
+  // below is unchanged; the rest of the pool comes from the pool's own seed (topUpCandidates).
+  fillCandidates(state, now, OPENING_SHARED_DRAW);
+  topUpCandidates(state, now, candidatePoolSize(state));
   // Three generated incidents are waiting from the first minute (the authored Maple Street
   // scenarios stay available alongside them). Seeded after the candidates so the starting
   // recruit pool is unchanged.

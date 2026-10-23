@@ -26,6 +26,8 @@ export const PATROL_GRADES: Readonly<Record<PatrolGrade, PatrolGradeDefinition>>
 export const PATROL_HIRE_COST = 900;
 export const PATROL_SEVERANCE_HOURS = 24;
 export const PATROL_TRAINING_SLOTS = 1;
+/** Patrol offers shown at once. */
+export const PATROL_CANDIDATE_POOL = 10;
 export const MAX_PATROL_BOOST_FACTOR = 2;
 export const PATROL_BOOSTS: Readonly<Record<string, { factor: number; hours: number; cost: number }>> = {
   'community-grant': { factor: 1.5, hours: 4, cost: 2000 },
@@ -54,11 +56,11 @@ function unavailableProfiles(state: GameState): Set<Id> {
   return ids;
 }
 
-/** Three deterministic offers, without another refresh clock or a stored copy of authored profiles. */
+/** Ten deterministic offers, without another refresh clock or a stored copy of authored profiles. */
 export function patrolCandidates(state: GameState): Persona[] {
   const excluded = unavailableProfiles(state);
   return shuffledPersonas(state.personnel?.campaignSeed ?? state.rngState, 'recruitment')
-    .filter((person) => !excluded.has(person.id)).slice(0, 3);
+    .filter((person) => !excluded.has(person.id)).slice(0, PATROL_CANDIDATE_POOL);
 }
 
 export function createPatrolState(): PatrolState { return { personnel: [], boosts: [], nextId: 1 }; }
