@@ -78,6 +78,23 @@ undeclared. Found with the hostage pilot's `lie_found` (set only behind `lied_si
 calls can't set), worked around with a count condition. Done: settable marks respect the
 outcome's `when`, and a fixture test shows a prompt variant pruned in the call that can't set it.
 
+### authored-harm-minors: Authored harm can record a minor as killed
+Tags: job=command; journeys=none (an ethics invariant on recorded harm, not a journey); probes=none (a clamp on recorded harm, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner rule since 2026-10-07: children can be hurt, never killed. The clamp holds only on drawn force:
+`instance.ts` sets `noFatal` on a minor or a person the self-harm screen covers, and only the force path reads it
+(`src/sim/drawn-effects.ts`, `src/gen/incident/gates/engine-driver.ts`). An outcome's authored `harm`
+compiles straight to `personHarm` (`src/gen/incident/trees-v13/compile.ts`) and `authoredHarm`
+(`src/sim/incident-consequences.ts`) records it with no check, so a tree that writes `fatal` for a role the
+template can draw as a minor records a death. sol confirmed it in memory on 2026-10-23 with an injected fixture
+(`minor: true`, `noFatal: true`, recorded `fatal`); no shipped call reaches it. Done: a fixture test that fails
+on today's code: an authored `fatal` on a minor, and on a self-harm-screened subject, records `fatal`; after
+the fix the same fixture records no death (capped at `serious`, the domain model's §6 clamp) and a gate fails
+any tree whose reachable outcome authors `fatal` on a role its template can draw as a minor or with
+`noDeathOnCard`. The gate in `src/gen/incident/gates/` is a tooling request. This is the first case of the
+invariant inventory proposed in `docs/scenario-framework.md` section 9, step 1.
+
 ### depth-bible: Depth rules a call can fail with zero defects
 Tags: job=command; journeys=choices-branch; probes=none (writing rules and review gates); lane=calls
 Needs: start=none; integrate=none; ship=none
@@ -660,7 +677,9 @@ a receipt check, since the local save can be edited. Prices are the same for eve
 `funding-balance` probe today checks only added funding (`src/architecture/wiring.ts`); it extends
 to purchase status, so owning a multiplier never moves call odds. A dev store stands in for billing
 until `store-wrap`. Done: each multiplier sold, granted, shown in HQ/Store and restored across a
-reinstall on a real phone, with the probe extended.
+reinstall on a real phone, with the probe extended, and entitlements reconciled from the account after
+every save migration, import, restore and slot switch, never read from a save as proof of purchase (save
+policy, owner 2026-10-23).
 
 ### offline-shell: The game opens with no network
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=interface
@@ -682,6 +701,91 @@ calls for a patient one. The labels passed `game_string_checks.py` but have had 
 `swat-writing-review` read. Done: that read, a playtest of whether players notice the line, and a
 decision on whether the lean needs a player-facing explanation (the HQ or the debrief).
 
+## Saves and live content
+
+The owner's save policy of 2026-10-23 (Owner decisions below; `docs/scenario-framework.md` section 7a):
+a growing catalog with frozen runs, promised from the store launch or the first real-money release.
+Saves stay disposable until then, so none of these items holds up scenario work.
+
+### frozen-runs: A started call finishes under the content and rules it started with
+Tags: job=keep; journeys=save-round-trip, new:release-upgrade; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+A run in progress is stored as an incident id and regenerated from current content, buildings and compiler at
+load (`getScenario`, `src/sim/scenario-registry.ts`), and its debrief re-derives every committed decision with
+current logic (`traceRun`, `src/sim/operation.ts`), so a release can change a call underneath a save. Done: on
+dispatch the save keeps the compiled scenario, the map and an execution-contract version; committed effects are
+stored as authoritative records and settlement reads them; a journey test saves a run mid-call, changes the
+call's content and tuning in a fixture build, and the loaded run continues and settles exactly as it would have
+unchanged, covering open decisions, dither minutes, the result screen and a completed but unsettled run.
+
+### stable-content-ids: Everything a save names keeps a stable id
+Tags: job=keep; journeys=save-round-trip; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Saves name items, courses, development nodes, building families, calls and situations, and validation rejects
+a save whose references no longer resolve (`src/sim/save.ts`); the casebook keys a situation by its numeric
+variant (`recipeKey`, `src/sim/casebook.ts`), so reordering situations would reinterpret history. Done: calls
+and situations carry stable ids, the casebook and every history record use them, and a test lists every content
+reference a save can hold and fails a content change that removes one without keeping it, mapping it to a
+replacement or tombstoning it with defined behavior.
+
+### save-migrations: The whole slot library migrates forward
+Tags: job=keep; journeys=save-round-trip; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=frozen-runs, stable-content-ids; ship=none
+
+Today a save loads only on the exact save and content version (`deserialize`, `src/sim/save.ts`). Done: one
+forward-only pure migration per schema bump over the whole library (`src/sim/campaign-slots.ts`), dormant
+slots, the deleted slot and imports included; golden libraries captured from every shipped build from the
+switch point on; tests for skipped upgrades, an interrupted write and continuing a frozen run after migration.
+The capture script is a tooling request.
+
+### save-generations: Saves are written crash-safe and recover from a good generation
+Tags: job=keep; journeys=save-round-trip; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=save-migrations; ship=none
+
+One library entry holds all ten slots, and a recovery copy exists only on the older session path
+(`src/sim/session.ts`). Done: each write lands as a new generation, is verified to load, then advances the
+pointer; the last three good generations are kept past the first autosave; a quota failure keeps the old
+generation and tells the player; restoring a generation runs the migrations; tests cover an interrupted write,
+full storage and a semantically broken migration recovered from an older generation. The writer in
+`src/ui/store.ts` is an interface request.
+
+### no-downgrade-overwrite: An older build never overwrites a newer save
+Tags: job=keep; journeys=save-round-trip; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+The stale-shell risk `offline-shell` names, on every writer: the slot library, the session recovery path and
+the UI store. Done: a test where each writer meets a library from a newer build leaves its bytes untouched,
+and the player sees one line saying to update.
+
+### withdrawn-content: Content pulled for safety settles honestly
+Tags: job=keep; journeys=save-round-trip; probes=none (saves, not a chance input); lane=engine
+Needs: start=none; integrate=frozen-runs; ship=none
+
+Frozen runs finish on the content they started with, except a revision withdrawn for safety. Done: a withdrawn
+revision gets a targeted migration or an interruption settlement that accounts for committed harm, consumed
+items, reservations, rewards and thread facts, never a fabricated ending; a fixture test withdraws a revision
+under a saved run and checks each.
+
+### durable-save-storage: Saves survive the device's own storage cleanup
+Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
+Needs: start=none; integrate=none; ship=store-wrap
+
+The UI keeps the library in browser `localStorage` (`src/ui/store.ts`), and a second copy there dies with the
+first if the WebView's storage is cleared. Done: durable native storage chosen with evidence alongside the
+wrapper choice in `store-wrap`, a recovery path outside the WebView's storage, and both validated on a real
+iPhone and Android phone through an app upgrade, storage pressure and a reinstall.
+
+### save-policy-rehearsal: The save promise is rehearsed before it is made
+Tags: job=keep; journeys=save-round-trip; probes=none (release process); lane=lead
+Needs: start=save-migrations; integrate=none; ship=save-generations, no-downgrade-overwrite, durable-save-storage
+
+The promise starts at the earliest of the store launch or the first real-money release. Done: from the first
+build after `save-migrations` ships, each prelaunch build upgrades the previous build's golden library on the
+chosen wrapper, and an upgrade and a recovery shown on a real phone are recorded as a launch gate before
+`store-wrap` or `real-purchases` ships. External playtests are told saves may reset.
+
 ## Owner decisions
 
 - **Death endings:** a human read of Going Live's `manager_killed` and `manager_killed_rider_hurt`.
@@ -702,6 +806,17 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   review line, the hostage review calls) predate the Going Live rebuild: the lead re-triages them after
   Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read
   (owner, 2026-10-22).
+
+Decided 2026-10-23 (live-content save policy, `docs/scenario-framework.md` section 7a): a campaign's
+catalog grows with each release (new calls and chapters reach existing campaigns between calls), and a
+started run is frozen: the save keeps its compiled call, map, execution-contract version and committed
+effects, and it finishes under the contract it started with. Every content reference a save can name gets a
+stable id, kept, mapped or tombstoned; content withdrawn for safety gets a targeted migration or an explicit
+interruption settlement; the whole slot library migrates forward with golden saves, generational crash-safe
+writes and no downgrade overwrites; durable native storage comes with `store-wrap`; purchases reconcile from
+the account, never from a save. The promise starts at the earliest of the store launch or the first
+real-money release, rehearsed on prelaunch builds first, with a demonstrated upgrade and recovery as a launch
+gate. Until then saves stay disposable.
 
 Decided 2026-10-22 (Going Live review): waiting it out is never charged in the debrief; endings show no
 custody (no car, cell or station); epilogues speak only for people on scene, never an institution off screen;
