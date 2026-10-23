@@ -31,7 +31,7 @@ export function Disclosure({ summary, count, hint, icon, open, name, className, 
   return (
     <details className={`disclosure${className ? ` ${className}` : ''}`} data-disclosure={name} open={open || undefined}>
       <summary className="disclosure-summary">
-        {icon && <Icon name={icon} size={15} />}
+        {icon && <Icon name={icon} size="sm" />}
         <span className="disclosure-label">
           <span className="disclosure-title">{summary}{count !== undefined && <span className="disclosure-count">{count}</span>}</span>
           {hint && <span className="disclosure-hint">{hint}</span>}

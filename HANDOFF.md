@@ -268,6 +268,13 @@ Wave 1 (providers and gates), each in its own worktree cut from `claude/feel-lea
 | build | Haiku | `Build.tsx`, `build-parts.tsx`, `build.css`, `Develop.tsx`, `development.css`, `src/ui/screens/build/` | 5195 |
 
 The lead merges providers first; build and settings then merge `claude/feel-lead` and take final captures on it.
+
+Wave 1 so far: build stood down with no commit (its 9 counts live in `Disclosure` and the shared navbadge; the badge
+goes to wave 2 hq) and archived. Added on the owner's word: brief (local_161e7cd2, rebuilds the call brief; owns
+`PrepBriefing`, `prep-briefing.css`, `OpsPrepare.tsx`, `DepthBrief`, `intel.ts`, the `.prep-brief*` rules) and
+brief-gaps (local_74efe97c; owns `src/sim/operation-selectors.ts`, `SupportContext`). Providers merged (465b3ef from
+be1f5bd): verify 3,280 passed, check:ui matches, check:feel only `hq F8.pill`; the barrier is released to settings
+and brief. Routed follow-ups are in the plan's "Changes during wave 1".
 Lead-owned during the wave: `src/ui/ui-debt.json` and `SMALL_TEXT_CEILING` (lanes lower them on their own branch;
 the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme.css`, `app.css`, `skin.css`,
 `player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
