@@ -521,22 +521,29 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     return { ...base, progress: { ...base.progress, threat }, ...patch };
   };
 
-  it('leads with the threat, moment and choices, with the map immediately accessible and the scene below', () => {
+  it('reads in the 4B order: strip, scene with map and faces, moment, on-scene comms, then choices', () => {
+    // docs/ops-experience.md "The decide beat" (owner, 2026-10-21).
     const html = render(createElement(LiveView, props()));
     expect(html).not.toContain('role="tablist"');
     expect(html).not.toContain('role="tabpanel"');
     expect(html).toContain('aria-label="Threat: Indigo edges for the door in 4 minutes"');
     const strip = html.indexOf('class="live-bar live-strip"'), scene = html.indexOf('aria-label="The scene"'), map = html.indexOf('class="live-map live-map-compact"');
+    const faces = html.indexOf('class="live-squad-faces"'), comms = html.indexOf('class="comms-log');
     const prompt = html.indexOf('How will you verify the report before committing?'), choice = html.indexOf('aria-label="Review Prepare medical access"');
     expect(strip).toBeGreaterThan(-1);
     expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(strip);
     expect(html.indexOf('class="threat-pill ')).toBeLessThan(scene);
     expect(scene).toBeLessThan(map);
-    expect(choice).toBeLessThan(map);
-    expect(choice).toBeLessThan(html.indexOf('class="live-squad-faces"'));
+    expect(map).toBeLessThan(faces);
+    expect(faces).toBeLessThan(prompt);
+    expect(comms).toBeGreaterThan(-1);
+    expect(prompt).toBeLessThan(comms);
+    expect(comms).toBeLessThan(choice);
     expect(html.indexOf('class="hud-btn live-map-access"')).toBeLessThan(prompt);
     expect(prompt).toBeLessThan(choice);
-    expect(html).not.toMatch(/id="live-map"[^>]*hidden=""/);
+    // Folded by default so the choices fit the first screen; the toggle and the head's Full map open it.
+    expect(html).toMatch(/id="live-map"[^>]*hidden=""/);
+    expect(html).toContain('aria-controls="live-map"');
   });
 
   it('reads the result on its own beat, with no choices and no threat until Continue', () => {

@@ -38,7 +38,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
       <div className="plate pb-scene">
         <PlateArt src={sceneFor(scenario?.incident?.type)} />
         {familyBlurb(scenario?.locationFamilyId ?? null) && <span className="pb-scene-place"><Icon name="pin" size={16} />{familyBlurb(scenario?.locationFamilyId ?? null)}</span>}
-        {scenario?.rewards && <span className="pb-scene-pay" aria-label={`Pays up to ${money(scenario.rewards.funding)} and ${scenario.rewards.xp} experience`}><b>{money(scenario.rewards.funding)}</b>{scenario.rewards.xp} XP</span>}
+        {scenario?.rewards && <span className="pb-scene-pay" aria-label={`Pays up to ${money(scenario.rewards.funding)} and ${scenario.rewards.xp} experience`}><span className="pb-scene-up">Up to</span><b>{money(scenario.rewards.funding)}</b>{scenario.rewards.xp} XP</span>}
       </div>
       {/* Orders and the threat first (docs/ops-experience.md, Brief), then the cold open whole, then
           who is inside, what is unknown and the conditions. */}
@@ -55,7 +55,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
 
       {(intel.people.length > 0 || unplaced.length > 0) && <section className="pb-block" aria-labelledby="pb-people-h">
         <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={16} />Who’s inside</h3>
-        <ul className="pb-people">
+        <ul className="pb-people" data-ui-list>
           {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} role={whoText.get(id)?.role} who={whoText.get(id)?.text} status={line.status} where={line.where} />; })}
           {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
         </ul>

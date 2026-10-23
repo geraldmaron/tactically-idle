@@ -8,3 +8,19 @@
 .face-officer, .face-patrol { color: var(--officer); }
 .face-subject { border-color: var(--subject); color: var(--subject); }
 .face-civilian { border-color: var(--civilian); color: var(--civilian); }
+
+/* A face with a condition (Face status): a ring that fills with stress in the band's color, and a
+   corner badge naming why the officer is not simply ready. Later faces in a stack overlap the right,
+   so the badge sits bottom left where it stays visible. */
+.face-status { --band: var(--good); position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; isolation: isolate; }
+.face-status::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(var(--band) calc(var(--stress, 0) * 3.6deg), color-mix(in srgb, var(--band) 22%, transparent) 0deg); }
+.face-status > .face { border-color: var(--ink-1); }
+.face-band-strained { --band: var(--warn); }
+.face-band-overloaded, .face-band-recovery { --band: var(--harm); }
+.face-badge { position: absolute; left: -4px; bottom: -4px; z-index: 2; display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid var(--ink-1); border-radius: 50%; background: var(--ink-3); color: var(--t1); }
+.face-mark-injured .face-badge { background: var(--harm); color: var(--ink-0); }
+.face-mark-resting .face-badge, .face-mark-strained .face-badge { background: var(--warn); color: var(--ink-0); }
+.face-mark-training .face-badge { background: var(--act); color: var(--ink-0); }
+.face-mark-deployed .face-badge { background: var(--ink-3); color: var(--act); }
+.face-mark-injured > .face, .face-mark-resting > .face, .face-mark-training > .face { filter: saturate(0.55) brightness(0.85); }

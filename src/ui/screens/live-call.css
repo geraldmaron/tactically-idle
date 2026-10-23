@@ -17,10 +17,12 @@
 /* On the narrowest phones Step out is its chevron alone; the words stay for screen readers. */
 @container game (max-width: 359px) {
   .live .live-stepout-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .live .live-stepout { padding-inline: var(--sp1); }
+  .live .live-stepout { justify-content: center; min-width: var(--touch); padding-inline: var(--sp1); }
 }
 .live .live-title-block { display: grid; flex: 1 1 auto; min-width: 0; }
-.live .live-title { display: inline-flex; align-items: center; justify-self: start; gap: var(--sp1); max-width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: var(--t1); text-align: left; cursor: pointer; }
+.live .live-title { position: relative; display: inline-flex; align-items: center; justify-self: start; gap: var(--sp1); max-width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: var(--t1); text-align: left; cursor: pointer; }
+/* The title stays one compact line; its hit box is the full touch height around it. */
+.live .live-title::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); }
 .live .live-title:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .live .live-name { min-width: 0; font: 600 var(--s18)/1.15 var(--f-title); overflow-wrap: anywhere; }
 .live .live-title-more { flex: none; color: var(--t2); }
@@ -105,13 +107,14 @@
 .live-squad { display: grid; gap: 6px; }
 .live-squad .live-squad-rail.operation-squad-focus { padding: 0; margin: 0; }
 .live-squad-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
-.live-squad-face { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 44px; padding: 5px 4px; border: 1px solid var(--hair); border-radius: 8px; background: rgba(8, 13, 24, 0.4); color: var(--t1); text-align: center; cursor: pointer; }
+.live-squad-face { display: flex; align-items: center; gap: var(--sp1); width: 100%; min-width: 0; min-height: var(--touch); padding: var(--sp1); border: 1px solid var(--hair); border-radius: 8px; background: rgba(8, 13, 24, 0.4); color: var(--t1); text-align: center; cursor: pointer; }
 .live-squad-face:focus-visible { outline: 2px solid var(--act); outline-offset: 1px; }
 .live-squad-acting { border-color: var(--t2); }
-.live-squad-name { display: inline-flex; align-items: center; justify-content: center; gap: 3px; max-width: 100%; font: 600 12.5px/1.15 var(--f-title); overflow-wrap: anywhere; }
+.live-squad-text { display: grid; min-width: 0; text-align: left; }
+.live-squad-name { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.15 var(--f-title); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .live-squad-stress { font-size: var(--s12); line-height: 1.15; }
 .live-squad-stress.stress-recovery:not(.lead-choice-stress) { color: var(--harm); }
-.live-squad-out .lead-face { opacity: 0.5; filter: grayscale(1); }
+.live-squad-out .face { opacity: 0.5; filter: grayscale(1); }
 .live-team-leader { color: var(--t1); }
 @media (max-width: 360px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 

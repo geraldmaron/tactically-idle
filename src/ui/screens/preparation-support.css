@@ -21,10 +21,10 @@
   flex: 0 0 auto;
 }
 .prep-support-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 10px;
-  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  margin-top: var(--sp2);
 }
 .prep-support-selected {
   border-color: var(--t2);
@@ -43,3 +43,5 @@
   color: var(--warn);
   font-size: 13px;
 }
+.prep-support-well { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t1); }
+.prep-support-row { border-bottom: 0; }

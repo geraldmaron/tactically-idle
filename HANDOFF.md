@@ -178,6 +178,24 @@ df9a3e9 before editing. The lead checks each branch's base before merging. The l
 `src/ui/ui-debt.json` and owns `JOURNEYS` and the manifest. Checkpoint: nothing from P2 to P8 starts
 until the owner plays the slice.
 
+## Contract rollout (2026-10-23, owner go: "I want to see broader changes in the ui")
+
+Layout gates merged (a15133a; opt-in until the lead names them in `FEEL_ON`). Shared brief:
+`side-session-notes/local_74f265d1-361d-40c4-913d-2844627571d7/contract-rollout-brief.md`. Lanes cut from
+`claude/feel-lead`; each merges the lead tip once the feel-slice header and squad commit lands.
+
+| Session | Model | Package | Port | Writes only |
+|---|---|---|---|---|
+| feel-slice (local_16bb6632) | Sonnet | P2 HQ, P7 live and debrief, live strip (owner pick b) | 5191 | HQ, TopBar, Hub, Finance, CommandStaff, live and debrief files, `ops-visual.css`, `live-call.css` |
+| rollout-team (local_51fb307c) | Sonnet | P3 Team | 5192 | P3 files in the audit table |
+| rollout-calls (local_83d7ec62) | Sonnet | P6 board, brief, deploy | 5193 | P6 files; never `ops-visual.css` |
+| rollout-build (local_e5113dcd) | Sonnet | P4 Build, upgrades, Armory | 5194 | P4 files plus `build.css` and `store.css` |
+
+Shared files (`theme.css`, `app.css`, `skin.css`, `player-navigation.css`, `ui.tsx`, `ChoiceRail.tsx`,
+icons) change only through the lead, except feel-slice's granted `Ring`, `ChoiceRail` size and bar rules.
+Lead to do at the P4 merge: register `.facility-building`, `.dev-track`, `.store-list`, `.armory-list` once the
+feel walk reaches Build and Store; update `capture.mjs` `.facility-plan [data-facility-branch]` if the attribute moves.
+
 ## Locks outside normal ownership
 
 feel-slice (local_16bb6632), owner feedback 2026-10-23 (header and squad rows, brief sent by the lead):

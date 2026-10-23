@@ -57,3 +57,9 @@
 @media (prefers-reduced-motion: reduce) {
   .choice-rail-item { transition: none; }
 }
+
+/* Compact (size sm): 36px tall in a row's trail. The rail's padding and border take 10px, each choice
+   draws 26px, and its hit area reaches the full touch height above and below. */
+.choice-rail-sm { flex: none; overflow: visible; padding: var(--sp1); }
+.choice-rail-sm .choice-rail-item { position: relative; gap: var(--sp1); min-height: 26px; min-width: var(--touch); padding: 0 var(--sp2); }
+.choice-rail-sm .choice-rail-item::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); }

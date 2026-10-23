@@ -11,9 +11,10 @@
 export const LAYOUT_REGISTRY = [
   { key: 'hq-squads', screen: 'hq', label: 'HQ squads', items: '.hq-duty' },
   { key: 'hq-patrol', screen: 'hq', label: 'HQ patrol', items: '.hq-patrol-lines > div' },
-  { key: 'hq-timers', screen: 'hq', label: 'HQ timers ("On the clock")', items: '.hq-timer' },
+  { key: 'hq-timers', screen: 'hq', label: 'HQ timers ("On the clock")', items: '.hq-clock' },
   { key: 'team-patrol', screen: 'team-patrol', label: 'the Patrol roster', items: '.patrol-roster > *' },
   { key: 'calls-board', screen: 'board', label: 'the Calls board', items: '.cl-board-list .cl-card' },
+  { key: 'deploy-squads', screen: 'deploy', label: 'the deploy squads', items: '.cl-squads > *' },
   { key: 'command-staff', screen: 'team-command', label: 'Command Staff', items: '.team-command .command-room-post, .team-command .staff-row' },
 ];
 

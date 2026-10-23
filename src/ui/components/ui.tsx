@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode, Ref } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { RATING_META, STATUS_META, ratingTone } from './labels';
@@ -152,7 +152,7 @@ export function Card({ children, className, tone, selected, disabled, onClick, l
  * value or chevron. With onClick the whole row is the button. Every row leads with a picture
  * (docs/visual-kit.md); a falsy lead still renders `data-lead="none"`, which the visual gates count.
  * `selected` and `disabled` are the shared states. */
-export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled }: {
+export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled, data, buttonRef }: {
   /** Required: a face, art or a kit mark. Registered art is a node like any other. */
   lead: ReactNode;
   title: ReactNode;
@@ -164,6 +164,10 @@ export function Row({ lead, title, detail, trail, onClick, className, label, sel
   label?: string;
   selected?: boolean;
   disabled?: boolean;
+  /** `data-*` attributes for tests, captures and gates, e.g. `{ 'data-facility-branch': id }`. */
+  data?: Record<`data-${string}`, string | number | undefined>;
+  /** A ref to the row's button, for focus return after a sheet closes. */
+  buttonRef?: Ref<HTMLButtonElement>;
 }) {
   const body = (
     <>
@@ -178,8 +182,8 @@ export function Row({ lead, title, detail, trail, onClick, className, label, sel
   const classes = `ui-row${selected ? ' ui-row-selected' : ''}${disabled ? ' ui-row-disabled' : ''}${className ? ` ${className}` : ''}`;
   const leadMark = lead ? undefined : 'none';
   return onClick
-    ? <button type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark}>{body}</button>
-    : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark}>{body}</div>;
+    ? <button ref={buttonRef} type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark} {...data}>{body}</button>
+    : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark} {...data}>{body}</div>;
 }
 
 type ActionBarButton = Omit<ButtonProps, 'variant' | 'children' | 'block'> & { label: ReactNode };
@@ -213,6 +217,19 @@ export function KV({ k, v, tone, strong, icon }: { k: ReactNode; v: ReactNode; t
       <span className={`kv-v${tone ? ` tone-${tone}` : ''}`}>{v}</span>
     </div>
   );
+}
+
+/** The one ring: a value from 0 to 100 drawn as a filled arc around its content (an icon, a number or a
+ * face). `tone` colors the arc; `score` picks good, amber or harm by the value (80 and 50, as results
+ * read). Decorative: the value's words belong to the element that holds it. */
+export type RingTone = 'score' | 'act' | 'good' | 'warn' | 'harm' | 'trust' | 'level';
+const RING_COLOR: Record<Exclude<RingTone, 'score'>, string> = { act: 'var(--act)', good: 'var(--good)', warn: 'var(--warn)', harm: 'var(--harm)', trust: 'var(--good)', level: 'var(--act)' };
+export const ringColor = (tone: RingTone, value: number) => tone === 'score' ? (value >= 80 ? 'var(--mint)' : value >= 50 ? 'var(--warn)' : 'var(--danger)') : RING_COLOR[tone];
+export function Ring({ value, size = 34, tone = 'score', className, children }: { value: number; size?: number; tone?: RingTone; className?: string; children?: ReactNode }) {
+  const v = Math.max(0, Math.min(100, value));
+  return <span className={`ring${className ? ` ${className}` : ''}`} aria-hidden="true" style={{ width: size, height: size, '--ring-fill': v, '--ring-color': ringColor(tone, v) } as CSSProperties}>
+    <span className="ring-core">{children}</span>
+  </span>;
 }
 
 /** Horizontal meter with a text label so condition is never colour alone. */
