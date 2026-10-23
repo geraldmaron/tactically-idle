@@ -8,7 +8,8 @@ import { ManagerPortrait } from '../art/ManagerArt';
 import { useBeat } from '../components/Beat';
 import { useNav } from '../components/nav';
 import { personaNote } from '../../content/personas';
-import { storyLine } from '../people/story-line';
+import { rotation, turnIndex } from '../people/story-line';
+import { useStoryClock } from '../people/story-clock';
 import { TeamScene } from './TeamScene';
 import { patrolEnrolledBeat, patrolSignedBeat } from './team-beats';
 import { Sheet } from '../components/Sheet';
@@ -97,13 +98,24 @@ function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmpl
   const name = profileName(employee.profileId);
   const hours = next ? Math.min(employee.serviceHours, next.serviceHours) : 0;
   // A recorded fact about this person: their state, their note, or their hours on patrol (people/story-line.ts).
-  const story = storyLine({ kind: 'patrol', employee, gradeName: (grade) => PATROL_GRADES[grade].name }, game.department.clockHighWater);
+  // The line turns through everything recorded about them on the shared story clock and holds on the first under
+  // reduced motion. Assistive technology gets the first line, fixed, so the text never changes under its cursor.
+  const clock = useStoryClock();
+  const person = { kind: 'patrol', employee, gradeName: (grade: PatrolGrade) => PATROL_GRADES[grade].name } as const;
+  // First paint shows the first line (their state, when they have one); the turn starts with the clock.
+  const shown = useRef<string | null>(null);
+  const lines = rotation(person, game.department.clockHighWater);
+  const story = lines[clock.still || shown.current === null ? 0 : turnIndex(lines.length, clock.now, employee.id)] ?? null;
+  const spoken = lines[0] ?? null;
+  // It fades in only when it turns over, never on first paint.
+  const turned = shown.current !== null && !!story && shown.current !== story.text;
+  useEffect(() => { shown.current = story?.text ?? null; });
   return <article className="patrol-item" data-patrol-employee={employee.id} tabIndex={-1} aria-label={name}>
     <Row lead={<Face size="sm" kind="patrol" src={patrolProfile(employee.profileId)?.portrait} />} title={name}
       detail={`Grade ${employee.grade} · ${grade.name} · ${training ? '$0/h' : perHour(grade.gross)}`}
       trail={<Chip tone={training ? 'blue' : 'good'} icon={training ? 'mortarboard' : 'check'}>{training ? 'In training' : 'Covering'}</Chip>} />
     <div className="patrol-item-foot">
-      {story && <p className="patrol-item-story" data-story={story.kind}>{story.text}</p>}
+      {story && <><p key={story.text} className={turned ? 'patrol-item-story patrol-item-story-turned' : 'patrol-item-story'} data-story={story.kind} aria-hidden="true">{story.text}</p>{spoken && <p className="sr-only">{spoken.text}</p>}</>}
       {training ? <p className="patrol-training-status">Grade changes when training finishes.</p>
         : next ? <div className="patrol-grade-progress"><span>{Math.floor(employee.serviceHours)} / {next.serviceHours} funded hours · Level {next.departmentLevel} required</span><Meter value={(hours / next.serviceHours) * 100} label={`Service toward ${next.name}`} valueText={`${Math.floor(employee.serviceHours)} of ${next.serviceHours} funded hours`} /></div>
           : <p className="patrol-training-status">Highest patrol grade</p>}

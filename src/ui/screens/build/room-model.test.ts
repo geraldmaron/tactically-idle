@@ -6,7 +6,8 @@ import { budget, courseOptions, nodeOptions } from '../../../sim/department-sele
 import { DEVELOP_HANDLERS } from '../../../sim/develop';
 import { candidatePoolSize, recoveryRate } from '../../../sim/economy';
 import type { GameState } from '../../../sim/types';
-import { garageView, nextDevelopment, nextForStation, nodeSummary, roomFaces, roomViews, stepHelp, stepState, viewOfNode } from './room-model';
+import { MANAGERS } from '../../../sim/command-staff';
+import { garageView, nextDevelopment, nextForStation, nodeSummary, roomFaces, roomLines, roomViews, stepHelp, stepState, viewOfNode } from './room-model';
 import { ROOMS } from './rooms';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
@@ -171,5 +172,36 @@ describe('who a step helps, checked against what the purchase delivers', () => {
     const views = roomViews(s);
     const known = new Set([...Object.keys(s.officers), ...s.candidates.map((c) => c.officer.id)]);
     for (const v of views) for (const id of roomFaces(s, v)) expect(known.has(id)).toBe(true);
+  });
+});
+
+describe('saying a post once', () => {
+  it('names a command post only in its step title, not in the effect or the who-it-helps row', () => {
+    const s = fresh();
+    for (const o of nodeOptions(s)) {
+      const post = (o.node.tiers?.flatMap((t) => t.effects) ?? o.node.effects).find((e) => e.kind === 'commandStaff');
+      if (!post || post.kind !== 'commandStaff') continue;
+      const title = MANAGERS[post.managerId].title.toLowerCase();
+      const help = stepHelp(s, o);
+      expect(help.effect.toLowerCase()).not.toContain(title);
+      for (const row of help.rows) expect(`${row.label} ${row.note ?? ''}`.toLowerCase()).not.toContain(title);
+    }
+  });
+});
+
+describe('room card lines', () => {
+  it('opens on what the room is for, then one recorded fact per person it helps, each short enough for two lines', () => {
+    const s = fresh();
+    for (const view of roomViews(s)) {
+      const lines = roomLines(s, view, NOW);
+      expect(lines[0]).toBe(view.room.line);
+      const faces = roomFaces(s, view);
+      expect(lines.length).toBeLessThanOrEqual(1 + faces.length);
+      for (const line of lines.slice(1)) {
+        expect(line.length).toBeLessThanOrEqual(62);
+        expect(faces.some((id) => line.startsWith(`${s.officers[id].surname}. `))).toBe(true);
+        expect(line).not.toMatch(/[—–]| - /);
+      }
+    }
   });
 });

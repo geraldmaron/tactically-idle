@@ -104,7 +104,8 @@ export function RoomSheet({ game, view, step, now, pending, onSelect, onOpenRoom
               <span className="room-step-glyph"><NodeGlyph option={o} size={32} />{s === 'owned' && <span className="room-step-mark"><Icon name="check" size={16} /></span>}{s === 'locked' && <span className="room-step-mark"><Icon name="lock" size={16} /></span>}</span>
               <span className="room-step-main">
                 <span className="room-step-name">{o.node.name}</span>
-                <span className="room-step-fx">{s === 'owned' && o.maxTier > 1 && !o.targetTier ? 'Every tier built' : nodeSummary(o)}</span>
+                {/* The chosen step's effect is already the line under its headline; its row only names it. */}
+                {o.node.id !== step.node.id && <span className="room-step-fx">{s === 'owned' && o.maxTier > 1 && !o.targetTier ? 'Every tier built' : nodeSummary(o)}</span>}
                 {o.maxTier > 1 && <span className="room-step-tiers"><Segments done={o.currentTier} total={o.maxTier} /></span>}
               </span>
               <span className="room-step-price" aria-hidden="true"><CostTag part="value" quote={q} /></span>

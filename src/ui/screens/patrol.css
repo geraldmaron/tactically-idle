@@ -9,7 +9,8 @@
 .patrol-scene-posts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: stretch; gap: var(--sp1); }
 .patrol-scene-post { position: relative; display: grid; justify-items: center; align-content: start; gap: var(--sp1); min-width: 44px; min-height: 72px; padding: var(--sp1) 0; border: 0; border-radius: var(--r1); background: color-mix(in srgb, var(--ink-0) 82%, transparent); color: var(--t1); font: 500 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
 .patrol-scene-post .manager-portrait { border-radius: var(--r1); }
-.patrol-scene-post > span:last-of-type { max-width: 100%; overflow-wrap: anywhere; }
+/* A name fits or is cut at its end with an ellipsis; it never breaks inside a word. The button's label has the full name. */
+.patrol-scene-post > span:last-of-type { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .patrol-scene-post > .icon { position: absolute; top: 29px; right: 1px; color: var(--t1); background: var(--ink-0); border-radius: var(--r1); }
 .patrol-scene-post-training .manager-portrait { filter: grayscale(.9); opacity: .6; }
 .patrol-scene-post-open { color: var(--t2); }
@@ -77,5 +78,8 @@
 @container game (max-width: 359px) { .patrol-scene-posts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 .patrol-scene-who { margin: 0; color: var(--t-plate); font-size: var(--s14); line-height: 1.35; text-shadow: 0 2px 5px var(--ink-deep); }
-.patrol-item-story { margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.4; }
+.patrol-item-story { margin: 0; min-height: calc(var(--s14) * 1.4 * 2); color: var(--t2); font-size: var(--s14); line-height: 1.4; }
+.patrol-item-story-turned { animation: patrol-story-in 400ms ease-out; }
+@keyframes patrol-story-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .patrol-item-story-turned { animation: none; } }
 .patrol-person-note { margin: var(--sp1) 0 0; color: var(--t2); font-size: var(--s14); line-height: 1.35; }

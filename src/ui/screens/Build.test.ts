@@ -45,6 +45,12 @@ describe('the Build screen as the station', () => {
     expect(html).not.toContain('Department plan');
   });
 
+  it('marks an affordable step as affordable, never with the tick that means built', () => {
+    const html = page();
+    expect(html).toContain('Can afford');
+    expect(html).not.toMatch(/room-status" data-state="ready"><svg[^]*?<\/svg>Ready</);
+  });
+
   it('labels an unbuilt, affordable room as ready to build for assistive technology', () => {
     const rooms = stationRooms(roomViews(state), garageView(state));
     const html = renderToStaticMarkup(createElement(Station, { rooms, name: 'Test', fresh: null, onOpen: () => {} }));
