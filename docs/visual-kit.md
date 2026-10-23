@@ -270,7 +270,7 @@ the new file with it.
 | Half | Run | What it does |
 | --- | --- | --- |
 | Static | `npm test` (`src/ui/ui-gates-static.test.ts`) or `npx vitest run src/ui/ui-gates-static.test.ts` | Reads `src/ui` CSS and TSX (`scripts/ui-gates/`), counts each rule, compares with the baseline. Each detector also has a negative control in the test: a fixture that must trip it and one that must not. |
-| Rendered | `npm run check:ui` (starts a dev server on 5174 if none is up) or `npm run check:ui -- http://localhost:5174/` | Runs the rendered controls (a page per rule that must fail it, and one that must pass), then walks every registered state at each width (`--widths 390` for one), probes each scroll segment, and compares with the baseline. Needs Chrome (`CHROME_PATH` overrides the Mac default). |
+| Rendered | `npm run check:ui` (starts this worktree's own dev server on a free port) or `npm run check:ui -- <url>` (reused only if it serves this worktree's code) | Runs the rendered controls (a page per rule that must fail it, and one that must pass), then walks every registered state at each width (`--widths 390` for one), probes each scroll segment, and compares with the baseline. Needs Chrome (`CHROME_PATH` overrides the Mac default). |
 | Baseline | `npm run ui:baseline` | Rewrites `src/ui/ui-debt.json` (static and rendered). `--widths 390` rewrites only that width's rendered entries. |
 
 The probe (`scripts/ui-gates/probe.mjs`) measures the active surface only: the open sheet, else the screen

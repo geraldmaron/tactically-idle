@@ -99,7 +99,7 @@ Done: a call that authors them shows them at 390x844, and the checker fails an o
 
 ### live-chat-build: Finish the read of Going Live's chat
 Tags: job=command; journeys=none (text and presentation); probes=none (text and presentation); lane=calls
-Needs: start=none; integrate=none; ship=going-live-review (the same read)
+Needs: start=none; integrate=restraint-never-charged; ship=going-live-review (the same read)
 
 The chat shipped 2026-10-22 (merge ad0d329): each threat's chat follows its drain in thirds, the stream's
 stopped, slowed, surged and dropped pools play at onset, gates in `src/content/incidents/chat.test.ts`
@@ -218,15 +218,18 @@ Codex's third read (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f3
 9 of 10 hold, three medium findings, no block; all three fixed as data at 8d8a0fc (2026-10-22): `walk_live`
 adverse is now the shame event its tag names (crowd x3 routes 165 to 0 on the dither-aware walk), and the
 minute-3 beat is a suspension warning, not a cut, with the rate flag gone (the stream reads live throughout).
-The lead re-ran `check:paths` on 8d8a0fc: turn reach 78/95/93/96, uniform 56/57, nothing beaten. Left, in order:
-   Owner, 2026-10-22: `go_in` keeps its +8 on `clip_out`; the suspension warning is reason enough.
-1. Open, not blocking prose: `way_out`'s run-out text cannot differ by `nextIf` route (spine sheet row O);
-   per-route text would change `TreeTimeout`, an interface file, so it waits for a lead decision.
-2. The prose passes from the briefs in the branch's `docs/calls/notes/going-live-spine.md`: scene, menu,
-   consequence and chat layers, each one Sonnet writer across the whole call, then one integration edit
-   and `swat-writing-review` by a separate reader.
-3. The tests that pin the old call's ids, fingerprints and snapshots (53 failures in 27 files on the
-   branch), recaptured or rewritten on purpose, and the `wiring` probe "door and window states" for the
+The lead re-ran `check:paths` on 8d8a0fc: turn reach 78/95/93/96, uniform 56/57, nothing beaten. Owner, 2026-10-22: `go_in` keeps its +8 on
+`clip_out`. The prose is written (scene, menu, consequence, integration edit; `claude/hopeful-pike-69bdac`,
+6e4d34f, `check:strings` clean). Left, in order:
+1. The writing review (2026-10-22, `docs/calls/notes/going-live-review.md` on `claude/friendly-leakey-bd79fb`,
+   e66d2fb): verdict edit, block B1, fixes F1 to F13, 17 notes. Owner decisions the same day: no long-call
+   charge for waiting (`restraint-never-charged`); no custody images (officers take hold on the step, no car
+   or station); epilogues speak only for people on scene; the manager is offered the phone and decides (F11);
+   D7, the line a player repeats, is "your hands are shaking. There's water in the cooler by me." A fix pass
+   applies F1 to F13 as data with those decisions, then `check:strings` and `check:paths`.
+   Still open, not blocking: `way_out`'s run-out text cannot differ by `nextIf` route (spine sheet row O).
+2. The tests that pin the old call's ids, fingerprints and snapshots (10 failures in `trees-v13` on
+   6e4d34f, plus any outside it), recaptured or rewritten on purpose, and the `wiring` probe "door and window states" for the
    hostage call, now 12 of 24 on the pass 2 branch against its 0.27 floor; confirm with `wiring.test.ts`.
 Done: the teardown's blocks closed as data with the `npm run check:paths` report attached, `npm run verify`
 green, and a separate review.
@@ -240,6 +243,17 @@ stall before it applies beat marks, so a beat at minute 3 that cuts the stream s
 climb to minute 9.5 (25.7 to 32.9 on one route) and fire cues after the cut, in projection and commit alike.
 Done: clock-changing beats apply at their timestamps in `stalledRun` and the commit, the remaining minutes
 advance under the changed state, and a fixture test shows no clock bump or cue after a cutting beat.
+
+### restraint-never-charged: Waiting it out never costs the team in the debrief
+Tags: job=understand; journeys=debrief-explains; probes=none (scoring of time, not odds); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner, 2026-10-22, from the Going Live writing review's block B1: on the `hold` path the debrief adds
+'The team was on scene for 68 minutes.' at -1 trust and +3 strain (`time:long` in `src/sim/outcome-score.ts`,
+`longAt: 45`), which punishes restraint. Rule: no `time:long` charge when the call's long minutes come from a
+hold or talk choice whose card states its span (`span`, such as "All night"); other long calls keep the charge.
+Done: a test on fixtures where a long hold scores no `time:long` and a long call of another kind still does,
+the outcome-score ranking gate holding, and Going Live's `hold` debrief read without the line.
 
 ### threat-after-close: A threat never lands after the result that ended its scene
 Tags: job=command; journeys=answer-a-call; probes=none (ordering, not odds); lane=engine
@@ -461,29 +475,6 @@ profile get a `swat-writing-review` read.
 
 ## Player experience
 
-### ui-gates: Every surface is measured for visual antipatterns at every width
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout gates, not odds); lane=tooling
-Needs: start=none; integrate=none; ship=none
-
-The owner (2026-10-22): the app feels half baked, with missing icons and polish, uneven padding and margins,
-and inconsistencies, and every surface must have code-level validation with no assumptions. Astra's audit of
-261 fixed-seed frames (`side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`, captures beside it) found 29 defects and proposed rules R1 to R18. Build them:
-static rules in vitest (R1 spacing from `--sp*` tokens, R3 declared gaps, R5 kit semantics for source, status and outcome, R7 the type floors, R8 no literal
-colors in CSS or TSX, R9 icon sizes 16/20/24 and stroke 1.75, R10 one implementation per component family,
-R11 shared empty, loading and error states) and a rendered gate, `npm run check:ui`, that runs the capture
-probe at 320, 390 and 430 and checks R2 one gutter per surface, R6 effective 44px hit regions, R12 no
-unintended overflow or essential-copy clipping, R13 safe areas, R14 contrast, R15 chip insets, R16 the first
-decision reachable, R17 every registered surface and state captured, R18 art decoded. Fix the probe first:
-active-surface scoping, ancestor clipping, hit-testing, per-element ids, and unlocked restock, presets and
-error states. Debt lives in a generated baseline (`npm run ui:baseline`) that only falls and that the lead
-regenerates at each merge; rules Astra marks hard zero start as ratchets at today's count. Done: every rule
-has a gate, `npm run verify` and `npm run check:ui` pass on today's UI, and a negative control fails each rule.
-
-Latest blue-hour revision: retire R4's picture-before-every-heading/list-row and hidden-glyph bans;
-screen composition and readability supersede those aesthetic mandates. Fix R16 so an off-screen
-choices affordance cannot satisfy the first-viewport gate, with a failing negative control. Re-run
-the full gate and deliberately inspect every changed baseline after the new Store/Patrol surfaces land.
-
 ### feel-slice: One path from HQ to debrief that feels like one game
 Tags: job=command; journeys=answer-a-call, debrief-explains; probes=none (layout, density and taps, not odds); lane=interface
 Needs: start=none; integrate=none; ship=none
@@ -520,7 +511,7 @@ Codex reviews the merged diff; the owner plays the slice. Nothing in `ui-surface
 
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=ui-gates, feel-slice; integrate=none; ship=none
+Needs: start=feel-slice; integrate=none; ship=none
 
 Each package follows the `feel-slice` rules and the component contract in `docs/game-ux-direction.md` (owner, 2026-10-23: variable counts as grouped lists, uniform pills and rows on one grid), and passes its checks: existing primitives, the variants it
 replaces deleted, alias tokens migrated (the aliases go after the last package). `feel-slice` covers P6,
@@ -540,7 +531,9 @@ P7 live call, review, result and debrief (compact strip and empty radio, keeping
 `docs/ops-experience.md`, a reachable first choice, outcome and resource marks); P8 portraits, art and the
 blueprint (literal colors, art sizing, fallback floors). The shared tokens, variants, `LoadingState`,
 `ErrorState`, semantic type classes, `ICON_SIZE` and required `Row.lead` and `Section.icon` landed with
-ui-primitives (2026-10-22). File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
+ui-primitives (2026-10-22). The gates (`ui-gates`, 2026-10-22) hold every rule's debt in `src/ui/ui-debt.json` (`npm run check:ui`,
+`npm run ui:baseline`, `docs/visual-kit.md` "UI gates"); each package brings its files and states to zero.
+Briefs: `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/ui-surfaces-brief.md`. File lists per package are in `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/astra-findings.md`. Done: each
 package's surfaces pass every gate at 320, 390 and 430, a fixed-seed sweep compared with the 2026-10-22
 captures, and a closing Astra read of the after set.
 
@@ -709,6 +702,12 @@ decision on whether the lean needs a player-facing explanation (the HQ or the de
   review line, the hostage review calls) predate the Going Live rebuild: the lead re-triages them after
   Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read
   (owner, 2026-10-22).
+
+Decided 2026-10-22 (Going Live review): waiting it out is never charged in the debrief; endings show no
+custody (no car, cell or station); epilogues speak only for people on scene, never an institution off screen;
+a held person is offered the phone and decides, never asked to perform a concession; Going Live's line a player
+repeats is the manager's "your hands are shaking. There's water in the cooler by me." These settle the custody
+(O4) and E12 concession questions for every call.
 
 Superseded by the NPC patrol revision in `docs/patrol-work.md` (historical owner answers, 2026-10-22): option B for paid-detail strain; a multiplier
 gives no strain advantage, so each tap's strain scales with the combined multiplier and pay per strain is

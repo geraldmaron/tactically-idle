@@ -84,7 +84,8 @@ async function main() {
           console.error(`  ${line}${detail[`${p.rule} ${key}`] ? ` (${detail[`${p.rule} ${key}`]})` : ''}${p.kind === 'rose' && sample ? `\n${sample}` : ''}`);
         }
       }
-      process.exit(1);
+      process.exitCode = 1; // not process.exit: the finally below must stop the server this run started
+      return;
     }
     console.log('\ncheck:ui passed: every rendered count matches src/ui/ui-debt.json');
   } finally {

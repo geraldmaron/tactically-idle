@@ -1,7 +1,8 @@
 // Captures the /locations.html contact sheet for every building family and writes a JSON summary.
-// Starts no server: run `npx vite --port 5174` (or any port) first and point TI_BASE_URL at it.
+// Starts this worktree's own dev server on a free port unless TI_BASE_URL names one that serves this
+// worktree's code byte for byte (scripts/ui-gates/serve.mjs).
 //
-//   TI_BASE_URL=http://127.0.0.1:5174   dev server origin (default)
+//   TI_BASE_URL=<origin>                reuse a dev server instead of starting one
 //   TI_CAPTURE_DIR=<dir>                output directory (default: <os tmp>/ti-location-captures)
 //   TI_FAMILIES=bungalow_g1,warehouse_g1  subset (default: every generated + authored family)
 //   TI_SEEDS=1-24                       seed spec passed to the sheet
@@ -13,8 +14,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { serve } from './ui-gates/serve.mjs';
 
-const baseURL = (process.env.TI_BASE_URL ?? 'http://127.0.0.1:5174').replace(/\/$/, '');
+const server = await serve({ root: fileURLToPath(new URL('..', import.meta.url)), given: process.env.TI_BASE_URL });
+const baseURL = server.url.replace(/\/$/, '');
 const outDir = process.env.TI_CAPTURE_DIR ?? join(tmpdir(), 'ti-location-captures');
 const seeds = process.env.TI_SEEDS ?? '1-24';
 const cellWidth = Number(process.env.TI_CELL_WIDTH ?? 360);
@@ -120,6 +124,7 @@ try {
   console.log(`\nWrote ${summary.families.length} families to ${outDir}\nSummary: ${jsonPath}`);
 } finally {
   await browser.close();
+  server.stop();
 }
 
 async function captureCellPngs(page, family, floor) {

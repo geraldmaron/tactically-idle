@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FEEL_BUDGETS, FEEL_ON, judgeTaps } from './ui-gates/feel.mjs';
+import { serve } from './ui-gates/serve.mjs';
 
 /** Automatic patrol funding on the live HQ surface, then the real hire and boost purchase flows.
  * Proves authoritative accrual, HQ-only bounded motion, navigation reconciliation and reduced motion. */
-export async function playPatrolEconomy(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844, captureDir } = {}) {
+export async function playPatrolEconomy(page, { baseURL, width = 390, height = 844, captureDir } = {}) {
   const fixed = new Date();
   await page.clock.setFixedTime(fixed);
   await page.setViewportSize({ width, height });
@@ -101,7 +102,7 @@ export async function playPatrolEconomy(page, { baseURL = 'http://127.0.0.1:5174
  * Each call sends as many ready squads as its Prepare screen says it takes, so a call that takes
  * two sends two; radios a squad lacks are bought through the Prepare screen's own purchase
  * button, never injected. */
-export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844, captureDir } = {}) {
+export async function playLiveCalls(page, { baseURL, width = 390, height = 844, captureDir } = {}) {
   await page.clock.setFixedTime(new Date());
   await page.setViewportSize({ width, height });
   const errors = []; page.on('pageerror', error => errors.push(String(error)));
@@ -364,7 +365,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
  * A tap is any trusted click, recorded in the page, so a Deploy that needs a squad picked first costs the
  * extra tap. Squad picks and radio purchases are made as a player would, only when the screen needs them.
  * Returns { boardToDecision, debriefToBoard } as lists of the taps made. */
-export async function measureTapBudget(page, { baseURL = 'http://127.0.0.1:5174', width = 390, height = 844 } = {}) {
+export async function measureTapBudget(page, { baseURL, width = 390, height = 844 } = {}) {
   await page.clock.setFixedTime(new Date());
   await page.setViewportSize({ width, height });
   page.on('dialog', dialog => dialog.accept());
@@ -419,9 +420,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { chromium } = await import('playwright-core');
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
   const results = [];
-  // The base URL comes from the first argument, then TI_BASE_URL, then the default (127.0.0.1:5174).
-  // Run it on another dev port, e.g. node scripts/play-loop.mjs http://localhost:5182.
-  const baseURL = process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? process.env.TI_BASE_URL;
+  // With no URL it starts this worktree's own dev server on a free port (scripts/ui-gates/serve.mjs). A URL
+  // (first argument, then TI_BASE_URL) is reused only if it serves this worktree's code byte for byte.
+  const server = await serve({ root: fileURLToPath(new URL('..', import.meta.url)), given: process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? process.env.TI_BASE_URL });
+  const baseURL = server.url;
   try {
     // `--taps` runs only the tap budget. It reports always, and exits 1 only when F6.taps is switched on
     // in FEEL_ON.path (scripts/ui-gates/feel.mjs) or `--enforce` is given.
@@ -433,8 +435,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         console.log(`debrief -> board: ${debriefToBoard.length} taps (budget ${FEEL_BUDGETS.tapsDebriefToBoard}): ${debriefToBoard.join(' > ')}`);
         const over = [...judgeTaps('board-to-decision', boardToDecision), ...judgeTaps('debrief-to-board', debriefToBoard)];
         for (const f of over) console.error(`F6.taps ${f.id}: ${f.detail}`);
-        if (over.length && (process.argv.includes('--enforce') || FEEL_ON.path.includes('F6.taps'))) process.exit(1);
-      } finally { await context.close(); await browser.close(); }
+        if (over.length && (process.argv.includes('--enforce') || FEEL_ON.path.includes('F6.taps'))) { await context.close(); await browser.close(); server.stop(); process.exit(1); }
+      } finally { await context.close(); await browser.close(); server.stop(); }
       process.exit(0);
     }
     const paidContext = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
@@ -449,5 +451,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
     if (process.env.TI_E2E_REPORT) await writeFile(process.env.TI_E2E_REPORT, JSON.stringify(results, null, 2) + '\n');
     console.log(`Passed ${results.length} live board calls at 390x844 and 320x568: ${new Set(results.map(result => result.type)).size} frameworks discovered, ${results.filter(result => result.squads > 1).length} two-squad deployments (${results.reduce((total, result) => total + result.boughtRadios, 0)} radios bought on Prepare), ${results.filter(result => result.floors > 1).length} with an upper floor, then an empty board.`);
-  } finally { await browser.close(); }
+  } finally { await browser.close(); server.stop(); }
 }
