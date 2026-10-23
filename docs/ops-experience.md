@@ -2,7 +2,7 @@
 
 **Status (2026-10-21):** proposal. Nothing here is built. The work is in
 [backlog.md](backlog.md) as `ops-experience-now` (accepted with controls) and
-`owner-visual-picks` (needs the owner's comparison). This doc builds on
+`owner-visual-picks` (settled 2026-10-22: the reading face stays the sans). This doc builds on
 [call-presentation.md](call-presentation.md) and the decisions recorded in
 [game-ux-direction.md](game-ux-direction.md). Where it reverses one of those, it says so.
 
@@ -19,9 +19,9 @@ first:
    tap away.
 5. **Board card:** shorten it to about 290px. It keeps everything the owner asked for on it.
 
-Two changes need the owner to compare candidates before either ships. The first is how the live
-decide beat shares space between the scene and the story. The second is whether the story text
-gets a reading serif.
+Two changes needed the owner to compare candidates before either shipped: how the live decide beat
+shares space between the scene and the story (4B, chosen), and whether the story text gets a
+reading serif (no, the sans stays).
 
 The first draft went much further: an "operation mode" that hid the navigation, a board of rows,
 a brief that started with the map, and a scene cropped to the squad's area. Codex's adversarial
@@ -65,7 +65,7 @@ and how each one was handled.
 | Review with outcomes first | Requirements, the lead, authorization and resupply are controls, not reference | Accepted with controls | Cost and previews first, every control kept, the map as a labeled inset (mockup 5) |
 | Result first | A "Changed" summary of adjectives hides an injury or a used supply | Accepted with controls | The result and any recorded harm first, then facts, injuries, supplies and stress-band crossings. Raw numbers fold into Details. The final decision, which goes straight to the debrief, gets the same order (mockup 6) |
 | After-action report with Rest and Back actions | Rest before settlement leaves officers assigned and the rewards unpaid | Accepted with controls | Close settles first (`closeDebrief`). A Rest offer follows, for anyone strained or worse, and it respects the Watch Commander's policy. Archived reports stay action-free |
-| Reading serif and fewer bordered cards | A serif wraps longer and pushes the first choice down at 200% text | Needs validation | Same prompt in both faces (mockups 7A and 7B), judged at 320px and 200% text |
+| Reading serif and fewer bordered cards | A serif wraps longer and pushes the first choice down at 200% text | Rejected for the serif (owner, 2026-10-22) | Same prompt in both faces (mockups 7A and 7B), judged at 320px and 200% text. The owner kept the sans |
 
 Codex also named things the draft missed, which every change below must hold:
 
@@ -166,11 +166,7 @@ decided* row, never retold. The scene sits under the story as one line (where th
 changed* pill) and opens on a tap. The source ticker keeps its count but not its chat on this beat.
 The decision log holds the full record: every score, every officer's stress reading.
 
-## The reading face: still open
+## The reading face: the sans
 
-Dev builds keep a pink DEV switch at the bottom-left of the live call, with Sans and Serif. A link
-can open on the serif too (`http://localhost:5173/?face=serif`). The serif is Source Serif 4 on the
-cold open, prompts, results, transcripts and the debrief's ending. It loads only when picked, and
-production keeps Barlow. The choice is kept in localStorage (`ti-dev-candidates`), never in the save
-(`src/ui/settings/candidates.ts`). Judge it on the same prompt at 390x844 and 320x568, and at 200%
-text. Then record the verdict here, delete the loser and remove the switch.
+Settled by the owner on 2026-10-22: story text stays in Barlow on every screen. The Source Serif 4
+candidate, its dev switch and the `?face=serif` link were deleted.
