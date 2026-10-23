@@ -3,7 +3,7 @@
 .settle-funding { display: flex; align-items: center; gap: var(--sp3); }
 .settle-cash { width: var(--face-md); height: var(--face-md); object-fit: contain; flex: none; }
 .settle-stack { display: grid; gap: var(--sp1); }
-.settle-value { font: 700 var(--s28)/1 var(--f-title); color: var(--t1); font-variant-numeric: tabular-nums; }
+.settle-value { min-width: 9ch; font: 700 var(--s28)/1 var(--f-title); color: var(--t1); font-variant-numeric: tabular-nums; }
 .settle-delta { font: 600 var(--s14)/1.2 var(--f-ui); }
 .settle-xp { display: grid; gap: var(--sp2); }
 .settle-xp-label { display: flex; justify-content: space-between; gap: var(--sp3); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }

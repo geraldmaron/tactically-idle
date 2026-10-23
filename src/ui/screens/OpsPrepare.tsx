@@ -171,11 +171,16 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
 
   // A call that takes exactly one squad opens its deploy step with the best-fit ready squad chosen:
   // the one with the most officers fit to go. The player can still pick another or clear it.
-  useEffect(() => {
-    if (step !== 'deploy' || squadsTouched || chosen.length > 0 || range.min !== 1 || range.max !== 1) return;
+  // Choose team makes the pick before the step changes, so the deploy step opens already filled
+  // and nothing pops in after the first frame; the effect covers a direct entry (a reload, Forward).
+  const preselect = () => {
+    if (squadsTouched || chosen.length > 0 || range.min !== 1 || range.max !== 1) return;
     setSquadsTouched(true);
     const best = bestFitSquad(g.squads.map((s) => ({ id: s.id, ...squadReadiness(g, s.id, Date.now()) })));
     if (best) setChosen([best]);
+  };
+  useEffect(() => {
+    if (step === 'deploy') preselect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, squadsTouched, chosen.length, range.min, range.max]);
 
@@ -396,7 +401,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
 
   // A pushed flow (components/chrome.tsx): the shell draws the head and the action bar; the tabs go.
   const footer = step === 'brief'
-    ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => callFlow.goStep('deploy') }} />
+    ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => { preselect(); callFlow.goStep('deploy'); } }} />
     : <ActionBar className="cl-actions"
       primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
