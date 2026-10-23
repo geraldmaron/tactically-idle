@@ -109,13 +109,13 @@ export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onO
         </button></li>
         <li><button className="stat stat-trust" {...helpProps('trust', `${Math.round(d.trust)} out of 100`)}>
           <span className="res-pill" data-ui-pill>
-            <Ring value={d.trust} size={28} tone="trust"><Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /></Ring>
+            <Ring value={d.trust} size={22} tone="trust"><Icon name={RESOURCE_ICON.trust} size={16} className="res-icon" /></Ring>
             <span className="res-word">Trust </span><span className="res-value">{Math.round(d.trust)}</span>
           </span>
         </button></li>
         <li><button className="stat stat-level" {...helpProps('level', String(d.level))}>
           <span className="res-pill" data-ui-pill>
-            <Ring value={levelFill} size={28} tone="level"><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" /></Ring>
+            <Ring value={levelFill} size={22} tone="level"><Icon name={RESOURCE_ICON.level} size={16} className="res-icon" /></Ring>
             <span className="res-word">Level </span><span className="res-value">{d.level}</span>
           </span>
         </button></li>

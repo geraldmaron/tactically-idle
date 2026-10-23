@@ -112,7 +112,7 @@
 .live-squad-acting { border-color: var(--t2); }
 .live-squad-text { display: grid; min-width: 0; text-align: left; }
 .live-squad-name { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.15 var(--f-title); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.live-squad-stress { font-size: var(--s12); line-height: 1.15; }
+.live-squad-stress { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s12); line-height: 1.15; }
 .live-squad-stress.stress-recovery:not(.lead-choice-stress) { color: var(--harm); }
 .live-squad-out .face { opacity: 0.5; filter: grayscale(1); }
 .live-team-leader { color: var(--t1); }
@@ -326,3 +326,41 @@
   .live .source-ticker-effect { grid-column: 1 / -1; margin: 0; font-size: var(--s14); line-height: 1.2; }
   .live .source-reactions { grid-column: 1 / -1; height: 1.2em; margin-top: 0; font-size: var(--s14); line-height: 1.2; }
 }
+
+/* The strip as uniform pills (component contract 10, owner 2026-10-23, option 3): row one is the stage
+   pill beside the source pill, row two the threat, then the source's chat in its fixed two-line box and
+   its effect line. Every pill is 32px, a ring on its well, tabular values at one size. The source
+   ticker's wrapper takes no box of its own so its parts sit on the strip's grid. */
+.live .live-strip { grid-template-columns: auto minmax(0, 1fr); gap: var(--sp1); padding: var(--sp1) var(--gutter); }
+.live .live-strip > .live-wash { grid-column: 1 / -1; }
+.live .live-strip > .live-sources { display: contents; }
+.live .live-strip .source-ticker { display: contents; }
+.live .live-strip .stage-pill { grid-row: 1; grid-column: 1; }
+.live .live-strip .source-pill { grid-row: 1; grid-column: 2; }
+.live .live-strip .threat-pill { grid-row: 2; grid-column: 1 / -1; }
+.live .live-strip .source-reactions, .live .live-strip .source-ticker-effect, .live .live-strip .fill-gauge { grid-column: 1 / -1; }
+.live .stage-pill, .live .source-pill, .live .live-strip .threat-pill { display: flex; align-items: center; gap: var(--sp1); min-width: 0; min-height: 32px; margin: 0; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); }
+.live .stage-pill { position: relative; cursor: pointer; }
+.live .stage-pill::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); }
+.live .stage-pill:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.live .stage-pill .ring-core, .live .source-pill .ring-core, .live .live-strip .threat-pill .ring-core { background: var(--ink-2); color: var(--t1); }
+.live .stage-pill-num { font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; }
+.live .source-pill { color: var(--warn-text); }
+.live .source-pill-count { font: 600 var(--s16)/1 var(--f-ui); font-variant-numeric: tabular-nums; color: var(--t1); }
+.live .source-pill-unit { min-width: 0; }
+.live .source-pill-cues { display: inline-flex; gap: var(--sp1); margin-left: auto; }
+.live .source-cue { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--hair-2); }
+.live .source-cue-heard { background: var(--t1); }
+.live .source-pill .source-ticker-pull { flex: none; }
+.live .live-strip .threat-pill { flex-wrap: nowrap; row-gap: 0; border-width: 1px; }
+.live .live-strip .threat-pill-bar { display: grid; flex: none; height: auto; border-radius: 50%; background: none; box-shadow: none; overflow: visible; }
+.live .live-strip .threat-pill-label { flex: 1 1 auto; min-width: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--harm-text); }
+.live .live-strip .threat-pill-min { flex: none; font: 600 var(--s16)/1 var(--f-ui); font-variant-numeric: tabular-nums; color: var(--t1); }
+.live .live-strip .source-reactions { margin-top: 0; }
+/* The narrowest phones: the two pills of row one take a row each (the shortcut covers reach there). */
+@container game (max-width: 359px) {
+  .live .live-strip .source-pill { grid-row: auto; grid-column: 1 / -1; }
+  .live .live-strip .stage-pill { grid-column: 1 / -1; justify-self: start; }
+}
+
+.live .live-strip .ring { --ring-w: 3px; }

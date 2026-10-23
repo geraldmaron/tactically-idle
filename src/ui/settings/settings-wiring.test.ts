@@ -145,15 +145,15 @@ describe('the threat bar', () => {
   const bar = (dither?: number) => renderToStaticMarkup(createElement(ThreatPill, { label: 'The count reaches zero', minutes: 8, dither }));
   it('shows the minutes left after the stall, in the text and the bar', () => {
     expect(bar()).toContain('8 min');
-    expect(bar()).toMatch(/width:100(\.0+)?%/);
+    expect(bar()).toMatch(/--ring-fill:100[;"]/);
     const half = bar(4);
     expect(half).toContain('4 min');
-    expect(half).toMatch(/width:50(\.0+)?%/);
+    expect(half).toMatch(/--ring-fill:50[;"]/);
     expect(half).toContain('aria-valuenow="4"');
     expect(half).toContain('Threat: The count reaches zero in 4 minutes');
   });
   it('is empty at the cap and never negative', () => {
-    expect(bar(8)).toMatch(/width:0(\.0+)?%/);
+    expect(bar(8)).toMatch(/--ring-fill:0[;"]/);
     // Past the cap the pill says the threat landed, and never shows negative minutes.
     expect(bar(20)).toContain('threat-pill-landed');
     expect(bar(20)).not.toMatch(/-\d+ min/);

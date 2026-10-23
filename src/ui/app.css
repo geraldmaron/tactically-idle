@@ -846,9 +846,9 @@ button.ui-row:disabled {
 }
 
 /* Ring (components/ui.tsx): the one ring. The arc fills to --ring-fill out of 100 in --ring-color over a
-   hairline track; the core is inset 4px so the arc reads at every size. */
+   hairline track; the core is inset by --ring-w (4px, 3px inside a 32px pill). */
 .ring { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: conic-gradient(var(--ring-color) calc(var(--ring-fill, 0) * 3.6deg), var(--hair-2) 0deg); }
-.ring-core { display: grid; place-items: center; width: calc(100% - 8px); height: calc(100% - 8px); border-radius: 50%; background: var(--ink-1); color: var(--t2); }
+.ring-core { display: grid; place-items: center; width: calc(100% - 2 * var(--ring-w, 4px)); height: calc(100% - 2 * var(--ring-w, 4px)); border-radius: 50%; background: var(--ink-1); color: var(--t2); }
 .meter {
   height: 6px;
   border-radius: 3px;

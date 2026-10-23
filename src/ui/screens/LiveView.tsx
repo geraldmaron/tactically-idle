@@ -27,7 +27,7 @@ import { floorCount } from '../blueprint/floors';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
 import { containSheetFocus } from '../components/sheet-focus';
-import { Button, Chip, SubHead } from '../components/ui';
+import { Button, Chip, Ring, SubHead } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
 import { RATING_META, ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL, TRAIT_INFO } from '../components/labels';
@@ -170,6 +170,7 @@ export function LiveView(p: LiveViewProps) {
   // 4B, 2026-10-21, docs/ops-experience.md); stage 1 keeps the player's remembered choice.
   const [stageMap, setStageMap] = useState<{ stage: string; open: boolean } | null>(null);
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
   // The head's "Your call" shortcut shows whenever the first choice sits below the first viewport,
   // whatever the screen height or text size; its slot is always reserved so the head never shifts.
   const liveRoot = useRef<HTMLDivElement>(null);
@@ -270,9 +271,10 @@ export function LiveView(p: LiveViewProps) {
                 casualty record, not the officer's saved injury), so the row stays one line high. */}
             <Face size="sm" kind="officer" officer={o} status={{ stress: o.stress, band, surname: o.surname, mark: casualty ? 'injured' : null, until: null, label: casualty ? `${o.surname} is out of action` : `${o.surname}, ${STRESS_LABEL[band].toLowerCase()}` }} />
             <span className="live-squad-text">
-              <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}</span>
+              <span className="live-squad-name">{o.surname}</span>
+              {/* The leader's star sits with the stress line so the surname keeps its full width. */}
               {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
-                : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{whole(o.stress)}</span>}
+                : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}{whole(o.stress)}</span>}
             </span>
           </button>
         </li>;
@@ -398,7 +400,7 @@ export function LiveView(p: LiveViewProps) {
       </header>
       <div className="live-bar live-strip">
         {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
-        <StageSteps progress={p.progress} />
+        <StagePill progress={p.progress} onOpen={() => setStepsOpen(true)} />
         {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
           {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} threat={p.progress.threat ?? null} dither={p.dither ?? 0} /> : <FillGauge key={view.id} view={view} />)}
@@ -411,6 +413,9 @@ export function LiveView(p: LiveViewProps) {
       {story}
       {beat !== 'decide' && sceneSection}
 
+      <Sheet open={stepsOpen} onClose={() => setStepsOpen(false)} title="The call's steps" maxHeight="short">
+        <StageSteps progress={p.progress} />
+      </Sheet>
       <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing"
         footer={p.canCancel ? <Button variant="danger" block aria-label="Cancel the call" onClick={() => { setBriefingOpen(false); p.onCancel?.(); }}>Cancel the call</Button> : undefined}>
         <div className="live-briefing">{p.subtitle && <p className="live-briefing-sub">{p.subtitle}</p>}{p.situation}</div>
@@ -444,15 +449,15 @@ export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minu
   const shown = Math.ceil(left);
   const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
   const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
-  return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined}
+  // A strip pill (component contract 5 and 10): the drain is the ring on the well, the label and the
+  // minutes left beside it; the meter's numbers stay on the ring for assistive technology.
+  return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined} data-ui-pill
     aria-label={left <= 0 ? `${label}. It happened` : `Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
-    <Icon name="hourglass" size={20} />
-    <span className="threat-pill-label"><PeopleText text={label} /></span>
-    <span className="threat-pill-sep" aria-hidden="true">·</span>
-    <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
     <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
-      <i style={{ width: `${(share * 100).toFixed(2)}%` }} />
+      <Ring value={share * 100} size={22} tone="harm"><Icon name="hourglass" size={16} /></Ring>
     </span>
+    <span className="threat-pill-label"><PeopleText text={label} /></span>
+    <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
   </p>;
 }
 
@@ -565,6 +570,21 @@ function shortLabel(label: string, o: Officer): string {
 }
 
 // ---------------------------------------------------------------- stage progress
+
+/** The stage as a strip pill: a ring filled to the share of steps done with the current step's number
+ * in it, and the current stage's name. The full rail opens on tap (the upcoming names are one tap away,
+ * and in its accessible name). */
+export function StagePill({ progress, onOpen }: { progress: StageProgress; onOpen: () => void }) {
+  const total = Math.max(1, progress.stages.length);
+  const index = Math.max(0, progress.stages.findIndex((step) => step.state === 'current'));
+  const current = progress.stages[index];
+  const names = progress.stages.map((step) => step.label).join(', ');
+  return <button type="button" className="stage-pill" data-ui-pill onClick={onOpen} aria-haspopup="dialog"
+    aria-label={`Step ${index + 1} of ${total}: ${current?.label ?? ''}. The steps are ${names}. Show the steps`}>
+    <Ring value={(100 * (index + 1)) / total} size={22} tone="act"><b className="stage-pill-num">{index + 1}</b></Ring>
+    <span className="stage-pill-label">{current?.label}</span>
+  </button>;
+}
 
 export function StageSteps({ progress }: { progress: StageProgress }) {
   const rail = useRef<HTMLOListElement>(null);

@@ -1,3 +1,4 @@
+import { Ring } from '../components/ui';
 // The live decision (docs/call-pressure.md, "The live decision"): the scene keeps moving while the
 // player weighs a choice. Pressure sources tick as a count someone on scene would see, with what the
 // people watching are saying in a two-line chat under it, and the comms log carries what is said on scene as it is
@@ -159,20 +160,17 @@ export function SourceTicker({ view, runKey = 'preview', effect = null, chat: sh
 
   const unit = view.count?.unit;
   const number = view.count ? formatCount(shown) : `${Math.round(view.value)}`;
-  return <div className={`source-ticker${view.stopped ? ' source-ticker-stopped' : ''}`} data-source={view.id} role="group" aria-label={`${view.label}: ${view.count ? `${formatCount(target)} ${unit}` : `${Math.round(view.value)} of 100`}${view.stopped ? ', stopped' : ''}`}>
-    <p className="source-ticker-head">
-      <i className={`source-live-dot${view.stopped ? ' source-live-off' : ''}`} aria-hidden="true" />
-      <span className="source-ticker-label"><PeopleText text={view.label} /></span>
-      {/* Always in the row, hidden until it pulls, so a long label wraps once and never rewraps. */}
-      <span className={`source-ticker-pull${view.oddsPull ? '' : ' source-ticker-pull-none'}`} title="Taken off the checks it weighs on" aria-hidden={view.oddsPull ? undefined : true}>−{view.oddsPull || 0}</span>
+  return <div className={`source-ticker${view.stopped ? ' source-ticker-stopped' : ''}`} data-source={view.id} role="group" aria-label={`${view.label}: ${view.count ? `${formatCount(target)} ${unit}` : `${Math.round(view.value)} of 100`}${view.oddsPull ? `, ${view.oddsPull} off the checks it weighs on` : ''}, ${view.cues.filter((cue) => cue.heard).length} of ${view.cues.length} cues heard${view.stopped ? ', stopped' : ''}`}>
+    {/* The source as a strip pill (component contract 10): the fill as the ring on the live dot, the
+        count with its unit, a pip per cue (filled once heard) and the pull on the odds. The source's
+        name is in the group's accessible name. */}
+    <p className="source-pill" data-ui-pill aria-hidden="true">
+      <Ring value={view.value} size={22} tone={view.stopped ? 'good' : 'warn'}><i className={`source-live-dot${view.stopped ? ' source-live-off' : ''}`} /></Ring>
+      <b className="source-pill-count">{number}</b>
+      <span className="source-pill-unit">{view.count ? unit : 'of 100'}</span>
+      {view.cues.length > 0 && <span className="source-pill-cues">{view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'source-cue source-cue-heard' : 'source-cue'} />)}</span>}
+      <span className={`source-ticker-pull${view.oddsPull ? '' : ' source-ticker-pull-none'}`} title="Taken off the checks it weighs on">−{view.oddsPull || 0}</span>
     </p>
-    {/* The number and its unit wrap apart, never inside the number, and the digits are tabular,
-        so a refresh never changes the ticker's height. */}
-    <p className="source-ticker-count" aria-hidden="true"><b>{number}</b> <span>{view.count ? unit : 'of 100'}</span></p>
-    <span className="source-ticker-bar" aria-hidden="true">
-      <i style={{ width: `${Math.max(0, Math.min(100, view.value))}%` }} />
-      {view.cues.map(cue => <em key={cue.at} className={cue.heard ? 'fill-gauge-tick fill-gauge-heard' : 'fill-gauge-tick'} style={{ left: `${cue.at}%` }} />)}
-    </span>
     {effect && <p className="source-ticker-effect">{effect}</p>}
     {showChat && <div className="source-reactions" aria-hidden="true">
       {chat.map(item => <span key={item.key} className={`source-reaction${item.text === null ? ' source-reaction-join' : ''}`}>
