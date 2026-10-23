@@ -75,8 +75,22 @@
 .store-tile-stock { font-size: var(--s14); line-height: 1.3; color: var(--t2); }
 .store-tile .store-tile-stock .cost-quote-inline { display: inline; }
 .store-tile .store-tile-stock .cost-quote-note { display: inline; }
-.store-tile-locked .inv-art { opacity: .65; filter: grayscale(.8); }
-.store-tile-buy .cost-quote-value { color: var(--t1); }
+/* Purchase state reads at a glance: a mint count on owned art, a price in amber when it can be bought,
+   a dimmed row with its lock and the blocker on its own line when it cannot. */
+.store-tile-locked .inv-art > .gear-art-frame { opacity: .6; filter: grayscale(.8); }
+.store-tile-locked { background: color-mix(in srgb, var(--ink-0) 45%, transparent); }
+.store-tile-locked .inv-name { color: var(--t2); }
+.store-tile .inv-art { position: relative; }
+.store-tile-qty { position: absolute; top: -6px; left: -6px; min-width: 22px; padding: 0 5px; border: 1px solid var(--ink-0); border-radius: 999px; background: var(--mint); color: var(--ink-0); font: 800 var(--s14)/20px var(--f-ui); text-align: center; font-variant-numeric: tabular-nums; }
+.store-tile-have { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text, var(--mint)); }
+/* CostTag (screens/build-parts.tsx) with its pill option: the price, the state pill, the blocker line. */
+.store-tile-gate { display: block; margin-top: var(--sp1); }
+.store-tile .store-tile-gate .cost-quote-note { display: flex; align-items: flex-start; gap: var(--sp1); }
+.store-tile .store-tile-gate .cost-quote-note > .icon { flex: none; margin-top: 1px; }
+.store-tile-buy .cost-quote-value, .store-tile-buy .cost-quote-value > .icon { color: var(--amber); }
+.store-tile .cost-quote-value { font-weight: 700; }
+.cost-quote-pill { padding: 1px var(--sp2); border: 1px solid var(--hair-2); border-radius: 999px; color: var(--t2); font-size: var(--s14); line-height: 1.3; white-space: nowrap; }
+.cost-quote[data-state="short"] .cost-quote-pill { border-color: var(--warn-text); color: var(--warn-text); }
 .store-tile .inv-cond { top: auto; bottom: 0; height: 3px; }
 .store-tile-acquired { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text, var(--mint)); font-size: var(--s14); font-weight: 700; }
 .store-group-head { margin: 0; }
@@ -87,3 +101,17 @@
 .store-list > .store-tile { flex-wrap: wrap; }
 .store-list > .store-tile > .ui-row-main { flex: 1 1 9em; }
 .store-list > .store-tile > .ui-row-trail { margin-left: auto; }
+
+/* Requirement banner: the blocker and the one tap to its unlock sit with the object, above the fold. */
+.store-gate { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3); border: 1px solid color-mix(in srgb, var(--warn-text) 55%, var(--hair-2)); border-radius: 14px; background: color-mix(in srgb, var(--warn) 10%, var(--ink-1)); color: var(--warn-text); }
+.store-gate > .icon { flex: none; }
+.store-gate > div { flex: 1 1 auto; min-width: 0; }
+.store-gate strong { display: block; font-size: var(--s16); line-height: 1.3; }
+.store-gate p { margin: var(--sp1) 0 0; color: var(--t2); font-size: var(--s14); line-height: 1.35; }
+.store-gate .btn { flex: none; }
+.store-purchase .store-purchase-reason { display: flex; align-items: flex-start; gap: var(--sp2); color: var(--warn-text); }
+.store-purchase-reason > .icon { flex: none; margin-top: 2px; }
+/* The Store's two disclosures read as cards, not bare rows floating in space. */
+.gear-page-compact > .disclosure, .gear-page-compact .equipment-controls { border: 1px solid var(--hair-2); border-radius: 14px; background: var(--ink-1); }
+.gear-page-compact > .disclosure > .disclosure-summary, .gear-page-compact .equipment-controls > .disclosure-summary { padding-inline: var(--sp3); }
+.gear-page-compact > .disclosure > :not(summary), .gear-page-compact .equipment-controls > :not(summary) { padding-inline: var(--sp3); padding-bottom: var(--sp3); }

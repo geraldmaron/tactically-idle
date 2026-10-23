@@ -15,20 +15,24 @@ export interface CostQuote {
   free?: { label: string; met: boolean; have: number; need: number };
   /** Said in place of a price once owned. */
   done?: string;
+  /** A row that must read at a glance: the state said in a pill under the price, a lock beside the blocker. */
+  pill?: boolean;
 }
 
 /** One price column for a row's trail: glyph and price, with one quiet caption under it. */
 /** `part` splits it for a row whose trail has no room for the caption: the price in the trail, the
  * blocker or free route under the row's detail. */
 export function CostTag({ quote, part = 'all' }: { quote: CostQuote; part?: 'all' | 'value' | 'note' }) {
-  const { state, price, blocker, free, done } = quote;
+  const { state, price, blocker, free, done, pill } = quote;
+  const pillText = pill ? (state === 'locked' ? 'Locked' : state === 'short' ? 'Needs funding' : null) : null;
   const live = state !== 'owned';
   const freeNote = live && free ? `Free at ${free.label}${free.met ? '' : ` · ${free.have}/${free.need}`}` : null;
   return <span className={`cost-quote${part === 'note' ? ' cost-quote-inline' : ''}`} data-state={state}>
     {part !== 'note' && (state === 'owned'
       ? <span className="cost-quote-value"><Icon name="check" size={16} />{done ?? 'Owned'}</span>
       : <span className="cost-quote-value"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{price != null ? money(price) : ''}</span>)}
-    {part !== 'value' && live && blocker && <span className="cost-quote-note" data-kind="blocker">{blocker}</span>}
+    {part !== 'note' && pillText && <span className="cost-quote-pill">{pillText}</span>}
+    {part !== 'value' && live && blocker && <span className="cost-quote-note" data-kind="blocker">{pill && state === 'locked' && <Icon name="lock" size={16} />}{blocker}</span>}
     {part !== 'value' && freeNote && <span className="cost-quote-note">{freeNote}</span>}
     {part !== 'value' && live && free && <span className="cost-quote-bar" data-met={free.met ? 'yes' : undefined}><i style={{ width: `${Math.round(Math.min(1, free.have / Math.max(1, free.need)) * 100)}%` }} /></span>}
   </span>;
