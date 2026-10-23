@@ -230,6 +230,30 @@ base d5e7f75 too (reported by station-primitives, not reproduced by the lead).
 Neither touches `App.tsx`, shared CSS, `storefront.css`, `HQ.tsx` or `scripts/ui-gates/`; the lead registers both
 screens in the feel and layout registries at merge.
 
+Phases 4 and 5 merged into `claude/feel-lead` (47fad8d Build, 3c02164 Team; tip 94f34cc).
+
+## Sessions, servers and pending merges (2026-10-23, lead local_74f265d1)
+
+The lead stays local_74f265d1 on `claude/feel-lead`. Every finished station, rollout and feel session is
+archived; their branches are contained in 94f34cc. One dev server runs: `lead-5182`, `claude/feel-lead` on
+http://127.0.0.1:5182 (`.claude/launch.json`). Other ports belong to their session and stop with it.
+
+| Session | Branch | In flight | Declared touches |
+|---|---|---|---|
+| station-rebuild-fix-7-ro (local_ee1fc7f5) | `claude/adoring-meninsky-ac977a`, from 94f34cc | 7 rough edges and the gate port trap; its gate server on 5391 is its own | `scripts/check-feel.mjs`, `scripts/check-ui.mjs`, `scripts/ui-gates/serve.mjs` so far |
+
+Not yet in `claude/feel-lead`, merged by the lead after the session above lands (both touch `scripts/ui-gates/`):
+
+- `main` (b968e4b, `ui-gates` shipped): add/add conflicts with this branch's own gates in `scripts/ui-gates/`,
+  `scripts/check-ui.mjs`, `src/ui/ui-debt.json`, `src/ui/ui-gates-static.test.ts`, `package.json`, the capture tool
+  and `docs/backlog.md`. Tooling and docs only; the app the server shows does not change.
+- `claude/scenario-framework` (7e85ce3, on top of `main`): `docs/scenario-framework.md` and backlog items. Docs only.
+
+Parked, kept: the Going Live branches (`going-live-spine-25ad3c`, `spine-pass2-363cdf`, `prose-scene-6a2c7c`,
+`trusting-pasteur-41bc4e`, `happy-wilson-6259de`, `hopeful-pike-69bdac`) and `friendly-leakey-bd79fb`. The
+going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached. Folders of
+archived worktrees still on disk are clean and contained; remove them with `git worktree remove`.
+
 ## Locks outside normal ownership
 
 feel-slice (local_16bb6632), owner feedback 2026-10-23 (header and squad rows, brief sent by the lead):
