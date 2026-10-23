@@ -716,15 +716,19 @@ button.ui-row:disabled {
   font-size: var(--s16);
   letter-spacing: 0.04em;
 }
-/* Inline form: a card or a short list, one row, no picture. */
+/* Inline form: a card or a short list, no picture. The icon holds its own column and the title,
+   line and action stack beside it, so a long title wraps under itself and never under the icon. */
 .empty-compact {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  justify-items: start;
   gap: var(--sp1) var(--sp2);
   padding: var(--sp2) 0;
   text-align: left;
 }
+.empty-compact > .icon { grid-column: 1; grid-row: 1 / span 3; margin-top: 1px; }
+.empty-compact > :not(.icon) { grid-column: 2; }
 .empty-error .icon,
 .empty-error strong {
   color: var(--harm-text);
@@ -1982,6 +1986,10 @@ button.ocard {
 .live-map-inner {
   position: relative;
   min-width: 0;
+}
+/* The full map is fixed to the screen (live-call.css); its bottom controls clear the home indicator. */
+.live-map-full {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .map-hud {
   display: flex;
