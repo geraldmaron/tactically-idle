@@ -71,7 +71,7 @@
 
 /* Armory tools as one grouped list: the Quartermaster, restock rules, presets and the wall guide. */
 .armory-list { padding: 0; overflow: hidden; }
-.armory-list > .ui-row { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
-.armory-list > .ui-row:last-child { border-bottom: 0; }
-.armory-list > .ui-row:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
-.armory-list .armory-tool .ui-row-lead { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
+.armory-list .qm-row, .armory-list .armory-tool { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
+.armory-list > :last-child { border-bottom: 0; }
+.armory-list > :focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
+.armory-well { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }

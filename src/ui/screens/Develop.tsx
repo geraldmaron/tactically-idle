@@ -253,7 +253,7 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     <span className="dev-node-main" aria-hidden="true">
       <span className="dev-node-title"><strong>{o.node.name}</strong></span>
       <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>
-      {o.granted && !o.milestone ? <span className="dev-node-granted"><Icon name="medal" size={14} />Granted at {o.granted.milestone}</span> : null}
+      {o.granted && !o.milestone ? <span className="dev-node-granted"><Icon name="medal" size={16} />Granted at {o.granted.milestone}</span> : null}
       <CostTag part="note" quote={quote} />
       {tiered && <span className="dev-node-steps"><Segments done={o.currentTier} total={o.maxTier} /><span>Tier {o.currentTier} of {o.maxTier}</span></span>}
     </span>
@@ -292,7 +292,7 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
   const shortReason = o.reason && !missing.length ? o.reason : null;
   return <Sheet open onClose={onClose} title={o.node.name} subtitle={<>{BRANCH_META[o.node.branch].label} · {o.currentTier ? tiered ? `Tier ${tierLabel(o.currentTier)} of ${tierLabel(o.maxTier)}` : 'Owned' : 'Not owned'}</>} className="development-sheet" footer={
     o.targetTier && o.quote.cost ? <div className="dev-buy">
-      <p className="dev-buy-effect"><Icon name="check" size={14} /><span><b>You get</b> {nodeSummary(o)}</span></p>
+      <p className="dev-buy-effect"><Icon name="check" size={16} /><span><b>You get</b> {nodeSummary(o)}</span></p>
       {shortReason && <p className="dev-buy-reason">{shortReason}</p>}
       <div className="dev-buy-ways">
         <div className="dev-buy-way">
@@ -316,8 +316,8 @@ export function DevelopmentDetail({ option: o, onClose, pending, failure, purcha
           const owned = !missing.includes(id);
           const name = DEV_NODES[id]?.name ?? id;
           return <li key={id}>{owned || !onOpenNode
-            ? <span className={`dev-chip dev-chip-${owned ? 'owned' : 'missing'}`}><Icon name={owned ? 'check' : 'lock'} size={14} />{name}<span className="sr-only"> · {owned ? 'Owned' : 'Required'}</span></span>
-            : <button type="button" className="dev-chip dev-chip-missing dev-chip-action" onClick={() => onOpenNode(id)}><Icon name="lock" size={14} />{name}<span className="sr-only"> · Required. Open it</span><Icon name="chevronRight" size={14} /></button>}</li>;
+            ? <span className={`dev-chip dev-chip-${owned ? 'owned' : 'missing'}`}><Icon name={owned ? 'check' : 'lock'} size={16} />{name}<span className="sr-only"> · {owned ? 'Owned' : 'Required'}</span></span>
+            : <button type="button" className="dev-chip dev-chip-missing dev-chip-action" onClick={() => onOpenNode(id)}><Icon name="lock" size={16} />{name}<span className="sr-only"> · Required. Open it</span><Icon name="chevronRight" size={16} /></button>}</li>;
         })}</ul></section>}
       {unlocks.length > 0 && <section aria-labelledby="dev-unlocks"><h3 id="dev-unlocks" className="dev-label">Unlocks</h3>
         <ul className="dev-chips">{unlocks.map((unlock) => <li key={unlock.key} className="dev-chip">{unlock.itemId ? <GearArt itemId={unlock.itemId} size={22} /> : <Icon name="mortarboard" size={14} />}{unlock.name}</li>)}</ul></section>}

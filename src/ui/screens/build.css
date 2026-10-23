@@ -10,8 +10,8 @@
 .facility-plan-label { display: flex; align-items: center; gap: var(--sp2); margin: 0; padding: var(--sp3) var(--sp4); border: 1px solid var(--hair-2); border-bottom: 0; background: var(--ink-2); color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); }
 .facility-plan-label > .icon { color: var(--t3); }
 .facility-building { padding: 0; border-radius: 0 0 var(--r2) var(--r2); overflow: hidden; }
-.facility-building > .ui-row, .build-capacity .ui-row { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
-.facility-building > .ui-row:last-child, .build-capacity .ui-row { border-bottom: 0; }
+.facility-building .facility-room, .build-capacity .facility-patrol { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
+.facility-building .facility-room:last-child, .build-capacity .facility-patrol { border-bottom: 0; }
 .facility-room:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -2px; }
 .facility-object { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
 .facility-detail { display: flex; align-items: center; gap: var(--sp2); min-width: 0; }

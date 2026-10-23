@@ -35,7 +35,7 @@ describe('development browsing and shared detail', () => {
     expect(html).toContain('aria-label="Development branches"');
     expect(html).toContain('aria-label="Staff, 0 of 8 owned');
     expect(html).toContain('Next up');
-    expect(html).toContain('class="dev-track"');
+    expect(html).toContain('class="dev-track card" data-ui-list');
     expect(html).toMatch(/data-development-node="personnel_academy"[^>]*class="dev-node store-node-highlight"/);
     const staff = Object.values(DEV_NODES).filter((node) => node.branch === 'personnel').length;
     expect((html.match(/data-development-node=/g) ?? [])).toHaveLength(staff);
@@ -94,8 +94,8 @@ describe('development browsing and shared detail', () => {
     const tiered = renderToStaticMarkup(createElement(DevelopmentTile, { option: option('personnel_academy', 1), budget, highlighted: false, onOpen: () => {} }));
     expect(tiered).toContain('data-state="ready"');
     expect(tiered).toContain('Training academy. Ready to buy. Tier 1 of 3. Next costs $7,200. Or granted at Level 5, 1 of 5');
-    expect(tiered).toContain('Free at Level 5<b>1 of 5</b>');
-    expect(((tiered.match(/<span class="dev-pips">(.*?)<\/span>/)?.[1] ?? '').match(/<i[ >]/g) ?? [])).toHaveLength(3);
+    expect(tiered).toContain('Free at Level 5 · 1/5');
+    expect(((tiered.match(/<span class="segments"[^>]*>(.*?)<\/span>/)?.[1] ?? '').match(/<i[ >]/g) ?? [])).toHaveLength(3);
     expect(tiered).toContain('<i data-on="yes"></i><i></i><i></i>');
     expect((tiered.match(/<button/g) ?? [])).toHaveLength(1);
     const locked = renderToStaticMarkup(createElement(DevelopmentTile, { option: option('intel_drone'), budget, highlighted: false, onOpen: () => {} }));
@@ -106,7 +106,8 @@ describe('development browsing and shared detail', () => {
     broke.department.funding = 0;
     const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { funding: 0 }, highlighted: false, onOpen: () => {} }));
     expect(short).toContain('Needs more funding');
-    expect(short).toMatch(/<span class="dev-price" data-state="short" data-short="yes">\$4,900<\/span>/);
+    expect(short).toMatch(/<span class="cost-tag" data-state="short"><span class="cost-tag-value"><svg[\s\S]*?<\/svg>\$4,900<\/span><\/span>/);
+    expect(short).toContain('Needs funding');
     const owned = option('personnel_negotiation', 1);
     expect(tileState(owned)).toBe('owned');
     expect(renderToStaticMarkup(createElement(DevelopmentTile, { option: owned, budget, highlighted: false, onOpen: () => {} }))).toContain('Negotiation training. Owned');

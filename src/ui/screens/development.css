@@ -158,10 +158,10 @@
 .dev-node-steps { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
 .dev-chip-count { color: var(--t3); font-variant-numeric: tabular-nums; }
 .dev-branch-chip-on .dev-chip-count { color: var(--t2); }
-.segments { display: inline-flex; gap: 2px; min-width: 0; }
+.segments { display: inline-flex; gap: var(--sp1); min-width: 0; }
 .segments > i { display: block; width: 12px; height: 4px; border-radius: 1px; background: var(--hair-2); }
 .segments > i[data-on] { background: var(--good-text, var(--mint)); }
-.cost-tag { display: grid; justify-items: end; gap: 2px; min-width: 0; max-width: 132px; text-align: right; font-variant-numeric: tabular-nums; }
+.cost-tag { display: grid; justify-items: end; gap: var(--sp1); min-width: 0; max-width: 132px; text-align: right; font-variant-numeric: tabular-nums; }
 .cost-tag-value { display: inline-flex; align-items: center; gap: var(--sp1); font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); white-space: nowrap; }
 .cost-tag-value > .icon { flex: none; color: var(--t3); }
 .cost-tag[data-state="ready"] .cost-tag-value { color: var(--t1); }
@@ -175,13 +175,13 @@
 .cost-tag-bar > i { display: block; height: 100%; background: var(--t1); }
 .cost-tag-bar[data-met] > i { background: var(--good-text, var(--mint)); }
 .dev-chips > li { list-style: none; }
-.dev-chip-action { cursor: pointer; font: inherit; font-size: 13px; min-height: 36px; }
+.dev-chip-action { cursor: pointer; font: inherit; font-size: var(--s14); min-height: 36px; }
 .dev-chip-action:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .dev-buy-effect { display: flex; align-items: flex-start; gap: var(--sp2); flex: 1 1 100%; margin: 0; font-size: var(--s14); color: var(--t2); }
-.dev-buy-effect > .icon { flex: none; margin-top: 2px; color: var(--good-text, var(--mint)); }
+.dev-buy-effect > .icon { flex: none; margin-top: var(--sp1); color: var(--good-text, var(--mint)); }
 .dev-buy-effect b { color: var(--t1); font-weight: 600; }
 /* Tier ladder: tier and effect on one line, the price under the effect, so nothing is squeezed. */
-.dev-ladder > li { grid-template-columns: 38px minmax(0, 1fr); row-gap: 2px; }
+.dev-ladder > li { grid-template-columns: 38px minmax(0, 1fr); row-gap: var(--sp1); }
 .dev-ladder-cost { grid-column: 2; text-align: left; white-space: normal; }
 .dev-ladder-cost:empty { display: none; }
 .cost-tag-inline { display: flex; flex-wrap: wrap; align-items: center; justify-items: start; gap: var(--sp1) var(--sp2); max-width: none; text-align: left; }

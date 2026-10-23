@@ -56,7 +56,7 @@ export function BuildScreen() {
       </div>
     </section>
     <section className="build-capacity" aria-label="Patrol positions">
-      <Row lead={<span className="facility-object" aria-hidden="true"><Icon name="people" size={24} /></span>}
+      <Row className="facility-patrol" lead={<span className="facility-object" aria-hidden="true"><Icon name="people" size={24} /></span>}
         title={`${employedPatrol(game).length} / ${capacity} patrol positions filled`}
         detail={<span className="facility-detail facility-detail-wrap"><Segments done={employedPatrol(game).length} total={capacity} /><span>Department level {game.department.level} · {next ? `${next.positions} positions at department level ${next.level}` : 'All 12 patrol positions authorized'}</span></span>} />
     </section>

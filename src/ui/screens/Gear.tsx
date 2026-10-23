@@ -61,14 +61,14 @@ function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'refere
       <div className="armory-list card" data-ui-list>
         <QuartermasterCard />
         <Row className="armory-tool" onClick={() => onTool('rules')} label={`Restock rules, ${restock.unlocked ? `${g.department.restockRules.length} set` : 'locked'}`}
-          lead={<Icon name={restock.unlocked ? 'refresh' : 'lock'} size={24} />} title="Restock rules"
+          lead={<span className="armory-well"><Icon name={restock.unlocked ? 'refresh' : 'lock'} size={24} /></span>} title="Restock rules"
           detail={restock.unlocked ? 'Refill held stock each hour' : restock.nodeName ? `Unlocks with ${restock.nodeName}` : 'Locked'}
           trail={<Chip tone={restock.unlocked ? 'neutral' : 'warn'} icon={restock.unlocked ? undefined : 'lock'}>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</Chip>} />
         <Row className="armory-tool" onClick={() => onTool('presets')} label={`Loadout presets, ${presets.unlocked ? `${g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length} set` : 'locked'}`}
-          lead={<Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={24} />} title="Loadout presets"
+          lead={<span className="armory-well"><Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={24} /></span>} title="Loadout presets"
           detail={presets.unlocked ? 'Specialist gear each squad takes' : presets.nodeName ? `Unlocks with ${presets.nodeName}` : 'Locked'}
           trail={<Chip tone={presets.unlocked ? 'neutral' : 'warn'} icon={presets.unlocked ? undefined : 'lock'}>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</Chip>} />
-        <Row className="armory-tool" onClick={() => onTool('reference')} lead={<Icon name="brick" size={24} />} title="Wall materials" detail="Construction reference" trail={<Icon name="chevronRight" size={18} />} />
+        <Row className="armory-tool" onClick={() => onTool('reference')} lead={<span className="armory-well"><Icon name="brick" size={24} /></span>} title="Wall materials" detail="Construction reference" trail={<Icon name="chevronRight" size={18} />} />
       </div>
     </section>
   );

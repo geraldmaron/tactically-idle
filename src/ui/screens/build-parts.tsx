@@ -25,8 +25,8 @@ export function CostTag({ quote, part = 'all' }: { quote: CostQuote; part?: 'all
   const caption = state === 'owned' ? null : blocker ?? (free ? `Free at ${free.label}` : null);
   return <span className={`cost-tag${part === 'note' ? ' cost-tag-inline' : ''}`} data-state={state}>
     {part !== 'note' && (state === 'owned'
-      ? <span className="cost-tag-value"><Icon name="check" size={14} strokeWidth={3} />{done ?? 'Owned'}</span>
-      : <span className="cost-tag-value"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={14} />{price != null ? money(price) : ''}</span>)}
+      ? <span className="cost-tag-value"><Icon name="check" size={16} />{done ?? 'Owned'}</span>
+      : <span className="cost-tag-value"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{price != null ? money(price) : ''}</span>)}
     {part !== 'value' && caption && <span className="cost-tag-note">{caption}{!blocker && free && !free.met ? ` · ${free.have}/${free.need}` : ''}</span>}
     {part !== 'value' && !blocker && free && state !== 'owned' && <span className="cost-tag-bar" data-met={free.met ? 'yes' : undefined}><i style={{ width: `${Math.round(Math.min(1, free.have / Math.max(1, free.need)) * 100)}%` }} /></span>}
   </span>;

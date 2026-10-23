@@ -62,10 +62,10 @@
 /* Equipment as one grouped list per category (contract items 2 and 3): a card of rows, each with a
    40px art well, name and stock, and one price tag. The condition strip runs along the row's foot. */
 .store-list.inv-grid { display: block; padding: 0; overflow: hidden; }
-.store-list > .ui-row.inv-tile { position: relative; display: flex; justify-items: initial; min-height: 64px; padding: var(--sp3) var(--sp4); border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: none; text-align: left; overflow: visible; }
-.store-list > .ui-row.inv-tile:last-child { border-bottom: 0; }
-.store-list > .ui-row.inv-tile:active { transform: none; }
-.store-list > .ui-row.inv-tile:focus-visible { outline-offset: -2px; }
+.store-list > .store-tile { position: relative; display: flex; justify-items: initial; min-height: 64px; padding: var(--sp3) var(--sp4); border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: none; text-align: left; overflow: visible; }
+.store-list > .store-tile:last-child { border-bottom: 0; }
+.store-list > .store-tile:active { transform: none; }
+.store-list > .store-tile:focus-visible { outline-offset: -2px; }
 .store-tile .inv-art { display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; margin: 0; }
 .store-tile .inv-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp2); min-height: 0; overflow: visible; font: 600 var(--s16)/1.25 var(--f-ui); letter-spacing: 0; text-align: left; color: var(--t1); }
 .store-tile .inv-alert, .store-tile-cert { position: static; flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; }
