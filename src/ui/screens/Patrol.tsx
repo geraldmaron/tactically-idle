@@ -87,7 +87,7 @@ function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmpl
   const hours = next ? Math.min(employee.serviceHours, next.serviceHours) : 0;
   return <article className="patrol-item" data-patrol-employee={employee.id} tabIndex={-1} aria-label={name}>
     <Row lead={<PatrolPortrait profileId={employee.profileId} size={40} />} title={name}
-      detail={`Grade ${employee.grade} · ${grade.name} · ${training ? '$0/h' : perHour(grade.gross)} gross`}
+      detail={`Grade ${employee.grade} · ${grade.name} · ${training ? '$0/h' : perHour(grade.gross)}`}
       trail={<Chip tone={training ? 'blue' : 'good'} icon={training ? 'mortarboard' : 'check'}>{training ? 'In training' : 'Covering'}</Chip>} />
     <div className="patrol-item-foot">
       {training ? <p className="patrol-training-status">{PATROL_GRADES[training.toGrade].name} · {duration(Math.max(0, training.endsAt - game.department.clockHighWater))} remaining. Grade changes when training finishes.</p>
