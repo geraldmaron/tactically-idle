@@ -50,14 +50,17 @@
 .app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
 
 /* Desk chrome: one 44px row. Funds and the hourly rate share one chip; trust, level and the menu follow. */
-.app .resource-bar { box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; min-height: 44px; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); gap: var(--sp1); padding: 0 var(--sp2) 0 var(--gutter); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+/* --pill-h is the one height for the pills and the menu button: 32px, growing with the text setting. When the
+   pills no longer fit beside the menu they wrap inside .stats, a second row on purpose, and the menu keeps the
+   top right. */
+.app .resource-bar { --pill-h: max(32px, calc(var(--s16) + 12px)); --bar-row: max(var(--touch), calc(var(--pill-h) + 12px)); box-sizing: border-box; display: flex; flex-wrap: nowrap; align-items: flex-start; min-height: 44px; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); gap: var(--sp1); padding: 0 var(--sp2) 0 var(--gutter); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
 .resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; padding: 0; gap: 0 var(--sp1); flex-wrap: wrap; justify-content: flex-start; list-style: none; }
 .resource-bar .stats > li { display: flex; flex: none; }
 /* Each control is a 44px hit area around one 32px pill; every pill shares height, radius and type.
    Pills never shrink below their content: at enlarged text the bar wraps to a second row rather than
    clip the balance or the hourly rate (Codex, 2026-10-23). */
-.resource-bar .stat { position: relative; display: inline-flex; align-items: center; min-width: 0; height: var(--touch); padding: 0; border: 0; background: none; color: var(--t1); font: inherit; cursor: pointer; }
-.resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; min-height: 32px; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
+.resource-bar .stat { position: relative; display: inline-flex; align-items: center; min-width: 0; height: var(--bar-row); padding: 0; border: 0; background: none; color: var(--t1); font: inherit; cursor: pointer; }
+.resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; box-sizing: border-box; height: var(--pill-h); padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
 .resource-bar .res-well { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; }
 .resource-bar .res-well-cash { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
 .resource-bar .ring-core { background: var(--ink-2); color: var(--t1); }
@@ -67,7 +70,7 @@
 .resource-bar .res-suffix { font: 500 var(--s14)/1 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
 .resource-bar .res-suffix.stat-neg { color: var(--harm-text); }
 .resource-bar .res-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-.resource-bar .menu-btn { position: relative; display: grid; place-items: center; flex: none; box-sizing: border-box; width: 32px; height: 32px; margin: 0 0 0 auto; padding: 0; border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); color: var(--t1); }
+.resource-bar .menu-btn { position: relative; display: grid; place-items: center; flex: none; box-sizing: border-box; width: var(--pill-h); height: var(--pill-h); margin: calc((var(--bar-row) - var(--pill-h)) / 2) 0 0 auto; padding: 0; border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); color: var(--t1); }
 /* The menu is drawn at pill size like the pills (check:feel F8.pill); its hit area is the full 44px. */
 .resource-bar .menu-btn::after { content: ''; position: absolute; inset: calc((100% - var(--touch)) / 2); }
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
@@ -81,11 +84,14 @@
   .resource-bar .menu-btn { margin-right: var(--sp1); }
 }
 @media (hover: hover) { .resource-bar button:hover .res-pill, .resource-bar .menu-btn:hover { filter: brightness(1.12); } }
-.chrome-foot > .bottomnav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); padding: 0 var(--sp1); }
+/* Five equal tabs while the labels fit; at enlarged text they wrap to a second row instead of running together. */
+.chrome-foot > .bottomnav { display: flex; flex-wrap: wrap; }
+.chrome-foot > .bottomnav > .navbtn { flex: 1 1 0; min-width: max-content; padding-inline: var(--sp1); }
+.bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
 .bottomnav .navicon .icon { display: block; }
-.bottomnav .navbadge { top: -8px; right: -12px; min-width: 18px; height: 18px; padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+/* 14px count with 4px clear above and below, so the box is the text plus 8px. */
+.bottomnav .navbadge { top: -10px; right: -14px; min-width: calc(min(var(--s14), 14px) + 8px); height: calc(min(var(--s14), 14px) + 8px); padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 min(var(--s14), 14px)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
 .bottomnav .live-dot { top: -4px; right: -6px; }
 .bottomnav .navdot { top: -3px; right: -5px; background: var(--act); }
 
