@@ -1,4 +1,4 @@
-/* The switch row (SwitchRow.tsx). The track and thumb are the shared .toggle-ui from app.css. */
+/* The switch row (SwitchRow in components/ui.tsx). The track and thumb are the shared .toggle-ui from app.css. */
 .switch-row { cursor: pointer; }
 .switch-row .ui-row-trail { display: flex; align-items: center; }
 .switch-row input { position: absolute; opacity: 0; width: 1px; height: 1px; }

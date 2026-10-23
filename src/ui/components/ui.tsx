@@ -6,6 +6,8 @@ import type { RatingKey } from '../../sim/types';
 import type { StatusKey } from './labels';
 import { ChoiceRail } from './ChoiceRail';
 import { StressDisplay } from './StressDisplay';
+import '../settings/inset-list.css';
+import './switch-row.css';
 
 // Small shared primitives, one definition each (docs/ui-ux-audit.md, "Patterns in use"). Styling
 // lives in app.css under "primitives", from the tokens in theme.css. Empty, loading and error states
@@ -184,6 +186,31 @@ export function Row({ lead, title, detail, trail, onClick, className, label, sel
   return onClick
     ? <button ref={buttonRef} type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark} {...data}>{body}</button>
     : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark} {...data}>{body}</div>;
+}
+
+/** The one switch: a row with a lead, a title and a line, and the switch in the trail, laid out like
+ * the link rows beside it. The whole row toggles it. First run, the Menu and its Themes page all
+ * use this. A blocked switch stays visible and says why through `describedBy`. */
+export function SwitchRow({ icon, title, detail, checked, onChange, blocked, describedBy }: {
+  icon: IconName;
+  title: ReactNode;
+  detail?: ReactNode;
+  checked: boolean;
+  onChange: (on: boolean) => void;
+  blocked?: boolean;
+  describedBy?: string;
+}) {
+  return <label className="ui-row switch-row" data-blocked={blocked || undefined}>
+    <span className="ui-row-lead"><Icon name={icon} size="md" /></span>
+    <span className="ui-row-main">
+      <span className="ui-row-title">{title}</span>
+      {detail && <span className="ui-row-detail">{detail}</span>}
+    </span>
+    <span className="ui-row-trail">
+      <input type="checkbox" role="switch" checked={checked} disabled={blocked} aria-describedby={blocked ? describedBy : undefined} onChange={(e) => onChange(e.target.checked)} />
+      <span className="toggle-ui" aria-hidden="true" />
+    </span>
+  </label>;
 }
 
 type ActionBarButton = Omit<ButtonProps, 'variant' | 'children' | 'block'> & { label: ReactNode };

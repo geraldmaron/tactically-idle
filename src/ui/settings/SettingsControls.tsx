@@ -1,10 +1,9 @@
 import { useId, useSyncExternalStore } from 'react';
 import { TIMER_SETTINGS } from '../../sim/timer-setting';
-import { Card, Section, Segmented } from '../components/ui';
+import { Card, Section, Segmented, SwitchRow } from '../components/ui';
 import { CARD_WARNING_SETTINGS, readSettings, subscribeSettings, type PlayerSettings } from './prefs';
 import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
 import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
-import { SwitchRow } from './SwitchRow';
 import './settings.css';
 
 /** The saved settings, re-rendering on every change made on this page. */

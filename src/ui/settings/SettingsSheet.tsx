@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Sheet } from '../components/Sheet';
-import { Card, Row, Section, Segmented } from '../components/ui';
+import { Card, Row, Section, Segmented, SwitchRow } from '../components/ui';
 import { Icon } from '../icons';
 import { useCampaigns } from '../store';
 import { campaignStatus } from '../components/SaveManager';
@@ -12,7 +12,6 @@ import { CARD_WARNING_SETTINGS, updateSettings, type PlayerSettings } from './pr
 import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
 import { CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
 import { SupportPanel, ThemeSwitch, useSettings } from './SettingsControls';
-import { SwitchRow } from './SwitchRow';
 import './menu.css';
 
 export type MenuPage = 'menu' | 'themes' | 'warnings' | 'timer' | 'support';
