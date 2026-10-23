@@ -7,6 +7,7 @@ import { COURSES } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { createPlayerNavigation, DEFAULT_NAV, NavContext, PLAYER_NAV_HISTORY_KEY, topTab, type NavApi, type PlayerRoute } from './components/nav';
 import { BottomNav } from './components/BottomNav';
+import { BeatContext } from './components/Beat';
 import { GearScreen } from './screens/Gear';
 import { ManagerSheet } from './components/CommandStaff';
 import { SquadScreen } from './screens/Squad';
@@ -45,6 +46,7 @@ function historyFixture() {
     state: () => history.state,
   };
 }
+const buildScreen = () => createElement(BeatContext.Provider, { value: { play: vi.fn(), act: vi.fn() } }, createElement(BuildScreen));
 function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
   return renderToStaticMarkup(createElement(NavContext.Provider, { value: { ...DEFAULT_NAV, ...nav } }, child));
 }
@@ -198,8 +200,9 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(store).toContain('Store</h1>');
     expect(store).toContain('Search equipment');
     expect(store).not.toContain('Development branches');
-    const build = markup(createElement(BuildScreen), { tab: 'develop' });
-    expect(build).toContain('Development branches');
+    const build = markup(buildScreen(), { tab: 'develop' });
+    expect(build).toContain('Next for the station');
+    expect(build).toContain('data-disclosure="all-department-upgrades"');
     expect(build).not.toContain('Search equipment');
     expect(build).not.toContain('Build sections');
     const boosts = markup(createElement(StoreScreen), { tab: 'store', storeSection: 'boosts' });
@@ -207,15 +210,14 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(boosts).not.toContain('Search equipment');
   });
 
-  it.each([{ level: 1, capacity: 6, next: '8 positions at level 3' }, { level: 3, capacity: 8, next: '12 positions at level 6' }, { level: 6, capacity: 12, next: 'All 12 positions authorized' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
+  it.each([{ level: 1, capacity: 6, next: 'Level 3 adds 2 places' }, { level: 3, capacity: 8, next: 'Level 6 adds 4 places' }, { level: 6, capacity: 12, next: 'Every place is open' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
     state.department.level = level;
-    const html = markup(createElement(BuildScreen), { tab: 'develop' });
-    expect(html).toContain(`/ ${capacity} patrol positions filled`);
-    expect(html).toContain(`Level ${level} · `);
+    const html = markup(buildScreen(), { tab: 'develop' });
+    expect(html).toContain(`of ${capacity} patrol positions filled`);
     expect(html).toContain(next);
-    const capacitySection = html.match(/<section class="build-capacity"[\s\S]*?<\/section>/)?.[0];
-    expect(capacitySection).toBeDefined();
-    expect(capacitySection).not.toContain('<button');
+    const garage = html.match(/<button[^>]*data-room="garage"[\s\S]*?<\/button>/)?.[0];
+    expect(garage).toBeDefined();
+    expect(garage).toContain('Opens Team, Patrol');
   });
   it('shows one Armory list with owned stock on its tiles and the standing tools in the header (gear-armory)', () => {
     const html = markup(createElement(GearScreen));

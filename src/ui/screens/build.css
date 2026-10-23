@@ -1,24 +1,90 @@
-/* Build: the department plan scene over one grouped list of facilities (contract items 2 and 3). Each
-   facility is a Row: a 40px art well, name, progress as segments with the count beside it, and one
-   price tag. The patrol positions follow as one row of the same family. */
-.facility-build-page { gap: var(--sp4); }
-.facility-plan { display: grid; min-width: 0; }
-.facility-plan-scene { height: clamp(96px, 28vw, 120px); border: 1px solid var(--hair-2); border-bottom: 0; border-radius: var(--r2) var(--r2) 0 0; }
-.facility-plan-scene > .plate-art { object-position: center 57%; }
-.facility-plan-scene::after { background: none; }
-.facility-plan-label { display: flex; align-items: center; gap: var(--sp2); margin: 0; padding: var(--sp3) var(--sp4); border: 1px solid var(--hair-2); border-bottom: 0; background: var(--ink-2); color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); }
-.facility-plan-label > .icon { color: var(--t3); }
-.facility-building { padding: 0; border-radius: 0 0 var(--r2) var(--r2); overflow: hidden; }
-.facility-building .facility-room, .build-capacity .facility-patrol { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
-.facility-building .facility-room:last-child, .build-capacity .facility-patrol { border-bottom: 0; }
-.facility-room:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -2px; }
-.facility-object { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
-.facility-detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); min-width: 0; }
-.facility-detail > .segments { flex: none; }
-.facility-room-ready .cost-quote-value { color: var(--t1); }
-.build-capacity { border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
-.facility-build-page .develop-page { padding: var(--sp3) 0; }
-/* Enlarged text: the price drops under the name instead of breaking it mid-word. */
-.facility-building .facility-room { flex-wrap: wrap; }
-.facility-building .facility-room > .ui-row-main { flex: 1 1 9em; }
-.facility-building .facility-room > .ui-row-trail { margin-left: auto; }
+/* Build: the station. The diorama is painted dark; each open room is the lit painting showing through
+   its own outline. Below it: the one room to build next, a card for every room (a grouped list of
+   buttons, price last), and the sheet where a room's steps are read and bought. */
+.build-page { gap: var(--sp4); }
+
+.station { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); overflow: hidden; background: var(--ink-1); }
+.station-art { position: absolute; inset: 0; }
+.station-plate, .station-light { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.station-light { opacity: 0; transition: opacity 1.1s ease-out; }
+.station-light[data-open] { opacity: 1; }
+.station-light[data-fresh] { animation: station-lit 1.6s ease-out; }
+@keyframes station-lit { 0% { filter: brightness(1.9); } 100% { filter: brightness(1); } }
+.station > .scene { background: none; }
+/* The rooms are drawn by the paintings; the tap target is a small mark, not a wash over the picture. */
+.station .scene-spot-fill { place-self: center; width: var(--sp3); height: var(--sp3); border-radius: 50%; }
+.station .scene-spot-lit .scene-spot-fill { background: var(--t1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-deep) 60%, transparent), 0 0 var(--sp4) var(--sp1) color-mix(in srgb, var(--t1) 55%, transparent); }
+.station .scene-spot-dark .scene-spot-fill { background: var(--t3); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-deep) 70%, transparent); }
+.station .scene-spot-ready .scene-spot-fill { background: var(--act-hi); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink-deep) 60%, transparent), 0 0 0 4px var(--act); }
+.station-caption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp3); padding: var(--sp6) var(--sp3) var(--sp2); background: linear-gradient(transparent, color-mix(in srgb, var(--ink-deep) 88%, transparent)); pointer-events: none; }
+.station-name { margin: 0; min-width: 0; font: 700 var(--s22)/1.1 var(--f-title); color: var(--t1); }
+.station-count { flex: none; font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t2); text-align: right; }
+@media (prefers-reduced-motion: reduce) {
+  .station-light { transition: none; }
+  .station-light[data-fresh] { animation: none; }
+}
+
+/* Cards: painting, text, price. The room list is one card of buttons split by hairlines. */
+.room-list { padding: 0; overflow: hidden; }
+.room-card, .next-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); width: 100%; min-height: 64px; padding: var(--sp3); border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
+.room-list > .room-card + .room-card { border-top: 1px solid var(--hair); }
+.room-card:focus-visible, .next-card:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -2px; }
+.room-art { display: block; border-radius: var(--r1); object-fit: cover; background: var(--ink-2); }
+.room-card .room-art, .next-card .room-art { width: 64px; height: 52px; }
+.room-main, .next-main { display: grid; gap: var(--sp1); min-width: 0; }
+.room-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); font: 600 var(--s16)/1.25 var(--f-ui); }
+.room-line { font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.room-trail { display: grid; justify-items: end; gap: var(--sp1); }
+.room-trail .segments > i { width: 6px; }
+.room-status { display: inline-flex; align-items: center; gap: var(--sp1); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t3); }
+.room-status[data-state="ready"] { color: var(--good-text, var(--good)); }
+.room-note { max-width: 9em; font: 400 var(--s14)/1.25 var(--f-ui); color: var(--t3); text-align: right; }
+.face-stack { display: inline-flex; align-items: center; margin-top: var(--sp1); }
+.face-stack > * + * { margin-left: calc(-1 * var(--sp2)); }
+.next-card { border: 1px solid color-mix(in srgb, var(--act) 45%, transparent); border-radius: var(--r2); background: color-mix(in srgb, var(--act) 9%, var(--ink-1)); }
+.next-eyebrow { font: 600 var(--s14)/1.2 var(--f-ui); color: var(--act-text); }
+.next-title { font: 700 var(--s22)/1.1 var(--f-title); }
+
+/* The room sheet. */
+.room-detail { display: grid; gap: var(--sp4); min-width: 0; }
+.room-detail section { display: grid; gap: var(--sp2); min-width: 0; }
+.room-hero { display: block; width: 100%; height: 150px; border-radius: var(--r2); object-fit: cover; background: var(--ink-2); }
+.room-step-title { margin: 0; font: 700 var(--s22)/1.1 var(--f-title); }
+.room-effect { margin: 0; font: 400 var(--s16)/1.35 var(--f-ui); color: var(--t1); }
+.room-label { margin: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.room-who, .room-ladder { margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.room-who-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); min-height: 56px; padding: var(--sp2) var(--sp3); }
+.room-who-row + .room-who-row, .room-ladder > li + li { border-top: 1px solid var(--hair); }
+.room-who-lead { display: grid; place-items: center; min-width: var(--face-sm); }
+.room-who-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
+.room-who-main { display: grid; gap: var(--sp1); min-width: 0; }
+.room-who-name { font: 600 var(--s16)/1.25 var(--f-ui); overflow-wrap: anywhere; }
+.room-who-note { font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.room-who-note:empty { display: none; }
+.room-who-delta { display: grid; justify-items: end; max-width: 9em; text-align: right; font: 600 var(--s14)/1.25 var(--f-ui); font-variant-numeric: tabular-nums; }
+.room-who-delta s { text-decoration: none; color: var(--t3); }
+.room-who-delta b { font-weight: 700; color: var(--good-text, var(--good)); }
+.room-ladder > li { padding-left: calc(var(--depth, 0) * var(--sp4)); }
+.room-step-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); width: 100%; min-height: 56px; padding: var(--sp3); border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
+.room-step-row[aria-current="step"] { background: var(--ink-3); }
+.room-step-row:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
+.room-step-glyph { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); }
+.room-step-mark { position: absolute; right: calc(-1 * var(--sp1)); bottom: calc(-1 * var(--sp1)); display: grid; place-items: center; width: var(--sp4); height: var(--sp4); border-radius: 50%; background: var(--ink-0); color: var(--t2); }
+.room-ladder > li[data-state="owned"] .room-step-mark { color: var(--good-text, var(--good)); }
+.room-ladder > li[data-state="locked"] .room-step-glyph > .dev-glyph { filter: grayscale(1); opacity: 0.6; }
+.room-step-main { display: grid; gap: var(--sp1); min-width: 0; }
+.room-step-name { font: 600 var(--s16)/1.25 var(--f-ui); }
+.room-step-fx { font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.room-ladder > li[data-state="locked"] .room-step-name { color: var(--t2); }
+.room-needs { margin: 0 var(--sp3) var(--sp3); }
+.room-links { display: flex; flex-wrap: wrap; gap: var(--sp2); }
+.room-buy { display: grid; gap: var(--sp2); justify-items: stretch; }
+.room-buy .cost-quote-inline { justify-content: center; text-align: center; }
+.room-done { display: flex; align-items: center; gap: var(--sp2); margin: 0; color: var(--t2); }
+.room-done > .icon { color: var(--good-text, var(--good)); }
+@media (max-height: 600px) { .room-hero { height: 96px; } }
+@media (max-width: 359px) {
+  .room-card, .next-card { grid-template-columns: 56px minmax(0, 1fr); }
+  .room-card .room-art, .next-card .room-art { width: 56px; height: 48px; }
+  .room-trail { grid-column: 2; justify-items: start; grid-auto-flow: column; align-items: center; gap: var(--sp3); }
+}

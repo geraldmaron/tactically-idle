@@ -135,7 +135,7 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
         await shot('08-recruit-card', { segments: 1 }); await b.click(); await shot('08-hire-contract-sheet', { segments: 2 }); await closeSheet(); });
       await step('training', async () => { await page.locator('.squad-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Training', exact: true }).click(); await shot('09-training', { segments: 3 }); });
       await step('develop', async () => { await tab('Build'); await shot('10-develop', { segments: 6 }); });
-      await step('develop-sheet', async () => { await page.locator('.facility-plan [data-facility-branch]').first().click(); await shot('11-develop-sheet', { segments: 2 }); await closeSheet(); });
+      await step('develop-sheet', async () => { await page.locator('.room-list [data-room]').first().click(); await shot('11-develop-sheet', { segments: 2 }); await closeSheet(); });
       await step('gear', async () => { await tab('Store'); await page.locator('.store-screen-head').waitFor(); await shot('12-store', { segments: 6 });
         await page.locator('.store-screen-head [aria-label="Store sections"]').getByRole('button', { name: 'Boosts', exact: true }).click(); await shot('12-store-boosts', { segments: 3 });
         await page.locator('.store-screen-head [aria-label="Store sections"]').getByRole('button', { name: 'Equipment', exact: true }).click(); });
