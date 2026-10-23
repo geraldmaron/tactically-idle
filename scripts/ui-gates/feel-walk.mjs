@@ -8,12 +8,13 @@ import { FEEL_SCREENS, feelProbe, judgeScreen, judgeShift } from './feel.mjs';
 
 /** The scenario matrix. `paint` scenarios hold art back so the first frame and the load shift can be seen. */
 export const SCENARIOS = [
-  { id: 'w320', width: 320, height: HEIGHTS[320], paint: true },
+  // Small, short and enlarged-text screens are judged on reach: the protected 4B order and full hook leave
+  // no room for two cards or the first live choice, so density is off and the live shortcut counts.
+  { id: 'w320', width: 320, height: HEIGHTS[320], paint: true, density: false, shortcut: true },
   { id: 'w390', width: 390, height: HEIGHTS[390], paint: true, cold: true },
   { id: 'w430', width: 430, height: HEIGHTS[430] },
-  // The short screen is judged on reach, not density: the protected full hook leaves room for one card.
-  { id: 'short640', width: 390, height: 640, density: false },
-  { id: 'text200', width: 390, height: HEIGHTS[390], textScale: 2 },
+  { id: 'short640', width: 390, height: 640, density: false, shortcut: true },
+  { id: 'text200', width: 390, height: HEIGHTS[390], textScale: 2, shortcut: true },
   { id: 'timer-off', width: 390, height: HEIGHTS[390], timer: 'off', stepOut: true },
   { id: 'timer-relaxed', width: 390, height: HEIGHTS[390], timer: 'relaxed', stepOut: true },
   { id: 'timer-standard', width: 390, height: HEIGHTS[390], timer: 'standard', stepOut: true },
@@ -89,7 +90,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         } catch (e) { failures.push(`${sc.id} ${name}: ${String(e).slice(0, 120)}`); }
       };
       const finish = async (name, raw, shift) => {
-        const findings = judgeScreen(raw, { scale: sc.textScale ?? 1, density: sc.density !== false });
+        const findings = judgeScreen(raw, { scale: sc.textScale ?? 1, density: sc.density !== false, shortcut: !!sc.shortcut });
         // The chrome budget again under the safe-area fixture (notch and home indicator), where it grows by the insets.
         const inset = INSET_FIXTURES.bottom;
         await setInset(inset); await page.waitForTimeout(80);

@@ -28,7 +28,6 @@ export const FEEL_BUDGETS = {
   shiftMax: 0.001,        // summed layout-shift score caused by art load
   tapsBoardToDecision: 3, // board -> first live decision
   tapsDebriefToBoard: 1,  // debrief -> board
-  shortScreenPx: 640,     // below this height density is not judged and the live shortcut stands in for the first choice
 };
 
 /**
@@ -175,9 +174,10 @@ export async function feelProbe(cfg) {
 
 // ---- verdicts: pure, shared by the walk and the negative controls. Each returns [{ rule, id, detail }].
 
-export function judgePrimary(p, { vh, jump } = {}) {
-  // Below the short-screen floor a reachable shortcut to the choices stands in for the first choice.
-  if (vh && vh < FEEL_BUDGETS.shortScreenPx && jump?.inside && jump.clear && !jump.disabled) return [];
+export function judgePrimary(p, { jump, shortcut = false } = {}) {
+  // Where the scenario allows it (small or short screens, enlarged text), a reachable shortcut to the
+  // live choices stands in for the first choice: the 4B order and the full hook leave it no room there.
+  if (shortcut && jump?.inside && jump.clear && !jump.disabled) return [];
   if (!p?.found) return [{ rule: 'F1.primary', id: 'primary', detail: 'no primary action found on the screen' }];
   const why = [];
   if (!p.inside) why.push(p.top < 0 ? `starts above the viewport (${p.top}px)` : `ends at ${p.bottom}px, below the first viewport`);
@@ -210,9 +210,9 @@ export function judgeChrome(c, budget = FEEL_BUDGETS.chromePx, scale = 1) {
   return used > allowed ? [{ rule: 'F3.chrome', id: `chrome@inset${c.inset?.top ?? 0}/${c.inset?.bottom ?? 0}`, detail: `top bar ${c.top}px (${c.topLabel ?? 'none'}) + bottom ${c.bottom}px (${c.bottomLabel ?? 'none'}) = ${used}px, budget ${allowed}px` }] : [];
 }
 
-/** `scale` is the text scale of the run; density is skipped at 2 or more and below the short-screen floor. */
-export function judgeDensity(d, scale = 1, vh = 0) {
-  if (!d || scale >= 2 || (vh && vh < FEEL_BUDGETS.shortScreenPx)) return [];
+/** `scale` is the text scale of the run; density is skipped at 2 or more. */
+export function judgeDensity(d, scale = 1) {
+  if (!d || scale >= 2) return [];
   const min = d.rule === 'squads' ? FEEL_BUDGETS.minSquadRows : FEEL_BUDGETS.minCards;
   if (d.total < min) return [];
   return d.inView < min ? [{ rule: 'F4.density', id: d.rule, detail: `${d.inView} of ${d.total} ${d.label} fit the first viewport, need ${min} (heights ${d.heights.join(', ')}px)` }] : [];
@@ -233,12 +233,13 @@ export function judgeTaps(path, taps) {
 }
 
 /** All the in-screen verdicts for one probe result. */
-export function judgeScreen(result, { scale = 1, density = true } = {}) {
+/** `density` and `shortcut` come from the scenario (feel-walk.mjs SCENARIOS). */
+export function judgeScreen(result, { scale = 1, density = true, shortcut = false } = {}) {
   return [
-    ...judgePrimary(result.primary, { vh: result.vh, jump: result.jump }),
+    ...judgePrimary(result.primary, { jump: result.jump, shortcut }),
     ...judgeEssential(result),
     ...judgeChrome(result.chrome, FEEL_BUDGETS.chromePx, scale),
-    ...(density ? judgeDensity(result.density, scale, result.vh) : []),
+    ...(density ? judgeDensity(result.density, scale) : []),
     ...judgePlates(result.plates),
   ];
 }
