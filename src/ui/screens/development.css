@@ -6,6 +6,8 @@
 .cost-quote { display: grid; justify-items: end; gap: var(--sp1); min-width: 0; max-width: 132px; text-align: right; font-variant-numeric: tabular-nums; }
 .cost-quote-value { display: inline-flex; align-items: center; gap: var(--sp1); font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); white-space: nowrap; }
 .cost-quote-value > .icon { flex: none; color: var(--t3); }
+.cost-quote-pill { padding: 1px var(--sp2); border: 1px solid var(--hair-2); border-radius: 999px; color: var(--t2); font-size: var(--s14); line-height: 1.3; white-space: nowrap; }
+.cost-quote[data-state="short"] .cost-quote-pill { border-color: var(--warn-text); color: var(--warn-text); }
 .cost-quote[data-state="ready"] .cost-quote-value { color: var(--t1); }
 .cost-quote[data-state="owned"] .cost-quote-value { font-size: var(--s14); color: var(--good-text, var(--good)); }
 .cost-quote[data-state="owned"] .cost-quote-value > .icon { color: inherit; }
