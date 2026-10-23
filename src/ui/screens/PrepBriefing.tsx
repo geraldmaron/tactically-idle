@@ -1,30 +1,35 @@
-// The prepare screen's briefing, rebuilt (owner 2026-10-20) around what a player needs before
-// choosing a team, in the order they need it: who is inside, what the threat is, what the team must
-// do, and what is still unknown. Rendered from props alone so the Scenario Lab shows the player's
-// real briefing. Only what the player is told at dispatch: intel.ts never reads truth. Store-free.
+// The prepare screen's briefing (rebuilt 2026-10-23 from the owner's "it is weak"): what a player
+// needs before choosing a team, in the order they need it. The place and the clock on the plate, what
+// the call pays and asks, the orders with the faces of the people they name, what the team faces
+// and does not know, then the cold open whole, who is inside and the conditions. Rendered from props
+// alone so the Scenario Lab shows the player's real briefing. Only what the player is told at
+// dispatch: intel.ts never reads truth. Store-free.
+import { useMemo } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { FactStatusChip } from '../components/FactStatusChip';
 import type { Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
-import { DifficultyChip, EnvChips } from '../components/incident';
+import { countdown, DifficultyChip, EnvChips, familyBlurb, useNow } from '../components/incident';
 import { Face, type FaceKind } from '../components/Face';
 import { PlateArt, sceneFor } from '../art/Plates';
-import { familyBlurb } from '../components/incident';
 import { Icon } from '../icons';
 import { money } from '../format';
-import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
-import { peopleLabel } from '../people/lexicon';
+import { Card, Chip, Row } from '../components/ui';
+import { PeopleGlyph, PeopleText, usePeopleColor, usePeopleEntry } from '../people/PeopleText';
+import { lexiconFor, peopleLabel, segmentPeople, type Lexicon, type LexiconEntry } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
 import type { Intel, IntelLine } from './intel';
 import { Disclosure } from '../components/Disclosure';
 import { ColdOpen } from '../components/DepthBrief';
 import './prep-briefing.css';
 
-/** `built` is the call's building as the player sees it; the briefing reads it through `intel`. */
-export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
+/** `built` is the call's building as the player sees it; the briefing reads it through `intel`.
+ * `openUntil` is when the call leaves the board (epoch ms); the Lab has no board, so it passes none. */
+export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
   /** Beside the orders' heading: the step ("Step 1 of 2"). */
-  aside?: ReactNode }): JSX.Element {
+  aside?: ReactNode;
+  openUntil?: number }): JSX.Element {
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
   // A person report is the person's location fact; the story binding says whose.
   const personOf = new Map(Object.values(scenario?.story?.bindings.people ?? {}).map((person) => [person.locationFactId, person.id]));
@@ -32,26 +37,56 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
   // People the dispatch names but no location report covers still belong on the card list.
   const reported = new Set(intel.people.map((line) => personOf.get(line.id) ?? line.id));
   const unplaced = (scenario?.briefing.people ?? []).filter((person) => !reported.has(person.personId));
+  // The call's people as the team knows them at dispatch: the same lexicon that colors names in the
+  // text. It does not depend on the color preference, which only decides whether prose is tinted.
+  const lexicon = useMemo(() => scenario ? lexiconFor(scenario, null, []) : null, [scenario]);
+  const range = scenario?.squadRange;
   return (
     <div className="pb">
-      {/* The scene plate: the call's painted place at the shared plate height, then the orders. */}
+      {/* The scene plate: the call's painted place at the shared plate height. The place is a
+          caption on it and the board clock sits opposite; nothing else competes for the art. */}
       <div className="plate pb-scene">
         <PlateArt src={sceneFor(scenario?.incident?.type)} />
         {familyBlurb(scenario?.locationFamilyId ?? null) && <span className="pb-scene-place"><Icon name="pin" size={16} />{familyBlurb(scenario?.locationFamilyId ?? null)}</span>}
-        {scenario?.rewards && <span className="pb-scene-pay" aria-label={`Pays up to ${money(scenario.rewards.funding)} and ${scenario.rewards.xp} experience`}><span className="pb-scene-up">Up to</span><b>{money(scenario.rewards.funding)}</b>{scenario.rewards.xp} XP</span>}
+        {openUntil !== undefined && <OpenFor until={openUntil} />}
       </div>
-      {/* Orders and the threat first (docs/ops-experience.md, Brief), then the cold open whole, then
-          who is inside, what is unknown and the conditions. */}
+      {/* The stakes under the plate: what it pays, how hard it reads, how many squads it takes. */}
+      {(scenario?.rewards || intel.difficulty || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
+        {scenario?.rewards && <li><Chip tone="amber" icon="cash" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(scenario.rewards.funding)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
+        {intel.difficulty && <li><DifficultyChip band={intel.difficulty.band} /></li>}
+        {range && <li><Chip icon="people">{`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} ${range.max > 1 ? 'squads' : 'squad'}`}</Chip></li>}
+      </ul>}
+      {/* Orders first (docs/ops-experience.md, Brief), each with the face of the one person it names. */}
       <section className="pb-block pb-orders-panel" aria-labelledby="pb-orders-h">
         <div className="pb-h-row">
           <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={16} />Your orders</h3>
           {aside && <span className="pb-h-aside">{aside}</span>}
         </div>
-        {brief.objectives.length ? <ol className="pb-orders">{brief.objectives.map((text, index) => <li key={index}><span className="pb-order-n" aria-hidden="true">{index + 1}</span><span><PeopleText text={text} /></span></li>)}</ol> : <p className="dim">No orders listed.</p>}
-        {intel.threats.length > 0 && <ul className="pb-threats" aria-label="The threat">{intel.threats.map((line) => <ThreatRow key={line.id} line={line} />)}</ul>}
+        {brief.objectives.length
+          ? <Card className="pb-card"><ul className="pb-list pb-orders" data-ui-list>{brief.objectives.map((text, index) => {
+            // The data's own objective, when it is the one this text came from.
+            const objective = scenario?.objectives[index]?.label === text ? scenario.objectives[index] : null;
+            const entry = objective ? orderPerson(objective, lexicon) : null;
+            return <li key={index}><Row className="pb-row pb-order"
+              lead={<OrderLead n={index + 1} entry={entry} />}
+              title={<PeopleText text={text} />} /></li>;
+          })}</ul></Card>
+          : <p className="dim">No orders listed.</p>}
       </section>
 
-      <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" />
+      {/* What the team faces: the weapon report as an alert row, then what nobody knows yet. */}
+      {(intel.threats.length > 0 || brief.unknown.length > 0) && <section className="pb-block pb-faces" aria-labelledby="pb-faces-h">
+        <h3 id="pb-faces-h" className="pb-h"><Icon name="warning" size={16} />What the team faces</h3>
+        <Card className="pb-card"><ul className="pb-list" data-ui-list>
+          {intel.threats.map((line) => <ThreatRow key={line.id} line={line} />)}
+          {brief.unknown.map((text, index) => <li key={`u${index}`} className="pb-unknown"><Row className="pb-row pb-unknown-row"
+            lead={<span className="pb-well"><Icon name="search" size={24} /></span>}
+            title={<PeopleText text={text} />}
+            trail={<FactStatusChip status="unknown" />} /></li>)}
+        </ul></Card>
+      </section>}
+
+      <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" icon="book" />
 
       {(intel.people.length > 0 || unplaced.length > 0) && <section className="pb-block" aria-labelledby="pb-people-h">
         <h3 id="pb-people-h" className="pb-h"><Icon name="people" size={16} />Who’s inside</h3>
@@ -61,17 +96,12 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
         </ul>
       </section>}
 
-      {brief.unknown.length > 0 && <section className="pb-block pb-unknown" aria-labelledby="pb-unknown-h">
-        <h3 id="pb-unknown-h" className="pb-h"><Icon name="search" size={16} />Still unknown</h3>
-        <ul>{brief.unknown.map((text, index) => <li key={index}><PeopleText text={text} /></li>)}</ul>
-      </section>}
-
-      {(intel.difficulty || intel.environment) && <section className="pb-block pb-conditions" aria-label="Conditions">
-        <div className="chips">
-          {intel.difficulty && <DifficultyChip band={intel.difficulty.band} />}
-          {intel.environment && <EnvChips env={intel.environment} />}
-        </div>
+      {intel.environment && <section className="pb-block pb-conditions" aria-label="Conditions">
+        <div className="chips"><EnvChips env={intel.environment} /></div>
         {!!intel.difficulty?.drivers.length && <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={16} />{driver}</li>)}</ul>}
+      </section>}
+      {!intel.environment && !!intel.difficulty?.drivers.length && <section className="pb-block pb-conditions" aria-label="Conditions">
+        <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={16} />{driver}</li>)}</ul>
       </section>}
 
       <Disclosure name="prep-briefing" className="pb-more" icon="intel" summary="Full dispatch" count={knownRest.length || undefined}>
@@ -84,6 +114,38 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
       </Disclosure>
     </div>
   );
+}
+
+/** The one person an order is about, taken from the data: an order's id is the id of the person it is
+ * about (the content's convention: `clerk`, `manager`, `rider` in the hostage call), and the person
+ * counts only when the call's lexicon has them as located and public and the order's own words name
+ * them. A name found in the text is never enough, since "Get Reuben out before Malik moves" names two
+ * people and only one is its subject. Any other order has no face and gets its number. */
+export function orderPerson(objective: { id: string; label: string }, lexicon: Lexicon | null): LexiconEntry | null {
+  const entry = lexicon?.entries.find((e) => e.id === objective.id);
+  if (!lexicon || !entry || entry.kind === 'officer') return null;
+  return segmentPeople(objective.label, lexicon).some((part) => part.person?.id === entry.id) ? entry : null;
+}
+
+/** An order's picture: the person's role silhouette with the order number on its corner, or the
+ * number in a well when the order is about nobody the team has located. With "Color names by role"
+ * off the face is the plain person, as on the person cards below. */
+function OrderLead({ n, entry }: { n: number; entry: LexiconEntry | null }) {
+  const colored = usePeopleColor();
+  if (!entry) return <span className="pb-well pb-well-n" aria-label={`Order ${n}`}>{n}</span>;
+  const kind = colored ? entry.kind : 'person';
+  return <span className="pb-lead" data-kind={kind}>
+    <Face size="md" kind={faceKind(kind)} name={peopleLabel(kind, entry.squadName)} />
+    <b className="pb-n" aria-label={`Order ${n}`}>{n}</b>
+  </span>;
+}
+
+/** How long the call stays on the board, ticking: the one live thing on the brief. */
+function OpenFor({ until }: { until: number }) {
+  const left = until - useNow(1000);
+  if (left <= 0) return <span className="pb-scene-time pb-scene-time-soon"><Icon name="clock" size={16} /><span>Call closed</span></span>;
+  const soon = left < 15 * 60000;
+  return <span className={`pb-scene-time${soon ? ' pb-scene-time-soon' : ''}`}><Icon name="clock" size={16} /><span>{countdown(left)} left</span></span>;
 }
 
 /** One person on scene as a card: who they are, their role, and where the team thinks they are. */
@@ -105,13 +167,13 @@ function faceKind(kind: string | undefined): FaceKind {
   return kind === 'subject' || kind === 'civilian' || kind === 'officer' ? kind : 'person';
 }
 
-/** One weapon report in one line: what the report says and where, then who said it and how sure. */
+/** One weapon report: what the report says and where, then who said it and how sure. */
 function ThreatRow({ line }: { line: IntelLine }) {
   return <li className="pb-threat-row">
-    <Icon name="warning" size={20} className="pb-threat-icon" />
+    <Icon name="warning" size={24} className="pb-threat-icon" />
     <div>
       <p className="pb-threat-claim"><PeopleText text={line.claim.replace(/\.$/, '')} />{line.where ? <span className="pb-threat-where"> · {line.where}</span> : null}</p>
-      <p className="pb-threat-source">{line.source ? `Reported by ${line.source}. ` : ''}<FactStatusChip status={line.status} /></p>
+      <p className="pb-threat-source">{line.source ? <span>Reported by {line.source}</span> : null}<FactStatusChip status={line.status} /></p>
     </div>
   </li>;
 }

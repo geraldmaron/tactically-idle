@@ -9,4 +9,3 @@
 .who-they-are li + li { margin-top: 0 !important; }
 .who-they-are strong { font-size: 14px; color: var(--text); }
 .who-they-are p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
-.prep-cold-open { margin: 12px 0 0; }

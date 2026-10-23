@@ -3,13 +3,13 @@
  "static": {
   "R1": {
    "target": 0,
-   "total": 728,
+   "total": 717,
    "counts": {
     "src/ui/app.css": 14,
     "src/ui/blueprint/blueprint.css": 25,
     "src/ui/components/choice-rail.css": 7,
     "src/ui/components/debrief-results.css": 44,
-    "src/ui/components/depth-brief.css": 8,
+    "src/ui/components/depth-brief.css": 7,
     "src/ui/components/disclosure.css": 7,
     "src/ui/components/finance.css": 17,
     "src/ui/components/incident-people.css": 23,
@@ -29,7 +29,7 @@
     "src/ui/screens/officers.css": 1,
     "src/ui/screens/operation-feedback.css": 62,
     "src/ui/screens/operation-squads.css": 13,
-    "src/ui/screens/ops-visual.css": 104,
+    "src/ui/screens/ops-visual.css": 94,
     "src/ui/screens/preparation-options.css": 4,
     "src/ui/screens/preparation-support.css": 5,
     "src/ui/screens/recruit.css": 9,
@@ -115,7 +115,7 @@
   },
   "R3": {
    "target": 0,
-   "total": 231,
+   "total": 226,
    "counts": {
     "src/ui/app.css": 4,
     "src/ui/blueprint/blueprint.css": 7,
@@ -139,7 +139,7 @@
     "src/ui/screens/officer-profile.css": 8,
     "src/ui/screens/operation-feedback.css": 8,
     "src/ui/screens/operation-squads.css": 3,
-    "src/ui/screens/ops-visual.css": 42,
+    "src/ui/screens/ops-visual.css": 37,
     "src/ui/screens/recruit.css": 6,
     "src/ui/screens/situation-panel.css": 4,
     "src/ui/screens/squad-optimizer.css": 10,
@@ -181,7 +181,7 @@
   },
   "R7.sub14": {
    "target": 0,
-   "total": 223,
+   "total": 218,
    "counts": {
     "src/ui/app.css": 27,
     "src/ui/blueprint/blueprint.css": 9,
@@ -206,7 +206,7 @@
     "src/ui/screens/officer-profile.css": 5,
     "src/ui/screens/operation-feedback.css": 12,
     "src/ui/screens/operation-squads.css": 6,
-    "src/ui/screens/ops-visual.css": 37,
+    "src/ui/screens/ops-visual.css": 32,
     "src/ui/screens/preparation-options.css": 1,
     "src/ui/screens/preparation-support.css": 1,
     "src/ui/screens/recruit.css": 3,
@@ -221,7 +221,7 @@
   },
   "R8": {
    "target": 0,
-   "total": 169,
+   "total": 168,
    "counts": {
     "src/ui/blueprint/blueprint.css": 22,
     "src/ui/blueprint/Blueprint.tsx": 2,
@@ -241,7 +241,7 @@
     "src/ui/screens/gear-visual.css": 3,
     "src/ui/screens/live-call.css": 58,
     "src/ui/screens/operation-feedback.css": 1,
-    "src/ui/screens/ops-visual.css": 21,
+    "src/ui/screens/ops-visual.css": 20,
     "src/ui/screens/squad-visual.css": 7,
     "src/ui/screens/support-context.css": 1,
     "src/ui/settings/candidates.css": 2
