@@ -14,11 +14,8 @@
 .facility-building .facility-room:last-child, .build-capacity .facility-patrol { border-bottom: 0; }
 .facility-room:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -2px; }
 .facility-object { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
-.facility-detail { display: flex; align-items: center; gap: var(--sp2); min-width: 0; }
-.facility-detail > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facility-detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); min-width: 0; }
 .facility-detail > .segments { flex: none; }
-.facility-room-ready .cost-tag-value { color: var(--t1); }
+.facility-room-ready .cost-quote-value { color: var(--t1); }
 .build-capacity { border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
 .facility-build-page .develop-page { padding: var(--sp3) 0; }
-.facility-detail-wrap { flex-wrap: wrap; }
-.facility-detail-wrap > span:last-child { overflow: visible; text-overflow: clip; white-space: normal; }

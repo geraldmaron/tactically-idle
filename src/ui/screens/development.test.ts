@@ -106,7 +106,7 @@ describe('development browsing and shared detail', () => {
     broke.department.funding = 0;
     const short = renderToStaticMarkup(createElement(DevelopmentTile, { option: nodeOptions(broke).find((entry) => entry.node.id === 'personnel_academy')!, budget: { funding: 0 }, highlighted: false, onOpen: () => {} }));
     expect(short).toContain('Needs more funding');
-    expect(short).toMatch(/<span class="cost-tag" data-state="short"><span class="cost-tag-value"><svg[\s\S]*?<\/svg>\$4,900<\/span><\/span>/);
+    expect(short).toMatch(/<span class="cost-quote" data-state="short"><span class="cost-quote-value"><svg[\s\S]*?<\/svg>\$4,900<\/span><\/span>/);
     expect(short).toContain('Needs funding');
     const owned = option('personnel_negotiation', 1);
     expect(tileState(owned)).toBe('owned');
