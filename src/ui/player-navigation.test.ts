@@ -207,11 +207,11 @@ describe('rendered player destinations and persistent drafts', () => {
     expect(boosts).not.toContain('Search equipment');
   });
 
-  it.each([{ level: 1, capacity: 6, next: '8 positions at department level 3' }, { level: 3, capacity: 8, next: '12 positions at department level 6' }, { level: 6, capacity: 12, next: 'All 12 patrol positions authorized' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
+  it.each([{ level: 1, capacity: 6, next: '8 positions at level 3' }, { level: 3, capacity: 8, next: '12 positions at level 6' }, { level: 6, capacity: 12, next: 'All 12 positions authorized' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
     state.department.level = level;
     const html = markup(createElement(BuildScreen), { tab: 'develop' });
     expect(html).toContain(`/ ${capacity} patrol positions filled`);
-    expect(html).toContain(`Department level ${level}`);
+    expect(html).toContain(`Level ${level} · `);
     expect(html).toContain(next);
     const capacitySection = html.match(/<section class="build-capacity"[\s\S]*?<\/section>/)?.[0];
     expect(capacitySection).toBeDefined();

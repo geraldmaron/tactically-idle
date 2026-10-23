@@ -225,6 +225,13 @@ export function developmentQuote(o: NodeOption, shortFunding: boolean): CostQuot
   return { state, price: cost?.funding ?? null, blocker, free, done: o.maxTier > 1 ? 'Max' : 'Owned' };
 }
 
+/** What a development opens, from the effects of the tier it buys next (or all its tiers once owned). */
+export function nodeUnlocks(o: NodeOption): { key: string; itemId: string | null; name: string }[] {
+  const effects = o.node.tiers ? (o.targetTier ? developmentTierDefinition(o.node, o.targetTier)?.effects ?? o.node.effects : o.node.tiers.flatMap((tier) => tier.effects)) : o.node.effects;
+  return effects.flatMap((effect): { key: string; itemId: string | null; name: string }[] => effect.kind === 'unlockItem' ? [{ key: effect.itemId, itemId: effect.itemId, name: ITEMS[effect.itemId]?.name ?? effect.itemId }]
+    : effect.kind === 'unlockCourse' ? [{ key: effect.courseId, itemId: null, name: COURSES[effect.courseId]?.name ?? effect.courseId }] : []);
+}
+
 export function DevelopmentTile({ option: o, budget, highlighted, next = false, onOpen }: {
   option: NodeOption; budget: DevelopmentBudget; highlighted: boolean; next?: boolean; onOpen: () => void;
 }) {
@@ -234,8 +241,10 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
   const shortFunding = !!cost && budget.funding < cost.funding;
   const needs = o.quote.missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id);
   const quote = developmentQuote(o, shortFunding);
+  const unlocks = nodeUnlocks(o);
   const label = [
     o.node.name,
+    unlocks.length && state !== 'owned' ? `Unlocks ${unlocks.map((u) => u.name).join(', ')}` : '',
     state === 'owned' ? (tiered ? 'Fully upgraded' : 'Owned') : state === 'locked' ? `Locked, needs ${needs.join(' and ')}` : state === 'ready' ? 'Ready to buy' : shortFunding ? 'Needs more funding' : 'Not ready',
     tiered ? `Tier ${o.currentTier} of ${o.maxTier}` : '',
     cost ? `Next ${costText(o)}` : '',
@@ -252,7 +261,9 @@ export function DevelopmentTile({ option: o, budget, highlighted, next = false, 
     </span>
     <span className="dev-node-main" aria-hidden="true">
       <span className="dev-node-title"><strong>{o.node.name}</strong></span>
-      <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>
+      {unlocks.length > 0 && state !== 'owned'
+        ? <span className="dev-node-unlocks"><span className="dev-thumbs">{unlocks.slice(0, 5).map((unlock) => <span key={unlock.key} className="dev-thumb">{unlock.itemId ? <GearArt itemId={unlock.itemId} size={24} /> : <Icon name="mortarboard" size={16} />}</span>)}</span>Unlocks {unlocks.length}</span>
+        : <span className="dev-node-fx">{state === 'owned' ? (o.currentEffects.filter((line) => !UNLOCK_LINE.test(line))[0] ?? 'Active') : nodeSummary(o)}</span>}
       {o.granted && !o.milestone ? <span className="dev-node-granted"><Icon name="medal" size={16} />Granted at {o.granted.milestone}</span> : null}
       <CostTag part="note" quote={quote} />
       {tiered && <span className="dev-node-steps"><Segments done={o.currentTier} total={o.maxTier} /><span>Tier {o.currentTier} of {o.maxTier}</span></span>}

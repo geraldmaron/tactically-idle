@@ -2,7 +2,6 @@
    facility is a Row: a 40px art well, name, progress as segments with the count beside it, and one
    price tag. The patrol positions follow as one row of the same family. */
 .facility-build-page { gap: var(--sp4); }
-.facility-build-page > .build-title { margin: 0; }
 .facility-plan { display: grid; min-width: 0; }
 .facility-plan-scene { height: clamp(96px, 28vw, 120px); border: 1px solid var(--hair-2); border-bottom: 0; border-radius: var(--r2) var(--r2) 0 0; }
 .facility-plan-scene > .plate-art { object-position: center 57%; }

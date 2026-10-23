@@ -191,3 +191,14 @@
 .dev-needs .dev-need { min-height: 56px; padding: var(--sp2) var(--sp3); }
 .dev-needs > :last-child { border-bottom: 0; }
 .dev-need-well { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
+/* One row height class: the name stays on one line in the row font, unlocks are a strip of thumbnails. */
+.dev-node-title strong { font: 600 var(--s16)/1.25 var(--f-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dev-node-title { min-width: 0; }
+.dev-node-unlocks { display: flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
+.dev-thumbs { display: inline-flex; gap: var(--sp1); }
+.dev-thumb { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); overflow: hidden; }
+/* A row's blocker and free route read as one detail line, then the bar. */
+.dev-node-main .cost-quote-inline { display: block; }
+.dev-node-main .cost-quote-inline .cost-quote-note { display: inline; }
+.dev-node-main .cost-quote-inline .cost-quote-note[data-kind="blocker"]::after { content: ' · '; color: var(--t3); }
+.dev-node-main .cost-quote-inline .cost-quote-bar { display: block; margin-top: var(--sp1); }
