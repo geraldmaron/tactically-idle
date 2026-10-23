@@ -27,7 +27,7 @@ import { Disclosure } from '../components/Disclosure';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { conditionTone } from '../components/labels';
 import { StockBar, UnitList } from './ItemUnits';
-import { Segments } from '../screens/build-parts';
+import { CostTag, Segments, type CostQuote } from '../screens/build-parts';
 import './storefront.css';
 
 interface EquipmentReceipt { itemId: Id; quantity: number }
@@ -111,8 +111,7 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
   const certs = item.requiresCerts?.length ? `. Certification needed to use: ${entry.qualified} certified officer${entry.qualified === 1 ? '' : 's'}` : '';
   const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
   const stock = entry.owned > 0 ? `${entry.owned} owned · ${entry.ready} ready` : 'Not owned';
-  const blocker = state === 'locked' ? `Needs ${entry.unlockName}` : null;
-  const stateLabel = state === 'locked' ? 'Locked' : state === 'short' ? 'Needs funding' : null;
+  const quote: CostQuote = { state: state === 'buy' ? 'ready' : state, price: item.cost, pill: true, blocker: state === 'locked' ? `Needs ${entry.unlockName}` : undefined };
   // Row's markup and classes, with the item id and the element the sheet returns focus to, which Row does not carry.
   return <button type="button" className={`ui-row inv-tile store-tile store-tile-${state}${entry.owned > 0 ? ' store-tile-owned' : ''}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
     <span className="ui-row-lead inv-art" aria-hidden="true"><GearArtFrame itemId={item.id} size={32} />{entry.owned > 0 && <span className="store-tile-qty">{entry.owned}</span>}</span>
@@ -122,12 +121,9 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
         {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`}><Icon name="mortarboard" size={16} /></span>}
       </span>
       <span className="ui-row-detail store-tile-stock">{entry.owned > 0 ? <span className="store-tile-have"><Icon name="check" size={16} />{stock}</span> : stock}{acquired !== undefined && <> · <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span></>}</span>
-      {blocker && <span className="store-tile-gate"><Icon name="lock" size={16} />{blocker}</span>}
+      {state === 'locked' && <span className="store-tile-gate"><CostTag part="note" quote={quote} /></span>}
     </span>
-    <span className="ui-row-trail store-tile-price" aria-hidden="true">
-      <span className="store-tile-cost"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{money(item.cost)}</span>
-      {stateLabel && <span className="store-tile-state">{stateLabel}</span>}
-    </span>
+    <span className="ui-row-trail" aria-hidden="true"><CostTag part="value" quote={quote} /></span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
 }

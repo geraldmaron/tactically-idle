@@ -83,16 +83,14 @@
 .store-tile .inv-art { position: relative; }
 .store-tile-qty { position: absolute; top: -6px; left: -6px; min-width: 22px; padding: 0 5px; border: 1px solid var(--ink-0); border-radius: 999px; background: var(--mint); color: var(--ink-0); font: 800 var(--s14)/20px var(--f-ui); text-align: center; font-variant-numeric: tabular-nums; }
 .store-tile-have { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text, var(--mint)); }
-.store-tile-gate { display: flex; align-items: flex-start; gap: var(--sp1); margin-top: var(--sp1); color: var(--warn-text); font-size: var(--s14); line-height: 1.3; }
-.store-tile-gate > .icon { flex: none; margin-top: 1px; }
-.store-tile-price { display: grid; justify-items: end; gap: var(--sp1); }
-.store-tile-cost { display: inline-flex; align-items: center; gap: var(--sp1); font: 700 var(--s16)/1.2 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.store-tile-cost > .icon { flex: none; }
-.store-tile-buy .store-tile-cost { color: var(--amber); }
-.store-tile-short .store-tile-cost { color: var(--t2); }
-.store-tile-locked .store-tile-cost { color: var(--t3); }
-.store-tile-state { padding: 1px var(--sp2); border: 1px solid var(--hair-2); border-radius: 999px; color: var(--t2); font-size: var(--s14); line-height: 1.3; white-space: nowrap; }
-.store-tile-short .store-tile-state { border-color: var(--warn-text); color: var(--warn-text); }
+/* CostTag (screens/build-parts.tsx) with its pill option: the price, the state pill, the blocker line. */
+.store-tile-gate { display: block; margin-top: var(--sp1); }
+.store-tile .store-tile-gate .cost-quote-note { display: flex; align-items: flex-start; gap: var(--sp1); }
+.store-tile .store-tile-gate .cost-quote-note > .icon { flex: none; margin-top: 1px; }
+.store-tile-buy .cost-quote-value, .store-tile-buy .cost-quote-value > .icon { color: var(--amber); }
+.store-tile .cost-quote-value { font-weight: 700; }
+.cost-quote-pill { padding: 1px var(--sp2); border: 1px solid var(--hair-2); border-radius: 999px; color: var(--t2); font-size: var(--s14); line-height: 1.3; white-space: nowrap; }
+.cost-quote[data-state="short"] .cost-quote-pill { border-color: var(--warn-text); color: var(--warn-text); }
 .store-tile .inv-cond { top: auto; bottom: 0; height: 3px; }
 .store-tile-acquired { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text, var(--mint)); font-size: var(--s14); font-weight: 700; }
 .store-group-head { margin: 0; }
