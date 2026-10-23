@@ -33,11 +33,28 @@
 .squadpanel .officer-character-grid { padding: 0 var(--sp3) var(--sp3); gap: var(--sp2); }
 .officer-roster-card { padding: 0; overflow: hidden; }
 .squadpanel .ui-row, .officer-roster-card .ui-row { padding-inline: var(--sp3); }
-.officer-rows .officer-row-role { display: block; }
+.officer-rows .officer-row-role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .officer-rows .officer-row-role .icon { display: inline-block; vertical-align: -2px; margin-right: var(--sp1); }
-.officer-rows .officer-row-role .officer-row-certs { margin-left: var(--sp2); }
-.officer-rows .officer-row-certs .icon { margin-right: 0; }
-@media (max-width: 359px) { .officer-rows .officer-row-certs { display: none; } }
+@media (max-width: 359px) { .officer-row-trail .officer-row-certs { display: none; } }
 .ocard-tile { padding: var(--sp2) var(--sp3); gap: var(--sp2); }
 .ocard-title { overflow-wrap: normal; }
 .officers-page .section-head .text-link, .officers-page .section-head .squad-sort { margin-left: var(--sp2); }
+
+/* Section headers on Team: the quiet count and the action sit together on the right edge. */
+.team-page .section-count { margin-left: auto; }
+.roster-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); min-width: 0; }
+.squad-sort { min-height: 36px; padding: 0; border: 0; background: none; color: var(--t2); }
+.squad-sort select { min-height: 36px; min-width: 0; padding: 0 var(--sp1); border: 0; background: transparent; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); }
+.squadpanel .squad-block-name { display: flex; align-items: center; gap: var(--sp2); }
+.squadpanel .squad-badge { width: 20px; height: 20px; font-size: var(--s12); }
+.roster-bar .squad-sort select { min-height: 36px; padding: 0 var(--sp1); border: 0; background: transparent; appearance: none; -webkit-appearance: none; }
+.roster-bar .squad-sort { min-height: 36px; }
+.ocard-tile { padding: var(--sp2); }
+.ocard-face { width: 36px; }
+.roster-bar .squad-sort { padding: 0; border: 0; background: none; }
+.ocard-tile .ocard-condition { white-space: nowrap; min-width: 0; }
+.ocard-tile .ocard-condition .mark-label, .ocard-tile .ocard-condition > :first-child { white-space: nowrap; }
+@media (max-width: 359px) {
+  .ocard-tile { gap: var(--sp1); padding: var(--sp2) var(--sp1); }
+  .ocard-title .ring, .ocard-tile .ocard-certs { display: none; }
+}

@@ -23,10 +23,11 @@
 .ocard-tile { flex-direction: row; align-items: center; gap: var(--sp3); padding: var(--sp3); border-radius: var(--r2); }
 .ocard-tile:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 .ocard-tile:active { transform: scale(.98); }
-.ocard-face { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; }
-.ocard-face > [data-portrait] { height: 40px !important; border-radius: 50%; overflow: hidden; }
+.ocard-face { display: grid; flex: none; place-items: center; width: 40px; height: 40px; }
 .ocard-body { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
-.ocard-title { display: flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); overflow-wrap: anywhere; }
+.ocard-title { display: flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); }
+.ocard-title .ring { flex: none; }
+.ocard-surname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ocard-title .icon { flex: none; color: var(--amber); }
 .ocard-tile .ocard-role { font: 500 var(--s12)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); }
 .ocard-tile .ocard-role span, .ocard-tile .ocard-role { white-space: nowrap; }
@@ -140,16 +141,6 @@
 .squad-queue-dropped strong { text-decoration: line-through; text-decoration-thickness: 1px; }
 .squad-queued-note { display: flex; align-items: center; gap: 6px; margin: 0; }
 
-/* ---------------------------------------------------------------- character-card badge */
-/* The role's main rating in a medallion, ringed by XP toward its next point (squad-cards). No
-   rarity frame: officers are people, not loot (E3). */
-.ocard-badge { position: absolute; z-index: 3; right: -4px; bottom: -4px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
-  background: conic-gradient(var(--mint) var(--xp, 0%), rgba(255, 255, 255, 0.16) 0); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
-.ocard-badge::before { content: ''; position: absolute; inset: 2.5px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, var(--ink-3), var(--ink-0)); }
-.ocard-badge b { position: relative; font: 600 var(--s12)/1 var(--font-display); color: var(--t1); font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.ocard-badge-capped { background: conic-gradient(var(--t2) 100%, transparent 0); }
-.ocard-badge-capped b { color: var(--t2); }
-.ocard-badge .rank-insignia { position: relative; }
 
 /* Small phones: squad tabs show the letter only (the panel below names the squad), so up to four
    tabs, Add and Arrange fit without the rail scrolling. */

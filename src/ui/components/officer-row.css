@@ -1,9 +1,11 @@
 /* One officer as a row (components/OfficerRow.tsx): it holds at 320 with long names. */
 .officer-row { align-items: center; }
-.officer-row-face { position: relative; width: 40px; height: 40px; border-radius: 50%; }
-.officer-row-face > [data-portrait] { height: 40px !important; }
-.officer-row-squad { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r1); background: var(--ink-3); border: 1px solid var(--ink-0); font: 700 var(--s12)/1 var(--f-title); color: var(--t1); }
-.officer-row-name { display: flex !important; align-items: center; gap: var(--sp1); min-width: 0; overflow-wrap: anywhere; }
+.officer-row-face { position: relative; display: grid; place-items: center; width: 40px; height: 40px; }
+.officer-row-squad { position: absolute; left: -4px; top: -4px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r1); background: var(--ink-3); border: 1px solid var(--ink-0); font: 700 var(--s12)/1 var(--f-title); color: var(--t1); }
+.officer-row-name { display: flex !important; align-items: center; gap: var(--sp1); min-width: 0; }
+.officer-row-name .ring { flex: none; }
+.officer-row-surname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.officer-row-trail { display: inline-flex; align-items: center; gap: var(--sp2); }
 .officer-row-name .icon { flex: none; color: var(--t1); }
 .officer-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--sp2); margin-top: 2px; font-size: var(--s14); color: var(--t3); }
 .officer-row-certs { display: inline-flex; gap: var(--sp1); color: var(--good-text, var(--good)); }

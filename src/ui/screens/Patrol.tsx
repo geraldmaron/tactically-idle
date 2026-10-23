@@ -12,6 +12,7 @@ import { useToast } from '../components/toast';
 import { Button, Card, Chip, EmptyState, Meter, Row, Section } from '../components/ui';
 import { duration, moneyFull, perHour, rate, relativeTime } from '../format';
 import { Icon } from '../icons';
+import { Face } from '../components/Face';
 import { useGame } from '../store';
 import './patrol.css';
 
@@ -40,7 +41,7 @@ export function PatrolScreen() {
   return <div className="page patrol-page">
     <PatrolSummary game={game} onHire={() => setSelection({ kind: 'candidates' })} />
     <Section id="patrol-team-h" title="Patrol team" icon="people" count={`${employees.length} of ${patrolCapacity(game)} positions`} hint="Coverage runs automatically. Patrol staff stay separate from SWAT squads."
-      action={<button type="button" className="text-link" onClick={() => setSelection({ kind: 'candidates' })}>Hire patrol</button>}>
+      action={<button type="button" className="section-link" onClick={() => setSelection({ kind: 'candidates' })}>Hire patrol</button>}>
       {employees.length === 0 ? <EmptyState spot="noCandidates" title="No patrol staff">Hire into an authorized position to begin patrol coverage.</EmptyState>
         : <Card className="patrol-roster-card"><div className="patrol-roster" data-ui-list>{employees.map((employee) => <PatrolEmployeeCard key={employee.id} employee={employee} game={game} onReview={(kind) => setSelection({ kind, employeeId: employee.id })} />)}</div></Card>}
     </Section>
@@ -86,7 +87,7 @@ function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmpl
   const name = profileName(employee.profileId);
   const hours = next ? Math.min(employee.serviceHours, next.serviceHours) : 0;
   return <article className="patrol-item" data-patrol-employee={employee.id} tabIndex={-1} aria-label={name}>
-    <Row lead={<PatrolPortrait profileId={employee.profileId} size={40} />} title={name}
+    <Row lead={<Face size="sm" kind="patrol" src={patrolProfile(employee.profileId)?.portrait} />} title={name}
       detail={`Grade ${employee.grade} · ${grade.name} · ${training ? '$0/h' : perHour(grade.gross)}`}
       trail={<Chip tone={training ? 'blue' : 'good'} icon={training ? 'mortarboard' : 'check'}>{training ? 'In training' : 'Covering'}</Chip>} />
     <div className="patrol-item-foot">

@@ -8,6 +8,9 @@ import { OfficerCard } from '../components/OfficerCard';
 import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
+import { Face } from '../components/Face';
+import { officerFaceStatus } from '../components/face-status';
+import type { SquadDuty } from '../../sim/types';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
 import { Recruit } from './Recruit';
@@ -30,7 +33,7 @@ export function SquadScreen() {
   return (<>
     <div className="page squad-page officers-page">
       <h2 className="sr-only officers-title">SWAT</h2>
-      <ChoiceRail value={nav.squadSection} kind="navigation" label="SWAT sections" grow onChange={nav.setSquadSection} options={[
+      <ChoiceRail size="sm" value={nav.squadSection} kind="navigation" label="SWAT sections" grow onChange={nav.setSquadSection} options={[
         { value: 'squads', label: 'Squads' }, { value: 'roster', label: 'Roster' }, { value: 'hire', label: 'Hire' }, { value: 'training', label: 'Training' },
       ]} />
       {nav.squadSection === 'training' ? <TrainingStore />
@@ -54,7 +57,7 @@ function SquadsView() {
   return <>
     <QueuedMoves />
     <Section id="squads-h" title="Squads" icon="people" count={g.squads.length > 0 ? `${g.squads.length === 1 ? '1 squad' : `${g.squads.length} squads`} · ${ready} of ${total} ready` : undefined}
-      action={g.squads.length > 0 ? <button type="button" className="text-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button> : undefined}>
+      action={g.squads.length > 0 ? <button type="button" className="section-link" onClick={() => { nav.closeOfficer(); setArranging(true); }}>Arrange</button> : undefined}>
       {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
       {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
     </Section>
@@ -126,8 +129,6 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   const problems = deployed ? [] : [...(r.deployable ? [] : r.issues.slice(0, 2)), ...(r.deployable && r.staysHome.length > 0 ? [staysHomeLine(g, r.staysHome)] : [])];
 
   const leader = members.find((o) => o.id === squad.leaderId);
-  const readyChip = deployed ? <Chip tone="neutral" icon="bell">On a call</Chip>
-    : <Chip tone={members.length > 0 && r.ready === members.length ? 'good' : 'warn'} icon={members.length > 0 && r.ready === members.length ? 'check' : 'warning'}>{`${r.ready} of ${total} ready`}</Chip>;
   return (
     <Card className="squadpanel">
       <section aria-label={`Squad ${squad.id}, ${squad.name}`} className="squad-block">
@@ -147,16 +148,19 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
             <Button size="sm" variant="ghost" onClick={finishRename}>Cancel</Button>
           </form>
         ) : (
-          <Row
-            lead={<span className="squad-badge squad-badge-lg" aria-hidden="true">{squad.id}</span>}
+          <Row className="hq-duty hq-squad-row"
+            lead={<span className="hq-faces hq-faces-stack">{members.map((o) => <Face key={o.id} size="sm" kind="officer" officer={o} status={officerFaceStatus(g, o.id, g.department.clockHighWater)} />)}</span>}
             title={<h2 className="squad-block-name">
+              <span className="squad-badge" aria-hidden="true">{squad.id}</span>
               <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
                 requestedFocus.current = 'input';
                 nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
               }}>{squad.name}<Icon name="edit" size={14} /></button>
             </h2>}
-            detail={[DUTY_META[squad.duty].label, leader ? `${leader.surname} leads` : null, open > 0 ? (open === 1 ? '1 open place' : `${open} open places`) : null].filter(Boolean).join(' · ')}
-            trail={readyChip}
+            detail={[deployed ? 'On a call' : r.ready === members.length && members.length > 0 ? `All ${members.length} ready` : `${r.ready} of ${total} ready`, leader ? `${leader.surname} leads` : null, open > 0 ? (open === 1 ? '1 open place' : `${open} open places`) : null].filter(Boolean).join(' · ')}
+            trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <ChoiceRail size="sm" label={`Duty for ${squad.name}`} value={squad.duty}
+              options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: <><Icon name={DUTY_META[d].icon} size={16} /><span>{DUTY_META[d].label}</span></> }))}
+              onChange={(duty) => act({ type: 'setSquadDuty', squadId: squad.id, duty })} />}
           />
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
@@ -209,16 +213,18 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
   const leaders = new Set(g.squads.map((squad) => squad.leaderId).filter(Boolean));
   const count = (value: RosterFilter) => filterRoster(officers, value, now).length;
   return (
-    <Section id="squad-roster-h" title="Roster" icon="people" count={`${officers.length} of ${g.department.rosterCap} officers`}
-      action={<label className="squad-sort">
-        <span className="sr-only">Sort roster</span>
-        <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
-          {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>By {ROSTER_SORT_LABEL[value].toLowerCase()}</option>)}
-        </select>
-      </label>}>
-      <ChoiceRail value={filter} label="Show officers" grow onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
-        value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
-      }))} />
+    <Section id="squad-roster-h" title="Roster" icon="people" count={`${officers.length} of ${g.department.rosterCap} officers`}>
+      <div className="roster-bar">
+        <ChoiceRail size="sm" value={filter} label="Show officers" onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
+          value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
+        }))} />
+        <label className="squad-sort">
+          <span className="sr-only">Sort roster</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
+            {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>By {ROSTER_SORT_LABEL[value].toLowerCase()}</option>)}
+          </select>
+        </label>
+      </div>
       {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
         {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
       </div></Card>}

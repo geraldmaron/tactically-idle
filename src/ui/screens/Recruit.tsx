@@ -86,7 +86,7 @@ export function Recruit() {
 export function RecruitRefresh() {
   const { act } = useToast();
   return <div className="recruit-refresh">
-    <button type="button" className="text-link" onClick={() => act({ type: 'refreshCandidates' })}>Refresh candidates</button>
+    <button type="button" className="section-link" onClick={() => act({ type: 'refreshCandidates' })}>Refresh candidates</button>
   </div>;
 }
 
