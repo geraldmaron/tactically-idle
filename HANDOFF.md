@@ -235,18 +235,23 @@ Phases 4 and 5 merged into `claude/feel-lead` (47fad8d Build, 3c02164 Team; tip 
 ## Sessions, servers and pending merges (2026-10-23, lead local_74f265d1)
 
 The lead stays local_74f265d1 on `claude/feel-lead`. Every finished station, rollout and feel session is
-archived; their branches are contained in 94f34cc. One dev server runs: `lead-5182`, `claude/feel-lead` on
-http://127.0.0.1:5182 (`.claude/launch.json`). Other ports belong to their session and stop with it.
+archived and its branch is contained in this branch. One dev server runs: `lead-5182`, `claude/feel-lead` on
+http://127.0.0.1:5182 (`.claude/launch.json`). No lane is in flight.
 
-| Session | Branch | In flight | Declared touches |
-|---|---|---|---|
-| station-rebuild-fix-7-ro (local_ee1fc7f5) | `claude/adoring-meninsky-ac977a`, from 94f34cc | 7 rough edges and the gate port trap; its gate server on 5391 is its own | `scripts/check-feel.mjs`, `scripts/check-ui.mjs`, `scripts/ui-gates/serve.mjs` so far |
+Rough edges merged (e30ef9c, from 416420f on `claude/adoring-meninsky-ac977a`): the seven Build and Team fixes, one
+idle beat per screen, and the gate port trap (`scripts/ui-gates/serve.mjs` no longer reuses 5174 and refuses a URL
+whose `src/ui` and `src/sim` code differs from disk). Lane gates on 416420f: `npm run verify` 3,272 passed, `check:ui`
+passed with `ui-debt.json` unchanged, `check:feel` only hq F8.pill as on the base. On the merged tip (416420f plus
+HANDOFF.md) the lead ran typecheck and the architecture, Build, Recruit, room-model and storefront tests (146
+passed) and saw "Can afford" on Build at 390x844 on 5182. Note: `side-session-notes/local_ee1fc7f5-68fe-412c-9aa2-5c0a6a421d65/rough-edges/READY.md`.
 
-Not yet in `claude/feel-lead`, merged by the lead after the session above lands (both touch `scripts/ui-gates/`):
+Not yet in `claude/feel-lead`:
 
-- `main` (b968e4b, `ui-gates` shipped): add/add conflicts with this branch's own gates in `scripts/ui-gates/`,
-  `scripts/check-ui.mjs`, `src/ui/ui-debt.json`, `src/ui/ui-gates-static.test.ts`, `package.json`, the capture tool
-  and `docs/backlog.md`. Tooling and docs only; the app the server shows does not change.
+- `main` (b968e4b, `ui-gates` shipped): add/add conflicts with this branch's own gates in `scripts/ui-gates/` (now
+  including the port trap's `serve.mjs`), `scripts/check-ui.mjs`, `src/ui/ui-debt.json`,
+  `src/ui/ui-gates-static.test.ts`, `package.json`, the capture tool, `docs/visual-kit.md` and `docs/backlog.md`.
+  Tooling and docs only; the app the server shows does not change. Fix in the same merge: `docs/visual-kit.md`
+  still says the gates start a server on 5174, and `scripts/play-loop.mjs` still defaults to 127.0.0.1:5174.
 - `claude/scenario-framework` (7e85ce3, on top of `main`): `docs/scenario-framework.md` and backlog items. Docs only.
 
 Parked, kept: the Going Live branches (`going-live-spine-25ad3c`, `spine-pass2-363cdf`, `prose-scene-6a2c7c`,
