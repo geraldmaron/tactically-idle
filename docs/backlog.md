@@ -78,6 +78,23 @@ undeclared. Found with the hostage pilot's `lie_found` (set only behind `lied_si
 calls can't set), worked around with a count condition. Done: settable marks respect the
 outcome's `when`, and a fixture test shows a prompt variant pruned in the call that can't set it.
 
+### authored-harm-minors: Authored harm can record a minor as killed
+Tags: job=command; journeys=none (an ethics invariant on recorded harm, not a journey); probes=none (a clamp on recorded harm, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner rule since 2026-10-07: children can be hurt, never killed. The clamp holds only on drawn force:
+`instance.ts` sets `noFatal` on a minor or a person the self-harm screen covers, and only the force path reads it
+(`src/sim/drawn-effects.ts`, `src/gen/incident/gates/engine-driver.ts`). An outcome's authored `harm`
+compiles straight to `personHarm` (`src/gen/incident/trees-v13/compile.ts`) and `authoredHarm`
+(`src/sim/incident-consequences.ts`) records it with no check, so a tree that writes `fatal` for a role the
+template can draw as a minor records a death. sol confirmed it in memory on 2026-10-23 with an injected fixture
+(`minor: true`, `noFatal: true`, recorded `fatal`); no shipped call reaches it. Done: a fixture test that fails
+on today's code: an authored `fatal` on a minor, and on a self-harm-screened subject, records `fatal`; after
+the fix the same fixture records no death (capped at `serious`, the domain model's §6 clamp) and a gate fails
+any tree whose reachable outcome authors `fatal` on a role its template can draw as a minor or with
+`noDeathOnCard`. The gate in `src/gen/incident/gates/` is a tooling request. This is the first case of the
+invariant inventory proposed in `docs/scenario-framework.md` section 9, step 1.
+
 ### depth-bible: Depth rules a call can fail with zero defects
 Tags: job=command; journeys=choices-branch; probes=none (writing rules and review gates); lane=calls
 Needs: start=none; integrate=none; ship=none
