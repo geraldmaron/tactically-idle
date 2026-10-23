@@ -202,6 +202,23 @@ icons) change only through the lead, except feel-slice's granted `Ring`, `Choice
 Lead to do at the P4 merge: register `.facility-building`, `.dev-track`, `.store-list`, `.armory-list` once the
 feel walk reaches Build and Store; update `capture.mjs` `.facility-plan [data-facility-branch]` if the attribute moves.
 
+## Station rebuild (2026-10-23, owner go)
+
+Owner verdict: Build and Team are boring and plain. The teardown and the approved prototype are at
+https://claude.ai/artifact/A1RzfDvFE4jBp1CujBvtRW. The plan has six phases: teardown and prototype (done),
+art, shared primitives, Build, Team, then every other screen raised to the immersion standard (seven
+tests scored 0 to 2; a screen ships at 10 or more with no zero). Owner decisions, 2026-10-23:
+commission new art, prototype before code (approved), and light sound and haptics on management
+screens behind the Sound setting. Not merged yet: `claude/hiring-pool` 0c9e3c6 (10-candidate pool,
+squad swaps), which Phase 5 needs first.
+
+| Session | Model | Phase | Branch | Writes only |
+|---|---|---|---|---|
+| station-art | Sonnet, generation by Codex | 2, art | its own, from `claude/feel-lead` | `public/art/` (new files and manifests only), the art test registrations in `scripts/validate-art.mjs` and `src/ui/art/validate-art.test.ts` if a new folder needs one, `docs/art/station-rebuild.md` |
+| station-primitives | Sonnet | 3, shared primitives | its own, from `claude/feel-lead`, port 5198 | new `src/ui/motion.ts`, `src/ui/components/Beat.tsx`, `SceneHotspots.tsx` and their CSS, `src/ui/people/story-line.ts`, `src/ui/audio/live-audio.ts`, the `reducedMotion` call sites in `Finance.tsx`, `Settlement.tsx`, `LiveFeed.tsx`, `useViewport.ts`, the sound hint in `src/ui/components/labels.ts`, their tests |
+
+Phases 4 (Build) and 5 (Team) start once both land; they touch different files and can run in parallel.
+
 ## Locks outside normal ownership
 
 feel-slice (local_16bb6632), owner feedback 2026-10-23 (header and squad rows, brief sent by the lead):
