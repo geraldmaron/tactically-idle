@@ -12,9 +12,10 @@ import type { GameState, Id, SquadDuty, Squad, SquadId } from '../../sim/types';
 import { commandStaffOf, managerView } from '../../sim/command-staff';
 import { employedPatrol, patrolCapacity, patrolProfile, patrolRates } from '../../sim/patrol';
 import { stressBand } from '../../sim/officer';
+import { levelProgress } from '../../sim/department-level';
 import { STRESS_LABEL } from '../components/StressDisplay';
 import { bestFitSquad } from './operation-squads';
-import { Button, Card, Chip, EmptyState, Row, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, Meter, Row, Section } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { Face } from '../components/Face';
 import { FinanceDetail } from '../components/Finance';
@@ -24,7 +25,7 @@ import { Icon, type IconName } from '../icons';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { OutcomeMark } from '../icons/marks';
 import { getScenario } from '../../sim/scenario-registry';
-import { duration, perHour, plural, rate, signedMoney } from '../format';
+import { duration, perHour, plural, rate, signed, signedMoney } from '../format';
 import { scenarioTitle } from './helpers';
 import { callFlow } from './call-flow';
 import { SavedDebriefReview } from './OpsDebrief';
@@ -50,6 +51,7 @@ export function HQ() {
       <YourMove g={g} overview={overview} now={now} />
       {g.report && <Row className="hq-report" lead={<Icon name="dossier" size={20} />} title="Shift report" detail={reportSummary(g.report)} onClick={() => setReportOpen(true)} trail={<span className="hq-link">Review</span>} label={`Shift report: ${reportSummary(g.report)}. Review`} />}
       <DutySection squads={g.squads} g={g} />
+      <Vitals g={g} />
       <PatrolRow g={g} onOpen={() => setFinancesOpen(true)} />
       <Debriefs key={`${saved.campaignId ?? 'unsaved'}:${saved.session}`} g={g} now={now} />
       <Sheet open={financesOpen} onClose={() => setFinancesOpen(false)} title="Finances"
@@ -90,6 +92,8 @@ function YourMove({ g, overview, now }: { g: GameState; overview: Overview; now:
   const readyLine = ready.length === 0 ? 'No squad can deploy yet.' : ready.length === 1 ? `${ready[0].name} is ready.` : `${ready.length} squads are ready.`;
   let scene: string | null = null;
   let facts: { icon: IconName; text: string }[] = [];
+  let oldestLeft: number | null = null;
+  let bestFaces: NonNullable<GameState['officers'][string]>[] = [];
   let move: { title: string; line: string; action: string; onAct: () => void } | null = null;
   if (run) {
     scene = sceneFor(getScenario(run.scenarioId)?.incident?.type);
@@ -103,24 +107,33 @@ function YourMove({ g, overview, now }: { g: GameState; overview: Overview; now:
       scene = sceneFor(oldest.type);
       const def = getScenario(oldest.id);
       const best = bestFitSquad(g.squads.map((s) => ({ id: s.id, ...squadReadiness(g, s.id, t) })));
+      oldestLeft = oldest.expiresAt - t;
+      bestFaces = best ? (g.squads.find((q) => q.id === best)?.officerIds ?? []).map((id) => g.officers[id]).filter((o): o is NonNullable<typeof o> => !!o).slice(0, 3) : [];
       const sendLine = best ? `${g.squads.find((s) => s.id === best)?.name ?? best} is the best fit.` : readyLine;
       facts = [
         ...(def?.rewards ? [{ icon: 'cash' as const, text: signedMoney(def.rewards.funding) }, { icon: 'medal' as const, text: `${def.rewards.xp} XP` }] : []),
         ...(def?.difficulty ? [{ icon: 'gauge' as const, text: `${def.difficulty.band[0].toUpperCase()}${def.difficulty.band.slice(1)} difficulty` }] : []),
       ];
-      move = { title: `${scenarioTitle(g, oldest.id, now)} is the oldest call`, line: `Expires in ${duration(oldest.expiresAt - t)}. ${sendLine}`, action: 'Open', onAct: () => openCallBrief(nav, oldest.id) };
+      move = { title: scenarioTitle(g, oldest.id, now), line: sendLine, action: 'Open', onAct: () => openCallBrief(nav, oldest.id) };
     }
     else if (overview.squads.length > 0 && ready.length === 0) move = { title: 'No squad can deploy', line: 'Open Team to see who is out and why.', action: 'Team', onAct: () => nav.setTeamSection('swat') };
     else if (overview.budget.net < 0) move = { title: 'Costs exceed income', line: `Funding falls ${perHour(Math.abs(overview.budget.net))}. Review patrol coverage and costs.`, action: 'Patrol', onAct: () => nav.setTeamSection('patrol') };
     else move = { title: 'No call waiting', line: 'Funding can go to the next build.', action: 'Build', onAct: () => nav.go('develop') };
   }
   if (!move) return null;
+  const left = oldestLeft;
+  const lead = bestFaces;
   return <section className={`hq-move${scene ? ' hq-move-scene' : ''}`} aria-label="Your move">
     {scene && <PlateArt src={scene} />}
-    <div className="hq-move-main"><strong>{move.title}</strong><span>{move.line}</span>
-      {facts.length > 0 && <span className="hq-move-facts">{facts.map((f) => <Chip key={f.text} tone="neutral" icon={f.icon}>{f.text}</Chip>)}</span>}
+    <div className="hq-move-top">
+      {left !== null && <Chip tone={left < 60 * 60000 ? 'warn' : 'neutral'} icon="clock">{`${duration(left)} left`}</Chip>}
+      {facts.map((f) => <Chip key={f.text} tone="neutral" icon={f.icon}>{f.text}</Chip>)}
     </div>
-    <Button variant="primary" data-primary onClick={move.onAct}>{move.action}</Button>
+    <div className="hq-move-main"><strong>{move.title}</strong><span>{move.line}</span></div>
+    <div className="hq-move-foot">
+      {lead.length > 0 && <span className="hq-faces" aria-hidden="true">{lead.map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} />)}</span>}
+      <Button variant="primary" data-primary onClick={move.onAct}>{move.action}</Button>
+    </div>
   </section>;
 }
 
@@ -137,12 +150,11 @@ function reportSummary(report: NonNullable<GameState['report']>): string {
   ].filter(Boolean).join(' · ') || 'Nothing new';
 }
 
-/** One row per squad: its faces, its name, duty and readiness; the duty rail under it, and, once a
- * Watch Commander is hired, whether they run this squad's duty (the automation opt-out). */
+/** Squads side by side, two to a row. A tile is the squad's faces, its name and readiness, whoever is under
+ * strain, the last call it ran, and the duty switch. The tile's top opens the squad; the switch sets duty. */
 function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
   const { act } = useToast();
   const nav = useNav();
-  const { go } = nav;
   const watch = managerView(g, 'watch_commander');
   const policy = commandStaffOf(g).watch_commander.policy;
   const setManaged = (squadId: SquadId, managed: boolean) => {
@@ -150,12 +162,12 @@ function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
     act({ type: 'setManagerPolicy', patch: { managerId: 'watch_commander', optOut } }, managed ? 'Squad duty handed to the Watch Commander' : 'Squad kept on manual duty');
   };
   return (
-    <Section id="hq-duties-h" title="SWAT readiness" icon="people">
+    <Section id="hq-duties-h" title="SWAT readiness" icon="people" action={<Button size="sm" variant="quiet" onClick={() => nav.setTeamSection('swat')}>Team</Button>}>
       <div id="hq-duties" className="hq-duties">
       {squads.length === 0 ? (
         <EmptyState compact icon="people" title="No squads yet">
           Create a squad in Team.
-          <Button size="sm" onClick={() => go('squad')}>Open Team</Button>
+          <Button size="sm" onClick={() => nav.go('squad')}>Open Team</Button>
         </EmptyState>
       ) : squads.map((s) => {
         const deployed = squadDeployed(g, s.id);
@@ -166,19 +178,20 @@ function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
         const last = g.debriefs.find((d) => d.officerCondition.some((c) => s.officerIds.includes(c.officerId)));
         const allReady = !deployed && members.length > 0 && readiness.ready === members.length;
         return (
-          <Card key={s.id} tone={allReady ? 'good' : undefined} className="hq-squad">
-            <Row className="hq-duty"
-              lead={<span className="hq-faces" aria-hidden="true">{members.slice(0, 3).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} />)}</span>}
-              title={s.name}
-              detail={deployed ? 'On a call' : <Chip tone={allReady ? 'good' : 'warn'} icon={allReady ? 'check' : 'warning'}>{`${readiness.ready} of ${members.length} ready`}</Chip>}
-              trail={<Icon name="chevronRight" size={20} />} onClick={() => nav.setSquadSection('squads')} label={`${s.name}: ${deployed ? 'on a call' : `${readiness.ready} of ${members.length} ready`}. Open the squad`} />
+          <Card key={s.id} tone={allReady ? 'good' : undefined} className="hq-squad hq-duty">
+            <button type="button" className="hq-squad-open" onClick={() => nav.setSquadSection('squads')} aria-label={`${s.name}: ${deployed ? 'on a call' : `${readiness.ready} of ${members.length} ready`}. Open the squad`}>
+              <span className="hq-faces hq-faces-md" aria-hidden="true">{members.slice(0, 3).map((officer) => <Face key={officer.id} size="md" kind="officer" officer={officer} />)}</span>
+              <span className="hq-squad-name"><strong>{s.name}</strong><Icon name="chevronRight" size={16} /></span>
+              {deployed ? <Chip tone="neutral" icon="bell">On a call</Chip> : <Chip tone={allReady ? 'good' : 'warn'} icon={allReady ? 'check' : 'warning'}>{`${readiness.ready} of ${members.length} ready`}</Chip>}
+            </button>
             <p className="hq-squad-note">
-              <span>{DUTY_META[s.duty].blurb}</span>
-              {strained.length > 0 && <span className="hq-squad-strain"><Icon name="warning" size={16} />{strained.map((o) => `${o.surname} ${STRESS_LABEL[stressBand(o.stress)].toLowerCase()}`).join(', ')}</span>}
-              {last && <span><Icon name="flag" size={16} />Last call: {last.endingTitle}</span>}
+              {strained.length > 0
+                ? <span className="hq-squad-strain"><Icon name="warning" size={16} />{strained.map((o) => `${o.surname}: ${STRESS_LABEL[stressBand(o.stress)].toLowerCase()}`).join(', ')}</span>
+                : <span><Icon name="check" size={16} />Everyone fit</span>}
+              {last && <span><Icon name="flag" size={16} />{last.endingTitle}</span>}
             </p>
-            <ChoiceRail label={`Duty for ${s.name}`} value={s.duty}
-              options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, label: DUTY_META[d].label, disabled: !!deployed }))}
+            <ChoiceRail label={`Duty for ${s.name}`} value={s.duty} grow
+              options={(['standby', 'rest'] as SquadDuty[]).map((d) => ({ value: d, accessibleLabel: `${DUTY_META[d].label}. ${DUTY_META[d].blurb}`, label: <><Icon name={DUTY_META[d].icon} size={16} className="hq-duty-icon" /><span className="hq-duty-word">{DUTY_META[d].label}</span></>, disabled: !!deployed }))}
               onChange={(duty) => act({ type: 'setSquadDuty', squadId: s.id, duty })} />
             {watch.hired && <label className="hq-duty-auto">
               <input type="checkbox" role="switch" checked={managed} onChange={(e) => setManaged(s.id, e.target.checked)} />
@@ -193,11 +206,37 @@ function DutySection({ squads, g }: { squads: Squad[]; g: GameState }) {
   );
 }
 
+/** What the department stands on: public trust, and service toward the next level. Each opens where it matters. */
+function Vitals({ g }: { g: GameState }) {
+  const nav = useNav();
+  const d = g.department;
+  const p = levelProgress(d);
+  const trust = Math.round(d.trust);
+  const lastTrust = g.debriefs[0]?.trustDelta;
+  const toNext = p.next === null ? null : Math.max(0, p.next - p.service);
+  return <div className="hq-vitals">
+    <Card className="hq-vital" onClick={() => document.getElementById('hq-results')?.scrollIntoView({ block: 'start', behavior: 'smooth' })} label={`Public trust ${trust} of 100. See recent results`}>
+      <span className="hq-vital-head"><Icon name="shield" size={20} />Trust</span>
+      <strong className="hq-vital-value">{trust}</strong>
+      <Meter value={trust} tone="mid" label="Public trust" valueText={`${trust} of 100`} />
+      <span className="hq-vital-sub">{lastTrust ? `Last call ${signed(lastTrust, 1)}` : 'No calls yet'}</span>
+    </Card>
+    <Card className="hq-vital" onClick={() => nav.go('develop')} label={`Department level ${p.level}${toNext === null ? '' : `, ${toNext} service to level ${p.level + 1}`}. Open Build`}>
+      <span className="hq-vital-head"><Icon name="chevronUp" size={20} />Level</span>
+      <strong className="hq-vital-value">{p.level}</strong>
+      <Meter value={p.next === null ? 100 : (100 * (p.service - p.floor)) / (p.next - p.floor)} tone="mid" label="Service toward the next level" valueText={toNext === null ? 'top level' : `${toNext} to go`} />
+      <span className="hq-vital-sub">{toNext === null ? 'Top level' : `${toNext} to level ${p.level + 1}`}</span>
+    </Card>
+  </div>;
+}
+
 /** Patrol as one income row: its faces, how many are covering, what it nets an hour. It opens Finances. */
 function PatrolRow({ g, onOpen }: { g: GameState; onOpen: () => void }) {
+  const nav = useNav();
   const employees = employedPatrol(g);
   const rates = patrolRates(g, g.department.clockHighWater);
-  return <Section title="Patrol" icon="patrol"><div data-patrol-funding-origin><Card className="hq-patrol-card"><Row className="hq-patrol"
+  const open = patrolCapacity(g) - employees.length;
+  return <Section title="Patrol" icon="patrol" action={open > 0 ? <Button size="sm" variant="quiet" icon="plus" onClick={() => nav.openPatrol({ kind: 'hire' })}>Hire</Button> : undefined}><div data-patrol-funding-origin><Card className="hq-patrol-card"><Row className="hq-patrol"
     lead={<span className="hq-faces" aria-hidden="true">{employees.slice(0, 3).map((employee) => <Face key={employee.id} size="sm" kind="patrol" src={patrolProfile(employee.profileId)?.portrait} />)}</span>}
     title="Patrol coverage" detail={`${rates.productive} covering · ${patrolCapacity(g) - employees.length} open${employees.some((e) => e.training) ? ` · ${employees.filter((e) => e.training).length} in training` : ''}`}
     trail={<span className="hq-patrol-rate"><strong>{rate(rates.net)}</strong></span>}
@@ -209,7 +248,7 @@ export function Debriefs({ g, now }: { g: GameState; now: number }) {
   const [expanded, setExpanded] = useState(false);
   const selected = g.debriefs.find((debrief) => debrief.runId === selectedId) ?? null;
   return (
-    <Section title="Recent results" icon="chart">
+    <Section id="hq-results" title="Recent results" icon="chart">
       {g.debriefs.length === 0 ? (
         <EmptyState compact icon="chart" title="No results yet">
           Finished calls appear here with their results and causes.
