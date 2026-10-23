@@ -8,8 +8,6 @@ import { OfficerCard } from '../components/OfficerCard';
 import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
 import { DUTY_META } from '../components/labels';
-import { Face } from '../components/Face';
-import { officerFaceStatus } from '../components/face-status';
 import type { SquadDuty } from '../../sim/types';
 import { Icon } from '../icons';
 import { SQUAD_IDS } from '../../sim/types';
@@ -149,9 +147,8 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           </form>
         ) : (
           <Row className="hq-duty hq-squad-row"
-            lead={<span className="hq-faces hq-faces-stack">{members.map((o) => <Face key={o.id} size="sm" kind="officer" officer={o} status={officerFaceStatus(g, o.id, g.department.clockHighWater)} />)}</span>}
+            lead={<span className="squad-badge squad-badge-lg" aria-hidden="true">{squad.id}</span>}
             title={<h2 className="squad-block-name">
-              <span className="squad-badge" aria-hidden="true">{squad.id}</span>
               <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
                 requestedFocus.current = 'input';
                 nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
@@ -220,6 +217,7 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
         }))} />
         <label className="squad-sort">
           <span className="sr-only">Sort roster</span>
+          <Icon name="sort" size={16} />
           <select value={sort} onChange={(event) => setSort(event.target.value as RosterSort)}>
             {(Object.keys(ROSTER_SORT_LABEL) as RosterSort[]).map((value) => <option key={value} value={value}>By {ROSTER_SORT_LABEL[value].toLowerCase()}</option>)}
           </select>

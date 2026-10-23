@@ -46,7 +46,9 @@
 .squad-sort { min-height: 36px; padding: 0; border: 0; background: none; color: var(--t2); }
 .squad-sort select { min-height: 36px; min-width: 0; padding: 0 var(--sp1); border: 0; background: transparent; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); }
 .squadpanel .squad-block-name { display: flex; align-items: center; gap: var(--sp2); }
-.squadpanel .squad-badge { width: 20px; height: 20px; font-size: var(--s12); }
+.squadpanel .squad-badge-lg { width: 40px; height: 40px; font-size: var(--s22); }
+.ocard-face { position: relative; }
+.ocard-star { position: absolute; top: -2px; right: -2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--ink-3); color: var(--amber); }
 .roster-bar .squad-sort select { min-height: 36px; padding: 0 var(--sp1); border: 0; background: transparent; appearance: none; -webkit-appearance: none; }
 .roster-bar .squad-sort { min-height: 36px; }
 .ocard-tile { padding: var(--sp2); }
@@ -58,3 +60,5 @@
   .ocard-tile { gap: var(--sp1); padding: var(--sp2) var(--sp1); }
   .ocard-title .ring, .ocard-tile .ocard-certs { display: none; }
 }
+.roster-bar .squad-sort { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--t2); cursor: pointer; }
+.roster-bar .squad-sort select { font: 600 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); cursor: pointer; }
