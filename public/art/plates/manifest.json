@@ -17,7 +17,21 @@
     "scene_command_room",
     "scene_patrol_garage",
     "scene_facilities_plan",
-    "scene_armory_counter"
+    "scene_armory_counter",
+    "room_personnel_lit",
+    "room_personnel_dark",
+    "room_training_lit",
+    "room_training_dark",
+    "room_information_lit",
+    "room_information_dark",
+    "room_recovery_lit",
+    "room_recovery_dark",
+    "room_equipment_lit",
+    "room_equipment_dark",
+    "room_garage_lit",
+    "room_garage_dark",
+    "scene_swat_locker",
+    "scene_facilities_plan_dark"
   ],
   "width": 1200,
   "height": 675

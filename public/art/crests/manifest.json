@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "readyIds": [
+    "alpha",
+    "bravo",
+    "charlie",
+    "delta"
+  ],
+  "width": 512,
+  "height": 512
+}

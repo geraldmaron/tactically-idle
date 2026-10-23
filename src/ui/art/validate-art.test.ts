@@ -35,7 +35,7 @@ function fixture(emblemIds: string[], medallionIds: string[] = []): string {
   write('src/content/personas.json', '[]');
   write('src/content/courses.ts', "export const COURSES = {\n  composure_workshop: {\n    name: 'Composure workshop',\n  },\n};\n");
   write('src/ui/components/labels.ts', "export const BRANCHES: DevBranch[] = ['personnel', 'field'];\n");
-  for (const set of ['portraits', 'gear', 'materials', 'managers', 'plates']) write(`public/art/${set}/manifest.json`, JSON.stringify({ version: 1, readyIds: [], width: 512, height: 512 }));
+  for (const set of ['portraits', 'gear', 'materials', 'managers', 'plates', 'crests']) write(`public/art/${set}/manifest.json`, JSON.stringify({ version: 1, readyIds: [], width: 512, height: 512 }));
   write('src/ui/icons/kit.ts', "export const CALL_TYPE_ICON: Record<IncidentType, IconName> = {\n  hostage_crisis: 'hostage',\n  barricaded: 'barricade',\n};\n");
   write('public/art/medallions/manifest.json', JSON.stringify({ version: 1, readyIds: medallionIds, width: 512, height: 512 }));
   for (const id of medallionIds) write(`public/art/medallions/${id}.webp`, WEBP);
@@ -82,5 +82,37 @@ describe('validate-art medallions', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('medallions/barricade: not a call type');
     expect(result.stderr).toContain('medallions/hostage_crisis: marked ready but file missing');
+  });
+});
+
+describe('validate-art station rebuild sets', () => {
+  const ready = (root: string, kind: string, ids: string[]) => {
+    fs.writeFileSync(join(root, `public/art/${kind}/manifest.json`), JSON.stringify({ version: 1, readyIds: ids, width: 512, height: 512 }));
+    for (const id of ids) fs.writeFileSync(join(root, `public/art/${kind}/${id}.webp`), WEBP);
+  };
+
+  it('accepts the squad crests, the two later managers and the room vignettes', () => {
+    const root = fixture([]);
+    fs.mkdirSync(join(root, 'public/art/crests'), { recursive: true });
+    ready(root, 'crests', ['alpha', 'delta']);
+    ready(root, 'managers', ['recruiter', 'peer_support_lead']);
+    ready(root, 'plates', ['room_recovery_lit', 'room_garage_dark', 'scene_swat_locker']);
+    const result = run(root);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ crestsReady: 2, managersReady: 2 });
+  });
+
+  it('fails on a crest, manager or room id outside the sets', () => {
+    const root = fixture([]);
+    fs.mkdirSync(join(root, 'public/art/crests'), { recursive: true });
+    ready(root, 'crests', ['echo']);
+    ready(root, 'managers', ['janitor']);
+    ready(root, 'plates', ['room_attic_lit']);
+    const result = run(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('crests/echo: not a squad crest');
+    expect(result.stderr).toContain('managers/janitor: not a Command Staff manager');
+    expect(result.stderr).toContain('plates/room_attic_lit: not a scene, banner or texture id');
   });
 });
