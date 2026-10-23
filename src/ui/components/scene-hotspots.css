@@ -1,0 +1,25 @@
+/* SceneHotspots (components/SceneHotspots.tsx): buttons placed by percent over a painted plate. The box is
+   the place; the button around it is never smaller than the 44px touch target, centred on the box. */
+.scene { position: relative; width: 100%; overflow: hidden; isolation: isolate; background: linear-gradient(135deg, var(--ink-2), var(--ink-0)); }
+.scene > .plate-art { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; }
+.scene-spots { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
+.scene-spot-box { position: absolute; }
+.scene-spot { position: absolute; left: 50%; top: 50%; width: max(100%, var(--touch)); height: max(100%, var(--touch)); display: grid; place-items: end center; padding: 0; border: 0; background: none; color: var(--t1); cursor: pointer; transform: translate(-50%, -50%); -webkit-tap-highlight-color: transparent; }
+.scene-spot:active .scene-spot-fill { filter: brightness(1.3); }
+.scene-spot:focus-visible { outline: 2px solid var(--act-hi); outline-offset: 2px; }
+.scene-spot > * { grid-area: 1 / 1; }
+.scene-spot-fill { place-self: stretch; border-radius: var(--r1); }
+.scene-spot-img { place-self: stretch; width: 100%; height: 100%; border-radius: var(--r1); object-fit: cover; }
+.scene-spot-name { position: relative; max-width: max(100%, 7em); margin-bottom: var(--sp1); padding: 0 var(--sp1); border-radius: var(--r1); overflow: hidden; background: color-mix(in srgb, var(--ink-deep) 72%, transparent); color: var(--t1); font: 600 var(--s14)/1.3 var(--f-ui); text-overflow: ellipsis; white-space: nowrap; }
+
+/* Lit: warm light in the window (ivory; amber is kept for the move). Dark: shaded. Ready: lit, with an
+   amber ring that pulses twice and then holds. */
+.scene-spot-lit .scene-spot-fill, .scene-spot-ready .scene-spot-fill { background: radial-gradient(closest-side, color-mix(in srgb, var(--t1) 62%, transparent), color-mix(in srgb, var(--t1) 24%, transparent) 78%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--t1) 55%, transparent); }
+.scene-spot-dark .scene-spot-fill { background: color-mix(in srgb, var(--ink-deep) 62%, transparent); box-shadow: inset 0 0 0 1px var(--hair-2); }
+.scene-spot-dark .scene-spot-img { filter: grayscale(1) brightness(0.45); }
+.scene-spot-dark .scene-spot-name { color: var(--t2); }
+.scene-spot-ready .scene-spot-fill { box-shadow: 0 0 0 2px var(--act); animation: scene-ready 1.6s ease-out 2; }
+@keyframes scene-ready { 0% { box-shadow: 0 0 0 2px var(--act), 0 0 0 0 color-mix(in srgb, var(--act) 60%, transparent); } 100% { box-shadow: 0 0 0 2px var(--act), 0 0 0 14px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .scene-spot-ready .scene-spot-fill { animation: none !important; }
+}

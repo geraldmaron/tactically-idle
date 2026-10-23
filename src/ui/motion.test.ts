@@ -2,8 +2,9 @@
 // button meaning "a call is waiting on you, somewhere you aren't looking", and the light bar on a
 // hot call (owner, 2026-10-20), which since 2026-10-21 also sweeps as a wash across the strip. Nothing else pulses, blinks or loops. This reads every stylesheet under src/ui and fails on any other repeating
 // animation, so a new pulse has to argue its way into the doc first.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stylesheetsUnder } from '../dev/lab/css-rules';
+import { REDUCED_MOTION_QUERY, reducedMotion } from './motion';
 
 const SHEETS = stylesheetsUnder('src/ui');
 
@@ -42,5 +43,36 @@ describe('one motion signal', () => {
   it('keeps the ring still under reduced motion', () => {
     const css = SHEETS['app.css'];
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.live-dot \{\s*animation: none !important;/);
+  });
+});
+
+describe('reducedMotion', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('is false with no window, as on the server and in node', () => {
+    vi.stubGlobal('window', undefined);
+    expect(reducedMotion()).toBe(false);
+  });
+
+  it('is false when the window has no matchMedia', () => {
+    vi.stubGlobal('window', {});
+    expect(reducedMotion()).toBe(false);
+  });
+
+  it('asks the prefers-reduced-motion query and follows its answer', () => {
+    const asked: string[] = [];
+    let matches = true;
+    vi.stubGlobal('window', { matchMedia: (query: string) => { asked.push(query); return { matches }; } });
+    expect(reducedMotion()).toBe(true);
+    matches = false;
+    expect(reducedMotion()).toBe(false);
+    expect(asked).toEqual([REDUCED_MOTION_QUERY, REDUCED_MOTION_QUERY]);
+    expect(REDUCED_MOTION_QUERY).toBe('(prefers-reduced-motion: reduce)');
+  });
+
+  it('is the only reader of the query in the game UI, so no screen keeps its own copy', () => {
+    const sources = import.meta.glob(['/src/ui/**/*.{ts,tsx}', '!/src/ui/**/*.test.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const owners = Object.entries(sources).filter(([, text]) => text.includes('prefers-reduced-motion')).map(([file]) => file);
+    expect(owners).toEqual(['/src/ui/motion.ts']);
   });
 });

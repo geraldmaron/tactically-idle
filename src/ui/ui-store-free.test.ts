@@ -9,6 +9,8 @@ import { importChain, SOURCES, STORE_MODULES, walkImports } from '../dev/import-
 const ENTRIES = [
   '/src/ui/screens/LiveView.tsx', '/src/ui/screens/DecisionList.tsx', '/src/ui/screens/CallTile.tsx', '/src/ui/screens/PrepBriefing.tsx',
   '/src/ui/screens/DebriefContents.tsx', '/src/ui/people/PeopleText.tsx', '/src/ui/components/ToastView.tsx',
+  // The station primitives the lab's station page draws (Beat's store-bound mount is BeatProvider.tsx).
+  '/src/ui/components/Beat.tsx', '/src/ui/components/SceneHotspots.tsx', '/src/ui/people/story-line.ts', '/src/ui/audio/live-audio.ts',
   // Also pure by contract: the model, the groups, the matcher, the department context and the handoff.
   '/src/ui/screens/live-model.ts', '/src/ui/screens/contributor-groups.ts', '/src/ui/people/lexicon.ts', '/src/ui/components/department-context.ts', '/src/ui/lab-handoff.ts',
 ];

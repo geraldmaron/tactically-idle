@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getState, send, setLiveCallShown, settleLapse, useGame } from '../store';
 import { liveDither } from '../timer';
 import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
+import { reducedMotion } from '../motion';
 import { liveFillViews } from './fill-gauge';
 import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
@@ -28,7 +29,7 @@ import { isHotCall } from '../../sim/authorization';
 
 /** A beat change (result, then the next decision) starts at the top of the call. */
 function revealLastDecision() {
-  document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  document.querySelector('.live')?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
 }
 
 /** `onStepOut` leaves the call for HQ without cancelling it (Ops.tsx passes the shell's navigation). */

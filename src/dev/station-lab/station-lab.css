@@ -1,0 +1,19 @@
+/* The station primitives page (StationLab.tsx). Dev only; game tokens, plain layout. */
+.lab-station { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--sp4); display: grid; align-content: start; gap: var(--sp5); }
+.lab-station h1 { margin: 0; font: 700 var(--s22)/1.1 var(--f-title); }
+.lab-station h1 small { color: var(--t3); font: 500 var(--s14) var(--f-ui); }
+.lab-section { display: grid; gap: var(--sp2); }
+.lab-section h2 { margin: 0; font: 700 var(--s18)/1.2 var(--f-title); }
+.lab-section p { margin: 0; color: var(--t2); font: 400 var(--s14)/1.4 var(--f-ui); }
+.lab-row { display: flex; flex-wrap: wrap; gap: var(--sp2); }
+.lab-row button, .lab-hold { min-height: var(--touch); padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-2); color: var(--t1); font: 600 var(--s14) var(--f-ui); }
+.lab-row button[aria-pressed='true'] { border-color: var(--act); }
+.lab-hold { justify-self: start; }
+.lab-people { display: grid; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.lab-people li { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); }
+.lab-people span { display: grid; min-width: 0; }
+.lab-people em { color: var(--t2); font: 400 var(--s14)/1.3 var(--f-ui); font-style: normal; }
+.lab-people small { color: var(--t3); font: 400 var(--s12)/1.3 var(--f-ui); }
+
+.lab-check { display: flex; align-items: center; gap: var(--sp2); min-height: var(--touch); color: var(--t2); font: 500 var(--s14) var(--f-ui); }
+.lab-hold-beats .beat, .lab-hold-beats .beat-stamp, .lab-hold-beats .beat-react { animation-play-state: paused; animation-delay: -1s; }
