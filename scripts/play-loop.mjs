@@ -31,12 +31,6 @@ export async function playPatrolEconomy(page, { baseURL = 'http://127.0.0.1:5174
     return Number.isFinite(wallet) && Math.abs(wallet - actual) <= 1;
   });
   await onboard(page);
-  const sprites = page.locator('.funding-flight-layer .cash-sprite');
-  const spriteStyle = async () => page.evaluate(() => ({
-    count: document.querySelectorAll('.funding-flight-layer .cash-sprite').length,
-    layerPointerEvents: getComputedStyle(document.querySelector('.funding-flight-layer')).pointerEvents,
-    spritePointerEvents: [...document.querySelectorAll('.funding-flight-layer .cash-sprite')].every(sprite => getComputedStyle(sprite).pointerEvents === 'none'),
-  }));
 
   const initial = await state(page);
   assert.equal(initial.patrol.personnel.filter(person => person.dismissedAt === null).length, 4, 'a new department starts with four patrol employees');
@@ -47,13 +41,8 @@ export async function playPatrolEconomy(page, { baseURL = 'http://127.0.0.1:5174
   const before = initial.department.funding;
   await page.clock.setFixedTime(new Date(fixed.getTime() + 60 * 60_000));
   await page.waitForFunction(initialFunding => window.__ti.getState().department.funding >= initialFunding + 620, before, { timeout: 8000 });
-  assert.ok(await sprites.count() > 0, 'authoritative patrol settlement starts the HQ cash flight');
-  let spriteState = await spriteStyle();
-  assert.ok(spriteState.count <= 24, 'cash flights stay within the sprite bound');
-  assert.equal(spriteState.layerPointerEvents, 'none', 'the flight layer does not intercept input');
-  assert.equal(spriteState.spritePointerEvents, true, 'cash sprites do not intercept input');
-  await capture('patrol-funding-flight', page.locator('.funding-flight-layer'));
-  await sprites.first().waitFor({ state: 'detached', timeout: 3000 });
+  // Patrol income settles without a cash flight (owner, 2026-10-23); the balance must still match.
+  assert.equal(await page.locator('.funding-flight-layer .cash-sprite').count(), 0, 'patrol settlement draws no flying cash');
   assert.equal(Math.round((await state(page)).department.funding - before), 620, 'one hour credits the authoritative starting net');
   await walletMatches(page);
 
