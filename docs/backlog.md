@@ -539,7 +539,7 @@ Codex reviews the merged diff; the owner plays the slice. Nothing in `ui-surface
 
 ### ui-surfaces: Every screen passes the gates
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
-Needs: start=feel-slice; integrate=none; ship=none
+Needs: start=feel-slice (owner go 2026-10-23: bounded package work starts before the owner plays the slice, which still comes before ship); integrate=none; ship=none
 
 Each package follows the `feel-slice` rules and the component contract in `docs/game-ux-direction.md` (owner, 2026-10-23: variable counts as grouped lists, uniform pills and rows on one grid), and passes its checks: existing primitives, the variants it
 replaces deleted, alias tokens migrated (the aliases go after the last package). `feel-slice` covers P6,

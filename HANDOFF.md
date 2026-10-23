@@ -237,32 +237,45 @@ screens in the feel and layout registries at merge.
 
 Phases 4 and 5 merged into `claude/feel-lead` (47fad8d Build, 3c02164 Team; tip 94f34cc).
 
-## Sessions, servers and pending merges (2026-10-23, lead local_74f265d1)
+## UI finish (2026-10-23, owner go)
 
-The lead stays local_74f265d1 on `claude/feel-lead`. Every finished station, rollout and feel session is
-archived and its branch is contained in this branch. One dev server runs: `lead-5182`, `claude/feel-lead` on
-http://127.0.0.1:5182 (`.claude/launch.json`). No lane is in flight.
+Owner: "Address the remaining work across model cost effective agent sessions. You coordinate, use codex sol
+6.1 to challenge where it makes sense." Lead local_74f265d1 on `claude/feel-lead`; one dev server, `lead-5182`.
+Plan, revision 3, and sol's two rounds: `side-session-notes/local_74f265d1-361d-40c4-913d-2844627571d7/ui-finish/`.
+Sol (`gpt-6.1-sol`, always passed with `--model`; the config default is astra) rejected revisions 1 and 2; revision
+3 applies its four remaining smallest fixes and goes ahead as accepted with those controls.
 
-Rough edges merged (e30ef9c, from 416420f on `claude/adoring-meninsky-ac977a`): the seven Build and Team fixes, one
-idle beat per screen, and the gate port trap (`scripts/ui-gates/serve.mjs` no longer reuses 5174 and refuses a URL
-whose `src/ui` and `src/sim` code differs from disk). Lane gates on 416420f: `npm run verify` 3,272 passed, `check:ui`
-passed with `ui-debt.json` unchanged, `check:feel` only hq F8.pill as on the base. On the merged tip (416420f plus
-HANDOFF.md) the lead ran typecheck and the architecture, Build, Recruit, room-model and storefront tests (146
-passed) and saw "Can afford" on Build at 390x844 on 5182. Note: `side-session-notes/local_ee1fc7f5-68fe-412c-9aa2-5c0a6a421d65/rough-edges/READY.md`.
+Checkpoint: the owner's go supersedes "nothing in `ui-surfaces` starts before the owner plays the slice" for
+bounded package work only. The owner still plays HQ to debrief before anything ships, and `test:e2e` waits for
+the owner's UI sign-off. Lanes may run `check:ui`, `ui:baseline` and `check:feel` (its tap path included).
 
-Not yet in `claude/feel-lead`:
+Merged into `claude/feel-lead` before the wave: the rough edges (e30ef9c, from 416420f), `main`'s ui-gates
+(c593fb5; gate files merged three ways on ab362b2, R4 stays retired, `ui-gates` shipped), `claude/scenario-framework`
+(bc03d46), and the regenerated baseline (de08374: rendered counts unchanged; R9 and R11 fell where main's
+detectors read the merged primitives). On de08374: `npm run verify` 3,272 passed, art, build and no-lab green;
+`check:ui` matches the baseline; `check:feel` 73/73 controls and only `hq F8.pill` at 200% text, as before.
+Port-trap leftovers closed in c593fb5: play-loop and capture-locations go through `serve.mjs`, check-ui stops
+its server on a failing count. New backlog `gate-server-beside-dev`: a bare `ui:baseline` here timed out while
+`lead-5182` ran in the same worktree.
 
-- `main` (b968e4b, `ui-gates` shipped): add/add conflicts with this branch's own gates in `scripts/ui-gates/` (now
-  including the port trap's `serve.mjs`), `scripts/check-ui.mjs`, `src/ui/ui-debt.json`,
-  `src/ui/ui-gates-static.test.ts`, `package.json`, the capture tool, `docs/visual-kit.md` and `docs/backlog.md`.
-  Tooling and docs only; the app the server shows does not change. Fix in the same merge: `docs/visual-kit.md`
-  still says the gates start a server on 5174, and `scripts/play-loop.mjs` still defaults to 127.0.0.1:5174.
-- `claude/scenario-framework` (7e85ce3, on top of `main`): `docs/scenario-framework.md` and backlog items. Docs only.
+Wave 1 (providers and gates), each in its own worktree cut from `claude/feel-lead`:
+
+| Lane | Model | Writes only | Port |
+|---|---|---|---|
+| providers | Sonnet | `src/ui/art/`, `src/ui/portraits/`, `public/art/`, `docs/art/`, `src/ui/blueprint/` (props frozen), `Face`, `OfficerCard`, `OfficerTile`, `RankInsignia`, `StressDisplay`, `Disclosure` and their css, `src/ui/people/`, `scripts/validate-art.mjs`, their tests | 5185 |
+| gates | Sonnet | `scripts/ui-gates/`, `scripts/check-ui.mjs`, `scripts/check-feel*.mjs`, `scripts/play-loop.mjs` (no full runs), `scripts/capture-locations.mjs`, `docs/captures/ui-ux-audit/tools/`, `src/ui/ui-gates-*.test.ts`, `package.json` scripts | 5174 |
+| settings | Sonnet | `src/ui/settings/`, `SaveManager`, `WelcomeBack`, `OpenInLab`, `point-packs.css`, their css and tests; locks: the candidate lines in `src/main.tsx`, `docs/captures/owner-visual-picks/`, the reading-face lines in `docs/ops-experience.md` | 5178 |
+| build | Haiku | `Build.tsx`, `build-parts.tsx`, `build.css`, `Develop.tsx`, `development.css`, `src/ui/screens/build/` | 5195 |
+
+The lead merges providers first; build and settings then merge `claude/feel-lead` and take final captures on it.
+Lead-owned during the wave: `src/ui/ui-debt.json` and `SMALL_TEXT_CEILING` (lanes lower them on their own branch;
+the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme.css`, `app.css`, `skin.css`,
+`player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
+`store.ts`). Waves 2 (live-debrief, team, hq, store) and 3 (calls, then the lead's integration) are in the plan.
 
 Parked, kept: the Going Live branches (`going-live-spine-25ad3c`, `spine-pass2-363cdf`, `prose-scene-6a2c7c`,
 `trusting-pasteur-41bc4e`, `happy-wilson-6259de`, `hopeful-pike-69bdac`) and `friendly-leakey-bd79fb`. The
-going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached. The archived
-sessions' worktree folders and Codex's stale 5177 server (`codex/blue-hour-overhaul`, contained) are removed.
+going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached.
 
 ## Locks outside normal ownership
 
