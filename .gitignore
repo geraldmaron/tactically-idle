@@ -12,5 +12,3 @@ __pycache__/
 # Visual-story baseline: raw frames stay on disk, contact sheets are committed
 docs/captures/visual-story/*/390/
 docs/captures/visual-story/*/320/
-docs/captures/owner-visual-picks/**/*.jpg
-!docs/captures/owner-visual-picks/**/contact-*.jpg

@@ -41,7 +41,7 @@ node docs/captures/ui-ux-audit/tools/sheet.mjs "$PWD" "$PWD/docs/captures/visual
 - The resource bar holds five buttons across 320 without overlap (funds 76px, rate 71px, trust 44px,
   level 44px, menu 44px). "Trust" and "Level" are hidden below a 360px frame and the icons carry them;
   the buttons keep their full aria-labels and their help sheets.
-- Plates hold at 72, 96 and 128px on all five tab roots: see
-  [`../../owner-visual-picks/`](../../owner-visual-picks/README.md).
+- Plates hold at 72, 96 and 128px on all five tab roots. The owner picked 96px on 2026-10-22; the compare
+  captures were retired with the reading-face candidate.
 - Painted medallions appear at 44px on the debrief hero and 40px on the Casebook rows; below 40px the
   SVG badge draws.

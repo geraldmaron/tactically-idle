@@ -565,23 +565,6 @@ Briefs: `side-session-notes/local_0ef35909-1f92-43ed-b124-d0236bd4f320/ui-audit/
 package's surfaces pass every gate at 320, 390 and 430, a fixed-seed sweep compared with the 2026-10-22
 captures, and a closing Astra read of the after set.
 
-### owner-visual-picks: The owner picks the tab plate and the reading serif from one compare page
-Tags: job=command; journeys=answer-a-call, hire-and-equip; probes=none (layout and type); lane=interface
-Needs: start=none; integrate=none; ship=none
-
-Two open owner decisions are visual, so the owner judges them side by side, not from prose. One
-private compare page (an Artifact) shows, at 390 and 320 and from one fixed-seed campaign:
-
-1. The tab-root plate at no plate, 72px, 96px and 128px on each of HQ, Calls, Officers and Build,
-   so the owner also decides whether every tab gets one. The plate height is one token
-   (`--plate-h` in `theme.css`, tabs in `TAB_PLATES`), so any pick is a one-line change.
-2. The decide beat and a debrief in the current face and in the candidate serif behind the dev
-   switch (`src/ui/settings/candidates.ts`, `docs/ops-experience.md` "The reading face: still open").
-
-Owner's picks (2026-10-22): the plate stays 96px on all four tabs (already `--plate-h` and `TAB_PLATES`), and
-the reading face stays the sans. Done: the serif rule deleted from `candidates.css`, the dev switch removed,
-and the compare captures retired.
-
 ### patrol-boosts: Bounded boosts apply to NPC patrol funding
 Tags: job=build; journeys=hire-and-equip, offline-settles; probes=none (funding, not call odds); lane=engine
 Needs: start=patrol-work; integrate=none; ship=none
@@ -841,7 +824,7 @@ constant (the multiplier saves taps); entitlements per account; the ad's x1.5 fo
 playtests judge its size; the first room scales with multipliers; an offer that would pay nothing is not
 shown; no server analytics; AdMob alone and non-personalized at launch, personalized ads later as an opt-in
 with ATT and UMP work; prices $2.99 and $4.99; the tab plate stays 96px on all four tabs and the reading
-face stays the sans (`owner-visual-picks`); the live strip keeps 2 chat lines; the board hook shows in full, no 3-line clamp; `worn-kit` approved;
+face stays the sans; the live strip keeps 2 chat lines; the board hook shows in full, no 3-line clamp; `worn-kit` approved;
 Going Live's prose passes start.
 
 Decided 2026-10-22 (Going Live): the rebuild (`going-live-spine`) must let every balance style reach
