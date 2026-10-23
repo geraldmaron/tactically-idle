@@ -100,3 +100,20 @@
 .arrangement-options { margin: 0 0 var(--sp3); padding: var(--sp1) var(--sp3); }
 .arrangement-check { min-height: 48px; padding: var(--sp1) 0; }
 .arrangement-squad-option { padding-bottom: var(--sp2); }
+
+/* Station finish: option groups as cards, squads with their crest and larger faces, locks as rows with a face. */
+.arrangement-options { border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
+.arrangement-options legend { padding: 0 var(--sp2); font: 700 var(--s14)/1.2 var(--f-title); letter-spacing: .06em; text-transform: uppercase; color: var(--t2); }
+.arrangement-squad-option { align-items: center; gap: var(--sp2); flex-wrap: nowrap; padding: var(--sp2) 0; }
+.arrangement-squad-option > .squad-crest { flex: none; }
+.arrangement-squad-option .arrangement-check { flex: 1 1 0; }
+.arrangement-squad-option > .btn { flex: none; }
+.arrangement-faces { gap: 0; }
+.arrangement-faces .face { width: 32px; height: 32px; border: 2px solid var(--ink-1); }
+.arrangement-faces .face + .face, .arrangement-face + .arrangement-face { margin-left: -8px; }
+.arrangement-face { width: auto; height: auto; border: 0; border-radius: 50%; overflow: visible; }
+.arrangement-face-lead .face { border-color: var(--act); }
+.arrangement-officer-locks li > .face, .arrangement-roster li > .face, .arrangement-move-head > .face { flex: none; }
+.arrangement-comparison, .arrangement-undo { border-color: var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); }
+.arrangement-summary { background: var(--ink-0); border-radius: var(--r1); }
+@container game (max-width: 359px) { .arrangement-squad-option { flex-wrap: wrap; } .arrangement-squad-option > .squad-crest { display: none; } }

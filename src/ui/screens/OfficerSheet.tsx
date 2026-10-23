@@ -28,8 +28,8 @@ import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
 import { CERT_ICON, ROLE_META, STATUS_META, TRAIT_INFO } from '../components/labels';
 import { officerStatus } from './squad-model';
-import { Portrait } from '../portraits/Portrait';
-import { agePortraitProps } from './helpers';
+import { Face } from '../components/Face';
+import { officerFaceStatus } from '../components/face-status';
 import { Icon } from '../icons';
 import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
 import { officerRates } from '../../sim/economy';
@@ -69,7 +69,7 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
     <div className="profile">
       <section className="profile-hero" aria-label="Officer">
         <div className="profile-portrait">
-          <Portrait officer={o} size={72} {...agePortraitProps(g, o, now)} />
+          <Face size="lg" kind="officer" officer={o} status={officerFaceStatus(g, o.id, now)} />
           {isLeader && <span className="profile-leader" title="Squad leader"><Icon name="star" size={13} /></span>}
         </div>
         <div className="profile-id">
@@ -182,9 +182,9 @@ function CareerTab({ o }: { o: Officer }) {
 
 function CareTab({ o, factors }: { o: Officer; factors: string[] }) {
   return <div className="profile-stack">
-    <StressDisplay value={o.stress} />
+    <section className="profile-care-card" aria-label="Stress"><h3 className="profile-head"><Icon name="heart" size={16} />Stress</h3><StressDisplay value={o.stress} /></section>
     {o.injury && o.injury.until > Date.now() && <p className="note note-warn"><Icon name="bandage" size={14} />{o.injury.label}, healed {relativeTime(o.injury.until, Date.now())}</p>}
-    {factors.length > 0 && <section aria-label="Recovery"><h3 className="profile-head">Recovery</h3><ul className="factors">{factors.map((f, i) => <li key={i}>{f}</li>)}</ul></section>}
+    {factors.length > 0 && <section className="profile-care-card" aria-label="Recovery"><h3 className="profile-head"><Icon name="moon" size={16} />Recovery</h3><ul className="factors">{factors.map((f, i) => <li key={i}>{f}</li>)}</ul></section>}
     <StressGuide />
   </div>;
 }

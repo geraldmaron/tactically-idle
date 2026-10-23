@@ -61,3 +61,12 @@
 
 /* The role filter holds six choices; at 320 the counts step aside (each choice still says its count aloud) so the row fits without scrolling sideways. */
 @container game (max-width: 359px) { .cand-role-rail .choice-rail-count { display: none; } }
+
+/* Station finish: the contract's sections are cards under a labelled head, and the signer's face is ringed by nothing but the art. */
+.contract section { border-color: var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); }
+.contract-label { display: flex; align-items: center; gap: var(--sp2); color: var(--t2); font: 700 var(--s14)/1.2 var(--f-title); letter-spacing: .06em; text-transform: uppercase; }
+.contract-label .icon { color: var(--act-text); }
+.contract-sign { border-color: var(--act); }
+.contract-face { flex: none; }
+.contract-kit li { padding: var(--sp1) 0; border-top: 1px solid var(--hair); }
+.contract-kit li:first-child { border-top: 0; }

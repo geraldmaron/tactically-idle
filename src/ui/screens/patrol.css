@@ -66,8 +66,12 @@
 .patrol-projection strong { color: var(--t1); font-size: var(--s18); font-variant-numeric: tabular-nums; }
 .patrol-confirm-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--sp2); }
 .patrol-confirm-actions > * { min-width: 0; white-space: normal; }
-.patrol-review-person { display: flex; align-items: center; gap: var(--sp4); }
-.patrol-review-person > strong { font: 750 var(--s22)/1.15 var(--f-title); overflow-wrap: anywhere; }
+.patrol-review-person { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp4); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(160deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
+.patrol-review-person .manager-portrait { border-radius: var(--r2); }
+.patrol-review-who { display: grid; justify-items: start; gap: var(--sp2); min-width: 0; }
+.patrol-review-who > strong { font: 750 var(--s22)/1.15 var(--f-title); overflow-wrap: anywhere; }
+.patrol-review-who > span:not(.chip) { color: var(--t2); font-size: var(--s14); line-height: 1.35; }
+.patrol-review-who > .patrol-person-note { margin: 0; }
 .patrol-training-plan { display: grid; gap: var(--sp2); }
 .patrol-training-plan > h3 { margin: 0; font: 700 var(--s22)/1.25 var(--f-title); }
 .patrol-receipt { display: flex; align-items: flex-start; gap: var(--sp3); padding: var(--sp4); border: 1px solid var(--mint); border-radius: var(--r2); background: color-mix(in srgb, var(--mint) 12%, var(--ink-1)); color: var(--mint); }
@@ -83,3 +87,15 @@
 @keyframes patrol-story-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .patrol-item-story-turned { animation: none; } }
 .patrol-person-note { margin: var(--sp1) 0 0; color: var(--t2); font-size: var(--s14); line-height: 1.35; }
+
+/* Boosts: the garage plate with the patrol net and what is running, above the grants. */
+.patrol-boost-hero { position: relative; isolation: isolate; display: grid; gap: var(--sp1); min-height: 112px; align-content: end; padding: var(--sp3); overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
+.patrol-boost-hero > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; }
+.patrol-boost-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 15%, transparent), color-mix(in srgb, var(--ink-0) 90%, transparent) 80%); }
+.patrol-boost-hero p { margin: 0; text-shadow: 0 2px 5px var(--ink-deep); }
+.patrol-boost-hero-line { color: var(--t-plate); font-size: var(--s14); line-height: 1.35; }
+.patrol-boost-hero[data-boost-state="active"] .patrol-boost-hero-line { color: var(--good-text); }
+.patrol-boost-hero-net { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); color: var(--t-plate); font-size: var(--s14); }
+.patrol-boost-hero-net strong { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; }
+.patrol-boost-hero-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
+.patrol-boost-hero-strip dt { color: var(--t-plate); }

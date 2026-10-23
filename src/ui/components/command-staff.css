@@ -11,9 +11,7 @@
 
 .manager-portrait { position: relative; display: block; flex: none; overflow: hidden; border-radius: 14px; border: 1px solid var(--hair-2); background: linear-gradient(160deg, var(--ink-1), var(--ink-0)); }
 .manager-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
-.manager-portrait-fallback { position: absolute; inset: 0; display: grid; place-items: center; background-image: linear-gradient(rgba(158, 184, 212, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(158, 184, 212, 0.055) 1px, transparent 1px); background-size: 10px 10px; color: var(--chalk-dim); }
 .manager-silhouette { position: absolute; left: 12%; right: 12%; bottom: 0; width: 76%; height: auto; fill: rgba(170, 183, 202, 0.34); }
-.manager-initials { position: relative; font-family: var(--font-display); color: var(--t2); }
 .manager-portrait-locked { border-style: dashed; }
 .manager-portrait-locked .manager-silhouette { fill: rgba(125, 141, 166, 0.3); }
 .manager-portrait-locked .icon { position: relative; color: var(--muted); }

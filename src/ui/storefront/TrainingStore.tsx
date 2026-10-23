@@ -10,11 +10,11 @@ import { StressDisplay } from '../components/StressDisplay';
 import { Icon, type IconName } from '../icons';
 import { useBeat } from '../components/Beat';
 import { Face } from '../components/Face';
+import { officerFaceStatus } from '../components/face-status';
 import { enrolledBeat } from '../screens/team-beats';
 import { picksLine, splitCourses } from './training-picks';
 import { Button, Card, Chip, EmptyState, RatingBars, Row } from '../components/ui';
 import { Sheet } from '../components/Sheet';
-import { Portrait } from '../portraits/Portrait';
 import { duration, moneyFull as money } from '../format';
 import { EmblemArt } from '../art/EmblemArt';
 import { getState, useGame } from '../store';
@@ -147,7 +147,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
     </div>
     {officer && <section className="training-selected-officer" aria-label="Officer to train" data-training-officer-id={officer.id}>
-      <Portrait officer={officer} size={44} className="training-portrait" />
+      <Face size="md" kind="officer" officer={officer} status={officerFaceStatus(game, officer.id, game.department.clockHighWater)} className="training-portrait" />
       <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label} · {trainingOfficerCondition(officer, game.department.clockHighWater)}</span><span className="training-strengths">Highest ratings: {trainingStrongestRatings(officer).map((rating) => `${rating.short} ${officer.ratings[rating.key]}`).join(' · ')}</span></div>
       <StressDisplay value={officer.stress} compact />
       {sharedReason && !officer.assignment && <p className="reason training-officer-reason" role="status">{sharedReason}</p>}
@@ -293,7 +293,7 @@ export function TrainingEnrolmentReceipt({ course, enrolment, officer, now }: { 
   return <div className="training-enrolment" data-training-enrolment={course.id}>
     <div className="training-receipt-emblem"><CourseEmblem course={course} /><span className="training-receipt-check" aria-hidden="true"><Icon name="check" size={20} /></span></div>
     <div className="training-person">
-      {officer && <Portrait officer={officer} size={68} className="training-portrait" />}
+      {officer && <Face size="lg" kind="officer" officer={officer} className="training-portrait" />}
       <div className="training-person-name"><strong>{enrolment.officerName}</strong><span>{course.name}</span><span className="training-eligible" role="status">{inTraining ? `In training · ${duration(assignment.endsAt - now)} remaining` : completed ? 'Course completed' : officer ? trainingOfficerCondition(officer, now) : 'No longer on the roster'}</span></div>
     </div>
     <div className="training-confirm-details"><strong>{completed ? 'Course completion benefits' : 'On completion'}</strong><p className="training-course-gain">{cert ? `Earn ${CERT_NAME[cert]}` : rating ? `+${rating.delta} ${RATING_META.find((meta) => meta.key === rating.key)?.label ?? rating.key}` : ''}</p><p>+{courseXpGain(course.hours)} XP</p><p className="dim">{inTraining ? 'Away from squad duties until training finishes. Gains arrive on completion; XP may also improve a rating.' : completed ? 'Training has finished. Course gains and XP have been applied.' : 'Enrolment recorded. Check the officer’s current assignment for their availability.'}</p></div>
@@ -333,12 +333,13 @@ function TrainingGain({ course, officer, compact = false }: { course: Course; of
 export function TrainingOfficerCard({ candidate: { officer, option }, now, selected, onSelect }: { candidate: TrainingCandidate; now: number; selected?: boolean; onSelect?: () => void }) {
   const keys = trainingRatingKeys(option.course);
   const gain = trainingRatingGain(option.course, officer);
-  const { squads } = useGame();
+  const game = useGame();
+  const { squads } = game;
+  const faceStatus = officerFaceStatus(game, officer.id, now);
   return <article className={`training-officer-card${selected ? ' training-officer-selected' : ''}${option.available ? '' : ' training-officer-unavailable'}`} data-training-candidate={officer.id} tabIndex={-1} aria-label={`${fullName(officer)}, ${option.available ? 'can enrol' : 'unavailable'}`}>
     <div className="training-person">
-      <Portrait officer={officer} size={44} className="training-portrait" />
-      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={16} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · ${squadName(squads, officer.squadId)}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span></div>
-      <StressDisplay value={officer.stress} compact />
+      <Face size="lg" kind="officer" officer={officer} status={faceStatus} className="training-face" />
+      <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim"><Icon name={ROLE_META[officer.role].icon} size={16} /> {ROLE_META[officer.role].label}{officer.squadId ? ` · ${squadName(squads, officer.squadId)}` : ' · Unassigned'}</span><span className="training-condition">{trainingOfficerCondition(officer, now)}</span><StressDisplay value={officer.stress} compact /></div>
       {onSelect && <Button size="sm" variant={option.available ? 'primary' : 'secondary'} disabled={!option.available} onClick={onSelect} aria-label={`Select ${fullName(officer)} for ${option.course.name}`} className="training-select">Select</Button>}
       {selected && !onSelect && <span className="training-selected-label">Selected</span>}
     </div>
