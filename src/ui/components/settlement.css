@@ -1,0 +1,12 @@
+/* The debrief's settlement beat (components/Settlement.tsx). */
+.result-settlement .result-rewards { display: grid; gap: var(--sp3); border-top: 0; padding-top: 0; }
+.settle-funding { display: flex; align-items: center; gap: var(--sp3); }
+.settle-cash { width: var(--face-md); height: var(--face-md); object-fit: contain; flex: none; }
+.settle-stack { display: grid; gap: var(--sp1); }
+.settle-value { font: 700 var(--s28)/1 var(--f-title); color: var(--t1); font-variant-numeric: tabular-nums; }
+.settle-delta { font: 600 var(--s14)/1.2 var(--f-ui); }
+.settle-xp { display: grid; gap: var(--sp2); }
+.settle-xp-label { display: flex; justify-content: space-between; gap: var(--sp3); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.settle-xp-label b { color: var(--good-text); font-variant-numeric: tabular-nums; }
+.result-settlement .meter-fill { transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.result-settlement-still .meter-fill { transition: none; }

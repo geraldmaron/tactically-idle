@@ -14,11 +14,12 @@ import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
 import { armamentLabel } from '../components/incident';
 import { BeforeAfter, Card, Chip, SubHead } from '../components/ui';
-import { DebriefConsequences, DebriefRewards, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
+import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
 import { signed } from '../format';
+import { Settlement, type SettlementDepartment } from '../components/Settlement';
 import { OperationLogContents } from './OperationFeedback';
 import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
@@ -27,8 +28,10 @@ import { CallTypeBadge } from '../icons/CallTypeBadge';
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
-export function DebriefContents({ result: d, officers, scenario, reality = true, decisions = d.decisions ?? [], heroAction }: { result: DebriefResult; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean;
-  decisions?: DecisionView[]; heroAction?: ReactNode }): JSX.Element {
+export function DebriefContents({ result: d, officers, scenario, reality = true, decisions = d.decisions ?? [], heroAction, department }: { result: DebriefResult; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean;
+  decisions?: DecisionView[]; heroAction?: ReactNode;
+  /** What the department holds before this call settles; the settlement counts up from it. */
+  department?: SettlementDepartment }): JSX.Element {
   const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
   const tone = worst >= 80 ? 'good' : worst >= 50 ? 'mixed' : 'poor';
   // The epilogue is the call's last human beat: what is true afterward, set apart from the scores.
@@ -66,7 +69,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} decisions={decisions} />
     <OfficerResults debrief={d} officers={officers} />
-    <Card className="result-department"><DebriefRewards debrief={d} /></Card>
+    <Settlement debrief={d} department={department} still={death || tone === 'poor'} />
     <DebriefScore debrief={d} />
     <DebriefEvidence debrief={d} decisions={decisions} officers={officers} scenario={scenario} reality={reality} />
   </>;
@@ -88,7 +91,7 @@ export function DebriefEvidence({ debrief: d, decisions, officers, scenario, rea
 }
 
 function Row({ icon, title, children }: { icon: IconName; title: string; children: ReactNode }) {
-  return <section className="drow"><h3 className="drow-h"><Icon name={icon} size={18} />{title}</h3><div className="drow-body">{children}</div></section>;
+  return <section className="drow"><h3 className="drow-h"><Icon name={icon} size={20} />{title}</h3><div className="drow-body">{children}</div></section>;
 }
 
 function Information({ d }: { d: DebriefResult }) {
@@ -105,15 +108,15 @@ function Supplies({ d }: { d: DebriefResult }) {
   return <div className="drows">
     <Row icon="box" title="Resources">
       {resources.length === 0 ? <span className="dim">No equipment was carried.</span> : <ul className="offrows">{resources.map((r) => <li key={r.itemId}>
-        <strong><Icon name={itemIcon(r.itemId)} size={15} />{ITEMS[r.itemId]?.name ?? r.itemId}</strong><span>Used {r.used} · returned {r.returned}</span>
+        <strong><Icon name={itemIcon(r.itemId)} size={16} />{ITEMS[r.itemId]?.name ?? r.itemId}</strong><span>Used {r.used} · returned {r.returned}</span>
       </li>)}</ul>}
     </Row>
     <Row icon="wrench" title="Equipment wear">
       {wear.length === 0 ? <span className="dim">No equipment wore down on this run.</span> : <ul className="wearrows">{wear.map((w) => {
         const delta = w.after - w.before;
         return <li key={w.unitId}>
-          <span className="wear-id"><Icon name={itemIcon(w.itemId)} size={15} /><strong>{w.serial}</strong><span className="dim">{ITEMS[w.itemId]?.name ?? w.itemId}</span></span>
-          <span className="wear-nums">{Math.round(w.before)}% <Icon name="arrowRight" size={12} /> {Math.round(w.after)}% {delta !== 0 && <b className={delta < 0 ? 'tone-warn' : 'tone-mint'}>({signed(delta, 1)})</b>}</span>
+          <span className="wear-id"><Icon name={itemIcon(w.itemId)} size={16} /><strong>{w.serial}</strong><span className="dim">{ITEMS[w.itemId]?.name ?? w.itemId}</span></span>
+          <span className="wear-nums">{Math.round(w.before)}% <Icon name="arrowRight" size={16} /> {Math.round(w.after)}% {delta !== 0 && <b className={delta < 0 ? 'tone-warn' : 'tone-mint'}>({signed(delta, 1)})</b>}</span>
           <BeforeAfter before={w.before} after={w.after} />
         </li>;
       })}</ul>}
@@ -187,12 +190,12 @@ function Reality({ d, scenario: given }: { d: DebriefResult; scenario?: Scenario
             return (
               <li key={f.id} className={`realrow ${f.truth ? 'realrow-ok' : 'realrow-off'}`}>
                 <div className="realrow-top">
-                  <Icon name={f.truth ? 'checkcircle' : 'xcircle'} size={18} />
+                  <Icon name={f.truth ? 'checkcircle' : 'xcircle'} size={20} />
                   <strong>{f.label}</strong>
                   <Chip tone={f.truth ? 'mint' : 'amber'}>{f.truth ? 'Report was right' : 'Not as reported'}</Chip>
                 </div>
                 <p className="realrow-line">
-                  <Icon name="chat" size={14} />
+                  <Icon name="chat" size={16} />
                   <span>
                     {told ? 'Told' : 'Not reported'}: {f.claim}
                     {told && f.source ? <span className="dim"> ({f.source})</span> : null}
@@ -200,7 +203,7 @@ function Reality({ d, scenario: given }: { d: DebriefResult; scenario?: Scenario
                 </p>
                 {note && (
                   <p className="realrow-line">
-                    <Icon name="eye" size={14} />
+                    <Icon name="eye" size={16} />
                     <span>{note}</span>
                   </p>
                 )}
@@ -215,7 +218,7 @@ function Reality({ d, scenario: given }: { d: DebriefResult; scenario?: Scenario
       {people.length > 0 && (
         <>
           <h4 className="realpeople-h">
-            <Icon name="people" size={15} />
+            <Icon name="people" size={16} />
             Everyone present
           </h4>
           <ul className="realpeople">
