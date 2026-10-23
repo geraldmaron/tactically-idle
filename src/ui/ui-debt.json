@@ -3,7 +3,7 @@
   "static": {
     "R1": {
       "target": 0,
-      "total": 763,
+      "total": 731,
       "counts": {
         "src/ui/app.css": 14,
         "src/ui/blueprint/blueprint.css": 25,
@@ -23,7 +23,6 @@
         "src/ui/components/transcript.css": 6,
         "src/ui/components/welcome-back.css": 10,
         "src/ui/screens/casebook.css": 2,
-        "src/ui/screens/development.css": 32,
         "src/ui/screens/gear-visual.css": 23,
         "src/ui/screens/live-call.css": 72,
         "src/ui/screens/officer-profile.css": 18,
@@ -46,12 +45,11 @@
     },
     "R10.badge": {
       "target": 0,
-      "total": 11,
+      "total": 10,
       "counts": {
         "src/ui/app.css": 3,
         "src/ui/components/command-staff.css": 1,
         "src/ui/screens/calls.css": 1,
-        "src/ui/screens/development.css": 1,
         "src/ui/screens/gear-visual.css": 1,
         "src/ui/screens/live-call.css": 1,
         "src/ui/screens/ops-visual.css": 3
@@ -109,18 +107,17 @@
     },
     "R11.error": {
       "target": 0,
-      "total": 11,
+      "total": 10,
       "counts": {
         "src/ui/components/SaveManager.tsx": 7,
         "src/ui/components/states.tsx": 1,
-        "src/ui/screens/Develop.tsx": 1,
         "src/ui/screens/SquadOptimizer.tsx": 1,
         "src/ui/storefront/EquipmentStore.tsx": 1
       }
     },
     "R3": {
       "target": 0,
-      "total": 251,
+      "total": 234,
       "counts": {
         "src/ui/app.css": 4,
         "src/ui/blueprint/blueprint.css": 7,
@@ -139,7 +136,6 @@
         "src/ui/components/topbar-help.css": 1,
         "src/ui/components/transcript.css": 3,
         "src/ui/components/welcome-back.css": 4,
-        "src/ui/screens/development.css": 17,
         "src/ui/screens/gear-visual.css": 9,
         "src/ui/screens/live-call.css": 24,
         "src/ui/screens/officer-profile.css": 8,
@@ -187,7 +183,7 @@
     },
     "R7.sub14": {
       "target": 0,
-      "total": 235,
+      "total": 224,
       "counts": {
         "src/ui/app.css": 27,
         "src/ui/blueprint/blueprint.css": 9,
@@ -207,7 +203,6 @@
         "src/ui/player-navigation.css": 1,
         "src/ui/screens/calls.css": 1,
         "src/ui/screens/casebook.css": 1,
-        "src/ui/screens/development.css": 11,
         "src/ui/screens/gear-visual.css": 9,
         "src/ui/screens/live-call.css": 14,
         "src/ui/screens/officer-profile.css": 5,
@@ -228,7 +223,7 @@
     },
     "R8": {
       "target": 0,
-      "total": 178,
+      "total": 171,
       "counts": {
         "src/ui/blueprint/blueprint.css": 22,
         "src/ui/blueprint/Blueprint.tsx": 2,
@@ -245,7 +240,6 @@
         "src/ui/components/transcript.css": 2,
         "src/ui/components/welcome-back.css": 6,
         "src/ui/portraits/Portrait.tsx": 3,
-        "src/ui/screens/development.css": 7,
         "src/ui/screens/gear-visual.css": 3,
         "src/ui/screens/live-call.css": 58,
         "src/ui/screens/operation-feedback.css": 1,
@@ -271,7 +265,7 @@
     },
     "R9.size": {
       "target": 0,
-      "total": 56,
+      "total": 51,
       "counts": {
         "src/ui/components/Career.tsx": 2,
         "src/ui/components/chrome.tsx": 1,
@@ -286,7 +280,6 @@
         "src/ui/components/WelcomeBack.tsx": 1,
         "src/ui/screens/Casebook.tsx": 1,
         "src/ui/screens/DecisionList.tsx": 5,
-        "src/ui/screens/Develop.tsx": 5,
         "src/ui/screens/Gear.tsx": 2,
         "src/ui/screens/LiveFeed.tsx": 1,
         "src/ui/screens/OfficerSheet.tsx": 7,
@@ -300,10 +293,9 @@
     },
     "R9.stroke": {
       "target": 0,
-      "total": 3,
+      "total": 2,
       "counts": {
         "src/ui/art/GearArt.tsx": 1,
-        "src/ui/screens/Develop.tsx": 1,
         "src/ui/screens/LiveView.tsx": 1
       }
     }
@@ -486,7 +478,7 @@
     },
     "R9.rendered": {
       "target": 0,
-      "total": 91,
+      "total": 88,
       "counts": {
         "03-finance-sheet@320": 1,
         "03-finance-sheet@390": 1,
@@ -501,9 +493,6 @@
         "10-develop@320": 1,
         "10-develop@390": 1,
         "10-develop@430": 1,
-        "11-develop-sheet@320": 1,
-        "11-develop-sheet@390": 1,
-        "11-develop-sheet@430": 1,
         "12-store@320": 2,
         "12-store@390": 2,
         "12-store@430": 2,

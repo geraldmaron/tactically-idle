@@ -1,66 +1,99 @@
-import { useNav } from '../components/nav';
-import { Row } from '../components/ui';
+// Build: the station. The diorama is the screen, with a tap target for each room; below it the one room
+// worth building next, a card for every room, and the plain index of every upgrade. A room opens its
+// sheet, and a purchase plays a beat instead of a toast, lights the room, and closes the sheet.
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEV_NODES } from '../../content/dev-tree';
-import { CostTag, Segments, type CostQuote } from './build-parts';
-import { Icon, type IconName } from '../icons';
-import { DevelopScreen, nextDevelopment } from './Develop';
-import { employedPatrol, patrolCapacity } from '../../sim/patrol';
 import { nodeOptions } from '../../sim/department-selectors';
-import type { DevBranch } from '../../sim/types';
-import { useGame } from '../store';
+import type { Id } from '../../sim/types';
+import { useBeat } from '../components/Beat';
 import { Disclosure } from '../components/Disclosure';
-import { PlateArt, plateUrl } from '../art/Plates';
-import { money } from '../format';
+import { useNow } from '../components/incident';
+import { useNav } from '../components/nav';
+import { Section } from '../components/ui';
+import { useReducedMotion } from '../motion';
+import { useStationAmbience } from '../audio/useStationAmbience';
+import { useGame } from '../store';
+import { UpgradeIndex } from './Develop';
+import { GarageCard, NextCard, RoomCard } from './build/RoomCard';
+import { RoomSheet, defaultStep } from './build/RoomSheet';
+import { Station, stationRooms } from './build/Station';
+import { garageView, nextForStation, personById, roomViews, stepHelp, viewOfNode, viewOfRoom } from './build/room-model';
+import type { RoomId } from './build/rooms';
 import './build.css';
 
-const FACILITIES: { branch: DevBranch; name: string; icon: IconName }[] = [
-  { branch: 'personnel', name: 'Personnel office', icon: 'desk' },
-  { branch: 'field', name: 'Training floor', icon: 'shooting' },
-  { branch: 'intel', name: 'Information room', icon: 'binoculars' },
-  { branch: 'wellbeing', name: 'Recovery room', icon: 'bed' },
-  { branch: 'logistics', name: 'Equipment bay', icon: 'van' },
-];
+/** How long a newly opened room keeps its fade-in marker. */
+const FRESH_MS = 1800;
 
 /** Department facilities and development. Equipment purchases live in the Store. */
 export function BuildScreen() {
+  useStationAmbience();
   const nav = useNav();
   const game = useGame();
-  const options = nodeOptions(game);
-  const capacity = patrolCapacity(game);
-  const next = game.department.level < 3 ? { level: 3, positions: 8 } : game.department.level < 6 ? { level: 6, positions: 12 } : null;
-  return <div className="page facility-build-page">
+  const beat = useBeat();
+  const now = useNow(30_000);
+  const still = useReducedMotion();
+  const [open, setOpen] = useState<{ room: RoomId; node?: Id } | null>(null);
+  const [fresh, setFresh] = useState<RoomId | null>(null);
+  const [pending, setPending] = useState(false);
+  const top = useRef<HTMLDivElement>(null);
+  const options = useMemo(() => nodeOptions(game), [game]);
+  const views = useMemo(() => roomViews(game, options), [game, options]);
+  const garage = garageView(game);
+  const rooms = stationRooms(views, garage);
+  const next = nextForStation(views);
+
+  // A link from Training, the Armory or Command Staff names a step: open its room with that step chosen.
+  useEffect(() => {
+    if (!nav.developmentNode || !DEV_NODES[nav.developmentNode]) return;
+    const view = viewOfNode(roomViews(game), nav.developmentNode);
+    if (view) setOpen({ room: view.room.id, node: nav.developmentNode });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.developmentNode, nav.developmentRequest]);
+  useEffect(() => {
+    if (!fresh) return;
+    const timer = setTimeout(() => setFresh(null), FRESH_MS);
+    return () => clearTimeout(timer);
+  }, [fresh]);
+
+  const openRoom = (room: RoomId, node?: Id) => room === 'garage' ? nav.setTeamSection('patrol') : setOpen({ room, node });
+  const view = open ? viewOfRoom(views, open.room) : undefined;
+  const step = view ? defaultStep(view, open?.node) : undefined;
+
+  const build = () => {
+    if (!view || !step?.targetTier || pending) return;
+    const help = stepHelp(game, step);
+    const row = help.rows.find((r) => r.officerIds.length) ?? help.rows[0];
+    const person = row?.officerIds[0] ? personById(game, row.officerIds[0]) : undefined;
+    setPending(true);
+    try {
+      const result = beat.act({ type: 'unlockNode', nodeId: step.node.id, expectedTier: step.targetTier }, {
+        stamp: view.open ? 'Built' : 'Open',
+        face: person ? { officer: person, kind: 'officer', name: person.surname } : undefined,
+        line: row?.reaction,
+        sting: 'buy',
+      });
+      if (result.ok) {
+        setFresh(view.room.id);
+        setOpen(null);
+        top.current?.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+      }
+    } finally { setPending(false); }
+  };
+
+  return <div className="page build-page" ref={top}>
     <h1 className="sr-only">Build</h1>
-    <section className="facility-plan" aria-label="Department facility plan">
-      <div className="facility-plan-scene plate" aria-hidden="true"><PlateArt src={plateUrl('scene_facilities_plan')} /></div>
-      <h2 className="facility-plan-label"><Icon name="build" size={16} />Department plan</h2>
-      <div className="facility-building card" data-ui-list>
-        {FACILITIES.map((facility) => {
-          const branch = options.filter((option) => option.node.branch === facility.branch);
-          const option = nextDevelopment(branch) ?? branch.find((row) => row.targetTier) ?? branch[0];
-          if (!option) return null;
-          const complete = branch.filter((row) => !row.targetTier).length;
-          const cost = option.quote.cost?.funding;
-          const locked = option.status === 'locked';
-          const missing = option.quote.missingPrerequisites.map((id) => DEV_NODES[id]?.name ?? id);
-          const quote: CostQuote = !option.targetTier ? { state: 'owned', done: 'Complete' }
-            : { state: locked ? 'locked' : option.quote.ok ? 'ready' : 'short', price: cost ?? null, blocker: locked ? `Needs ${missing.join(' and ')}` : option.quote.ok ? undefined : 'Needs funding' };
-          return <Row key={facility.branch} data={{ 'data-facility-branch': facility.branch }} className={`facility-room facility-room-${facility.branch}${option.quote.ok ? ' facility-room-ready' : ''}`}
-            onClick={() => nav.openDevelopment(option.node.id)}
-            label={`${facility.name}. ${complete} of ${branch.length} improvements complete. ${option.node.name}${cost ? `, ${money(cost)}` : ''}. ${option.quote.ok ? 'Available to improve' : option.reason ?? 'Complete'}`}
-            lead={<span className="facility-object" aria-hidden="true"><Icon name={facility.icon} size={24} /></span>}
-            title={facility.name}
-            detail={<span className="facility-detail"><Segments done={complete} total={branch.length} /><span>{complete}/{branch.length} · {option.node.name}</span></span>}
-            trail={<CostTag quote={quote} />} />;
-        })}
+    <Station rooms={rooms} name={game.department.name} fresh={fresh} onOpen={(id) => openRoom(id)} />
+    {next && <NextCard game={game} view={next} now={now} onOpen={() => openRoom(next.room.id, next.next!.node.id)} />}
+    <Section title="Rooms" icon="build" id="build-rooms">
+      <div className="card room-list" data-ui-list>
+        {views.map((v) => <RoomCard key={v.room.id} game={game} view={v} now={now} onOpen={() => openRoom(v.room.id)} />)}
+        <GarageCard garage={garage} onOpen={() => openRoom('garage')} />
       </div>
-    </section>
-    <section className="build-capacity" aria-label="Patrol positions">
-      <Row className="facility-patrol" lead={<span className="facility-object" aria-hidden="true"><Icon name="people" size={24} /></span>}
-        title={`${employedPatrol(game).length} / ${capacity} patrol positions filled`}
-        detail={<span className="facility-detail facility-detail-wrap"><Segments done={employedPatrol(game).length} total={capacity} /><span>Level {game.department.level} · {next ? `${next.positions} positions at level ${next.level}` : 'All 12 positions authorized'}</span></span>} />
-    </section>
+    </Section>
     <Disclosure name="all-department-upgrades" summary="All upgrades" icon="build">
-      <DevelopScreen highlightedNode={nav.developmentNode} highlightRequest={nav.developmentRequest} openHighlighted />
+      <UpgradeIndex views={views} funding={game.department.funding} onOpen={(nodeId) => openRoom(viewOfNode(views, nodeId)!.room.id, nodeId)} />
     </Disclosure>
+    {view && step && <RoomSheet key={view.room.id} game={game} view={view} step={step} now={now} pending={pending}
+      onSelect={(node) => setOpen({ room: view.room.id, node })} onOpenRoom={openRoom} onBuy={build} onClose={() => setOpen(null)} />}
   </div>;
 }

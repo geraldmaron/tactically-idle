@@ -1,163 +1,5 @@
-/* Develop as a research track (develop-track): a sticky resource bar, one suggested next step,
-   branch tabs, then the branch as a vertical track. Each development is a full-width row with its
-   medal, what it does next, tier pips and cost; what it needs is drawn as an edge from the
-   prerequisite's medal and named on the row. Effects, the tier ladder and buying live in the sheet. */
-.develop-page { gap: 10px; }
-.build-title { margin: 0 0 var(--sp4); font: 700 var(--s28)/1.1 var(--f-title); }
-
-.dev-label { display: flex; align-items: baseline; gap: 6px; margin: 0; font: 700 12px/1.2 var(--font-cond); color: var(--muted); }
-.dev-label-note { font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-family: var(--font-ui); }
-
-
-.dev-track-wrap { position: relative; min-width: 0; }
-.dev-edges { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.dev-edges path { fill: none; stroke: var(--line-strong); stroke-width: 2; stroke-dasharray: 4 4; }
-.dev-edges path[data-owned] { stroke: var(--mint); stroke-dasharray: none; }
-.dev-track { position: relative; display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.dev-track > li { display: grid; min-width: 0; padding-left: calc(var(--depth, 0) * 44px); }
-.dev-node { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; min-height: 60px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.dev-node:active { transform: scale(0.99); }
-.dev-node:focus-visible, .dev-node.store-node-highlight { outline: 2px solid var(--amber); outline-offset: 2px; }
-.dev-node-main { display: grid; gap: 2px; min-width: 0; }
-.dev-node-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.dev-node-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 15px/1.2 var(--font-cond); letter-spacing: 0.02em; }
-.dev-node-fx { font-size: 12.5px; line-height: 1.3; color: var(--text-dim); }
-.dev-node-needs { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--harm-text); }
-.dev-node-side { display: grid; justify-items: end; gap: 4px; }
-
-.dev-medal { position: relative; z-index: 1; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line-strong); background: radial-gradient(circle at 50% 35%, var(--ink-3), var(--ink-1) 75%); color: var(--chalk-dim); }
-.dev-glyph { display: grid; place-items: center; }
-.dev-medal img { border-radius: 50%; }
-.dev-medal-badge { position: absolute; top: -3px; right: -5px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; }
-.dev-badge-owned { background: var(--mint); color: var(--good-ink); }
-.dev-badge-locked { background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--text-dim); }
-.dev-pips { display: inline-flex; gap: 2px; }
-.dev-pips i { width: 10px; height: 4px; border-radius: 1px; background: var(--line-strong); }
-.dev-pips i[data-on] { background: var(--mint); }
-
-.dev-node-progress .dev-medal, .dev-node[data-state="owned"] .dev-medal { border-color: var(--mint); color: var(--mint); }
-.dev-node[data-state="owned"] { border-color: rgba(63, 208, 142, 0.4); }
-.dev-node[data-state="ready"] { border-color: var(--t1); box-shadow: 0 0 0 1px var(--hair-2); }
-.dev-node[data-state="ready"] .dev-medal { color: var(--t1); }
-.dev-node[data-state="ready"]:not(.dev-node-progress) .dev-medal { border-color: var(--t1); }
-.dev-node[data-state="locked"] { border-style: dashed; background: var(--panel); }
-.dev-node[data-state="locked"] .dev-medal { filter: grayscale(1); opacity: 0.6; }
-.dev-node[data-state="locked"] .dev-node-title strong { color: var(--text-dim); }
-.dev-detail { display: grid; gap: 14px; min-width: 0; }
-.dev-detail p { margin: 0; }
-.dev-detail section { display: grid; gap: 6px; min-width: 0; }
-.development-success { color: var(--mint); }
-.dev-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.dev-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; min-height: 28px; padding: 2px 10px 2px 4px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(8, 13, 24, 0.6); font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
-.dev-chip > .icon { margin-left: 4px; flex: 0 0 auto; color: var(--t2); }
-.dev-chip img { border-radius: 50%; flex: 0 0 auto; }
-.dev-chip-owned { border-color: rgba(63, 208, 142, 0.45); }
-.dev-chip-owned > .icon { color: var(--mint); }
-.dev-chip-missing { border-color: rgba(255, 107, 90, 0.5); color: var(--harm-text); }
-.dev-chip-missing > .icon { color: var(--harm-text); }
-.dev-lines { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
-.dev-lines li::before { content: '+ '; color: var(--mint); font-weight: 700; }
-.dev-ladder { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.dev-ladder > li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 40px; padding: 6px 10px 6px 6px; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.3; }
-.dev-ladder > li:first-child { border-top: 0; }
-.dev-ladder-tier { display: grid; place-items: center; height: 26px; border-radius: 6px; border: 1px solid var(--line-strong); font: 700 13px/1 var(--font-cond); letter-spacing: 0.04em; color: var(--text-dim); }
-.dev-ladder-fx { min-width: 0; overflow-wrap: anywhere; }
-.dev-ladder-cost { font: 600 12.5px/1.2 var(--font-cond); color: var(--text-dim); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.dev-ladder > li[data-state="owned"] { color: var(--text-dim); }
-.dev-ladder > li[data-state="owned"] .dev-ladder-tier { border-color: rgba(63, 208, 142, 0.5); color: var(--mint); }
-.dev-ladder > li[data-state="owned"] .dev-ladder-cost { color: var(--mint); }
-.dev-ladder > li[data-state="current"] { background: rgba(63, 208, 142, 0.08); }
-.dev-ladder > li[data-state="current"] .dev-ladder-tier { background: var(--mint); border-color: var(--mint); color: var(--good-ink); }
-.dev-ladder > li[data-state="current"] .dev-ladder-cost { color: var(--mint); }
-.dev-ladder > li[data-state="next"] { background: var(--ink-3); }
-.dev-ladder > li[data-state="next"] .dev-ladder-tier { border-color: var(--t1); color: var(--t1); }
-.dev-ladder > li[data-state="next"] .dev-ladder-cost { color: var(--t1); }
-.dev-ladder > li[data-state="later"] { color: var(--text-dim); }
-.dev-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.dev-links .btn { flex: 1 1 auto; }
-.dev-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.dev-buy-reason { flex: 1 1 100%; margin: 0; font-size: 13px; color: var(--warn); }
-.dev-buy-cost { font: 600 18px/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
-/* Two ways to get the next tier, side by side (develop-grants): the cash price and the milestone. */
-.dev-buy-ways { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
-.dev-buy-way { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-.dev-buy-way > .btn { width: 100%; }
-.dev-buy-free-note { font-size: 12px; }
-
-/* The free route on a row and in the sheet: milestone, count and a thin progress bar. */
-.dev-milestone { display: grid; gap: 3px; min-width: 0; }
-.dev-milestone-text { display: flex; align-items: center; gap: 4px; min-width: 0; font: 600 12px/1.2 var(--font-cond); letter-spacing: 0.02em; color: var(--text-dim); }
-.dev-milestone-text > .icon { flex: 0 0 auto; color: var(--t2); }
-.dev-milestone-text b { margin-left: auto; padding-left: 6px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dev-milestone-bar { display: block; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.dev-milestone-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--t1); }
-.dev-milestone[data-met] .dev-milestone-text b { color: var(--mint); }
-.dev-milestone[data-met] .dev-milestone-bar > i { background: var(--mint); }
-.dev-milestone-compact { max-width: 220px; }
-.dev-node-granted { display: inline-flex; align-items: center; gap: 4px; font: 600 12px/1.2 var(--font-cond); color: var(--mint); }
-.dev-buy-done { display: flex; align-items: center; gap: 6px; margin: 0; }
-.dev-buy-done > .icon { color: var(--mint); }
-@media (prefers-reduced-motion: reduce) { .dev-node:active { transform: none; } }
-
-
-
-/* Deep rows on narrow phones: the button moves under the text instead of squeezing it. */
-.dev-track > li { container-type: inline-size; }
-@container (max-width: 270px) {
-  .dev-node { grid-template-columns: auto minmax(0, 1fr); }
-  .dev-node-side { grid-column: 2; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-  .dev-node-side .dev-pips { margin-right: auto; }
-}
-
-/* Build, Upgrades (docs/ui-ux-audit.md): the one Next card is the only amber; rows are flat with a
-   hairline and a quiet price; the sheet buys, because a buy can't be undone and a milestone might
-   grant the same tier free. */
-.dev-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
-.dev-next[data-ready] { border-color: rgba(242, 178, 52, 0.35); background: var(--act-soft); }
-.dev-next-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--sp3); min-height: 44px; padding: 0; border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
-.dev-next-open:focus-visible { outline: 2px solid var(--act); outline-offset: 4px; border-radius: var(--r1); }
-.dev-next-main { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
-.dev-next-main strong { font: 700 var(--s22)/1.1 var(--f-title); }
-.dev-next-fx { font-size: var(--s14); color: var(--t2); }
-.dev-next-buy { flex: none; min-height: 48px; padding: 0 var(--sp4); font-size: var(--s16); font-variant-numeric: tabular-nums; }
-.dev-branch-chips { display: flex; flex-wrap: wrap; gap: var(--sp2); }
-.dev-branch-chip { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 22px; background: none; color: var(--t2); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
-.dev-branch-chip-on { background: var(--ink-3); color: var(--t1); font-weight: 600; }
-.dev-branch-chip:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
-.dev-tab-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--act); }
-.dev-branch-blurb { margin: 0; font-size: var(--s14); color: var(--t2); }
-.dev-node[data-state="locked"] .dev-node-fx { color: var(--t3); }
-.dev-node-title strong { font: 700 var(--s18)/1.15 var(--f-title); letter-spacing: 0; white-space: normal; overflow: visible; }
-.dev-node-fx { display: block; font-size: var(--s14); color: var(--t2); overflow: visible; }
-.dev-node-needs { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--warn-text); }
-.dev-node-needs > .icon { flex: none; }
-.dev-price { font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dev-price[data-state="ready"] { color: var(--t1); }
-.dev-price-done { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--good-text, var(--good)); }
-.dev-milestone-text { font: 500 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); }
-.dev-milestone-text b { font-weight: 600; }
-@media (max-width: 374px) {
-  .dev-next { grid-template-columns: minmax(0, 1fr); }
-  .dev-next-buy { justify-self: stretch; }
-  .dev-node { grid-template-columns: auto minmax(0, 1fr); }
-  .dev-node-side { grid-column: 2; display: flex; justify-content: space-between; align-items: center; gap: var(--sp2); }
-}
-
-/* The research track as one grouped list (contract item 2): a card of rows split by hairlines. Rows
-   lead with a 40px medal well and end with one price tag; the effect is never clamped. Edges are
-   drawn from the prerequisite's medal, so each level indents far enough to clear the medal's centre. */
-.dev-track { gap: 0; padding: 0; overflow: visible; }
-.dev-track > li { padding-left: calc(var(--depth, 0) * var(--sp6, 24px)); border-top: 1px solid var(--hair); }
-.dev-track > li:first-child { border-top: 0; }
-.dev-track > li > .dev-node { padding-left: var(--sp3); padding-right: var(--sp3); }
-.dev-node { min-height: 64px; gap: var(--sp3); padding: var(--sp3); border: 0; border-radius: 0; background: none; align-items: start; }
-.dev-node:focus-visible, .dev-node.store-node-highlight { outline-offset: -2px; }
-.dev-node .dev-medal { width: 40px; height: 40px; border-width: 1px; }
-.dev-node-side { align-self: center; }
-.dev-node[data-state="locked"] { border-style: none; background: none; }
-.dev-node-steps { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
-.dev-chip-count { color: var(--t3); font-variant-numeric: tabular-nums; }
-.dev-branch-chip-on .dev-chip-count { color: var(--t2); }
+/* The price tag, the pips and the plain index of every upgrade (Develop.tsx). The tag and the pips are
+   shared by the room cards and sheet on Build (build/). */
 .segments { display: inline-flex; gap: var(--sp1); min-width: 0; }
 .segments > i { display: block; width: 12px; height: 4px; border-radius: 1px; background: var(--hair-2); }
 .segments > i[data-on] { background: var(--good-text, var(--mint)); }
@@ -174,31 +16,14 @@
 .cost-quote-bar { display: block; width: 72px; height: 3px; border-radius: 2px; background: var(--hair-2); overflow: hidden; }
 .cost-quote-bar > i { display: block; height: 100%; background: var(--t1); }
 .cost-quote-bar[data-met] > i { background: var(--good-text, var(--mint)); }
-.dev-chips > li { list-style: none; }
-.dev-buy-effect { display: flex; align-items: flex-start; gap: var(--sp2); flex: 1 1 100%; margin: 0; font-size: var(--s14); color: var(--t2); }
-.dev-buy-effect > .icon { flex: none; margin-top: var(--sp1); color: var(--good-text, var(--mint)); }
-.dev-buy-effect b { color: var(--t1); font-weight: 600; }
-/* Tier ladder: tier and effect on one line, the price under the effect, so nothing is squeezed. */
-.dev-ladder > li { grid-template-columns: 38px minmax(0, 1fr); row-gap: var(--sp1); }
-.dev-ladder-cost { grid-column: 2; text-align: left; white-space: normal; }
-.dev-ladder-cost:empty { display: none; }
 .cost-quote-inline { display: flex; flex-wrap: wrap; align-items: center; justify-items: start; gap: var(--sp1) var(--sp2); max-width: none; text-align: left; }
 .cost-quote-inline:empty { display: none; }
 .cost-quote-inline .cost-quote-note { display: block; }
-.cost-quote-inline .cost-quote-bar { width: 72px; }
-.cost-quote-inline[data-state="locked"] .cost-quote-note::before { content: ''; }
-.dev-needs { padding: 0; overflow: hidden; }
-.dev-needs .dev-need { min-height: 56px; padding: var(--sp2) var(--sp3); }
-.dev-needs > :last-child { border-bottom: 0; }
-.dev-need-well { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
-/* One row height class: the name stays on one line in the row font, unlocks are a strip of thumbnails. */
-.dev-node-title strong { font: 600 var(--s16)/1.25 var(--f-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.dev-node-title { min-width: 0; }
-.dev-node-unlocks { display: flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
-.dev-thumbs { display: inline-flex; gap: var(--sp1); }
-.dev-thumb { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); overflow: hidden; }
-/* A row's blocker and free route read as one detail line, then the bar. */
-.dev-node-main .cost-quote-inline { display: block; }
-.dev-node-main .cost-quote-inline .cost-quote-note { display: inline; }
-.dev-node-main .cost-quote-inline .cost-quote-note[data-kind="blocker"]::after { content: ' · '; color: var(--t3); }
-.dev-node-main .cost-quote-inline .cost-quote-bar { display: block; margin-top: var(--sp1); }
+.dev-glyph { display: grid; place-items: center; }
+
+/* All upgrades: one grouped list per room, a medal well and the price on each row. */
+.upgrade-index { display: grid; gap: var(--sp4); padding: var(--sp3) 0; }
+.upgrade-room { margin: 0 0 var(--sp2); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.upgrade-glyph { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); overflow: hidden; }
+.upgrade-row[data-state="locked"] .upgrade-glyph { filter: grayscale(1); opacity: 0.6; }
+.upgrade-row[data-state="owned"] .upgrade-glyph { box-shadow: inset 0 0 0 1px var(--good-text, var(--mint)); }

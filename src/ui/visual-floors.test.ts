@@ -21,6 +21,7 @@ import { actionViews, briefing, pendingDebrief } from '../sim/operation-selector
 import { getScenario } from '../sim/scenario-registry';
 import type { GameState } from '../sim/types';
 import { apply, makeState, NOW, startRun, testCallId, withCallOnBoard } from '../sim/test-fixtures';
+import { BeatContext } from './components/Beat';
 import { DEFAULT_NAV, NavContext, type NavApi } from './components/nav';
 import { BottomNav } from './components/BottomNav';
 import { DepartmentStatusBar } from './components/TopBar';
@@ -250,14 +251,15 @@ const OBLIGATIONS: Obligation[] = [
       ...officerCards(page, 8),
     ];
   } },
-  { id: 'identity-build-facilities', screen: 'BuildScreen (Facilities)', fixture: 'department with a board', check: () => {
-    const page = mount(createElement(BuildScreen), { tab: 'develop' });
-    const medals = byClass(page, 'dev-medal');
-    const rooms = byClass(page, 'facility-room');
+  { id: 'identity-build-facilities', screen: 'BuildScreen (Station)', fixture: 'department with a board', check: () => {
+    const beat = { play: () => {}, act: () => ({ ok: true as const }) };
+    const page = mount(createElement(BeatContext.Provider, { value: beat }, createElement(BuildScreen)), { tab: 'develop' });
+    const cards = byClass(page, 'room-card');
+    const lights = byClass(page, 'station-light');
     return [
-      ...(rooms.length === 5 && rooms.every((room) => leadOf(room) === 'visual') ? [] : ['the five facilities lost their furnishing art']),
-      ...(find(page, (node) => node.tag === 'img' && (node.attrs.src ?? '').includes('scene_facilities_plan.webp')).length === 1 ? [] : ['the department facility plan lost its scene art']),
-      ...(medals.length >= 3 && medals.every((medal) => find(medal, (node) => isVisual(node)).length > 0) ? [] : ['upgrade nodes lost their screen art']),
+      ...(cards.length === 6 && cards.every((card) => find(card, (node) => node.tag === 'img' && (node.attrs.src ?? '').includes('room_')).length === 1) ? [] : ['the six room cards lost their paintings']),
+      ...(find(page, (node) => node.tag === 'img' && (node.attrs.src ?? '').includes('scene_facilities_plan_dark.webp')).length === 1 && lights.length === 6 ? [] : ['the station lost its dark plate or a room\'s light']),
+      ...(byClass(page, 'scene-spot').length === 6 ? [] : ['the station does not have a tap target per room']),
     ];
   } },
   { id: 'identity-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'department with a board', check: () => {
@@ -317,7 +319,10 @@ const OBLIGATIONS: Obligation[] = [
   } },
   { id: 'rows-hire', screen: 'SquadScreen (Hire)', fixture: 'a department with candidates', check: () => { state = createInitialState(NOW, 1); return rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'cand-row', 1); } },
   { id: 'rows-training', screen: 'SquadScreen (Training)', fixture: 'eight officers', check: () => rowsLeadWithVisual(mount(createElement(SquadScreen), { squadSection: 'training' }), 'course-tile', 6) },
-  { id: 'rows-upgrades', screen: 'BuildScreen (Upgrades)', fixture: 'department with a board', check: () => rowsLeadWithVisual(mount(createElement(BuildScreen), { tab: 'develop' }), 'dev-node', 3) },
+  { id: 'rows-upgrades', screen: 'BuildScreen (Rooms and index)', fixture: 'department with a board', check: () => {
+    const page = mount(createElement(BeatContext.Provider, { value: { play: () => {}, act: () => ({ ok: true as const }) } }, createElement(BuildScreen)), { tab: 'develop' });
+    return [...rowsLeadWithVisual(page, 'room-card', 6), ...rowsLeadWithVisual(page, 'upgrade-row', 20)];
+  } },
   { id: 'rows-store-equipment', screen: 'StoreScreen (Equipment)', fixture: 'department with owned gear', check: () => rowsLeadWithVisual(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'inv-tile', 8) },
   { id: 'rows-store-equipment-groups', screen: 'StoreScreen (Equipment)', fixture: 'department with owned gear', check: () => {
     const heads = byClass(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'store-group-head');
