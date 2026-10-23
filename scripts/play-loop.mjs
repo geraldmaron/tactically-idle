@@ -203,7 +203,10 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     const fit = cards.filter(card => readyOf(card) >= 1 && !card.label.includes('not deployable')).sort((x, y) => readyOf(y) - readyOf(x));
     const pick = Math.min(range.max, fit.length);
     assert.ok(pick >= range.min, `${label}: ${range.min} squad${range.min > 1 ? 's' : ''} able to deploy; the cards read ${cards.map(card => `"${card.label}"`).join(', ')}`);
-    for (const card of fit.slice(0, pick)) await page.locator('.cl-squads button.cl-squad').nth(card.index).click();
+    // Deploy preselects the best-fit ready squad, so tap only the cards whose state differs from the pick.
+    const want = new Set(fit.slice(0, pick).map(card => card.index));
+    const pressed = await page.locator('.cl-squads button.cl-squad').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed') === 'true'));
+    for (const [index, on] of pressed.entries()) if (on !== want.has(index)) await page.locator('.cl-squads button.cl-squad').nth(index).click();
     assert.equal(await page.locator('.cl-squads button[aria-pressed="true"]').count(), pick, `${label}: ${pick} squad${pick > 1 ? 's' : ''} chosen`);
     // Back to the brief and Forward again: the chosen squads are still chosen (the exit table).
     await page.locator('.flow-back').click();
@@ -301,7 +304,7 @@ export async function playLiveCalls(page, { baseURL = 'http://127.0.0.1:5174', w
     assert.equal(await page.locator('nav.bottomnav').count(), 0, `${label}: a flow hides the tabs`);
     assert.equal(await page.locator('.result-rewards').count(), 1, `${label}: the debrief lists its rewards`);
     await overflow(`${label} debrief`);
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.getByRole('button', { name: 'Next call', exact: true }).click();
     await casebook.waitFor();
     const after = await state(); assert.equal(after.activeRun, null);
     // Every operation is live: it earns department service and settles its equipment.
@@ -415,7 +418,7 @@ export async function measureTapBudget(page, { baseURL = 'http://127.0.0.1:5174'
     const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
     break;
   }
-  const done = page.getByRole('button', { name: 'Done', exact: true });
+  const done = page.getByRole('button', { name: 'Next call', exact: true });
   await done.waitFor({ timeout: 8000 });
   await reset();
   await done.click();

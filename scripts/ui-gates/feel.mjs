@@ -28,6 +28,7 @@ export const FEEL_BUDGETS = {
   shiftMax: 0.001,        // summed layout-shift score caused by art load
   tapsBoardToDecision: 3, // board -> first live decision
   tapsDebriefToBoard: 1,  // debrief -> board
+  shortScreenPx: 640,     // below this height density is not judged and the live shortcut stands in for the first choice
 };
 
 /**
@@ -41,7 +42,7 @@ export const FEEL_SCREENS = {
   brief: { primary: [{ css: 'button', name: '^Choose team$' }], plates: true },
   deploy: { primary: [{ css: 'button', name: '^Deploy( [A-Z]|$)' }], plates: true },
   live: { primary: [{ css: '.call-grid .callbtn:not(.callbtn-off)' }], essential: 'choices', plates: true },
-  debrief: { primary: [{ css: 'button', name: '^Done$' }], plates: true },
+  debrief: { primary: [{ css: 'button', name: '^Next call$' }], plates: true },
 };
 
 /**
@@ -51,8 +52,8 @@ export const FEEL_SCREENS = {
  * `'*'` switches a rule on for every screen. F6.taps is a path rule, enforced when listed under `'path'`.
  */
 export const FEEL_ON = {
-  hq: [], board: [], brief: [], deploy: [], live: [], debrief: [],
-  path: [],
+  hq: ['*'], board: ['*'], brief: ['*'], deploy: ['*'], live: ['*'], debrief: ['*'],
+  path: ['F6.taps'],
 };
 
 /**
@@ -101,6 +102,14 @@ export async function feelProbe(cfg) {
     }
     out.primary = { found: true, via, label: nameOf(el).slice(0, 40), top: Math.round(r.top), bottom: Math.round(r.bottom), inside, coveredBy, disabled: isDisabled(el) || cs(el).pointerEvents === 'none' };
   } else out.primary = { found: false };
+  out.vh = vh;
+  // The live call's shortcut to its choices: on a short screen the 4B order and the full hook leave no
+  // room for the first choice, so a visible, unobscured, enabled shortcut is how the choice is reached.
+  const jump = [...document.querySelectorAll('[data-choices-below]')].find(shown) ?? null;
+  if (jump) {
+    const r = rectOf(jump); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    out.jump = { inside: r.top >= 0 && r.bottom <= vh, clear: !!hit && (jump === hit || jump.contains(hit)), disabled: isDisabled(jump) };
+  }
 
   // ---- F2: essential content, present and not clamped
   const clampOf = (node, stop) => {
@@ -166,7 +175,9 @@ export async function feelProbe(cfg) {
 
 // ---- verdicts: pure, shared by the walk and the negative controls. Each returns [{ rule, id, detail }].
 
-export function judgePrimary(p) {
+export function judgePrimary(p, { vh, jump } = {}) {
+  // Below the short-screen floor a reachable shortcut to the choices stands in for the first choice.
+  if (vh && vh < FEEL_BUDGETS.shortScreenPx && jump?.inside && jump.clear && !jump.disabled) return [];
   if (!p?.found) return [{ rule: 'F1.primary', id: 'primary', detail: 'no primary action found on the screen' }];
   const why = [];
   if (!p.inside) why.push(p.top < 0 ? `starts above the viewport (${p.top}px)` : `ends at ${p.bottom}px, below the first viewport`);
@@ -197,9 +208,9 @@ export function judgeChrome(c, budget = FEEL_BUDGETS.chromePx) {
   return used > allowed ? [{ rule: 'F3.chrome', id: `chrome@inset${c.inset?.top ?? 0}/${c.inset?.bottom ?? 0}`, detail: `top bar ${c.top}px (${c.topLabel ?? 'none'}) + bottom ${c.bottom}px (${c.bottomLabel ?? 'none'}) = ${used}px, budget ${allowed}px` }] : [];
 }
 
-/** `scale` is the text scale of the run; density is skipped at 2 or more. */
-export function judgeDensity(d, scale = 1) {
-  if (!d || scale >= 2) return [];
+/** `scale` is the text scale of the run; density is skipped at 2 or more and below the short-screen floor. */
+export function judgeDensity(d, scale = 1, vh = 0) {
+  if (!d || scale >= 2 || (vh && vh < FEEL_BUDGETS.shortScreenPx)) return [];
   const min = d.rule === 'squads' ? FEEL_BUDGETS.minSquadRows : FEEL_BUDGETS.minCards;
   if (d.total < min) return [];
   return d.inView < min ? [{ rule: 'F4.density', id: d.rule, detail: `${d.inView} of ${d.total} ${d.label} fit the first viewport, need ${min} (heights ${d.heights.join(', ')}px)` }] : [];
@@ -222,10 +233,10 @@ export function judgeTaps(path, taps) {
 /** All the in-screen verdicts for one probe result. */
 export function judgeScreen(result, { scale = 1 } = {}) {
   return [
-    ...judgePrimary(result.primary),
+    ...judgePrimary(result.primary, { vh: result.vh, jump: result.jump }),
     ...judgeEssential(result),
     ...judgeChrome(result.chrome),
-    ...judgeDensity(result.density, scale),
+    ...judgeDensity(result.density, scale, result.vh),
     ...judgePlates(result.plates),
   ];
 }
