@@ -13,7 +13,7 @@ import { equipmentManagerBenefits, maintenanceBudget } from '../../sim/equipment
 import { managerView } from '../../sim/command-staff';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { ManagerSheet } from '../components/CommandStaff';
-import { Button, Card, EmptyState, Row, Stepper } from '../components/ui';
+import { Button, Card, Chip, EmptyState, Row, Stepper } from '../components/ui';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Icon } from '../icons';
@@ -58,15 +58,17 @@ function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'refere
   return (
     <section className="armory-head" aria-label="Armory">
       <p className="armory-basic"><Icon name={GEAR_SOURCE_ICON.basic} size={18} />{BASIC_KIT_LINE}</p>
-      <QuartermasterCard />
-      <div className="armory-tools">
-        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('rules')}>
-          <Icon name={restock.unlocked ? 'refresh' : 'lock'} size={16} />Restock rules<span>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</span>
-        </button>
-        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('presets')}>
-          <Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={16} />Loadout presets<span>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</span>
-        </button>
-        <button type="button" className="armory-tool" aria-haspopup="dialog" onClick={() => onTool('reference')}><Icon name="brick" size={16} />Wall materials</button>
+      <div className="armory-list card" data-ui-list>
+        <QuartermasterCard />
+        <Row className="armory-tool" onClick={() => onTool('rules')} label={`Restock rules, ${restock.unlocked ? `${g.department.restockRules.length} set` : 'locked'}`}
+          lead={<Icon name={restock.unlocked ? 'refresh' : 'lock'} size={24} />} title="Restock rules"
+          detail={restock.unlocked ? 'Refill held stock each hour' : restock.nodeName ? `Unlocks with ${restock.nodeName}` : 'Locked'}
+          trail={<Chip tone={restock.unlocked ? 'neutral' : 'warn'} icon={restock.unlocked ? undefined : 'lock'}>{restock.unlocked ? g.department.restockRules.length : 'Locked'}</Chip>} />
+        <Row className="armory-tool" onClick={() => onTool('presets')} label={`Loadout presets, ${presets.unlocked ? `${g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length} set` : 'locked'}`}
+          lead={<Icon name={presets.unlocked ? GEAR_CATEGORY_ICON.response : 'lock'} size={24} />} title="Loadout presets"
+          detail={presets.unlocked ? 'Specialist gear each squad takes' : presets.nodeName ? `Unlocks with ${presets.nodeName}` : 'Locked'}
+          trail={<Chip tone={presets.unlocked ? 'neutral' : 'warn'} icon={presets.unlocked ? undefined : 'lock'}>{presets.unlocked ? g.squads.filter((s) => Object.keys(s.loadoutPreset).length).length : 'Locked'}</Chip>} />
+        <Row className="armory-tool" onClick={() => onTool('reference')} lead={<Icon name="brick" size={24} />} title="Wall materials" detail="Construction reference" trail={<Icon name="chevronRight" size={18} />} />
       </div>
     </section>
   );

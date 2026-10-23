@@ -64,12 +64,14 @@
 .armory-basic .icon { flex: none; margin-top: 3px; color: var(--t3); }
 .qm-row .ui-row-trail { color: var(--t3); }
 .qm-row .ui-row-lead img, .qm-row .ui-row-lead canvas, .qm-row .ui-row-lead > * { border-radius: 50%; }
-.armory-tools { display: flex; flex-wrap: wrap; gap: var(--sp2); }
-.armory-tool { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 22px; background: none; color: var(--t1); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
-.armory-tool > span { color: var(--t3); font-variant-numeric: tabular-nums; }
-.armory-tool > .icon { color: var(--t3); }
-.armory-tool:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 
 /* The Store's two disclosures stack: two items never share a row (contract item 2). */
 .gear-page.gear-page-compact { grid-template-columns: minmax(0, 1fr); }
 .gear-page.gear-page-compact > .disclosure, .gear-page.gear-page-compact .equipment-controls { grid-column: 1 / -1; }
+
+/* Armory tools as one grouped list: the Quartermaster, restock rules, presets and the wall guide. */
+.armory-list { padding: 0; overflow: hidden; }
+.armory-list > .ui-row { min-height: 64px; padding: var(--sp3) var(--sp4); border-radius: 0; }
+.armory-list > .ui-row:last-child { border-bottom: 0; }
+.armory-list > .ui-row:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
+.armory-list .armory-tool .ui-row-lead { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t2); }
