@@ -85,7 +85,8 @@
 .bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); padding: 0 var(--sp1); }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
 .bottomnav .navicon .icon { display: block; }
-.bottomnav .navbadge { top: -8px; right: -12px; min-width: 18px; height: 18px; padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 var(--s12)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+/* 14px count with 4px clear above and below, so the box is the text plus 8px. */
+.bottomnav .navbadge { top: -10px; right: -14px; min-width: calc(min(var(--s14), 14px) + 8px); height: calc(min(var(--s14), 14px) + 8px); padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 min(var(--s14), 14px)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
 .bottomnav .live-dot { top: -4px; right: -6px; }
 .bottomnav .navdot { top: -3px; right: -5px; background: var(--act); }
 

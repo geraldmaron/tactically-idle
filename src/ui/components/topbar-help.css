@@ -25,3 +25,11 @@
 .department-stat-help p { margin: 0; line-height: 1.5; }
 .department-stat-help .department-stat-value { font: 600 32px/1.2 var(--font-cond); }
 .department-stat-value > span { display: inline-block; color: var(--text-dim); font: 400 14px/1.3 var(--font-ui); }
+
+/* Resource bar at large text: the pills stay 32px and the bar one row (check:feel F8.pill). The value type is
+   capped so a doubled type scale cannot grow the pills past the 32px menu button. */
+.app .resource-bar { flex-wrap: nowrap; }
+.app .resource-bar .stats { flex-wrap: nowrap; min-width: 0; }
+.app .resource-bar .res-pill { box-sizing: border-box; height: 32px; min-height: 32px; }
+.app .resource-bar .res-value { font-size: min(var(--s16), 18px); }
+.app .resource-bar .res-suffix { font-size: min(var(--s14), 14px); }
