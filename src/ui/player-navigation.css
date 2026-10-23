@@ -44,10 +44,10 @@
 .flow-trailing { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; }
 
 /* Toasts stand between the head and the foot, whatever fills them. With a footed sheet open they
-   move to the top of that space, clear of the sheet's buttons. */
+   rise to sit on the sheet's foot (toast.tsx sets --toast-lift), clear of its title and its buttons. */
 .toast-layer { position: absolute; left: 0; right: 0; top: var(--chrome-head-h, 0px); bottom: var(--chrome-foot-h, 0px); z-index: 40; pointer-events: none; }
 .app .toast-layer > .toasts { position: absolute; top: auto; bottom: 10px; left: 12px; right: 12px; }
-.app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
+.app .toast-layer > .toasts { bottom: var(--toast-lift, 10px); }
 
 /* Desk chrome: one 44px row. Funds and the hourly rate share one chip; trust, level and the menu follow. */
 /* --pill-h is the one height for the pills and the menu button: 32px, growing with the text setting. When the

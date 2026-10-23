@@ -136,6 +136,25 @@ function PatrolHiring({ onClose, onChoose }: { onClose: () => void; onChoose: (p
   </Sheet>;
 }
 
+/** The patrol people a grant lifts, standing on the garage plate. Anyone in training is dimmed: they
+ * are off coverage, so the grant adds nothing for them until they are back. */
+function BoostCrew({ game }: { game: GameState }) {
+  const employees = employedPatrol(game);
+  if (employees.length === 0) return <p className="patrol-boost-crew-note">No patrol staff yet. A grant lifts the gross of the people you hire in Team, Patrol.</p>;
+  const first = (employee: PatrolEmployee) => patrolProfile(employee.profileId)?.firstName ?? 'Employee';
+  const covering = employees.filter((employee) => !employee.training).length;
+  return <div className="patrol-boost-crew">
+    <p className="patrol-boost-crew-line">{covering > 0 ? `A grant lifts the gross these ${covering === 1 ? 'one person earns' : `${covering} earn`}` : 'Everyone is in training, so a grant adds nothing yet'}</p>
+    <ul className="patrol-boost-crew-faces" aria-label="Patrol staff">
+      {employees.map((employee) => <li key={employee.id} className={employee.training ? 'patrol-boost-crew-training' : undefined}>
+        <PatrolPortrait profileId={employee.profileId} size={40} />
+        <span>{first(employee)}</span>
+        {employee.training && <Icon name="mortarboard" size={16} />}
+      </li>)}
+    </ul>
+  </div>;
+}
+
 /** Reused by Team and Store; the same engine quote and confirmation handle either entry point. */
 export function PatrolBoosts() {
   const game = useGame();
@@ -149,6 +168,7 @@ export function PatrolBoosts() {
       <p className="patrol-boost-hero-line">{running.length ? <>Boost running: <b>×{rates.factor}</b> patrol gross · {rate(rates.boostAmount)} extra</> : 'No boost running. Patrol earns its base rate.'}</p>
       <p className="patrol-boost-hero-net"><span>Patrol net</span><strong>{rate(rates.net)}</strong></p>
       <dl className="patrol-money-grid patrol-boost-hero-strip"><div><dt>Gross</dt><dd>{rate(rates.gross)}</dd></div><div><dt>Payroll</dt><dd>{perHour(rates.wages)}</dd></div><div><dt>Operations</dt><dd>{perHour(rates.operating)}</dd></div></dl>
+      <BoostCrew game={game} />
     </div>
     <Card className="patrol-roster-card"><div className="patrol-boosts" data-ui-list>{Object.entries(PATROL_BOOSTS).map(([id, definition]) => {
       const quote = patrolBoostQuote(game, id);

@@ -92,8 +92,8 @@
   --manila-ink: #2a2113;
 
   /* Type: Barlow for the interface, Barlow Condensed for titles in sentence case, Kalam on the
-     blueprint only. Story text stays in Barlow until the reading-face compare is settled
-     (src/ui/settings/candidates.ts). Six sizes; nothing a player decides from under 14. */
+     blueprint only. Story text stays in Barlow: the reading face was settled as the sans
+     (docs/ops-experience.md, "The reading face"). Six sizes; nothing a player decides from under 14. */
   --f-ui: 'Barlow', system-ui, -apple-system, sans-serif;
   --f-title: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --f-marker: 'Kalam', 'Comic Sans MS', cursive;

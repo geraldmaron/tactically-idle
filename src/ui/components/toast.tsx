@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Command, HandlerResult } from '../../sim/types';
 import { send } from '../store';
@@ -22,6 +22,7 @@ const MAX_QUEUED = 4;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const idRef = useRef(1);
+  const layerRef = useRef<HTMLDivElement>(null);
 
   const dismiss = useCallback((id: number) => setItems((xs) => xs.filter((x) => x.id !== id)), []);
 
@@ -49,6 +50,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [notify],
   );
 
+  // Over a footed sheet the toast sits on the foot, below the sheet's title and above its buttons. It
+  // follows the sheet if the sheet closes or opens while the toast is up.
+  const shown = items.length > 0;
+  useLayoutEffect(() => {
+    const layer = layerRef.current;
+    if (!layer || !shown) return;
+    const place = () => {
+      const foots = document.querySelectorAll('.overlay-root .sheet .sheet-foot');
+      const foot = foots[foots.length - 1];
+      const lift = foot ? Math.max(10, layer.getBoundingClientRect().bottom - foot.getBoundingClientRect().top + 10) : 10;
+      layer.style.setProperty('--toast-lift', `${lift}px`);
+    };
+    place();
+    const watch = new MutationObserver(place);
+    watch.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', place);
+    return () => { watch.disconnect(); window.removeEventListener('resize', place); };
+  }, [shown]);
+
   const api = useMemo(() => ({ notify, act }), [notify, act]);
 
   return (
@@ -56,7 +76,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {/* The layer spans the space between the shell's head and foot (the chrome contract), so a
           toast never covers the resource bar, a flow head, the tabs or an action bar. */}
-      <div className="toast-layer">
+      <div className="toast-layer" ref={layerRef}>
         <div className="toasts" role="status" aria-live="polite">
           {items.slice(0, 1).map((t) => (
             <ToastView key={t.id} item={t} onDone={dismiss} />
