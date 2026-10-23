@@ -42,6 +42,14 @@ export interface FundingDelta { key: number; amount: number; label: string }
 
 /** The balance to show and the deltas floating off it. Deltas come from new ledger entries only;
  * the ledger already present when the view mounts is history, not news. */
+/** One frame of the funding count-up: closes 35% of the gap per 100ms, and lands exactly on the target
+ * once within a dollar. The resource bar and the debrief's settlement both count with it. */
+export function easeToward(current: number, target: number, elapsedMs: number): number {
+  if (Math.abs(target - current) < 1) return target;
+  const k = 1 - Math.pow(0.65, Math.min(1000, elapsedMs) / 100);
+  return current + (target - current) * k;
+}
+
 export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDelta[] } {
   const pendingRef = useRef(0);
   const ledger = g.department.ledger ?? [];
@@ -50,6 +58,8 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
   const [deltas, setDeltas] = useState<FundingDelta[]>([]);
   const [shown, setShown] = useState(() => g.department.funding);
   const shownRef = useRef(shown);
+  // True while a count is under way; the small-change hold applies only before one starts.
+  const countingRef = useRef(false);
   const gRef = useRef(g);
   gRef.current = g;
 
@@ -94,12 +104,14 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
         frame = window.requestAnimationFrame(step);
         return;
       }
-      const k = 1 - Math.pow(0.65, Math.min(1000, at - last) / 100);
+      const elapsed = at - last;
       last = at;
       // Ambient accrual is a few dollars at a time: hold the figure until the gap is worth showing, so it
-      // does not crawl. A real payout or a purchase is far larger and still counts across.
-      if (Math.abs(target - current) < 5 && pendingRef.current === 0) { frame = window.requestAnimationFrame(step); return; }
-      const next = Math.abs(target - current) < 1 ? target : current + (target - current) * k;
+      // does not crawl. A real payout or a purchase is far larger and counts across, and a count that has
+      // started always finishes on the exact figure.
+      if (!countingRef.current && Math.abs(target - current) < 5 && pendingRef.current === 0) { frame = window.requestAnimationFrame(step); return; }
+      const next = easeToward(current, target, elapsed);
+      countingRef.current = next !== target;
       shownRef.current = next;
       if (Math.round(next) !== Math.round(current)) setShown(next);
       frame = window.requestAnimationFrame(step);

@@ -50,23 +50,35 @@
 .app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
 
 /* Desk chrome: one 44px row. Funds and the hourly rate share one chip; trust, level and the menu follow. */
-.app .resource-bar { display: flex; align-items: center; height: 44px; min-height: 44px; gap: var(--sp1); padding: 0 var(--sp2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
-.resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; gap: var(--sp1); }
+.app .resource-bar { display: flex; align-items: center; height: 44px; min-height: 44px; gap: var(--sp1); padding: 0 var(--sp2) 0 var(--gutter); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; padding: 0; gap: var(--sp1); flex-wrap: nowrap; justify-content: flex-start; list-style: none; }
 .resource-bar .stats > li { display: flex; min-width: 0; }
-.resource-bar .stats > li:first-child { flex: 1 1 auto; }
-.resource-bar .stat { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1); min-height: var(--touch); min-width: var(--touch); padding: 0 var(--sp1); border: 0; border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
-.resource-bar .stat-cash { flex: 1 1 auto; justify-content: flex-start; gap: var(--sp2); min-width: 0; height: var(--touch); min-height: var(--touch); padding: 0 var(--sp3) 0 var(--sp1); border: 1px solid var(--cash-edge); background: linear-gradient(180deg, var(--cash-panel), var(--ink-0)); color: var(--t1); box-shadow: inset 0 1px 0 var(--edge-hi); }
-.resource-cash-art { width: 32px; height: 32px; object-fit: contain; flex: none; pointer-events: none; }
-.stat-cash-stack { display: grid; gap: 0; min-width: 0; text-align: left; }
-.stat-cash-value { font: 700 var(--s18)/1 var(--f-title); color: var(--good-text); font-variant-numeric: tabular-nums; }
-.resource-bar .stat-rate { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text); font: 500 var(--s14)/1 var(--f-ui); }
-.resource-bar .stat-rate.stat-neg { color: var(--harm-text); }
-.resource-bar .res-icon { flex: none; opacity: 0.85; }
-.resource-bar .res-word { display: none; }
-.resource-bar .stat-level { flex: none; }
-.resource-bar .menu-btn { margin-right: 0; color: var(--t2); }
+.resource-bar .stats > li:first-child { flex: 0 1 auto; }
+/* Each control is a 44px hit area around one 32px pill; every pill shares height, radius and type. */
+.resource-bar .stat { position: relative; display: inline-flex; align-items: center; min-width: 0; height: var(--touch); padding: 0; border: 0; background: none; color: var(--t1); font: inherit; cursor: pointer; }
+.resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; height: 32px; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
+.resource-bar .res-well { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; }
+.resource-bar .res-well-cash { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
+.resource-bar .ring-core { background: var(--ink-2); color: var(--t1); }
+.resource-bar .stat-trust .ring-core { color: var(--good); }
+.resource-bar .stat-level .ring-core { color: var(--act); }
+.resource-bar .res-value { font: 600 var(--s16)/1 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; }
+.resource-bar .res-suffix { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 500 var(--s14)/1 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
+.resource-bar .res-suffix.stat-neg { color: var(--harm-text); }
+.resource-bar .res-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.resource-bar .menu-btn { position: relative; isolation: isolate; display: grid; place-items: center; flex: none; width: var(--touch); height: var(--touch); margin: 0 0 0 auto; padding: 0; border: 0; background: none; color: var(--t1); }
+.resource-bar .menu-btn::before { content: ''; position: absolute; z-index: -1; width: 32px; height: 32px; border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); box-sizing: border-box; }
 .resource-bar button:focus-visible { outline: 2px solid var(--act); outline-offset: -2px; }
-@media (hover: hover) { .resource-bar button:hover { filter: brightness(1.12); } }
+.resource-bar .stat-cash-short { display: none; }
+@container game (max-width: 359px) {
+  .resource-bar .stat-cash-value { display: none; }
+  .resource-bar .stat-cash-short { display: inline; }
+  .app .resource-bar { padding: 0 var(--sp1); }
+  .resource-bar .stat-trust .res-pill, .resource-bar .stat-level .res-pill { padding-right: var(--sp1); }
+  /* The menu's 44px hit area may run into the bar's edge; its 32px pill stays inside. */
+  .resource-bar .menu-btn { margin-right: calc(-1 * var(--sp1)); }
+}
+@media (hover: hover) { .resource-bar button:hover .res-pill, .resource-bar .menu-btn:hover::before { filter: brightness(1.12); } }
 .chrome-foot > .bottomnav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .bottomnav .navbtn { min-height: var(--touch); gap: var(--sp1); padding: 0 var(--sp1); }
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
