@@ -99,3 +99,13 @@
 .patrol-boost-hero-net strong { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; }
 .patrol-boost-hero-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
 .patrol-boost-hero-strip dt { color: var(--t-plate); }
+
+/* The crew on the Boosts garage plate: the faces a grant lifts, names beneath, trainees dimmed. */
+.patrol-boost-crew { display: grid; gap: var(--sp2); padding-top: var(--sp2); border-top: 1px solid var(--hair); min-width: 0; }
+.patrol-boost-crew-line, .patrol-boost-crew-note { margin: 0; color: var(--t-plate); font-size: var(--s14); line-height: 1.35; }
+.patrol-boost-crew-faces { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.patrol-boost-crew-faces li { position: relative; display: grid; justify-items: center; gap: var(--sp1); min-width: 52px; max-width: 72px; padding: var(--sp1); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-0) 82%, transparent); color: var(--t1); font-size: var(--s12); line-height: 1.2; text-shadow: none; }
+.patrol-boost-crew-faces .manager-portrait { border-radius: var(--r1); }
+.patrol-boost-crew-faces li > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.patrol-boost-crew-faces li > .icon { position: absolute; top: 4px; right: 4px; color: var(--t1); background: var(--ink-0); border-radius: var(--r1); }
+.patrol-boost-crew-training .manager-portrait { filter: grayscale(.9); opacity: .6; }
