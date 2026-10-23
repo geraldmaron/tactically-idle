@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode, Ref } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { RATING_META, STATUS_META, ratingTone } from './labels';
@@ -152,7 +152,7 @@ export function Card({ children, className, tone, selected, disabled, onClick, l
  * value or chevron. With onClick the whole row is the button. Every row leads with a picture
  * (docs/visual-kit.md); a falsy lead still renders `data-lead="none"`, which the visual gates count.
  * `selected` and `disabled` are the shared states. */
-export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled }: {
+export function Row({ lead, title, detail, trail, onClick, className, label, selected, disabled, data, buttonRef }: {
   /** Required: a face, art or a kit mark. Registered art is a node like any other. */
   lead: ReactNode;
   title: ReactNode;
@@ -164,6 +164,10 @@ export function Row({ lead, title, detail, trail, onClick, className, label, sel
   label?: string;
   selected?: boolean;
   disabled?: boolean;
+  /** `data-*` attributes for tests, captures and gates, e.g. `{ 'data-facility-branch': id }`. */
+  data?: Record<`data-${string}`, string | number | undefined>;
+  /** A ref to the row's button, for focus return after a sheet closes. */
+  buttonRef?: Ref<HTMLButtonElement>;
 }) {
   const body = (
     <>
@@ -178,8 +182,8 @@ export function Row({ lead, title, detail, trail, onClick, className, label, sel
   const classes = `ui-row${selected ? ' ui-row-selected' : ''}${disabled ? ' ui-row-disabled' : ''}${className ? ` ${className}` : ''}`;
   const leadMark = lead ? undefined : 'none';
   return onClick
-    ? <button type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark}>{body}</button>
-    : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark}>{body}</div>;
+    ? <button ref={buttonRef} type="button" className={classes} onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label} data-lead={leadMark} {...data}>{body}</button>
+    : <div className={classes} aria-disabled={disabled || undefined} data-lead={leadMark} {...data}>{body}</div>;
 }
 
 type ActionBarButton = Omit<ButtonProps, 'variant' | 'children' | 'block'> & { label: ReactNode };
