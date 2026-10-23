@@ -69,3 +69,7 @@
 .armory-tool > span { color: var(--t3); font-variant-numeric: tabular-nums; }
 .armory-tool > .icon { color: var(--t3); }
 .armory-tool:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+
+/* The Store's two disclosures stack: two items never share a row (contract item 2). */
+.gear-page.gear-page-compact { grid-template-columns: minmax(0, 1fr); }
+.gear-page.gear-page-compact > .disclosure, .gear-page.gear-page-compact .equipment-controls { grid-column: 1 / -1; }

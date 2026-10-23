@@ -36,10 +36,10 @@ export function GearScreen({ compactTools = false }: { compactTools?: boolean })
       {compactTools ? <Disclosure name="armory-tools" summary="Armory tools" icon="gear"><ArmoryHeader onTool={setTool} /></Disclosure> : <ArmoryHeader onTool={setTool} />}
       <EquipmentStore active compactControls={compactTools} />
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
-        <RestockSection onOpen={(itemId) => { setTool(null); nav.openEquipment({ itemId }); }} />
+        <RestockSection onOpen={(itemId) => { setTool(null); nav.openEquipment({ itemId }); }} onGo={() => setTool(null)} />
       </Sheet>
       <Sheet open={tool === 'presets'} onClose={() => setTool(null)} title="Loadout presets" subtitle="Specialist gear each squad takes by default. Basic kit goes with every officer and is never packed.">
-        <PresetSection opts={opts} />
+        <PresetSection opts={opts} onGo={() => setTool(null)} />
       </Sheet>
       <Sheet open={tool === 'reference'} onClose={() => setTool(null)} title="Construction reference">
         <MaterialGuide />
@@ -72,17 +72,26 @@ function ArmoryHeader({ onTool }: { onTool: (tool: 'rules' | 'presets' | 'refere
   );
 }
 
-function RestockSection({ onOpen }: { onOpen: (itemId: Id) => void }) {
+function RestockSection({ onOpen, onGo }: { onOpen: (itemId: Id) => void; onGo: () => void }) {
   const g = useGame();
   const restock = hasNodeEffect(g, 'restockRules');
-  if (!restock.unlocked) return <p className="note note-warn"><Icon name="lock" size={16} />{restock.reason}</p>;
+  if (!restock.unlocked) return <LockedTool tool={restock} onGo={onGo} />;
   return <RuleList g={g} onOpen={onOpen} />;
 }
 
-function PresetSection({ opts }: { opts: StoreOption[] }) {
+/** A tool still locked says which upgrade opens it and goes there in one tap. */
+function LockedTool({ tool, onGo }: { tool: ReturnType<typeof hasNodeEffect>; onGo: () => void }) {
+  const nav = useNav();
+  return <div className="stack">
+    <p className="note note-warn"><Icon name="lock" size={16} />{tool.reason}</p>
+    {tool.nodeId && <Button variant="primary" icon="build" onClick={() => { onGo(); nav.openDevelopment(tool.nodeId!); }}>View {tool.nodeName}</Button>}
+  </div>;
+}
+
+function PresetSection({ opts, onGo }: { opts: StoreOption[]; onGo: () => void }) {
   const g = useGame();
   const presets = hasNodeEffect(g, 'loadoutPresets');
-  if (!presets.unlocked) return <p className="note note-warn"><Icon name="lock" size={16} />{presets.reason}</p>;
+  if (!presets.unlocked) return <LockedTool tool={presets} onGo={onGo} />;
   if (g.squads.length === 0) return <EmptyState spot="openSlot" title="No squads to set presets for" />;
   return <div className="stack">{g.squads.map((s) => <PresetEditor key={s.id} squad={s} opts={opts} />)}</div>;
 }

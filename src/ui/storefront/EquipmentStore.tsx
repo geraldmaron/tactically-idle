@@ -10,7 +10,7 @@ import { useNav } from '../components/nav';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
 import { Button, Chip, EmptyState } from '../components/ui';
-import { money as moneyShort, moneyFull as money } from '../format';
+import { moneyFull as money } from '../format';
 import { Icon } from '../icons';
 import { GEAR_CATEGORY_ICON } from '../icons/kit';
 import { hasNodeEffect } from '../screens/helpers';
@@ -27,6 +27,7 @@ import { Disclosure } from '../components/Disclosure';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { conditionTone } from '../components/labels';
 import { StockBar, UnitList } from './ItemUnits';
+import { CostTag, Segments, type CostQuote } from '../screens/build-parts';
 import './storefront.css';
 
 interface EquipmentReceipt { itemId: Id; quantity: number }
@@ -55,11 +56,6 @@ export function EquipmentStore({ active, compactControls = false, onDevelopment,
   const grouped = query.sort === 'recommended';
   const ownedTypes = entries.filter((entry) => entry.owned > 0).length;
   const controls = <>
-    <div className="store-collection" role="img" aria-label={`${ownedTypes} of ${entries.length} equipment types owned`}>
-      <span className="store-collection-label"><Icon name="box" size={16} />Collection</span>
-      <span className="store-bar" aria-hidden="true"><i style={{ width: `${(ownedTypes / Math.max(1, entries.length)) * 100}%` }} /></span>
-      <strong aria-hidden="true">{ownedTypes}/{entries.length}</strong>
-    </div>
     <label className="field store-search">
       <span className="field-label sr-only">Search equipment</span>
       <input type="search" placeholder="Search equipment or what it helps with" value={query.search} onChange={(event) => patch({ search: event.target.value })} />
@@ -71,7 +67,7 @@ export function EquipmentStore({ active, compactControls = false, onDevelopment,
       { value: 'buy', label: <>Buy now <span className="choice-rail-count">{facets.availability.buy_now}</span></>, accessibleLabel: `Buy now, ${facets.availability.buy_now}` },
     ]} />
     <div className="store-results-head">
-      <span role="status" aria-live="polite">{shown.length} of {entries.length} items</span>
+      <span role="status" aria-live="polite" className="store-results-count"><Icon name="box" size={16} />{shown.length === entries.length ? `${entries.length} items` : `${shown.length} of ${entries.length} items`} · {ownedTypes} owned<Segments done={ownedTypes} total={entries.length} label={`${ownedTypes} of ${entries.length} equipment types owned`} /></span>
       <label className="store-sort-inline">
         <span className="sr-only">Sort equipment</span>
         <Icon name="list" size={16} />
@@ -93,13 +89,13 @@ export function EquipmentStore({ active, compactControls = false, onDevelopment,
         return <section key={category} className="store-group" aria-label={ITEM_CATEGORY_LABELS[category]}>
           <h3 className="store-group-head">
             <span><Icon name={GEAR_CATEGORY_ICON[category]} size={16} />{ITEM_CATEGORY_LABELS[category]}</span>
-            <span className="store-bar" aria-hidden="true"><i style={{ width: `${(have / set.length) * 100}%` }} /></span>
+            <Segments done={have} total={set.length} />
             <span className="store-group-count" aria-label={`${have} of ${set.length} owned`}>{have}/{set.length}</span>
           </h3>
-          <div className="inv-grid">{tiles.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>
+          <div className="inv-grid store-list card" data-ui-list>{tiles.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>
         </section>;
       })
-      : <div className="inv-grid">{shown.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>}
+      : <div className="inv-grid store-list card" data-ui-list>{shown.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>}
     {selected && active && <EquipmentDetail key={selected.item.id} entry={selected} onPurchase={(quantity) => setReceipt({ itemId: selected.item.id, quantity })} onClose={() => detail.close()} onDevelopment={onDevelopment ?? nav.openDevelopment} onTraining={onTraining ?? ((certId) => nav.openTraining({ certId }))} />}
   </div>;
 }
@@ -114,16 +110,21 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
   const condition = entry.meanCondition === null ? null : Math.round(entry.meanCondition);
   const certs = item.requiresCerts?.length ? `. Certification needed to use: ${entry.qualified} certified officer${entry.qualified === 1 ? '' : 's'}` : '';
   const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
-  return <button type="button" className={`inv-tile store-tile store-tile-${state}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
-    <span className="inv-art"><GearArtFrame itemId={item.id} size={78} /></span>
-    {entry.owned > 0 && <span className="inv-count" aria-hidden="true">×{entry.owned}</span>}
-    {entry.needsAttention && <span className="inv-alert" aria-hidden="true"><Icon name="warning" size={16} /></span>}
-    {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`} aria-hidden="true"><Icon name="mortarboard" size={16} /></span>}
-    <span className="inv-name" aria-hidden="true">{item.name}</span>
-    <span className="store-tile-stock" aria-hidden="true">{entry.owned > 0 ? `${entry.owned} owned · ${entry.ready} ready` : 'Not owned'}</span>
-    <span className="store-tile-price" aria-hidden="true">{state === 'locked' ? <Icon name="lock" size={16} /> : <Icon name="cash" size={16} />}{moneyShort(item.cost)}</span>
-    <span className="store-tile-availability" aria-hidden="true">{state === 'locked' ? entry.unlockName : state === 'short' ? 'Needs funding' : 'Available now'}</span>
-    {acquired !== undefined && <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span>}
+  const stock = entry.owned > 0 ? `${entry.owned} owned · ${entry.ready} ready` : 'Not owned';
+  const quote: CostQuote = { state: state === 'buy' ? 'ready' : state, price: item.cost, blocker: state === 'locked' ? `Needs ${entry.unlockName}` : state === 'short' ? 'Needs funding' : undefined };
+  // Row's markup and classes, with the item id and the element the sheet returns focus to, which Row does not carry.
+  return <button type="button" className={`ui-row inv-tile store-tile store-tile-${state}${entry.needsAttention ? ' inv-tile-alert' : ''}`} data-item-id={item.id} title={item.name} aria-label={label} aria-haspopup="dialog" onClick={(event) => onOpen(event.currentTarget)}>
+    <span className="ui-row-lead inv-art" aria-hidden="true"><GearArtFrame itemId={item.id} size={32} /></span>
+    <span className="ui-row-main" aria-hidden="true">
+      <span className="ui-row-title inv-name">{item.name}
+        {entry.needsAttention && <span className="inv-alert"><Icon name="warning" size={16} /></span>}
+        {!!item.requiresCerts?.length && <span className={`store-tile-cert${entry.qualified ? '' : ' store-tile-cert-none'}`}><Icon name="mortarboard" size={16} /></span>}
+      </span>
+      <span className="ui-row-detail store-tile-stock">{stock}{quote.blocker && <> · <CostTag part="note" quote={quote} /></>}</span>
+    </span>
+    <span className="ui-row-trail" aria-hidden="true">
+      {acquired !== undefined ? <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired}</span> : <CostTag part="value" quote={quote} />}
+    </span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
 }
