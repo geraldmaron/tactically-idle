@@ -146,7 +146,7 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
       await step('saves', async () => { await page.locator('.resource-bar .menu-btn').click(); await page.waitForTimeout(300); await page.locator('.menu-sheet .menu-link').click(); await page.waitForTimeout(400); await shot('16b-saves-sheet', { segments: 3 }); await closeSheet(); });
       await step('team-patrol', async () => {
         await tab('Team'); await teamSection('Patrol'); await page.locator('.patrol-page').waitFor(); await shot('05-patrol', { segments: 6 });
-        await page.locator('.patrol-page .patrol-roster-head button').click(); await shot('05-patrol-hiring', { segments: 3 });
+        await page.locator('.patrol-page').getByRole('button', { name: 'Hire patrol', exact: true }).click(); await shot('05-patrol-hiring', { segments: 3 });
         const offer = page.locator('[data-patrol-candidate]').first().getByRole('button', { name: /^Review hire for / });
         if (await offer.count()) {
           await offer.click(); await shot('05-patrol-hire-review', { segments: 2 });

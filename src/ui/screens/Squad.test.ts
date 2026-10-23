@@ -26,7 +26,8 @@ vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() 
 
 type Element = ReactElement<ComponentProps<'input'> & ComponentProps<'form'> & { children?: ReactNode }>;
 function elements(node: ReactNode): Element[] {
-  return isValidElement<Element['props']>(node) ? [node, ...Children.toArray(node.props.children).flatMap(elements)] : [];
+  // Row keeps its controls in the title, detail and trail props, so those are walked as children.
+  return isValidElement<Element['props']>(node) ? [node, ...Children.toArray(node.props.children).flatMap(elements), ...(['lead', 'title', 'detail', 'trail'] as const).flatMap((slot) => elements((node.props as Record<string, ReactNode>)[slot]))] : [];
 }
 function capture(render: () => ReactElement, extra: Partial<NavApi> = {}) {
   let tree!: ReactElement;
@@ -105,7 +106,7 @@ describe('squads as blocks with separate rename drafts', () => {
     for (const squad of state.squads) expect(squads).toContain(`aria-label="Squad ${squad.id}, ${squad.name}"`);
     expect(squads.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
     const roster = capture(SquadScreen, { squadSection: 'roster' }).html;
-    expect(roster.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
+    expect(roster.match(/ui-row officer-row/g)).toHaveLength(officers);
   });
 
   it('recreates the navigation owner on New and Load even though campaigns share squad A/B ids', () => {

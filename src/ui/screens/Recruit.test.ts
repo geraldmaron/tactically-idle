@@ -25,7 +25,8 @@ vi.mock('../components/Sheet', () => ({ Sheet: ({ open, title, children, footer 
 type CapturedElement = ReactElement<{ children?: ReactNode; onClick?: (event: MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }>;
 function elements(node: ReactNode): CapturedElement[] {
   if (!isValidElement<CapturedElement['props']>(node)) return [];
-  return [node, ...Children.toArray(node.props.children).flatMap(elements)];
+  // Row keeps its controls in the title, detail and trail props, so those are walked as children.
+  return [node, ...Children.toArray(node.props.children).flatMap(elements), ...(['lead', 'title', 'detail', 'trail'] as const).flatMap((slot) => elements((node.props as Record<string, ReactNode>)[slot]))];
 }
 function capture(render: () => ReactElement) {
   let tree!: ReactElement;
@@ -34,7 +35,7 @@ function capture(render: () => ReactElement) {
   return { tree, html };
 }
 function button(tree: ReactNode, label: string) {
-  const match = elements(tree).find((element) => element.type === Button && Children.toArray(element.props.children).join('').startsWith(label));
+  const match = elements(tree).find((element) => (element.type === Button || element.type === 'button') && Children.toArray(element.props.children).join('').startsWith(label));
   expect(match, `button ${label}`).toBeDefined();
   return match!;
 }
@@ -62,7 +63,7 @@ describe('ordinary recruitment refresh', () => {
     expect(html).not.toContain('role="radiogroup"');
     for (const c of state.candidates) {
       const name = `${c.officer.firstName} ${c.officer.surname}`;
-      expect(html).toContain(renderToStaticMarkup(createElement('strong', { className: 'cand-name' }, name)));
+      expect(html).toContain(name);
       expect(html).toContain(ROLE_META[c.officer.role].label);
       for (const cert of c.officer.certs) expect(html).toContain(CERT_NAME[cert]);
     }

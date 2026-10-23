@@ -8,5 +8,6 @@
 /* A navigation rail at the compact size: tabs over a hairline, 36px tall, the current one underlined. */
 .team-page .choice-rail-navigation.choice-rail-sm { padding: 0; }
 .team-page .choice-rail-navigation.choice-rail-sm .choice-rail-item { min-height: 36px; padding: 0 var(--sp3); font-size: var(--s14); }
-.team-page .choice-rail-navigation.choice-rail-sm .choice-rail-selected::after { top: auto; bottom: -1px; left: var(--sp3); right: var(--sp3); height: 3px; transform: none; }
+.team-page .choice-rail-navigation.choice-rail-sm .choice-rail-item::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); background: none; }
+.team-page .choice-rail-navigation.choice-rail-sm .choice-rail-selected::before { content: ''; position: absolute; left: var(--sp3); right: var(--sp3); bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--act); }
 .team-head { padding-top: var(--sp2); gap: 0; }

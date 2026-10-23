@@ -13,9 +13,8 @@ import { CERT_NAME } from '../../content/certs';
 import { officerGrowth } from './OfficerProgress';
 import { RankInsignia } from './RankInsignia';
 import { Face } from './Face';
-import { officerFaceStatus } from './face-status';
+import type { FaceStatus } from './face-status';
 import { Ring } from './ui';
-import { useGame } from '../store';
 import { RANKS } from '../../content/ranks';
 import { StatusMark } from '../icons/marks';
 
@@ -38,16 +37,16 @@ export interface OfficerCardProps {
   note?: string;
   /** The injury recorded for this officer in the current operation. */
   incidentInjury?: string;
+  /** Tile only: the officer's condition as a face shows it (face-status.ts), computed by the screen that owns the game state. */
+  faceStatus?: FaceStatus | null;
 }
 
 /** Portrait card from the approved reference: portrait, SURNAME, role icon + label, readiness bar. */
-export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId }: OfficerCardProps) {
+export function OfficerCard({ officer, now, variant = 'strip', selected, onClick, chip, footer, leader, note, incidentInjury, squadId, faceStatus }: OfficerCardProps) {
   // The department dates the portrait's age; without one (outside the game) the portrait is unaged.
   const department = useContext(DepartmentContext);
   const age = department ? agePortraitProps({ department }, officer, now) : {};
   const [ref, w] = useWidth<HTMLSpanElement>(80);
-  const g = useGame();
-  const faceStatus = officerFaceStatus(g, officer.id, now);
   const band = bandOf(officer);
   const injured = !!incidentInjury || (!!officer.injury && officer.injury.until > now);
   const trainingOrDeployed: StatusKey | null =
@@ -73,11 +72,11 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         aria-pressed={onClick && selected !== undefined ? selected : undefined}
         aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${growthText}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
       >
-        <span className="ocard-face" aria-hidden="true"><Face size="sm" kind="officer" officer={officer} status={faceStatus} />{leader && <span className="ocard-star"><Icon name="star" size={12} /></span>}</span>
+        <span className="ocard-face" aria-hidden="true"><Face size="sm" kind="officer" officer={officer} status={faceStatus} />{leader && <span className="ocard-star"><Icon name="star" size={16} /></span>}</span>
         <span className="ocard-body" aria-hidden="true">
           <span className="ocard-title"><Ring value={xp} size={20} tone="level"><RankInsignia rank={growth.rank} size={12} /></Ring><span className="ocard-surname">{officer.surname}</span>{squadId && <span className="ocard-squad">{squadId}</span>}</span>
-          <span className="ocard-role"><Icon name={role.icon} size={14} />{role.short}</span>
-          <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} />{certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={12} />)}</span>}</span>
+          <span className="ocard-role"><Icon name={role.icon} size={16} />{role.short}</span>
+          <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} />{certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}</span>
         </span>
         {footer}
       </Tag>
