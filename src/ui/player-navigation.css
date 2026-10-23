@@ -50,20 +50,21 @@
 .app:has(.overlay-root .sheet .sheet-foot) .toast-layer > .toasts { top: 10px; bottom: auto; }
 
 /* Desk chrome: one 44px row. Funds and the hourly rate share one chip; trust, level and the menu follow. */
-.app .resource-bar { display: flex; align-items: center; height: 44px; min-height: 44px; gap: var(--sp1); padding: 0 var(--sp2) 0 var(--gutter); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
-.resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; padding: 0; gap: var(--sp1); flex-wrap: nowrap; justify-content: flex-start; list-style: none; }
-.resource-bar .stats > li { display: flex; min-width: 0; }
-.resource-bar .stats > li:first-child { flex: 0 1 auto; }
-/* Each control is a 44px hit area around one 32px pill; every pill shares height, radius and type. */
+.app .resource-bar { box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; min-height: 44px; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); gap: var(--sp1); padding: 0 var(--sp2) 0 var(--gutter); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.resource-bar .stats { display: flex; flex: 1 1 auto; align-items: center; min-width: 0; margin: 0; padding: 0; gap: 0 var(--sp1); flex-wrap: wrap; justify-content: flex-start; list-style: none; }
+.resource-bar .stats > li { display: flex; flex: none; }
+/* Each control is a 44px hit area around one 32px pill; every pill shares height, radius and type.
+   Pills never shrink below their content: at enlarged text the bar wraps to a second row rather than
+   clip the balance or the hourly rate (Codex, 2026-10-23). */
 .resource-bar .stat { position: relative; display: inline-flex; align-items: center; min-width: 0; height: var(--touch); padding: 0; border: 0; background: none; color: var(--t1); font: inherit; cursor: pointer; }
-.resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; height: 32px; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
+.resource-bar .res-pill { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; min-height: 32px; padding: 0 var(--sp2) 0 var(--sp1); border: 1px solid var(--hair); border-radius: 999px; background: var(--ink-2); white-space: nowrap; }
 .resource-bar .res-well { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; }
 .resource-bar .res-well-cash { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
 .resource-bar .ring-core { background: var(--ink-2); color: var(--t1); }
 .resource-bar .stat-trust .ring-core { color: var(--good); }
 .resource-bar .stat-level .ring-core { color: var(--act); }
 .resource-bar .res-value { font: 600 var(--s16)/1 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; }
-.resource-bar .res-suffix { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 500 var(--s14)/1 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
+.resource-bar .res-suffix { font: 500 var(--s14)/1 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
 .resource-bar .res-suffix.stat-neg { color: var(--harm-text); }
 .resource-bar .res-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .resource-bar .menu-btn { position: relative; isolation: isolate; display: grid; place-items: center; flex: none; width: var(--touch); height: var(--touch); margin: 0 0 0 auto; padding: 0; border: 0; background: none; color: var(--t1); }
