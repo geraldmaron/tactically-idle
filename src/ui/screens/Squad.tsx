@@ -153,7 +153,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
               <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
                 requestedFocus.current = 'input';
                 nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
-              }}>{squad.name}<Icon name="edit" size={14} /></button>
+              }}>{squad.name}<Icon name="edit" size={16} /></button>
             </h2>}
             detail={[deployed ? 'On a call' : r.ready === members.length && members.length > 0 ? `All ${members.length} ready` : `${r.ready} of ${total} ready`, leader ? `${leader.surname} leads` : null, open > 0 ? (open === 1 ? '1 open place' : `${open} open places`) : null].filter(Boolean).join(' · ')}
             trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <ChoiceRail size="sm" label={`Duty for ${squad.name}`} value={squad.duty}

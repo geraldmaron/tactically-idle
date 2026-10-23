@@ -72,11 +72,11 @@ export function OfficerCard({ officer, now, variant = 'strip', selected, onClick
         aria-pressed={onClick && selected !== undefined ? selected : undefined}
         aria-label={`${officer.firstName} ${officer.surname}, ${role.label}, ${statusText}, stress ${Math.floor(officer.stress + 1e-9)}${growthText}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}`}
       >
-        <span className="ocard-face" aria-hidden="true"><Face size="sm" kind="officer" officer={officer} status={faceStatus} />{leader && <span className="ocard-star"><Icon name="star" size={12} /></span>}</span>
+        <span className="ocard-face" aria-hidden="true"><Face size="sm" kind="officer" officer={officer} status={faceStatus} />{leader && <span className="ocard-star"><Icon name="star" size={16} /></span>}</span>
         <span className="ocard-body" aria-hidden="true">
           <span className="ocard-title"><Ring value={xp} size={20} tone="level"><RankInsignia rank={growth.rank} size={12} /></Ring><span className="ocard-surname">{officer.surname}</span>{squadId && <span className="ocard-squad">{squadId}</span>}</span>
-          <span className="ocard-role"><Icon name={role.icon} size={14} />{role.short}</span>
-          <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} />{certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={12} />)}</span>}</span>
+          <span className="ocard-role"><Icon name={role.icon} size={16} />{role.short}</span>
+          <span className="ocard-condition"><StatusMark status={statusKey ?? 'ready'} />{certs.length > 0 && <span className="ocard-certs">{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span>}</span>
         </span>
         {footer}
       </Tag>

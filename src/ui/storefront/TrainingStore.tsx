@@ -153,7 +153,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       const ratingMeta = rating ? RATING_META.find((meta) => meta.key === rating.key) : undefined;
       return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${locked ? ' course-tile-locked' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
         <Row lead={<CourseEmblem course={course} locked={locked} size={40} />} title={course.name}
-          detail={<span className="course-tile-meta"><span><Icon name="clock" size={14} />{course.hours}h</span><span><Icon name="cash" size={14} />{money(fee(course.cost))}</span></span>}
+          detail={<span className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></span>}
           trail={<Button size="sm" variant={locked ? 'secondary' : 'primary'} disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>} />
         <div className="course-tile-more">
           <div className="course-tile-gains">
