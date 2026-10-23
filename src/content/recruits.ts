@@ -9,7 +9,9 @@ import { rankForService, rankPay, xpForService } from './ranks';
  * is drawn, so those fields reach new candidates only. `rookieService` is read nowhere. */
 export const RECRUIT_TUNING = tunable('RECRUIT_TUNING', {
   /** Candidates in the pool before any development node adds more. */
-  basePool: 3,
+  basePool: 10,
+  /** People in the local market a pool is drawn from: those already seen plus unseen newcomers up to this many. */
+  marketSize: 24,
   /** How long an unshortlisted candidate stays available. */
   lifetimeMs: 48 * 3_600_000,
   /** Signing cost = this many hours of the candidate's wage. */
@@ -153,7 +155,7 @@ export function officerDominates(a: Officer, b: Officer): boolean {
 }
 
 export function generateBatch(
-  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0, retireAge = Infinity,
+  gen: RecruitGen, now: number, count: number, existingRoles: Role[], takenNames: Set<string>, day = 0, retireAge = Infinity, offered: Officer[] = [],
 ): Candidate[] {
   const seed = gen.campaignSeed ?? 12345;
   const excluded = new Set(gen.unavailable ?? []);
@@ -166,7 +168,7 @@ export function generateBatch(
   const reserve = eligible.filter((p) => !gen.builds?.[p.id]);
   // Every remaining authored identity can enter the opening local market, whether
   // its portrait is ready or it was a starter in an older version of the game.
-  const available = [...introduced, ...reserve.slice(0, Math.max(0, 12 - introduced.length))];
+  const available = [...introduced, ...reserve.slice(0, Math.max(0, RECRUIT_TUNING.marketSize - introduced.length))];
   const out: Candidate[] = [];
   const used = [...existingRoles];
   const roleOf = (p: Persona) => gen.builds?.[p.id]?.role ?? roleForPersona(seed, p.id);
@@ -175,8 +177,9 @@ export function generateBatch(
     let pool = available.filter((p) => !used.includes(roleOf(p)));
     if (!pool.length) pool = available;
     // A repeated role must still be a choice: leave out anyone who matches or loses to a
-    // same-role candidate already offered on every count, unless nobody else is left.
-    const choices = pool.filter((p) => !out.some((c) => officerDominates(c.officer, buildOf(p)) || officerDominates(buildOf(p), c.officer)));
+    // same-role candidate already offered (this batch or `offered`) on every count, unless nobody else is left.
+    const shown = [...offered, ...out.map((c) => c.officer)];
+    const choices = pool.filter((p) => !shown.some((o) => officerDominates(o, buildOf(p)) || officerDominates(buildOf(p), o)));
     if (choices.length) pool = choices;
     const person = pool[rollInt(gen, pool.length)];
     available.splice(available.indexOf(person), 1);

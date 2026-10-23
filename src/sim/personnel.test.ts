@@ -1,3 +1,4 @@
+import { RECRUIT_TUNING } from '../content/recruits';
 import { describe, expect, it } from 'vitest';
 import { PERSONAS, PERSONA_BY_ID, personaNote } from '../content/personas';
 import { buildPersona, generateBatch, roleForPersona } from '../content/recruits';
@@ -52,12 +53,12 @@ describe('campaign identities and succession', () => {
     expect(a.officers.off_chen.portrait).not.toBe(b.officers.off_chen.portrait);
     expect(a.officers.off_chen.ratings).not.toEqual(b.officers.off_chen.ratings);
   });
-  it('keeps only three candidates, with stable first-seen builds and no active duplicates', () => {
+  it('keeps the pool at its size, with stable first-seen builds and no active duplicates', () => {
     const s = createInitialState(T0, 88);
     const seen = new Map<string, Officer>();
     for (let i = 0; i < 60; i++) {
       fillCandidates(s, T0 + i * 4 * HOUR, candidatePoolSize(s));
-      expect(s.candidates).toHaveLength(3);
+      expect(s.candidates).toHaveLength(candidatePoolSize(s));
       const ids = [...Object.values(s.officers), ...s.candidates.map((c) => c.officer)].map((o) => o.identityId);
       expect(new Set(ids).size).toBe(ids.length);
       for (const c of s.candidates) {
@@ -66,7 +67,7 @@ describe('campaign identities and succession', () => {
         else seen.set(id, structuredClone(c.officer));
       }
     }
-    expect(seen.size).toBeLessThanOrEqual(12);
+    expect(seen.size).toBeLessThanOrEqual(RECRUIT_TUNING.marketSize);
     expect(seen.size).toBeGreaterThan(3);
   });
   it('keeps mixed-role recruitment and stable saved builds across 100 campaign seeds', () => {
@@ -147,7 +148,7 @@ describe('campaign identities and succession', () => {
     for (let i = 0; i < 30; i++) fillCandidates(s, T0, candidatePoolSize(s));
     const old = new Set(Object.keys(s.personnel!.builds));
     fillCandidates(s, T0 + 50 * 365 * HOUR, candidatePoolSize(s));
-    expect(s.candidates).toHaveLength(3);
+    expect(s.candidates).toHaveLength(candidatePoolSize(s));
     for (const c of s.candidates) {
       expect(old.has(c.officer.identityId!)).toBe(false);
       const age = (50 * 365 - c.officer.bornDay) / 365;

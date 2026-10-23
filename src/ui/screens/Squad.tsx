@@ -11,6 +11,8 @@ import { DUTY_META } from '../components/labels';
 import { officerFaceStatus } from '../components/face-status';
 import type { SquadDuty } from '../../sim/types';
 import { Icon } from '../icons';
+import { Sheet } from '../components/Sheet';
+import { perHour } from '../format';
 import { SQUAD_IDS } from '../../sim/types';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
@@ -60,7 +62,8 @@ function SquadsView() {
       {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
       {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
     </Section>
-    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count="Off duty until in a squad">
+    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count={`Paid ${perHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, can't deploy`}
+      hint="Unassigned officers rest and draw their wage but never go on a call. Open one to put them in a squad or swap them for someone.">
       <div className="officer-character-grid">{unassigned.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
     </Section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
@@ -128,6 +131,7 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   const problems = deployed ? [] : [...(r.deployable ? [] : r.issues.slice(0, 2)), ...(r.deployable && r.staysHome.length > 0 ? [staysHomeLine(g, r.staysHome)] : [])];
 
   const leader = members.find((o) => o.id === squad.leaderId);
+  const [filling, setFilling] = useState(false);
   return (
     <Card className="squadpanel">
       <section aria-label={`Squad ${squad.id}, ${squad.name}`} className="squad-block">
@@ -162,10 +166,35 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
           />
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
-        <div className="officer-character-grid">{members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}</div>
+        <div className="officer-character-grid">
+          {members.map((o) => <OfficerCard key={o.id} variant="tile" officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
+          {!deployed && open > 0 && <button type="button" className="open-place" aria-haspopup="dialog" aria-label={`Fill ${open === 1 ? 'the open place' : `${open} open places`} in ${squad.name}`} onClick={() => setFilling(true)}>
+            <Icon name="plus" size={20} /><span>{open === 1 ? 'Open place' : `${open} open places`}</span>
+          </button>}
+        </div>
       </section>
+      {filling && <FillPlace squad={squad} onClose={() => setFilling(false)} />}
     </Card>
   );
+}
+
+/** Fill a squad's open place from Unassigned in one tap, or go to Hire when nobody is waiting. */
+function FillPlace({ squad, onClose }: { squad: Squad; onClose: () => void }) {
+  const g = useGame();
+  const nav = useNav();
+  const { act } = useToast();
+  const now = Date.now();
+  const bench = officerList(g).filter((o) => o.squadId === null);
+  const open = Math.max(0, 4 - squad.officerIds.length);
+  return <Sheet open onClose={onClose} title={`Fill ${squad.name}`} subtitle={open === 1 ? '1 open place' : `${open} open places`}>
+    {bench.length === 0
+      ? <EmptyState spot="noCandidates" title="Nobody is unassigned">Hire an officer, or open someone in another squad to move them here.
+        <Button variant="primary" icon="plus" onClick={() => { onClose(); nav.setSquadSection('hire'); }}>Hire</Button></EmptyState>
+      : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
+        {bench.map((o) => <OfficerRow key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} actionLabel={`Add ${o.surname} to ${squad.name}`}
+          onClick={() => { if (act({ type: 'assignToSquad', officerId: o.id, squadId: squad.id }, `${o.surname} joins ${squad.name}`).ok && open <= 1) onClose(); }} />)}
+      </div></Card>}
+  </Sheet>;
 }
 
 /** Squad moves waiting for a call to end, and moves that could not apply when it did. */

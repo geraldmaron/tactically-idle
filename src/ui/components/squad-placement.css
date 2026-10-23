@@ -1,0 +1,27 @@
+/* Squad placement: squad buttons with their headcount, then the swap picker for a full squad. */
+.placement-count {
+  margin-left: var(--sp1);
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+}
+.placement-swap {
+  display: grid;
+  gap: var(--sp2);
+  padding: var(--sp3);
+  border: 1px solid var(--hair);
+  border-radius: var(--r2);
+  background: var(--ink-1);
+}
+.placement-swap-head {
+  margin: 0;
+  font-size: var(--s14);
+  color: var(--t2);
+}
+.placement-swap-off .officer-row {
+  opacity: 0.55;
+}
+.placement-swap-reason {
+  margin: var(--sp1) 0 0;
+  font-size: var(--s14);
+  color: var(--t3);
+}

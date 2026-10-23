@@ -1219,6 +1219,7 @@ export type Command =
   | { type: 'createSquad'; name: string }
   | { type: 'renameSquad'; squadId: SquadId; name: string }
   | { type: 'assignToSquad'; officerId: Id; squadId: SquadId | null }
+  | { type: 'swapSquadMembers'; officerId: Id; withId: Id }
   | { type: 'cancelPendingSquadMove'; officerId: Id }
   | { type: 'setSquadArrangementLock'; target: SquadArrangementLockTarget; locked: boolean }
   | { type: 'applySquadArrangement'; proposal: SquadArrangementProposal }
@@ -1332,6 +1333,7 @@ export type DepartmentCommandType =
   | 'createSquad'
   | 'renameSquad'
   | 'assignToSquad'
+  | 'swapSquadMembers'
   | 'cancelPendingSquadMove'
   | 'startDetail'
   | 'setSquadArrangementLock'

@@ -57,7 +57,7 @@ describe('starting state', () => {
     }
     expect(ownedCount(s, 'radio_kit')).toBe(0); // basic kit is part of every officer, never stock
     expect(ownedCount(s, 'thermal_imager')).toBe(0);
-    expect(s.candidates).toHaveLength(3);
+    expect(s.candidates).toHaveLength(10);
   });
   it('is deterministic', () => {
     expect(createInitialState(T0)).toEqual(s);
@@ -177,7 +177,7 @@ describe('candidates', () => {
     expect(sortedCandidates(s)[0].id).toBe(keep.id);
     s = ok(s, { type: 'refreshCandidates' }, T0);
     expect(s.candidates.map((c) => c.id)).toContain(keep.id);
-    expect(s.candidates).toHaveLength(3);
+    expect(s.candidates).toHaveLength(10);
     expect(s.candidates.filter((c) => c.id !== keep.id).every((c) => !c.shortlisted)).toBe(true);
   });
 
@@ -217,7 +217,10 @@ describe('candidates', () => {
     s = ok(s, { type: 'shortlist', candidateId: s.candidates[0].id, on: true }, T0);
     const keep = s.candidates[0].id;
     s = ok(s, { type: 'tick' }, T0 + 49 * HOUR_MS);
-    expect(s.candidates.map((c) => c.id)).toEqual([keep]);
+    // The shortlisted one stays; everyone else left and the pool refilled with fresh offers.
+    expect(s.candidates[0].id).toBe(keep);
+    expect(s.candidates).toHaveLength(10);
+    expect(s.candidates.slice(1).every((c) => c.expiresAt > T0 + 49 * HOUR_MS)).toBe(true);
   });
 });
 

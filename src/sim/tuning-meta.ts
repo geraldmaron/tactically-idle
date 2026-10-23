@@ -377,7 +377,8 @@ export const TUNING_META: readonly FieldMeta[] = [
     goodAtOrAbove: { label: 'Reads "Good" from', help: 'Condition at or above which a working unit reads "Good"; below, "Worn". Labels only.', mode: 'display', min: 50, max: 100, step: 1, unit: 'condition' },
   }),
   ...table('RECRUIT_TUNING', { group: 'economy', mode: 'new-entities' }, {
-    basePool: { label: 'Candidates in the pool', help: 'Candidates on offer before development adds more.', mode: 'department', min: 1, max: 8, step: 1, unit: 'candidates' },
+    basePool: { label: 'Candidates in the pool', help: 'Candidates on offer before development adds more. The pool refills between searches.', mode: 'department', min: 1, max: 16, step: 1, unit: 'candidates' },
+    marketSize: { label: 'Local market size', help: 'People a pool is drawn from: those already seen plus unseen newcomers up to this many.', mode: 'department', min: 12, max: 48, step: 1, unit: 'people' },
     lifetimeMs: { label: 'Candidate stays', help: 'How long an unshortlisted candidate stays available, set when drawn.', min: 3_600_000, max: 604_800_000, step: 3_600_000, unit: 'ms' },
     signingHours: { label: 'Signing cost', help: 'Signing cost in hours of the candidate\'s wage, set when drawn.', min: 0, max: 96, step: 1, unit: 'hours' },
     refreshCooldownMs: { label: 'Free search cooldown', help: 'Time between free candidate searches.', mode: 'department', min: 600_000, max: 86_400_000, step: 600_000, unit: 'ms' },

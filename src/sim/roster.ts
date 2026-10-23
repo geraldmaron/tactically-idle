@@ -4,6 +4,7 @@
 // net, the candidate pool its upgrades allow) is handed in by the department.
 import type { StaffPost } from './staff-pool';
 import type {
+  Candidate,
   Department,
   GameState,
   HandlerResult,
@@ -17,6 +18,7 @@ import type {
 import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
 import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
+import { hashSeed } from './rng';
 import { formatDuration, money } from './format';
 import { fullName } from './officer';
 import { gameDay, simNow } from './calendar';
@@ -200,19 +202,43 @@ function staffIdentityIds(state: GameState): string[] {
   });
 }
 
+/** The officer market draws from people who have never served, hold no staff post and are not on patrol. */
+function marketGen(d: GameState, rng: number, nextId: number): RecruitGen {
+  const personnel = d.personnel!;
+  const patrol = (d.patrol?.personnel ?? []).map((p) => p.profileId);
+  return { rng, nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: [...personnel.employedIdentityIds, ...staffIdentityIds(d), ...patrol] };
+}
+
+function takenNames(d: GameState, candidates: Candidate[]): Set<string> {
+  const taken = new Set<string>();
+  for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
+  for (const c of candidates) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
+  return taken;
+}
+
 /** Fill the pool up to `poolSize` (economy.ts candidatePoolSize) with deterministic candidates; shortlisted ones stay. */
 export function fillCandidates(d: GameState, now: number, poolSize: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
-  const personnel = d.personnel!;
-  const gen: RecruitGen = { rng: d.rngState, nextId: d.nextId, campaignSeed: personnel.campaignSeed, builds: personnel.builds, unavailable: [...personnel.employedIdentityIds, ...staffIdentityIds(d), ...(d.patrol?.personnel ?? []).map((person) => person.profileId)] };
-  const taken = new Set<string>();
-  for (const o of Object.values(d.officers)) taken.add(fullNameKey(o.firstName, o.surname));
-  for (const c of kept) taken.add(fullNameKey(c.officer.firstName, c.officer.surname));
-  const fresh = generateBatch(gen, now, Math.max(0, poolSize - kept.length), kept.map((c) => c.officer.role), taken, gameDay(d, now), CAREER_TUNING.retireAge);
+  const gen = marketGen(d, d.rngState, d.nextId);
+  const fresh = generateBatch(gen, now, Math.max(0, poolSize - kept.length), kept.map((c) => c.officer.role), takenNames(d, kept), gameDay(d, now), CAREER_TUNING.retireAge, kept.map((c) => c.officer));
   d.candidates = [...kept, ...fresh];
   d.rngState = gen.rng;
   d.nextId = gen.nextId;
   (d.department as DepartmentExt).candidateRefreshedAt = now;
+}
+
+/** Between searches the pool stays full: whoever is hired or leaves is replaced at the next
+ * settlement. The draw has its own seed and its own ids, so it never moves the
+ * shared rng or id counter that incidents and equipment draw on, and offline return still matches
+ * online ticks. A search (refreshCandidates) still replaces everyone not shortlisted. */
+export function topUpCandidates(d: GameState, now: number, poolSize: number): void {
+  const missing = poolSize - d.candidates.length;
+  if (missing <= 0 || !d.personnel) return;
+  // Seeded by how many people the campaign has met, not the clock, so the same state draws the same people.
+  const gen = marketGen(d, hashSeed(`${d.personnel.campaignSeed}:pool:${Object.keys(d.personnel.builds).length}`), 0);
+  const fresh = generateBatch(gen, now, missing, d.candidates.map((c) => c.officer.role), takenNames(d, d.candidates), gameDay(d, now), CAREER_TUNING.retireAge, d.candidates.map((c) => c.officer));
+  // Keyed by identity: one person is on offer at most once, and a hired person never returns.
+  d.candidates.push(...fresh.map((c) => ({ ...c, id: `cand_${c.officer.identityId ?? c.id}` })));
 }
 
 function refreshCandidates(d: GameState, poolSize: number): HandlerResult {
@@ -277,6 +303,39 @@ function assignToSquad(d: GameState, officerId: Id, squadId: SquadId | null): Ha
   if (!to.leaderId) to.leaderId = officerId;
   o.squadId = to.id;
   clearPendingMove(d, officerId);
+  return OK;
+}
+
+/** Trade places in one step, so a full squad never needs an open place first: `officerId` takes
+ * `withId`'s place in their squad, and their lead if they held it; `withId` takes `officerId`'s old
+ * place and lead, or goes to Unassigned when `officerId` had no squad. */
+export function swapCheck(state: GameState, officerId: Id, withId: Id): { ok: true; reason: null } | { ok: false; reason: string } {
+  const a = state.officers[officerId], b = state.officers[withId];
+  if (!a || !b) return { ok: false, reason: 'No such officer' };
+  if (a.id === b.id) return { ok: false, reason: 'Choose a different officer' };
+  const to = b.squadId ? state.squads.find((s) => s.id === b.squadId) : undefined;
+  if (!to) return { ok: false, reason: `${fullName(b)} is not in a squad` };
+  if (a.squadId === b.squadId) return { ok: false, reason: `${fullName(a)} and ${fullName(b)} are both in ${to.name}` };
+  for (const o of [a, b]) if (o.assignment?.kind === 'operation') return { ok: false, reason: `${fullName(o)} is on a call. Swap them once it ends` };
+  return { ok: true, reason: null };
+}
+
+function swapSquadMembers(d: GameState, officerId: Id, withId: Id): HandlerResult {
+  const check = swapCheck(d, officerId, withId);
+  if (!check.ok) return refusal(check.reason);
+  const a = d.officers[officerId], b = d.officers[withId];
+  const to = squadOf(d, b.squadId!)!;
+  const from = a.squadId ? squadOf(d, a.squadId) : undefined;
+  const takeSeat = (sq: Squad, out: Id, into: Id) => {
+    sq.officerIds = sq.officerIds.map((id) => id === out ? into : id);
+    if (sq.leaderId === out) sq.leaderId = into;
+  };
+  takeSeat(to, b.id, a.id);
+  if (from) takeSeat(from, a.id, b.id);
+  a.squadId = to.id;
+  b.squadId = from?.id ?? null;
+  clearPendingMove(d, a.id);
+  clearPendingMove(d, b.id);
   return OK;
 }
 
@@ -346,6 +405,7 @@ export const ROSTER_HANDLERS = {
   createSquad,
   renameSquad,
   assignToSquad,
+  swapSquadMembers,
   cancelPendingSquadMove,
   setLeader,
   setSquadDuty,

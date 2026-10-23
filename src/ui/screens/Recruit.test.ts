@@ -60,10 +60,11 @@ describe('ordinary recruitment refresh', () => {
     expect(html).toContain('Refresh candidates');
     expect(html).not.toContain('Role for next');
     expect(html).not.toContain('role to target');
-    expect(html).not.toContain('role="radiogroup"');
+    // The role rail filters the list on screen; it never targets the next search.
+    expect(html).toContain('Show candidates by role');
     for (const c of state.candidates) {
       const name = `${c.officer.firstName} ${c.officer.surname}`;
-      expect(html).toContain(name);
+      expect(html).toContain(name.replace(/'/g, '&#x27;'));
       expect(html).toContain(ROLE_META[c.officer.role].label);
       for (const cert of c.officer.certs) expect(html).toContain(CERT_NAME[cert]);
     }
@@ -153,7 +154,7 @@ describe('candidate hire review', () => {
   });
 
   it.each([[0, 1, 2], [2, 0, 1], [1, 2, 0]])('preserves every remaining receipt order through Done sequence %j', (first, second, third) => {
-    const candidates = state.candidates;
+    const candidates = state.candidates.slice(0, 3);
     const original: HireReceipt[] = candidates.map((candidate, index) => ({ candidate, index, projection: projectHire(state, candidate.id) }));
     // Hiring out of display order must not make insertion order dictate the result.
     let receipts = [original[2], original[0], original[1]];
@@ -185,7 +186,8 @@ describe('candidate hire review', () => {
     expect(sheet.html).toContain(`${original.c.officer.firstName} ${original.c.officer.surname} is now on your roster`);
     expect(sheet.html).not.toContain('Confirm hire');
     expect(receipt.html).toContain(`Signing ${money(projection.upfront)} paid`);
-    expect(receipt.html).toContain('Added to roster');
+    expect(receipt.html).toContain('Unassigned');
+    expect(receipt.html).toContain('Put them in a squad');
     expect(receipt.html).not.toContain('leaves ');
     contract.props.onConfirm();
     expect(act).toHaveBeenCalledOnce();
