@@ -275,6 +275,15 @@ goes to wave 2 hq) and archived. Added on the owner's word: brief (local_161e7cd
 brief-gaps (local_74efe97c; owns `src/sim/operation-selectors.ts`, `SupportContext`). Providers merged (465b3ef from
 be1f5bd): verify 3,280 passed, check:ui matches, check:feel only `hq F8.pill`; the barrier is released to settings
 and brief. Routed follow-ups are in the plan's "Changes during wave 1".
+
+Owner, 2026-10-23: "Stop any testing. I am solely focused on visual changes." No tests, gates or Codex reviews;
+lanes and the lead work from screenshots. Merged since: settings (6626b05) and its first-run follow-up (5f7a471),
+brief-gaps (c86d354), the brief rebuild (3254345). `owner-visual-picks` shipped. Gates paused unmerged on
+`claude/ui-gates-coverage-51111a` (7eb5a71). Stale until testing resumes: `src/ui/ui-debt.json`,
+`SMALL_TEXT_CEILING`, `docs/architecture.md`. `feel-lead`'s `node_modules` is now its own install.
+
+Wave 2 (visual only, from 3254345): live-debrief (local_8cb0246e, 5180), team (local_559e07b0, 5176),
+hq (local_47377257, 5175), store (local_05ca9623, 5177). Ownership and routed items: the plan's wave 2 table.
 Lead-owned during the wave: `src/ui/ui-debt.json` and `SMALL_TEXT_CEILING` (lanes lower them on their own branch;
 the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme.css`, `app.css`, `skin.css`,
 `player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
