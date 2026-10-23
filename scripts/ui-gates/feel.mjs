@@ -39,7 +39,7 @@ export const FEEL_SCREENS = {
   hq: { primary: [{ css: '.hq-move .btn-primary' }], density: { css: '.hq-duty', rule: 'squads', label: 'HQ squad rows' }, plates: true },
   board: { primary: [{ css: '.cl-card-button' }], essential: 'cards', density: { css: '.cl-card', rule: 'cards', label: 'board cards' }, plates: true },
   brief: { primary: [{ css: 'button', name: '^Choose team$' }], plates: true },
-  deploy: { primary: [{ css: 'button', name: '^Deploy( [A-Z]|$)' }], plates: true },
+  deploy: { primary: [{ css: 'button', name: '^Deploy( [A-Z]|$)' }], blockReason: '.prepcheck .note-warn, [data-blocked-reason]', plates: true },
   live: { primary: [{ css: '.call-grid .callbtn:not(.callbtn-off)' }], essential: 'choices', plates: true },
   debrief: { primary: [{ css: 'button', name: '^Next call$' }], plates: true },
 };
@@ -110,6 +110,13 @@ export async function feelProbe(cfg) {
     out.jump = { inside: r.top >= 0 && r.bottom <= vh, clear: !!hit && (jump === hit || jump.contains(hit)), disabled: isDisabled(jump) };
   }
 
+  // A blocked screen (nothing can deploy) must say why, in the first viewport.
+  if (screen.blockReason) {
+    const why = [...document.querySelectorAll(screen.blockReason)].find(shown);
+    const r = why ? rectOf(why) : null;
+    out.blocked = { reasonPresent: !!why && (why.textContent ?? '').trim().length > 0, reasonInside: !!r && r.top >= 0 && r.bottom <= vh, text: why ? (why.textContent ?? '').trim().slice(0, 60) : null };
+  }
+
   // ---- F2: essential content, present and not clamped
   const clampOf = (node, stop) => {
     for (let n = node; n && n !== stop?.parentElement && n !== document.body; n = n.parentElement) {
@@ -117,6 +124,7 @@ export async function feelProbe(cfg) {
       const lc = s.webkitLineClamp ?? s.getPropertyValue('-webkit-line-clamp');
       if (lc && lc !== 'none') return `line-clamp ${lc} on ${describe(n)}`;
       if (s.textOverflow === 'ellipsis' && n.scrollWidth > n.clientWidth + 1) return `ellipsis on ${describe(n)}`;
+      if (/hidden|clip/.test(s.overflowX) && n.scrollWidth > n.clientWidth + 1 && n.clientWidth > 0) return `${n.scrollWidth - n.clientWidth}px cut sideways by overflow:${s.overflowX} on ${describe(n)}`;
       if (/hidden|clip/.test(s.overflowY) && n.scrollHeight > n.clientHeight + 1 && n.clientHeight > 0) return `${n.scrollHeight - n.clientHeight}px cut by overflow:${s.overflowY} on ${describe(n)}`;
     }
     return null;
@@ -136,11 +144,12 @@ export async function feelProbe(cfg) {
   if (screen.essential === 'choices') {
     out.choices = [...document.querySelectorAll('.call-grid .callbtn:not(.callbtn-off)')].filter(shown).map((btn, i) => {
       const bar = btn.querySelector('.odds-bar');
-      const odds = bar ?? btn.querySelector('.callbtn-forecast-text');
+      // The percentage is judged on its own element: a bar can be whole while the number beside it is cut.
+      const pct = [...btn.querySelectorAll('.callbtn-forecast-text *, .callbtn-forecast-text')].find((e) => e.children.length === 0 && /\d+\s*%/.test(e.textContent ?? '')) ?? null;
       const harm = btn.querySelector('.callbtn-harm');
       return {
         id: btn.getAttribute('data-action-id') ?? String(i),
-        odds: { present: !!bar && shown(bar) && /\d+\s*%/.test(btn.innerText ?? ''), clamp: odds ? clampOf(odds, btn) : null },
+        odds: { present: !!bar && shown(bar) && !!pct && shown(pct), clamp: pct ? clampOf(pct, btn) : null },
         harm: { present: !!harm && shown(harm) && (harm.textContent ?? '').trim().length > 0, clamp: harm ? clampOf(harm, btn) : null },
       };
     });
@@ -150,7 +159,10 @@ export async function feelProbe(cfg) {
   if (screen.density) {
     const items = [...document.querySelectorAll(screen.density.css)].filter(shown);
     const topEdge = topEl && rectOf(topEl).bottom > 0 && rectOf(topEl).top < vh / 2 ? rectOf(topEl).bottom : 0;
-    out.density = { rule: screen.density.rule, label: screen.density.label, total: items.length, inView: items.filter((x) => { const r = rectOf(x); return r.top >= topEdge - 1 && r.bottom <= bottomEdge + 1; }).length, heights: items.slice(0, 3).map((x) => Math.round(rectOf(x).height)) };
+    out.density = { rule: screen.density.rule, label: screen.density.label, total: items.length, topEdge: Math.round(topEdge), bottomEdge: Math.round(bottomEdge), unobscured: Math.round(bottomEdge - topEdge), maxHeight: Math.max(0, ...items.map((x) => Math.round(rectOf(x).height))),
+      firstHookTop: (() => { const h = items[0]?.querySelector('.cl-card-hook'); return h ? Math.round(rectOf(h).top) : null; })(),
+      firstWarnTop: (() => { const w = items[0]?.querySelector('.cl-card-warning, .optile-warning'); return w ? Math.round(rectOf(w).top) : null; })(),
+      inView: items.filter((x) => { const r = rectOf(x); return r.top >= topEdge - 1 && r.bottom <= bottomEdge + 1; }).length, heights: items.slice(0, 3).map((x) => Math.round(rectOf(x).height)) };
   }
 
   // ---- F5: plates on their first frame. A plate whose art is still loading must already have a tone.
@@ -174,16 +186,55 @@ export async function feelProbe(cfg) {
 
 // ---- verdicts: pure, shared by the walk and the negative controls. Each returns [{ rule, id, detail }].
 
-export function judgePrimary(p, { jump, shortcut = false } = {}) {
-  // Where the scenario allows it (small or short screens, enlarged text), a reachable shortcut to the
-  // live choices stands in for the first choice: the 4B order and the full hook leave it no room there.
-  if (shortcut && jump?.inside && jump.clear && !jump.disabled) return [];
+/**
+ * The primary must exist, be enabled and be reachable. Where the scenario allows a shortcut (small, short
+ * and enlarged-text screens), a shortcut stands in for a first choice below the fold only if the choice
+ * itself exists and is enabled, and tapping the shortcut brings that choice into view, unobscured and
+ * focused. `jumpResult` is what exerciseJump(page) saw when the walk actually tapped it.
+ */
+export function judgePrimary(p, { jump, shortcut = false, jumpResult = null } = {}) {
   if (!p?.found) return [{ rule: 'F1.primary', id: 'primary', detail: 'no primary action found on the screen' }];
   const why = [];
   if (!p.inside) why.push(p.top < 0 ? `starts above the viewport (${p.top}px)` : `ends at ${p.bottom}px, below the first viewport`);
   if (p.coveredBy) why.push(`covered by ${p.coveredBy}`);
   if (p.disabled) why.push('disabled');
-  return why.length ? [{ rule: 'F1.primary', id: 'primary', detail: `"${p.label}" ${why.join('; ')}` }] : [];
+  if (!why.length) return [];
+  const fail = (detail) => [{ rule: 'F1.primary', id: 'primary', detail }];
+  const direct = `"${p.label}" ${why.join('; ')}`;
+  if (!shortcut) return fail(direct);
+  if (p.disabled) return fail(`${direct}; a shortcut cannot stand in for a disabled first choice`);
+  if (!jump?.inside || !jump.clear || jump.disabled) return fail(`${direct}; and the choices shortcut is missing, off screen, covered or disabled`);
+  if (!jumpResult) return fail(`${direct}; the shortcut was not tapped to prove it works`);
+  if (!jumpResult.clicked) return fail(`${direct}; the shortcut could not be tapped (${jumpResult.why})`);
+  if (!jumpResult.choiceFound) return fail(`${direct}; the shortcut leads to no first choice`);
+  if (jumpResult.choiceDisabled) return fail(`${direct}; the shortcut leads to a disabled first choice`);
+  if (!jumpResult.inView) return fail(`${direct}; tapping the shortcut leaves the first choice out of view`);
+  if (jumpResult.covered) return fail(`${direct}; after the shortcut the first choice is covered by ${jumpResult.covered}`);
+  if (!jumpResult.focused) return fail(`${direct}; after the shortcut the first choice does not have focus`);
+  return [];
+}
+
+/**
+ * Taps the shortcut on a live page and reports where the first choice ended up. Node side: `page` is a
+ * Playwright page. `choice` is the selector for the first choice.
+ */
+export async function exerciseJump(page, choice = '.call-grid .callbtn:not(.callbtn-off)') {
+  const jump = page.locator('[data-choices-below]:visible').first();
+  if (!(await jump.count())) return { clicked: false, why: 'no visible shortcut' };
+  try { await jump.click({ timeout: 1500 }); } catch (e) { return { clicked: false, why: String(e).split('\n')[0].slice(0, 80) }; }
+  await page.waitForTimeout(200);
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return { clicked: true, choiceFound: false };
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    const covered = !hit || el === hit || el.contains(hit) ? null : `${hit.tagName.toLowerCase()}${typeof hit.className === 'string' && hit.className ? '.' + hit.className.trim().split(/\s+/)[0] : ''}`;
+    return {
+      clicked: true, choiceFound: true, choiceDisabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
+      inView: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, covered,
+      focused: document.activeElement === el || el.contains(document.activeElement),
+    };
+  }, choice);
 }
 
 const clampDetail = (what, x) => `${what} ${!x.present ? 'is missing' : `is clamped (${x.clamp})`}`;
@@ -191,11 +242,12 @@ export function judgeEssential(r) {
   const bad = [];
   for (const c of r.cards ?? []) {
     if (!c.hook.present || c.hook.clamp) bad.push({ rule: 'F2.essential', id: `hook:${c.id}`, detail: clampDetail('card hook', c.hook) });
-    if (c.warning.present && c.warning.clamp) bad.push({ rule: 'F2.essential', id: `warning:${c.id}`, detail: clampDetail('card warning', c.warning) });
+    // Each card carries its call's descriptor union, so with warnings on every card shows its warning.
+    if (r.warningsOn && (!c.warning.present || c.warning.clamp)) bad.push({ rule: 'F2.essential', id: `warning:${c.id}`, detail: clampDetail('card warning', c.warning) });
+    else if (c.warning.present && c.warning.clamp) bad.push({ rule: 'F2.essential', id: `warning:${c.id}`, detail: clampDetail('card warning', c.warning) });
   }
-  if (r.cards?.length && r.warningsOn && !r.cards.some((c) => c.warning.present)) bad.push({ rule: 'F2.essential', id: 'warning:none', detail: `no card shows its warning line with warnings on (${r.cards.length} cards)` });
   for (const c of r.choices ?? []) {
-    if (!c.odds.present || c.odds.clamp) bad.push({ rule: 'F2.essential', id: `odds:${c.id}`, detail: clampDetail('choice odds', c.odds) });
+    if (!c.odds.present || c.odds.clamp) bad.push({ rule: 'F2.essential', id: `odds:${c.id}`, detail: clampDetail('choice odds and percentage', c.odds) });
     if (!c.harm.present || c.harm.clamp) bad.push({ rule: 'F2.essential', id: `harm:${c.id}`, detail: clampDetail('choice harm', c.harm) });
   }
   return bad;
@@ -204,10 +256,42 @@ export function judgeEssential(r) {
 /** `inset` is the safe-area override the probe ran under; the budget grows by it. The budget is for the
  * default text size: at 2x text the nav labels double, and clipping there is R12's job, not this one's. */
 export function judgeChrome(c, budget = FEEL_BUDGETS.chromePx, scale = 1) {
+  if (![c?.top, c?.bottom].every(Number.isFinite)) return [{ rule: 'F3.chrome', id: 'chrome', detail: 'the chrome measurement is missing or not a number' }];
   if (scale >= 2) return [];
   const allowed = budget + (c.inset?.top ?? 0) + (c.inset?.bottom ?? 0);
   const used = c.top + c.bottom;
   return used > allowed ? [{ rule: 'F3.chrome', id: `chrome@inset${c.inset?.top ?? 0}/${c.inset?.bottom ?? 0}`, detail: `top bar ${c.top}px (${c.topLabel ?? 'none'}) + bottom ${c.bottom}px (${c.bottomLabel ?? 'none'}) = ${used}px, budget ${allowed}px` }] : [];
+}
+
+/** The chrome budget under the safe-area fixture: `padded` is the whole probe result, the chrome is inside it. */
+export const judgePaddedChrome = (padded, scale = 1) => judgeChrome(padded?.chrome, FEEL_BUDGETS.chromePx, scale);
+
+/**
+ * Where two cards cannot fit (small and short screens), the density floor is off, so reach is bounded
+ * instead: no card taller than the viewport less the pinned bars, and the first card's hook and warning
+ * start inside the first viewport.
+ */
+export function judgeSmallScreen(d) {
+  if (!d || d.rule !== 'cards' || d.total < 1) return [];
+  const bad = [];
+  const fail = (id, detail) => bad.push({ rule: 'F4.density', id: `small:${id}`, detail });
+  if (d.maxHeight > d.unobscured) fail('height', `a ${d.label.replace(/s$/, '')} is ${d.maxHeight}px tall, taller than the ${d.unobscured}px between the bars`);
+  const inside = (top) => top !== null && top >= d.topEdge - 1 && top < d.bottomEdge;
+  if (!inside(d.firstHookTop)) fail('hook', `the first card's hook starts at ${d.firstHookTop === null ? 'nowhere (missing)' : `${d.firstHookTop}px`}, outside the first viewport (${d.topEdge} to ${d.bottomEdge}px)`);
+  if (d.firstWarnTop !== null && !inside(d.firstWarnTop)) fail('warning', `the first card's warning starts at ${d.firstWarnTop}px, outside the first viewport (${d.topEdge} to ${d.bottomEdge}px)`);
+  return bad;
+}
+
+/** A blocked deploy (nothing can deploy) must show a disabled control and say why in the first viewport. */
+export function judgeBlocked(r) {
+  const p = r.primary, b = r.blocked;
+  const fail = (detail) => [{ rule: 'F1.primary', id: 'blocked', detail }];
+  if (!p?.found) return fail('no Deploy control on the blocked screen');
+  if (!p.disabled) return fail(`"${p.label}" is enabled although nothing can deploy`);
+  if (!p.inside || p.coveredBy) return fail(`"${p.label}" is not fully visible and unobscured on the blocked screen`);
+  if (!b?.reasonPresent) return fail('the blocked screen gives no reason');
+  if (!b.reasonInside) return fail(`the reason ("${b.text}") is outside the first viewport`);
+  return [];
 }
 
 /** `scale` is the text scale of the run; density is skipped at 2 or more. */
@@ -236,10 +320,10 @@ export function judgeTaps(path, taps) {
 /** `density` and `shortcut` come from the scenario (feel-walk.mjs SCENARIOS). */
 export function judgeScreen(result, { scale = 1, density = true, shortcut = false } = {}) {
   return [
-    ...judgePrimary(result.primary, { jump: result.jump, shortcut }),
+    ...judgePrimary(result.primary, { jump: result.jump, shortcut, jumpResult: result.jumpResult }),
     ...judgeEssential(result),
     ...judgeChrome(result.chrome, FEEL_BUDGETS.chromePx, scale),
-    ...(density ? judgeDensity(result.density, scale) : []),
+    ...(density ? judgeDensity(result.density, scale) : judgeSmallScreen(result.density)),
     ...judgePlates(result.plates),
   ];
 }

@@ -4,7 +4,7 @@
 // and judges the probes with the verdicts in feel.mjs. The R-rule walk lives in docs/captures/.../capture.mjs
 // and is not touched; this is its own driver so the feel rules can be switched on screen by screen.
 import { CAMPAIGN_SEED, FIXED_TIME, HEIGHTS, INSET_FIXTURES } from './manifest.mjs';
-import { FEEL_SCREENS, feelProbe, judgeScreen, judgeShift } from './feel.mjs';
+import { FEEL_SCREENS, exerciseJump, feelProbe, judgeBlocked, judgePaddedChrome, judgeScreen, judgeShift, judgePrimary } from './feel.mjs';
 
 /** The scenario matrix. `paint` scenarios hold art back so the first frame and the load shift can be seen. */
 export const SCENARIOS = [
@@ -18,12 +18,14 @@ export const SCENARIOS = [
   { id: 'timer-off', width: 390, height: HEIGHTS[390], timer: 'off', stepOut: true },
   { id: 'timer-relaxed', width: 390, height: HEIGHTS[390], timer: 'relaxed', stepOut: true },
   { id: 'timer-standard', width: 390, height: HEIGHTS[390], timer: 'standard', stepOut: true },
+  // Every officer unassigned through window.__ti (dev builds), so no squad can deploy. Walks to the Deploy screen only.
+  { id: 'blocked', width: 390, height: HEIGHTS[390], blocked: true },
 ];
-// Not seedable by the harness today, so not walked: long names (no rename action), the empty board
-// (reached only by playing every call; F4 skips below two items anyway), a deliberately blocked deploy
-// (the default Deploy state before a squad is chosen is the blocked state, and F1 judges it).
+// Not seedable by the harness today, so not walked: long names (no rename action) and the empty board
+// (reached only by playing every call; F4 skips below two items anyway).
 
 const ART_DELAY_MS = 1200;
+const STOP = Symbol('end of a scenario that walks only part of the flow');
 
 /** Scale every --sNN type token by `scale`. The app's type scale is px tokens, so this is the nearest to larger text. */
 const scaleType = (scale) => {
@@ -72,6 +74,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
 
       /** Measure a screen's first viewport with no inset, then under the bottom-inset fixture for the chrome budget. */
       const measure = async (name) => {
+        if (sc.blocked && name !== 'deploy') return;
         const screen = FEEL_SCREENS[name.replace(/-reentry$/, '')];
         try {
           let shift = [];
@@ -90,18 +93,29 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         } catch (e) { failures.push(`${sc.id} ${name}: ${String(e).slice(0, 120)}`); }
       };
       const finish = async (name, raw, shift) => {
+        if (sc.blocked) {
+          const findings = judgeBlocked(raw);
+          results.push({ scenario: sc.id, screen: 'deploy-blocked', findings, raw });
+          log(sc.id, name, findings.length);
+          return;
+        }
+        // Where a shortcut may stand in for a first choice below the fold, tap it and see where the choice lands.
+        if (sc.shortcut && FEEL_SCREENS[name.replace(/-reentry$/, '')]?.essential === 'choices' && judgePrimary(raw.primary).length) {
+          raw.jumpResult = await exerciseJump(page);
+          await page.evaluate(() => { scrollTo(0, 0); for (const e of document.querySelectorAll('main, .screen, .live, .app')) e.scrollTop = 0; });
+        }
         const findings = judgeScreen(raw, { scale: sc.textScale ?? 1, density: sc.density !== false, shortcut: !!sc.shortcut });
         // The chrome budget again under the safe-area fixture (notch and home indicator), where it grows by the insets.
         const inset = INSET_FIXTURES.bottom;
         await setInset(inset); await page.waitForTimeout(80);
         const padded = await page.evaluate(feelProbe, { screen: {}, inset: { top: inset.top, bottom: inset.bottom } });
         await setInset(none);
-        const extra = judgeScreen({ primary: { found: true, inside: true, coveredBy: null, disabled: false }, chrome: padded }, { scale: sc.textScale ?? 1 });
+        const extra = judgePaddedChrome(padded, sc.textScale ?? 1);
         results.push({ scenario: sc.id, screen: name, findings: [...findings, ...shift, ...extra], raw });
         log(sc.id, name, findings.length + shift.length + extra.length);
       };
 
-      const step = async (name, fn) => { try { await fn(); } catch (e) { failures.push(`${sc.id} ${name}: ${String(e).slice(0, 160)}`); throw e; } };
+      const step = async (name, fn) => { try { await fn(); } catch (e) { if (e === STOP) throw e; failures.push(`${sc.id} ${name}: ${String(e).slice(0, 160)}`); throw e; } };
       try {
         const t0 = Date.now();
         await page.goto(baseURL);
@@ -110,6 +124,10 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
           await page.getByRole('button', { name: 'Continue to headquarters', exact: true }).click();
           await page.locator('nav').waitFor();
           if (sc.textScale) await page.evaluate(scaleType, sc.textScale);
+          if (sc.blocked) {
+            const n = await page.evaluate(() => Object.values(window.__ti.getState().officers ?? {}).map((o) => window.__ti.send({ type: 'assignToSquad', officerId: o.id, squadId: null }).ok).filter(Boolean).length);
+            if (!n) throw new Error('could not unassign any officer through window.__ti');
+          }
         });
         if (sc.cold) { const p = await page.evaluate(() => window.__paint); cold.push({ scenario: sc.id, firstContentfulPaintMs: p['first-contentful-paint'] ?? null, largestContentfulPaintMs: p['largest-contentful-paint'] ?? null, note: 'dev server, art held back 1.2s, not gated' }); }
         const tab = (t) => page.locator('nav.bottomnav').getByText(t, { exact: true }).click();
@@ -121,7 +139,8 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         });
         await step('deploy', async () => {
           await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
-          await measure('deploy'); // the state the player lands in: nothing chosen yet
+          await measure('deploy'); // the state the player lands in
+          if (sc.blocked) throw STOP;
           if (!(await page.locator('.cl-squads button[aria-pressed="true"]').count())) await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click();
           const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); }
         });
