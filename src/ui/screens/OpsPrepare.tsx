@@ -8,6 +8,7 @@ import {
   spaceViewsForScenario,
 } from '../../sim/operation-selectors';
 import { BASIC_KIT_LINE } from '../../sim/basic-kit';
+import { officerFaceStatus } from '../components/face-status';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
@@ -56,6 +57,8 @@ import { timerSetting } from '../timer';
  * who goes and what they carry. The step and the draft live in call-flow.ts, outside this screen,
  * so Back, browser Back and a detour to another tab keep them. `onCancel` replaces the flow's Back
  * (tests and the Lab). */
+const BASIC_KIT_ICONS: [string, string][] = [['radio_kit', 'Radio headset'], ['service_sidearm', 'Sidearm'], ['compact_carbine', 'Carbine'], ['light_protection', 'Light armor']];
+
 export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioId: Id; step?: FlowStep; onCancel?: () => void }) {
   const g = useGame();
   const now = Date.now();
@@ -337,7 +340,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
                 <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
               </span>
               <span className="cl-faces" aria-hidden="true">
-                {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} />)}
+                {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} name={officer.surname} status={officerFaceStatus(g, officer.id, now)} />)}
               </span>
             </button>
           );
@@ -357,9 +360,12 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
         </div>
         <Card className="cl-plan-card">
-          {index === 0 && <Row className="cl-plan-row" lead={<span className="cl-well"><Icon name="basicKit" size={24} /></span>} title="Basic kit" detail={BASIC_KIT_LINE} />}
-          {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={24} />{item.text}</li>)}</ul>
-            : <p className="cl-muted cl-plan-empty">Nothing from the Armory.</p>}
+          {index === 0 && <>
+            <Row className="cl-plan-row" lead={<span className="cl-well"><Icon name="basicKit" size={24} /></span>} title="Basic kit" detail={kit.length === 0 ? 'Nothing from the Armory.' : undefined} />
+            <ul className="cl-kit cl-basic-icons" aria-label={BASIC_KIT_LINE}>{BASIC_KIT_ICONS.map(([id, label]) => <li key={id} className="cl-kit-chip"><GearArt itemId={id} size={24} />{label}</li>)}</ul>
+          </>}
+          {kit.length > 0 && <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={24} />{item.text}</li>)}</ul>}
+          {kit.length === 0 && index > 0 && <p className="cl-muted cl-plan-empty">Nothing from the Armory.</p>}
         </Card>
         <div className="cl-section-head">
           <h3 className="cl-section-title"><Icon name="door" size={20} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>

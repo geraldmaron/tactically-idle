@@ -6,9 +6,10 @@
 .cl-board-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp1) var(--sp3); min-height: var(--touch); flex-wrap: wrap; }
 .cl-board-aside { display: inline-flex; align-items: center; gap: var(--sp3); margin-left: auto; }
 .cl-board-count { font-size: var(--s14); color: var(--t3); }
-.cl-board-next { display: inline-flex; align-items: center; gap: var(--sp1); margin-right: var(--sp2); color: var(--t2); vertical-align: bottom; }
+.cl-board-next { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--t2); vertical-align: bottom; }
 .cl-board-link { display: inline-flex; align-items: center; min-height: var(--touch); color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); text-decoration: none; }
-.cl-board-note { margin: 0; font-size: var(--s14); color: var(--t3); }
+.cl-board-note { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); margin: 0; font-size: var(--s14); color: var(--t3); }
+.cl-info { display: inline-grid; place-items: center; width: var(--touch); height: var(--touch); margin: calc(-1 * var(--sp2)) calc(-1 * var(--sp3)) calc(-1 * var(--sp2)) 0; border: 0; background: none; color: var(--t3); cursor: pointer; }
 .cl-board-list { display: flex; flex-direction: column; gap: var(--sp2); }
 .cl-board-casebook { scroll-margin-top: var(--sp4); }
 
@@ -44,7 +45,6 @@
 .cl-card-foot { display: flex; align-items: center; gap: var(--sp2); }
 .cl-card-ready { display: inline-flex; align-items: center; gap: var(--sp2); flex: 1 1 auto; min-width: 0; font-size: var(--s14); color: var(--t2); }
 .cl-ready-badges { display: inline-flex; gap: var(--sp1); }
-.cl-ready-badges .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
 .cl-ready-text { min-width: 0; }
 .cl-card-pay { display: grid; justify-items: end; gap: 0; flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
 .cl-card-pay-up { color: var(--t3); }
