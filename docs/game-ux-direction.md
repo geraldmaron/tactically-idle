@@ -17,6 +17,38 @@ These are the conventions of current mobile management and idle games (collectio
 5. **Progress per collection.** Each branch or set shows owned / total as a bar.
 6. **Caps and no bleed.** At most five operations on the board. Nothing scrolls sideways or gets cut off at a screen edge.
 
+## Component contract (owner, 2026-10-23)
+
+The owner, on the feel slice's HQ: squads side by side break on an odd count, the cash in the header
+is too big, and the other header items feel weak and lifeless. Wanted: compact, information-rich,
+uniform, aligned on one grid, built from components common in current mobile apps and games. Every
+screen and every session follows these; a package that needs something new adds it here first.
+
+1. **Grid.** 16px side gutter, 4px spacing steps, one card radius (`--r2`). Every row on a screen
+   starts its lead at the gutter and ends its trail at the gutter, so leads, titles and trails line
+   up down the page.
+2. **Variable counts are lists, not grids.** Squads, timers, patrol, staff, calls, anything whose
+   count can be odd or grow, render as an inset grouped list: one `Card` holding `Row`s split by a
+   hairline. Grids are only for sets fixed at an even size. Officer tiles stay 2-up (owner decision,
+   2026-10-23) until the owner says otherwise.
+3. **Row.** `Row` with a lead (face stack, art or kit icon in a 40px well), a title, one detail line
+   of facts joined by " · ", and a trail (a status chip, a compact segmented control, a value, or a
+   chevron, never two of the same). 56px minimum, 64px with faces. One row per thing.
+4. **Section header.** Icon and title on the left; the count as quiet text and the action as a quiet
+   text button together on the right, on one baseline with the title. No outlined buttons in headers.
+5. **Resource bar.** One 44px row of uniform resource pills: same height (32px), same radius, same
+   type. Each pill is a tinted icon well, a tabular value and, where it has one, a progress ring on
+   the well (trust out of 100, level toward the next). Cash is a pill like the others: kit icon, not
+   a photo, the value at the pill size with the hourly rate as a small muted suffix, and a brief tick
+   when it changes. The menu is an icon button at pill height. Nothing in the bar is larger than
+   anything else.
+6. **Segmented control.** Two or three choices in a row (duty, filters) use `ChoiceRail` at the
+   compact size inside a row's trail, icon plus short word, 36px tall with a 44px hit area.
+7. **Chips.** One chip at 12px, 28px tall, three tones, as the audit set. A chip states a status; it
+   is not a button and not a heading.
+8. **Life without size.** Motion and color carry state, not scale: a ring that fills, a number that
+   ticks, a pip that pulses once. Art, faces and icons stay on every surface (see the art contract).
+
 ## Shipped in this slice
 
 | Surface | Before | Now |

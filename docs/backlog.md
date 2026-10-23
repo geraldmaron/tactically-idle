@@ -522,7 +522,7 @@ Codex reviews the merged diff; the owner plays the slice. Nothing in `ui-surface
 Tags: job=command; journeys=answer-a-call, hire-and-equip, debrief-explains; probes=none (layout and art); lane=interface
 Needs: start=ui-gates, feel-slice; integrate=none; ship=none
 
-Each package follows the `feel-slice` rules and passes its checks: existing primitives, the variants it
+Each package follows the `feel-slice` rules and the component contract in `docs/game-ux-direction.md` (owner, 2026-10-23: variable counts as grouped lists, uniform pills and rows on one grid), and passes its checks: existing primitives, the variants it
 replaces deleted, alias tokens migrated (the aliases go after the last package). `feel-slice` covers P6,
 P7 and the HQ part of P2. P3 collapses Team's second tab level only if Hire and Training stay one tap
 away. P4 removes "All upgrades" only after prerequisite discovery, cross-track comparison and

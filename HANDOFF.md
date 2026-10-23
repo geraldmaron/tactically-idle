@@ -180,7 +180,10 @@ until the owner plays the slice.
 
 ## Locks outside normal ownership
 
-None. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
+feel-slice (local_16bb6632), owner feedback 2026-10-23 (header and squad rows, brief sent by the lead):
+the resource bar rules in `src/ui/player-navigation.css` and `.stat*` in `app.css`, a new `Ring` and
+`ChoiceRail` size in `src/ui/components/ui.tsx` and `ChoiceRail.tsx`, and `hub.css`. Rules every session
+follows: the component contract in `docs/game-ux-direction.md`. Earlier: none. live-chat-immersion merged (ad0d329, `npm run verify` 2,992 tests on the merged tip, lead played a
 lapse and a stream cut at 390x844), so its locks are released.
 
 ## Open questions for the owner
