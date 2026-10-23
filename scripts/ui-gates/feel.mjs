@@ -57,7 +57,7 @@ export const FEEL_SCREENS = {
  * `'*'` switches a rule on for every screen. F6.taps is a path rule, enforced when listed under `'path'`.
  */
 export const FEEL_ON = {
-  hq: ['*'], board: ['*'], brief: ['*'], deploy: ['*'], live: ['*'], debrief: ['*'],
+  hq: ['*', 'F7.list', 'F7.marker', 'F8.pill'], board: ['*'], brief: ['*'], deploy: ['*'], live: ['*'], debrief: ['*'],
   'team-patrol': [], 'team-command': [],
   path: ['F6.taps'],
 };

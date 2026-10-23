@@ -12,6 +12,12 @@ describe('Face', () => {
       expect(html).not.toMatch(/>AR</);
     }
   });
+  it('draws an officer with no file portrait as the officer silhouette, not initials', () => {
+    const officer = { id: 'o1', firstName: 'Ana', surname: 'Reyes', portrait: 'missing', role: 'entry' } as never;
+    const html = renderToStaticMarkup(createElement(Face, { kind: 'officer', officer }));
+    expect(html).toContain('data-face="silhouette"');
+    expect(html).not.toMatch(/>AR</);
+  });
   it('comes in three sizes and is decorative unless it is named', () => {
     expect(renderToStaticMarkup(createElement(Face, { size: 'sm' }))).toContain('face-sm');
     expect(renderToStaticMarkup(createElement(Face, { size: 'lg' }))).toContain('face-lg');
