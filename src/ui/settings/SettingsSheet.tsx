@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Sheet } from '../components/Sheet';
-import { Row, Segmented } from '../components/ui';
+import { Card, Row, Section, Segmented } from '../components/ui';
 import { Icon } from '../icons';
-import type { IconName } from '../icons';
 import { useCampaigns } from '../store';
 import { campaignStatus } from '../components/SaveManager';
 import { usePeopleColor } from '../people/PeopleText';
 import { setPeopleColor } from '../people/prefs';
 import { CARD_WARNING_SETTINGS, updateSettings, type PlayerSettings } from './prefs';
 import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
-import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
-import { SupportPanel, useSettings } from './SettingsControls';
+import { CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
+import { SupportPanel, ThemeSwitch, useSettings } from './SettingsControls';
+import { SwitchRow } from './SwitchRow';
 import './menu.css';
 
 export type MenuPage = 'menu' | 'themes' | 'warnings' | 'timer' | 'support';
@@ -53,71 +53,49 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
   const slot = saved.activeSlotId ? saved.slots[saved.activeSlotId - 1] : null;
   const peopleColor = usePeopleColor();
   const chevron = <Icon name="chevronRight" size="md" />;
+  const detail = slot ? `Slot ${saved.activeSlotId} · ${status.detail}` : status.detail;
   return <div className="menu-home">
-    <section className="menu-group" aria-labelledby="menu-campaign">
-      <h3 id="menu-campaign" className="menu-heading"><Icon name="bookmark" size={20} />{MENU_TEXT.campaign}</h3>
-      <Row className={`menu-row${status.attention ? ' menu-row-attention' : ''}`} lead={<Icon name="bookmark" size="md" />} title={slot?.name ?? status.name}
-        detail={slot ? `Slot ${saved.activeSlotId} · ${status.detail}` : status.detail}
-        trail={<button type="button" className="menu-link" onClick={onOpenSaves}>{MENU_TEXT.saves}</button>} />
-    </section>
-    <section className="menu-group" aria-labelledby="menu-settings">
-      <h3 id="menu-settings" className="menu-heading"><Icon name="gear" size={20} />{SETTINGS_TEXT.settingsTitle}</h3>
-      <Row className="menu-row" lead={<Icon name="eye" size="md" />} title={MENU_TEXT.themes} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
-      <Row className="menu-row" lead={<Icon name="warning" size="md" />} title={SETTINGS_TEXT.warningsHeading} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
-      <Row className="menu-row" lead={<Icon name="clock" size="md" />} title={SETTINGS_TEXT.timerHeading} detail={TIMER_LABELS[settings.timer].name} trail={chevron} onClick={() => onPage('timer')} />
-      <MenuSwitch icon="radio" label={SETTINGS_TEXT.soundHeading} checked={settings.sound} onChange={(sound) => updateSettings({ sound })} />
-      <MenuSwitch icon="warning" label={SETTINGS_TEXT.flashingHeading} checked={settings.flashing} onChange={(flashing) => updateSettings({ flashing })} />
-      {/* A display preference kept in this browser, not in the save (src/ui/people). */}
-      <MenuSwitch icon="people" label={MENU_TEXT.peopleColor} checked={peopleColor} onChange={setPeopleColor} />
-    </section>
-    <section className="menu-group" aria-labelledby="menu-support">
-      <h3 id="menu-support" className="menu-heading"><Icon name="heart" size={20} />{MENU_TEXT.support}</h3>
-      <Row className="menu-row" lead={<Icon name="heart" size="md" />} title={MENU_TEXT.talk} detail={MENU_TEXT.talkDetail} trail={chevron} onClick={() => onPage('support')} />
-    </section>
+    <Section id="menu-campaign" icon="bookmark" title={MENU_TEXT.campaign}>
+      <Card className="inset-list">
+        <Row className="menu-link" lead={<Icon name="bookmark" size="md" />} title={slot?.name ?? status.name}
+          detail={status.attention ? <span className="menu-attention">{detail}</span> : detail}
+          trail={<><span className="menu-trail-word">{MENU_TEXT.saves}</span>{chevron}</>} onClick={onOpenSaves} />
+      </Card>
+    </Section>
+    <Section id="menu-settings" icon="gear" title={SETTINGS_TEXT.settingsTitle}>
+      <Card className="inset-list">
+        <Row lead={<Icon name="eye" size="md" />} title={MENU_TEXT.themes} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
+        <Row lead={<Icon name="warning" size="md" />} title={SETTINGS_TEXT.warningsHeading} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
+        <Row lead={<Icon name="clock" size="md" />} title={SETTINGS_TEXT.timerHeading} detail={TIMER_LABELS[settings.timer].name} trail={chevron} onClick={() => onPage('timer')} />
+        <SwitchRow icon="soundwave" title={SETTINGS_TEXT.soundHeading} checked={settings.sound} onChange={(sound) => updateSettings({ sound })} />
+        <SwitchRow icon="bolt" title={SETTINGS_TEXT.flashingHeading} checked={settings.flashing} onChange={(flashing) => updateSettings({ flashing })} />
+        {/* A display preference kept in this browser, not in the save (src/ui/people). */}
+        <SwitchRow icon="people" title={MENU_TEXT.peopleColor} checked={peopleColor} onChange={setPeopleColor} />
+      </Card>
+    </Section>
+    <Section id="menu-support" icon="heart" title={MENU_TEXT.support}>
+      <Card className="inset-list">
+        <Row lead={<Icon name="phone" size="md" />} title={MENU_TEXT.talk} detail={MENU_TEXT.talkDetail} trail={chevron} onClick={() => onPage('support')} />
+      </Card>
+    </Section>
     <p className="menu-note">{SETTINGS_TEXT.settingsSubtitle}</p>
   </div>;
-}
-
-/** A yes or no setting: the switch sits at the end of its row and the whole row toggles it. */
-function MenuSwitch({ icon, label, detail, checked, onChange }: { icon: IconName; label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
-  return <label className="ui-row menu-row menu-switch">
-    <span className="ui-row-lead"><Icon name={icon} size={20} /></span>
-    <span className="ui-row-main">
-      <span className="ui-row-title">{label}</span>
-      {detail && <span className="ui-row-detail">{detail}</span>}
-    </span>
-    <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="toggle-ui" aria-hidden="true" />
-  </label>;
 }
 
 /** Only the themes a player can avoid are switches; one line names those every call can carry. */
 function ThemesPage({ settings }: { settings: PlayerSettings }) {
   return <div className="menu-page">
     <p className="menu-hint">{SETTINGS_TEXT.avoidHint}</p>
-    {AVOIDABLE_THEMES.map((theme) => {
-      const on = settings.avoidThemes.includes(theme);
-      const blocked = !canAvoid(settings.avoidThemes, theme);
-      return <div key={theme}>
-        <MenuSwitchBlocked theme={theme} on={on} blocked={blocked}
-          onChange={(checked) => updateSettings({ avoidThemes: THEME_ORDER.filter((x) => x === theme ? checked : settings.avoidThemes.includes(x)) })} />
-        {blocked && <p className="settings-reason">{BLOCKED_BY_CHOICES_REASON}</p>}
-      </div>;
-    })}
+    <Card className="inset-list">
+      {AVOIDABLE_THEMES.map((theme) => {
+        const on = settings.avoidThemes.includes(theme);
+        const blocked = !canAvoid(settings.avoidThemes, theme);
+        return <ThemeSwitch key={theme} theme={theme} on={on} blocked={blocked}
+          onChange={(checked) => updateSettings({ avoidThemes: THEME_ORDER.filter((x) => x === theme ? checked : settings.avoidThemes.includes(x)) })} />;
+      })}
+    </Card>
     {ALWAYS_THEMES.length > 0 && <p className="menu-hint">{MENU_TEXT.everyCall(joinThemes(ALWAYS_THEMES.map((theme) => CARD_THEME_WORDS[theme])))}</p>}
   </div>;
-}
-
-function MenuSwitchBlocked({ theme, on, blocked, onChange }: { theme: (typeof THEME_ORDER)[number]; on: boolean; blocked: boolean; onChange: (on: boolean) => void }) {
-  return <label className="ui-row menu-row menu-switch" data-blocked={blocked || undefined}>
-    <span className="ui-row-lead"><Icon name="eye" size={20} /></span>
-    <span className="ui-row-main">
-      <span className="ui-row-title">{THEME_LABELS[theme].name}</span>
-      <span className="ui-row-detail">{THEME_LABELS[theme].detail}</span>
-    </span>
-    <input type="checkbox" role="switch" checked={on} disabled={blocked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="toggle-ui" aria-hidden="true" />
-  </label>;
 }
 
 function ChoicePage({ hint, detail, children }: { hint: string | null; detail: string; children: ReactNode }) {

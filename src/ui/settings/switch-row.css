@@ -1,0 +1,9 @@
+/* The switch row (SwitchRow.tsx). The track and thumb are the shared .toggle-ui from app.css. */
+.switch-row { cursor: pointer; }
+.switch-row .ui-row-trail { display: flex; align-items: center; }
+.switch-row input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-row .toggle-ui { margin-top: 0; }
+.switch-row input:checked + .toggle-ui { background: var(--good); }
+.switch-row input:checked + .toggle-ui::after { transform: translateX(18px); background: var(--t1); }
+.switch-row input:focus-visible + .toggle-ui { outline: 2px solid var(--act); outline-offset: 2px; }
+.switch-row[data-blocked] { cursor: default; opacity: .6; }
