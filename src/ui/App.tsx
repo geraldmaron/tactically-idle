@@ -7,6 +7,7 @@ import { textureVars } from './art/Plates';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
+import { BeatProvider } from './components/BeatProvider';
 import { OverlayRootContext } from './components/Sheet';
 import { NavContext, topTab, usePlayerNavigation } from './components/nav';
 import { ChromeProvider, useChromeShell } from './components/chrome';
@@ -68,6 +69,7 @@ function GameShell() {
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
+              <BeatProvider>
                 <div className="chrome-head" ref={chrome.setHead}>
                   {mode === 'desk' && <TopBar onOpenMenu={() => setMenuOpen(true)} />}
                 </div>
@@ -88,6 +90,7 @@ function GameShell() {
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
                 <WelcomeBack />
                 <GrantToasts />
+              </BeatProvider>
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>
