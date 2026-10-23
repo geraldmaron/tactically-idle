@@ -29,7 +29,7 @@ Same frame, same size, never a bare gap and never initials:
 
 | Provider | Stand-in |
 |---|---|
-| `Face`, `Portrait`, `ManagerPortrait` | The shared `Silhouette` (`src/ui/portraits/Silhouette.tsx`): head and shoulders, a cap brim for officers, a hood for a subject. `Portrait` adds its personnel-file grid and, at 100px and up, the caption "NO PHOTO ON FILE". A vacant Command Staff seat shows the silhouette dimmed with the post's icon or a lock. |
+| `Face`, `Portrait`, `ManagerPortrait` | The shared `Silhouette` (`src/ui/portraits/Silhouette.tsx`): head and shoulders, a cap brim for officers, a hood for a subject. `Portrait` draws it on a faint personnel-file grid with no caption (tiles crop and overlay the art; the accessible label says "no photo on file"). A vacant Command Staff seat shows the silhouette dimmed with the post's icon or a lock. |
 | `GearArt`, `EmblemArt` | The kit icon, snapped to 16, 20 or 24px by the frame's size, centred on the round enamel (`.art-fallback`, `src/ui/art/art.css`) at the art's own size. |
 
 ## Sizes

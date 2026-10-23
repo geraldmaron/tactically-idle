@@ -13,11 +13,8 @@ const officer = { id: 'off_test', identityId: 'missing_test_person', firstName: 
 describe('honest portrait and art rendering', () => {
   it('renders a deliberate personnel file without making a broken-image request', () => {
     const html = renderToStaticMarkup(createElement(Portrait, { officer, size: 120, age: 45 }));
-    expect(html).toContain('NO PHOTO');
-    expect(html).toContain('ON FILE');
     expect(html).toContain('Sam West; no photo on file');
-    // The stand-in is the shared role silhouette, never initials; strip-sized cards leave the caption off
-    // (it would not be legible) and keep the silhouette and the accessible label.
+    // The stand-in is the shared role silhouette, never initials and no caption (callers crop and overlay the art).
     expect(html).toContain('class="silhouette');
     expect(html).not.toContain('>SW<');
     const small = renderToStaticMarkup(createElement(Portrait, { officer, size: 80 }));
@@ -25,6 +22,7 @@ describe('honest portrait and art rendering', () => {
     expect(small).toContain('class="silhouette');
     expect(small).not.toContain('>SW<');
     expect(small).not.toContain('NO PHOTO');
+    expect(html).not.toContain('NO PHOTO');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('legacy-procedural');
   });
@@ -41,9 +39,8 @@ describe('honest portrait and art rendering', () => {
         const html = renderToStaticMarkup(createElement(Portrait, { officer: saved }));
         if (portraitManifest.readyIds.includes(person.id)) {
           expect(html).toContain(`src="${assetUrl(person.portrait)}"`);
-          expect(html).not.toContain('NO PHOTO');
         } else {
-          expect(html).toContain('NO PHOTO');
+          expect(html).toContain('no photo on file');
           expect(html).not.toContain('<img');
         }
         expect(html).not.toContain('legacy-procedural');

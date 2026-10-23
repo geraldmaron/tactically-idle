@@ -36,9 +36,9 @@ export function Portrait({ officer, size = 80, className, age }: PortraitProps) 
     <div className={`portrait-art${className ? ` ${className}` : ''}`} style={style} data-portrait={failed ? 'unavailable' : 'painted'} title={age === undefined ? name : `${name} · age ${Math.floor(age)} · file portrait`}>
       {failed ? (
         <div className="portrait-file" role="img" aria-label={`Personnel file for ${name}; no photo on file`} style={{ ['--portrait-grid' as string]: `${size / 6}px` }}>
+          {/* No caption: callers crop and overlay the art (a tile clips it and lays the name over its foot), so the
+              silhouette on the file grid and the accessible label say there is no photo. */}
           <Silhouette kind="officer" />
-          {/* The caption is only legible on large cards; small ones keep the silhouette and the accessible label. */}
-          {size >= 100 && <span className="portrait-file-caption" aria-hidden="true">NO PHOTO<br />ON FILE</span>}
         </div>
       ) : (
         <img key={key} src={portraitSource(key)} alt={`File portrait of ${name}`} width={size} height={Math.round(size * 1.04)} draggable={false} onError={() => setFailedKey(key)} />
