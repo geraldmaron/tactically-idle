@@ -7,10 +7,10 @@
 import { useMemo } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { FactStatusChip } from '../components/FactStatusChip';
-import type { Briefing } from '../../sim/operation-selectors';
+import { callTier, type Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
-import { countdown, DifficultyChip, EnvChips, familyBlurb, useNow } from '../components/incident';
+import { countdown, EnvChips, familyBlurb, TierChevrons, useNow } from '../components/incident';
 import { Face, type FaceKind } from '../components/Face';
 import { PlateArt, sceneFor } from '../art/Plates';
 import { Icon } from '../icons';
@@ -41,6 +41,8 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
   // text. It does not depend on the color preference, which only decides whether prose is tinted.
   const lexicon = useMemo(() => scenario ? lexiconFor(scenario, null, []) : null, [scenario]);
   const range = scenario?.squadRange;
+  // The call's tier, never called difficulty or risk: tiers do not compare across call types. Authored calls have none.
+  const tier = scenario ? callTier(scenario.id) : null;
   return (
     <div className="pb">
       {/* The scene plate: the call's painted place at the shared plate height. The place is a
@@ -51,9 +53,9 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
         {openUntil !== undefined && <OpenFor until={openUntil} />}
       </div>
       {/* The stakes under the plate: what it pays, how hard it reads, how many squads it takes. */}
-      {(scenario?.rewards || intel.difficulty || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
+      {(scenario?.rewards || tier !== null || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
         {scenario?.rewards && <li><Chip tone="amber" icon="cash" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(scenario.rewards.funding)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
-        {intel.difficulty && <li><DifficultyChip band={intel.difficulty.band} /></li>}
+        {tier !== null && <li><Chip title="The call's tier"><TierChevrons tier={tier} />Tier {tier}</Chip></li>}
         {range && <li><Chip icon="people">{`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} ${range.max > 1 ? 'squads' : 'squad'}`}</Chip></li>}
       </ul>}
       {/* Orders first (docs/ops-experience.md, Brief), each with the face of the one person it names. */}
@@ -62,15 +64,10 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
           <h3 id="pb-orders-h" className="pb-h"><Icon name="flag" size={16} />Your orders</h3>
           {aside && <span className="pb-h-aside">{aside}</span>}
         </div>
-        {brief.objectives.length
-          ? <Card className="pb-card"><ul className="pb-list pb-orders" data-ui-list>{brief.objectives.map((text, index) => {
-            // The data's own objective, when it is the one this text came from.
-            const objective = scenario?.objectives[index]?.label === text ? scenario.objectives[index] : null;
-            const entry = objective ? orderPerson(objective, lexicon) : null;
-            return <li key={index}><Row className="pb-row pb-order"
-              lead={<OrderLead n={index + 1} entry={entry} />}
-              title={<PeopleText text={text} />} /></li>;
-          })}</ul></Card>
+        {brief.objectiveRefs.length
+          ? <Card className="pb-card"><ul className="pb-list pb-orders" data-ui-list>{brief.objectiveRefs.map((objective, index) => <li key={objective.id}><Row className="pb-row pb-order"
+            lead={<OrderLead n={index + 1} entry={orderPerson(objective, lexicon)} />}
+            title={<PeopleText text={objective.label} />} /></li>)}</ul></Card>
           : <p className="dim">No orders listed.</p>}
       </section>
 
@@ -98,10 +95,6 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
 
       {intel.environment && <section className="pb-block pb-conditions" aria-label="Conditions">
         <div className="chips"><EnvChips env={intel.environment} /></div>
-        {!!intel.difficulty?.drivers.length && <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={16} />{driver}</li>)}</ul>}
-      </section>}
-      {!intel.environment && !!intel.difficulty?.drivers.length && <section className="pb-block pb-conditions" aria-label="Conditions">
-        <ul className="pb-drivers">{intel.difficulty.drivers.slice(0, 3).map((driver, index) => <li key={index}><Icon name="gauge" size={16} />{driver}</li>)}</ul>
       </section>}
 
       <Disclosure name="prep-briefing" className="pb-more" icon="intel" summary="Full dispatch" count={knownRest.length || undefined}>

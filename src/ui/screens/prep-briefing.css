@@ -64,7 +64,6 @@
 .pb-where { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); }
 .pb-where-place { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font-size: var(--s14); color: var(--t2); }
 
-.pb-drivers li { display: flex; gap: var(--sp1); align-items: center; font-size: var(--s14); color: var(--t2); }
 .pb-more { margin-top: calc(-1 * var(--sp1)); }
 
 /* Small phones: tighter section gaps so the orders and the threat both reach the first screen. */
