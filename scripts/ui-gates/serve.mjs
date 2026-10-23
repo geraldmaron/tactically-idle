@@ -74,22 +74,20 @@ export async function serve({ root, given }) {
   const url = `http://localhost:${port}/`;
   const cacheDir = mkdtempSync(path.join(tmpdir(), 'ti-gate-vite-'));
   const script = fileURLToPath(new URL('./vite-server.mjs', import.meta.url));
-  const child = spawn(process.execPath, [script, root, String(port), cacheDir], { cwd: root, stdio: 'ignore', detached: false });
+  // stdin is a pipe the parent holds: when the parent goes for any reason (Ctrl-C, a signal, SIGKILL) it closes,
+  // and vite-server.mjs shuts down and removes its cache. No signal handler is installed here, so the caller keeps
+  // its own.
+  const child = spawn(process.execPath, [script, root, String(port), cacheDir], { cwd: root, stdio: ['pipe', 'ignore', 'ignore'], detached: false });
   let stopped = false;
   const onExit = () => stop();
-  // A cancelled run (Ctrl-C, a killed parent) must not leave Vite or its cache behind. The handler only cleans up;
-  // it hands the signal back (default termination when nothing else listens), so a caller's own handlers still run.
-  const onSignal = (signal) => { stop(); if (process.listenerCount(signal) === 0) process.kill(process.pid, signal); };
-  const onInt = () => onSignal('SIGINT');
-  const onTerm = () => onSignal('SIGTERM');
   const stop = () => {
     if (stopped) return;
     stopped = true;
-    process.off('exit', onExit); process.off('SIGINT', onInt); process.off('SIGTERM', onTerm);
+    process.off('exit', onExit);
     child.kill();
     rmSync(cacheDir, { recursive: true, force: true });
   };
-  process.on('exit', onExit); process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
+  process.on('exit', onExit);
   for (let i = 0; i < 60 && !(await reachable(url)); i++) await new Promise((r) => setTimeout(r, 500));
   if (!(await reachable(url))) { stop(); throw new Error(`could not start a dev server on port ${port}`); }
   return { url, stop };
