@@ -2,7 +2,7 @@
 // discrete event floats up from it as a signed chip, and one Finance view explains the hourly
 // rate and lists recent events. Nothing here invents money: between ticks the balance follows the
 // settled rate only while it is really accruing, and it snaps to the saved value on every tick.
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameState, LedgerEntry, LedgerKind, SquadDuty } from '../../sim/types';
 import { budget } from '../../sim/department-selectors';
@@ -11,134 +11,17 @@ import { fullName } from '../../sim/officer';
 import { Icon, type IconName } from '../icons';
 import { duration, money, moneyFull, perHour, rate, relativeTime, signedMoney } from '../format';
 import './finance.css';
-import { assetUrl } from '../art/assetUrl';
-import { useGame } from '../store';
 import { nextPatrolEventTime } from '../../sim/patrol';
 
 const reducedMotion = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-interface FundingFeedback {
-  pending: number;
-  arrival: number;
-}
-const FundingContext = createContext<FundingFeedback>({ pending: 0, arrival: 0 });
-export const useFundingFeedback = () => useContext(FundingContext);
-export const CASH_FLIGHT_MS = 650;
-export const MAX_CASH_SPRITES = 24;
+/** Smaller changes than this are not news: no floating chip for them. */
+export const MIN_NEWS = 25;
 
-/** One shell-owned layer. It presents receipts; it never dispatches or changes saved money. */
+/** Money never flies. Patrol accrual and payouts reach the balance quietly; the shell keeps this
+ * provider so the receipts stay in one place. */
 export function FundingFeedbackProvider({ children }: { children: ReactNode }) {
-  const game = useGame();
-  const ledger = game.department.ledger ?? [];
-  const lastSeq = ledger.reduce((max, entry) => Math.max(max, entry.seq), 0);
-  const layer = useRef<HTMLDivElement>(null);
-  const seen = useRef(lastSeq);
-  const observedAmounts = useRef<WeakMap<object, number> | null>(null);
-  if (!observedAmounts.current) {
-    observedAmounts.current = new WeakMap();
-    for (const entry of ledger) observedAmounts.current.set(entry, entry.amount);
-  }
-  const mounted = useRef(true);
-  const flights = useRef(new Map<number, { amount: number; finish: () => void }>());
-  const [pending, setPending] = useState(0);
-  const [arrival, setArrival] = useState(0);
-  const reconcile = useCallback(() => {
-    for (const flight of [...flights.current.values()]) flight.finish();
-  }, []);
-  useEffect(() => {
-    mounted.current = true;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    document.addEventListener('visibilitychange', reconcile);
-    media.addEventListener('change', reconcile);
-    return () => {
-      mounted.current = false;
-      document.removeEventListener('visibilitychange', reconcile);
-      media.removeEventListener('change', reconcile);
-      reconcile();
-    };
-  }, [reconcile]);
-
-  const collect = useCallback((sequence: number, amount: number, origin: { x: number; y: number }, actions: number) => {
-    if (!mounted.current || flights.current.has(sequence) || amount <= 0) return;
-    const host = layer.current;
-    const target = host?.parentElement?.querySelector<HTMLElement>('[data-funding-target]');
-    if (!host || !target || reducedMotion() || document.hidden || typeof target.animate !== 'function') {
-      setArrival((n) => n + 1); return;
-    }
-    const box = host.getBoundingClientRect();
-    const destination = target.getBoundingClientRect();
-    const x = destination.x + destination.width / 2;
-    const y = destination.y + destination.height / 2;
-    const hit = document.elementFromPoint(x, y);
-    if (!hit || !target.contains(hit)) { setArrival((n) => n + 1); return; }
-    // A backlog can only affect presentation: finish the oldest flight before admitting more.
-    while (host.childElementCount > MAX_CASH_SPRITES - 3) flights.current.values().next().value?.finish();
-    const sprites: HTMLImageElement[] = [];
-    let finished = false;
-    let timer = 0;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timer);
-      for (const sprite of sprites) { sprite.getAnimations().forEach((a) => a.cancel()); sprite.remove(); }
-      flights.current.delete(sequence);
-      if (mounted.current) {
-        setPending([...flights.current.values()].reduce((sum, f) => sum + f.amount, 0));
-        setArrival((n) => n + 1);
-      }
-    };
-    flights.current.set(sequence, { amount, finish });
-    setPending([...flights.current.values()].reduce((sum, f) => sum + f.amount, 0));
-    const count = Math.min(3, Math.max(1, actions));
-    for (let i = 0; i < count; i++) {
-      const sprite = document.createElement('img');
-      sprite.src = assetUrl('art/plates/tex_cash.webp');
-      sprite.alt = '';
-      sprite.className = 'cash-sprite';
-      host.append(sprite); sprites.push(sprite);
-      const sx = origin.x - box.x - 18, sy = origin.y - box.y - 18;
-      const ex = x - box.x - 18, ey = y - box.y - 18;
-      const fan = (i - (count - 1) / 2) * 28;
-      // Sample a cubic arc into compositor keyframes. React never advances particles per frame.
-      const fx = sx + fan, fy = sy - 34;
-      const frames: Keyframe[] = [
-        { transform: `translate(${sx}px, ${sy}px) scale(.5) rotate(-12deg)`, opacity: 0, offset: 0 },
-        { transform: `translate(${fx}px, ${fy}px) scale(1.15) rotate(${fan / 2}deg)`, opacity: 1, offset: .2 },
-      ];
-      for (let step = 1; step <= 12; step++) {
-        const t = step / 12, u = 1 - t;
-        const cx = u ** 3 * fx + 3 * u ** 2 * t * (fx + fan * 1.5) + 3 * u * t ** 2 * (ex + 50) + t ** 3 * ex;
-        const cy = u ** 3 * fy + 3 * u ** 2 * t * (fy - 80) + 3 * u * t ** 2 * (ey + 30) + t ** 3 * ey;
-        frames.push({ transform: `translate(${cx}px, ${cy}px) scale(${1.15 - .7 * t}) rotate(${fan / 2 * u}deg)`, opacity: t > .9 ? (1 - t) * 10 : 1, offset: .2 + .8 * t });
-      }
-      sprite.animate(frames, { duration: CASH_FLIGHT_MS, delay: i * 35, easing: 'cubic-bezier(.35,0,.65,1)', fill: 'both' });
-    }
-    timer = window.setTimeout(finish, CASH_FLIGHT_MS + (count - 1) * 35);
-  }, []);
-
-  // Patrol accrual is already in the authoritative ledger when this runs. The scene marker only
-  // decides whether to present the flight; leaving HQ, reduced motion, and spending reconcile at once.
-  useEffect(() => {
-    if (lastSeq <= seen.current) { seen.current = lastSeq; return; }
-    const fresh = ledger.filter((entry) => entry.seq > seen.current);
-    seen.current = lastSeq;
-    if (fresh.some((entry) => entry.kind !== 'patrol')) reconcile();
-    const patrol = fresh.map((entry) => {
-      const previous = observedAmounts.current!.get(entry) ?? 0;
-      observedAmounts.current!.set(entry, entry.amount);
-      return { entry, amount: entry.amount - previous };
-    }).filter(({ entry, amount }) => entry.kind === 'patrol' && amount > 0);
-    const source = document.querySelector<HTMLElement>('[data-patrol-funding-origin]');
-    if (!patrol.length || !source) return;
-    const rect = source.getBoundingClientRect();
-    if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) return;
-    const amount = patrol.reduce((sum, posting) => sum + posting.amount, 0);
-    collect(lastSeq, amount, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }, Math.min(3, patrol.length + 1));
-  }, [collect, lastSeq, ledger, reconcile]);
-  useEffect(() => {
-    if (!document.querySelector('[data-patrol-funding-origin]')) reconcile();
-  });
-  return <FundingContext.Provider value={{ pending, arrival }}>{children}<div ref={layer} className="funding-flight-layer" aria-hidden="true" /></FundingContext.Provider>;
+  return <>{children}</>;
 }
 
 /** Funding as of `now`: the settled balance plus the hourly rate since settlement, but only inside
@@ -160,9 +43,7 @@ export interface FundingDelta { key: number; amount: number; label: string }
 /** The balance to show and the deltas floating off it. Deltas come from new ledger entries only;
  * the ledger already present when the view mounts is history, not news. */
 export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDelta[] } {
-  const feedback = useFundingFeedback();
-  const pendingRef = useRef(feedback.pending);
-  pendingRef.current = feedback.pending;
+  const pendingRef = useRef(0);
   const ledger = g.department.ledger ?? [];
   const lastSeq = ledger.reduce((max, e) => Math.max(max, e.seq), 0);
   const seen = useRef(lastSeq);
@@ -180,12 +61,12 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
       shownRef.current = g.department.funding;
       setShown(g.department.funding);
     }
-    const visual = document.querySelector('[data-patrol-funding-origin]') ? fresh : fresh.filter((entry) => entry.kind !== 'patrol');
+    const visual = fresh.filter((entry) => entry.kind !== 'patrol');
     if (reducedMotion() || !visual.length) return;
     // One chip per frame of news: several events at once read as their sum.
     // A folded entry announces only its newest posting; the rest was announced when it happened.
     const amount = visual.reduce((sum, e) => sum + (e.latest ?? e.amount), 0);
-    if (Math.round(amount) === 0) return;
+    if (Math.abs(amount) < MIN_NEWS) return;
     const delta = { key: lastSeq, amount, label: visual.length === 1 ? visual[0].label : `${visual.length} changes` };
     setDeltas((list) => [...list.slice(-2), delta]);
     const timer = window.setTimeout(() => setDeltas((list) => list.filter((d) => d.key !== delta.key)), 1800);
@@ -215,6 +96,9 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
       }
       const k = 1 - Math.pow(0.65, Math.min(1000, at - last) / 100);
       last = at;
+      // Ambient accrual is a few dollars at a time: hold the figure until the gap is worth showing, so it
+      // does not crawl. A real payout or a purchase is far larger and still counts across.
+      if (Math.abs(target - current) < 5 && pendingRef.current === 0) { frame = window.requestAnimationFrame(step); return; }
       const next = Math.abs(target - current) < 1 ? target : current + (target - current) * k;
       shownRef.current = next;
       if (Math.round(next) !== Math.round(current)) setShown(next);

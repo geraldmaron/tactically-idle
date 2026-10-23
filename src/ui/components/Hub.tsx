@@ -22,12 +22,12 @@ export function Hub({ pins, title, meta }: { pins: HubPin[]; title?: string; met
   return <section className={`hub${painted ? '' : ' hub-plain'}`} aria-label="Headquarters">
     <div className={`hub-plate${state === 'loaded' ? ' hub-plate-loaded' : ''}`}>
       {painted && <img className="hub-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onLoad={() => setState('loaded')} onError={() => setState('failed')} />}
-      {title && <div className="hub-identity"><h1>{title}</h1>{meta && <span>{meta}</span>}</div>}
-    </div>
-    {pins.length > 0 && <ul className="hub-pins">
+      {pins.length > 0 && <ul className="hub-pins">
       {pins.map((pin) => <li key={pin.room}>
         {pin.onOpen ? <Button size="sm" variant="quiet" onClick={pin.onOpen}>{pin.text}</Button> : <Chip tone={pin.tone === 'harm' ? 'harm' : 'neutral'}>{pin.text}</Chip>}
       </li>)}
     </ul>}
+      {title && <div className="hub-identity"><h1>{title}</h1>{meta && <span>{meta}</span>}</div>}
+    </div>
   </section>;
 }

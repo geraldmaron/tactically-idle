@@ -121,7 +121,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         await step('deploy', async () => {
           await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
           await measure('deploy'); // the state the player lands in: nothing chosen yet
-          await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click();
+          if (!(await page.locator('.cl-squads button[aria-pressed="true"]').count())) await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click();
           const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); }
         });
         await step('live', async () => {
@@ -143,7 +143,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
             const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
             break;
           }
-          await page.getByRole('button', { name: 'Done', exact: true }).waitFor({ timeout: 8000 });
+          await page.getByRole('button', { name: 'Next call', exact: true }).waitFor({ timeout: 8000 });
           await measure('debrief');
         });
       } catch { /* the failed step is recorded; later screens of this scenario are skipped */ }

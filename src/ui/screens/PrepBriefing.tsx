@@ -12,6 +12,7 @@ import { Face, type FaceKind } from '../components/Face';
 import { PlateArt, sceneFor } from '../art/Plates';
 import { familyBlurb } from '../components/incident';
 import { Icon } from '../icons';
+import { money } from '../format';
 import { PeopleGlyph, PeopleText, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
 import { IncidentBriefContext } from './SupportContext';
@@ -37,6 +38,7 @@ export function PrepBriefing({ scenario, brief, intel, aside }: { scenario: Scen
       <div className="plate pb-scene">
         <PlateArt src={sceneFor(scenario?.incident?.type)} />
         {familyBlurb(scenario?.locationFamilyId ?? null) && <span className="pb-scene-place"><Icon name="pin" size={16} />{familyBlurb(scenario?.locationFamilyId ?? null)}</span>}
+        {scenario?.rewards && <span className="pb-scene-pay" aria-label={`Pays up to ${money(scenario.rewards.funding)} and ${scenario.rewards.xp} experience`}><b>{money(scenario.rewards.funding)}</b>{scenario.rewards.xp} XP</span>}
       </div>
       {/* Orders and the threat first (docs/ops-experience.md, Brief), then the cold open whole, then
           who is inside, what is unknown and the conditions. */}

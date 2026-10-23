@@ -216,7 +216,7 @@
 .result-officers .result-officer-body { gap: 4px; }
 .result-officers .result-officer-heading { flex-wrap: nowrap; align-items: flex-start; gap: 6px; }
 .result-officers .result-officer-heading strong { display: block; font-size: 13.5px; line-height: 1.2; overflow-wrap: anywhere; }
-.result-officers .result-xp { padding: 1px 6px; border-radius: 999px; background: rgba(63, 208, 142, 0.14); font-size: 12px; white-space: nowrap; }
+.result-officers .result-xp { padding: var(--sp1) var(--sp2); border-radius: 999px; background: rgba(63, 208, 142, 0.14); font-size: 12px; white-space: nowrap; }
 .result-stress-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 12px; }
 .result-stress-row .stress-mini { font-size: 12px; }
 .result-stress-delta { font-size: 12px; white-space: nowrap; }
@@ -325,5 +325,6 @@
 .lead-choice-cert { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--s14); color: var(--good-text); }
 .prepare .prep-basic-kit { margin: 0; font-size: var(--s14); line-height: 1.4; }
 /* The call's type on the debrief hero: its medallion and name on a dark chip, as on the board's scene. */
-.debrief-type { width: fit-content; display: flex; align-items: center; padding: var(--sp1) var(--sp3) var(--sp1) var(--sp1); border-radius: 999px; background: rgba(8, 13, 22, 0.62); }
-.debrief-type .ct-badge-label { font-size: var(--s14); }
+.debrief-type { width: fit-content; display: flex; align-items: center; padding: 0 var(--sp3) 0 var(--sp1); border-radius: 999px; background: rgba(8, 13, 22, 0.62); }
+.debrief-type .ct-badge { padding-block: var(--sp1); }
+.debrief-type .ct-badge-label { font-size: var(--s14); white-space: nowrap; }

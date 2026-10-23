@@ -33,7 +33,8 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
   const place = [blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
   const pay = scenario?.rewards;
   return (
-    <article className={`cl-card${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}>
+    <article className={`cl-card${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}
+      onClick={onOpen ? (e) => { if (!(e.target as HTMLElement).closest('button, a, input, select, textarea, label')) onOpen(); } : undefined}>
       <div className="cl-card-scene plate">
         <PlateArt src={sceneFor(type ?? undefined)} />
         <div className="cl-card-scene-top">

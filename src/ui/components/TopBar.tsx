@@ -8,7 +8,7 @@ import { Meter } from './ui';
 import { levelProgress } from '../../sim/department-level';
 import { frameworksOpeningAt } from '../../content/unlocks';
 import './topbar-help.css';
-import { FinanceDetail, FundingDeltas, useLiveFunding, useFundingFeedback } from './Finance';
+import { FinanceDetail, FundingDeltas, useLiveFunding } from './Finance';
 import { assetUrl } from '../art/assetUrl';
 import { MenuButton } from './SaveManager';
 import { Icon } from '../icons';
@@ -75,13 +75,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu?: () => void }) {
     return () => { window.removeEventListener('popstate', current.onPop); current.dispose(); };
   }, []);
   const live = useLiveFunding(g);
-  const { arrival } = useFundingFeedback();
   const cash = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!arrival || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const animation = cash.current?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-out' });
-    return () => animation?.cancel();
-  }, [arrival]);
 
   return <DepartmentStatusBar fundingRef={cash} g={g} live={live} topic={topic} onOpen={(next) => navigation.current?.open(next)} onClose={() => navigation.current?.close()} onOpenMenu={onOpenMenu} />;
 }

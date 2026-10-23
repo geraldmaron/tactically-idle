@@ -7,4 +7,4 @@
 .hub-identity { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); width: 100%; min-width: 0; }
 .hub-identity h1 { min-width: 0; margin: 0; font: 700 var(--s22)/1.1 var(--f-title); overflow-wrap: anywhere; text-shadow: 0 2px 7px var(--ink-deep); }
 .hub-identity > span { flex: none; color: var(--t-plate); font: 500 var(--s14)/1.2 var(--f-ui); text-shadow: 0 2px 5px var(--ink-deep); }
-.hub-pins { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: var(--sp2) var(--gutter) 0; list-style: none; }
+.hub-pins { position: absolute; top: var(--sp2); left: var(--gutter); right: var(--gutter); display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }

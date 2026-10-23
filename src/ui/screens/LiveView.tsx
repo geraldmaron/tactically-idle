@@ -305,7 +305,7 @@ export function LiveView(p: LiveViewProps) {
               </span>
             </p>
           </div>
-          {beat === 'decide' && <button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" onClick={(event) => {
+          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide'} onClick={(event) => {
             const live = event.currentTarget.closest('.live');
             const firstChoice = live?.querySelector('.operation-choices .callbtn') ?? live?.querySelector('.operation-choice-count');
             firstChoice?.scrollIntoView({ block: 'center' });

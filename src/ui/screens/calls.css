@@ -14,8 +14,9 @@
 
 .cl-card { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
 .cl-card-open:hover { border-color: var(--t3); }
+.cl-card-open { cursor: pointer; }
 .cl-card-open:focus-within { outline: 2px solid var(--act); outline-offset: 2px; }
-.cl-card-scene { display: flex; flex-direction: column; justify-content: space-between; height: var(--plate-h); padding: var(--sp2) var(--sp3); border-bottom: 1px solid var(--hair); }
+.cl-card-scene { display: flex; flex-direction: column; justify-content: space-between; min-height: var(--plate-h); gap: var(--sp2); padding: var(--sp2) var(--sp3); border-bottom: 1px solid var(--hair); }
 .cl-card-scene.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 85%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 45%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 15%, transparent) 100%); }
 .cl-card-scene-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); }
 .cl-card-scene-end { display: inline-flex; align-items: center; gap: var(--sp2); }
@@ -79,6 +80,7 @@
 .cl-squad:disabled { opacity: 0.55; cursor: default; }
 .cl-squad-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
 .cl-squad-main strong { font-size: var(--s18); }
+.cl-squad-fit { display: inline-flex; align-items: center; gap: var(--sp1); margin-left: var(--sp2); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--good-text); vertical-align: middle; }
 .cl-squad-main > span { font-size: var(--s14); color: var(--t2); }
 .cl-squad-main > span.cl-warn { color: var(--warn-text); }
 .cl-faces { display: inline-flex; flex: 0 0 auto; }
@@ -105,3 +107,4 @@
 .sheet.sheet-short.operation-action-sheet { max-height: min(78%, var(--sheet-available-height)); }
 .operation-action-sheet .operation-commit { display: grid; gap: var(--sp2); }
 .operation-action-sheet .operation-commit-meta { margin: 0; }
+.cl-squad-main strong { display: inline-flex; align-items: center; gap: var(--sp2); }
