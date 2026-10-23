@@ -2,6 +2,7 @@
 // that must trip it and a sibling that must not. `npm run check:feel` runs them first, so a probe that has
 // gone blind fails before it is allowed to say a screen is fine.
 import * as feel from './feel.mjs';
+import { LAYOUT_EXEMPT, judgeLists, judgeMarkers, judgePills, layoutProbe } from './feel-layout.mjs';
 import { feelProbe, judgeChrome, judgeDensity, judgeEssential, judgePlates, judgePrimary, judgeScreen, judgeShift, judgeTaps } from './feel.mjs';
 
 const BASE = '<style>*{box-sizing:border-box}body{margin:0;background:#101820;color:#e8eef5;font:14px/1.3 system-ui}</style>';
@@ -20,6 +21,30 @@ const live = ({ act = 'scroll', choiceOpts = {}, noChoice = false, shortcutAt = 
 };
 const liveScreen = { primary: [{ css: '.call-grid .callbtn:not(.callbtn-off)' }] };
 const jumpJudge = (r) => judgePrimary(r.primary, { jump: r.jump, shortcut: true, jumpResult: r.jumpResult });
+
+// ---- layout gates: lists, markers and the resource bar (feel-layout.mjs)
+const sq = (n, css = '') => `<div class="hq-duty" style="height:72px;${css}">Squad ${n}</div>`;
+const listOf = (items, { marked = true, css = '' } = {}) => `<div class="hq-duties" ${marked ? 'data-ui-list' : ''} style="${css}">${items.join('')}</div>`;
+const registry = [{ key: 'hq-squads', label: 'HQ squads', items: '.hq-duty' }];
+const pillCss = '.resource-bar{display:flex;gap:8px;align-items:center;height:44px}.stat{display:flex;align-items:center;font:700 16px system-ui;padding:0 10px;border:0;background:#223;color:#fff}';
+const pillBar = ({ cash = 32, trust = 32, level = 32, menu = 32, cashImg = null, trustSize = 16 } = {}) => `<header class="resource-bar"><button data-ui-pill class="stat stat-cash" style="height:${cash}px">${cashImg ? `<img alt="" width="${cashImg}" height="${cashImg}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="width:${cashImg}px;height:${cashImg}px">` : ''}$12,300</button><button data-ui-pill class="stat stat-trust" style="height:${trust}px;font-size:${trustSize}px">63</button><button data-ui-pill class="stat stat-level" style="height:${level}px">4</button><button class="menu-btn" style="height:${menu}px;width:32px"></button></header>`;
+const lc = (x) => ({ ...x, kind: 'layout' });
+export const LAYOUT_CONTROLS = [
+  lc({ rule: 'F7.list', bad: true, name: 'three squads, two to a row, in a marked list', html: app(listOf([sq(1, 'float:left;width:48%'), sq(2, 'float:right;width:48%'), sq(3, 'clear:both')])), cfg: { registry }, judge: (r) => judgeLists(r.lists) }),
+  lc({ rule: 'F7.list', bad: true, name: 'a flex-wrap pair of squads in a marked list', html: app(listOf([sq(1, 'width:48%'), sq(2, 'width:48%')], { css: 'display:flex;flex-wrap:wrap;gap:8px' })), cfg: { registry }, judge: (r) => judgeLists(r.lists) }),
+  lc({ rule: 'F7.list', bad: false, name: 'three squads stacked one to a row', html: app(listOf([sq(1), sq(2), sq(3)])), cfg: { registry }, judge: (r) => judgeLists(r.lists) }),
+  lc({ rule: 'F7.list', bad: false, name: 'officer tiles stay 2-up inside a marked grid that is exempt', html: app(`<div class="officer-character-grid" data-ui-list style="display:flex">${sq(1, 'width:50%')}${sq(2, 'width:50%')}</div>`), cfg: { registry, exempt: LAYOUT_EXEMPT }, judge: (r) => judgeLists(r.lists) }),
+  lc({ rule: 'F7.marker', bad: true, name: 'three squads with no marker', html: app(listOf([sq(1), sq(2), sq(3)], { marked: false })), cfg: { registry }, judge: (r) => judgeMarkers(r.registry) }),
+  lc({ rule: 'F7.marker', bad: true, name: 'two squads, one outside the marked list', html: app(listOf([sq(1)]) + sq(2)), cfg: { registry }, judge: (r) => judgeMarkers(r.registry) }),
+  lc({ rule: 'F7.marker', bad: false, name: 'three squads inside a marked list', html: app(listOf([sq(1), sq(2), sq(3)])), cfg: { registry }, judge: (r) => judgeMarkers(r.registry) }),
+  lc({ rule: 'F7.marker', bad: false, name: 'a single squad needs no marker', html: app(listOf([sq(1)], { marked: false })), cfg: { registry }, judge: (r) => judgeMarkers(r.registry) }),
+  lc({ rule: 'F8.pill', bad: false, name: 'three equal 32px pills and a 32px menu button', html: app(pillBar(), pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+  lc({ rule: 'F8.pill', bad: true, name: 'a 44px cash pill', html: app(pillBar({ cash: 44 }), pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+  lc({ rule: 'F8.pill', bad: true, name: 'a menu button taller than the pills', html: app(pillBar({ menu: 44 }), pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+  lc({ rule: 'F8.pill', bad: true, name: 'a pill with its own value size', html: app(pillBar({ trustSize: 22 }), pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+  lc({ rule: 'F8.pill', bad: true, name: 'a cash photo larger than the icon well', html: app(pillBar({ cashImg: 40 }), pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+  lc({ rule: 'F8.pill', bad: true, name: 'a bar with no marked pills', html: app('<header class="resource-bar"><button class="stat">$1</button></header>', pillCss), cfg: { pills: true }, judge: (r) => judgePills(r.bar) }),
+];
 
 const run = (screen, extra = {}) => ({ screen, inset: { top: 0, bottom: 0 }, ...extra });
 const primaryScreen = { primary: [{ css: '#go' }] };
@@ -117,6 +142,14 @@ export async function runFeelControls({ chromium, executablePath }) {
       else if (!c.bad && hits.length) failed.push(`${c.rule} "${c.name}": the check flagged a clean page: ${hits.map((h) => h.detail).join('; ')}`);
     }
     await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, right: 0, bottom: 0, left: 0 } });
+    for (const c of LAYOUT_CONTROLS) {
+      ran++;
+      await page.setContent(c.html);
+      await page.evaluate(() => scrollTo(0, 0));
+      const hits = c.judge(await page.evaluate(layoutProbe, c.cfg)).filter((f) => f.rule === c.rule);
+      if (c.bad && !hits.length) failed.push(`${c.rule} "${c.name}": the check did not catch it`);
+      else if (!c.bad && hits.length) failed.push(`${c.rule} "${c.name}": the check flagged a clean page: ${hits.map((h) => h.detail).join('; ')}`);
+    }
     for (const c of SHIFT_CONTROLS) {
       ran++;
       const p = await context.newPage();

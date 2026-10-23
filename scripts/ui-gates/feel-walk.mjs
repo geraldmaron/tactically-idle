@@ -4,20 +4,26 @@
 // and judges the probes with the verdicts in feel.mjs. The R-rule walk lives in docs/captures/.../capture.mjs
 // and is not touched; this is its own driver so the feel rules can be switched on screen by screen.
 import { CAMPAIGN_SEED, FIXED_TIME, HEIGHTS, INSET_FIXTURES } from './manifest.mjs';
+import { LAYOUT_EXEMPT, LAYOUT_REGISTRY, judgeLists, judgeMarkers, judgePills, layoutProbe } from './feel-layout.mjs';
 import { FEEL_SCREENS, exerciseJump, feelProbe, judgeBlocked, judgePaddedChrome, judgeScreen, judgeShift, judgePrimary } from './feel.mjs';
 
 /** The scenario matrix. `paint` scenarios hold art back so the first frame and the load shift can be seen. */
 export const SCENARIOS = [
   // Small, short and enlarged-text screens are judged on reach: the protected 4B order and full hook leave
   // no room for two cards or the first live choice, so density is off and the live shortcut counts.
-  { id: 'w320', width: 320, height: HEIGHTS[320], paint: true, density: false, shortcut: true },
-  { id: 'w390', width: 390, height: HEIGHTS[390], paint: true, cold: true },
-  { id: 'w430', width: 430, height: HEIGHTS[430] },
-  { id: 'short640', width: 390, height: 640, density: false, shortcut: true },
-  { id: 'text200', width: 390, height: HEIGHTS[390], textScale: 2, shortcut: true },
+  { id: 'w320', layout: true, width: 320, height: HEIGHTS[320], paint: true, density: false, shortcut: true },
+  { id: 'w390', layout: true, width: 390, height: HEIGHTS[390], paint: true, cold: true },
+  { id: 'w430', layout: true, width: 430, height: HEIGHTS[430] },
+  { id: 'short640', layout: true, width: 390, height: 640, density: false, shortcut: true },
+  { id: 'text200', layout: true, width: 390, height: HEIGHTS[390], textScale: 2, shortcut: true },
   { id: 'timer-off', width: 390, height: HEIGHTS[390], timer: 'off', stepOut: true },
   { id: 'timer-relaxed', width: 390, height: HEIGHTS[390], timer: 'relaxed', stepOut: true },
   { id: 'timer-standard', width: 390, height: HEIGHTS[390], timer: 'standard', stepOut: true },
+  // The squad list at the owner's counts (1, and 3 across the three widths). Walks HQ only: `layoutOnly`.
+  { id: 'sq1-390', width: 390, height: HEIGHTS[390], layout: true, layoutOnly: true, squads: 1 },
+  { id: 'sq3-320', width: 320, height: HEIGHTS[320], layout: true, layoutOnly: true, squads: 3 },
+  { id: 'sq3-390', width: 390, height: HEIGHTS[390], layout: true, layoutOnly: true, squads: 3 },
+  { id: 'sq3-430', width: 430, height: HEIGHTS[430], layout: true, layoutOnly: true, squads: 3 },
   // Every officer unassigned through window.__ti (dev builds), so no squad can deploy. Walks to the Deploy screen only.
   { id: 'blocked', width: 390, height: HEIGHTS[390], blocked: true },
 ];
@@ -74,7 +80,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
 
       /** Measure a screen's first viewport with no inset, then under the bottom-inset fixture for the chrome budget. */
       const measure = async (name) => {
-        if (sc.blocked && name !== 'deploy') return;
+        if ((sc.blocked && name !== 'deploy') || sc.layoutOnly) return;
         const screen = FEEL_SCREENS[name.replace(/-reentry$/, '')];
         try {
           let shift = [];
@@ -91,6 +97,20 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
           await page.waitForTimeout(450);
           return finish(name, await page.evaluate(feelProbe, { screen, inset: none }), shift);
         } catch (e) { failures.push(`${sc.id} ${name}: ${String(e).slice(0, 120)}`); }
+      };
+      /** The layout gates (feel-layout.mjs) on a screen's first view: marked lists, the marker registry, the bar's pills. */
+      const measureLayout = async (name) => {
+        if (!sc.layout) return;
+        try {
+          await page.waitForTimeout(450);
+          // Evidence only: FEEL_FORCE_LIST / FEEL_FORCE_PILL are CSS selectors to mark as data-ui-list / data-ui-pill
+          // before probing, to show what the gates would say about today's UI once its containers are marked.
+          if (process.env.FEEL_FORCE_LIST || process.env.FEEL_FORCE_PILL) await page.evaluate(([list, pill]) => { if (list) document.querySelectorAll(list).forEach((e) => e.setAttribute('data-ui-list', '')); if (pill) document.querySelectorAll(pill).forEach((e) => e.setAttribute('data-ui-pill', '')); }, [process.env.FEEL_FORCE_LIST ?? '', process.env.FEEL_FORCE_PILL ?? '']);
+          const raw = await page.evaluate(layoutProbe, { registry: LAYOUT_REGISTRY.filter((e) => e.screen === name), exempt: LAYOUT_EXEMPT, pills: name === 'hq' || name === 'board' });
+          const findings = [...judgeLists(raw.lists), ...judgeMarkers(raw.registry), ...(raw.bar !== null || name === 'hq' || name === 'board' ? judgePills(raw.bar) : [])];
+          results.push({ scenario: sc.id, screen: name, findings, raw: { layout: raw } });
+          log(sc.id, `${name} layout`, findings.length);
+        } catch (e) { failures.push(`${sc.id} ${name} layout: ${String(e).slice(0, 120)}`); }
       };
       const finish = async (name, raw, shift) => {
         if (sc.blocked) {
@@ -124,6 +144,19 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
           await page.getByRole('button', { name: 'Continue to headquarters', exact: true }).click();
           await page.locator('nav').waitFor();
           if (sc.textScale) await page.evaluate(scaleType, sc.textScale);
+          if (sc.squads) {
+            // Seed the squad count through window.__ti (dev builds): 1 folds B into A, 3 adds Charlie from B's officers.
+            const ok = await page.evaluate((count) => {
+              const ti = window.__ti, g = ti.getState();
+              const byId = (id) => Object.values(ti.getState().officers).filter((o) => o.squadId === id);
+              if (count === 1) { for (const o of byId('B')) ti.send({ type: 'assignToSquad', officerId: o.id, squadId: 'A' }); return true; }
+              if (!ti.send({ type: 'createSquad', name: 'Charlie' }).ok) return false;
+              const c = ti.getState().squads.find((x) => x.name === 'Charlie');
+              for (const o of byId('B').slice(0, 2)) ti.send({ type: 'assignToSquad', officerId: o.id, squadId: c.id });
+              return g.squads.length === 2;
+            }, sc.squads);
+            if (!ok) throw new Error('could not seed the squad count through window.__ti');
+          }
           if (sc.blocked) {
             const n = await page.evaluate(() => Object.values(window.__ti.getState().officers ?? {}).map((o) => window.__ti.send({ type: 'assignToSquad', officerId: o.id, squadId: null }).ok).filter(Boolean).length);
             if (!n) throw new Error('could not unassign any officer through window.__ti');
@@ -131,8 +164,14 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         });
         if (sc.cold) { const p = await page.evaluate(() => window.__paint); cold.push({ scenario: sc.id, firstContentfulPaintMs: p['first-contentful-paint'] ?? null, largestContentfulPaintMs: p['largest-contentful-paint'] ?? null, note: 'dev server, art held back 1.2s, not gated' }); }
         const tab = (t) => page.locator('nav.bottomnav').getByText(t, { exact: true }).click();
-        await step('hq', async () => { await tab('HQ'); await measure('hq'); });
-        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await measure('board'); });
+        await step('hq', async () => { await tab('HQ'); await measure('hq'); await measureLayout('hq'); if (sc.layoutOnly) throw STOP; });
+        await step('team', async () => {
+          if (!sc.layout) return;
+          const section = (n) => page.locator('.team-page [aria-label="Team sections"]').getByRole('button', { name: n, exact: true }).click();
+          await tab('Team'); await section('Patrol'); await page.locator('.patrol-page').waitFor(); await measureLayout('team-patrol');
+          await section('Command'); await page.locator('.team-command .command-room').waitFor(); await measureLayout('team-command');
+        });
+        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await measure('board'); await measureLayout('board'); });
         await step('brief', async () => {
           const welcome = page.locator('.welcome-sheet'); if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
           await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await measure('brief');

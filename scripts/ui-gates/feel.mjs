@@ -18,7 +18,13 @@ export const FEEL_RULES = {
   'F5.placeholder': 'a plate is transparent on its first frame, before its art has loaded',
   'F5.shift': 'art loading shifts the layout',
   'F6.taps': 'a core path takes more taps than its budget',
+  'F7.list': 'two items of a variable-count list (data-ui-list) share a row',
+  'F7.marker': 'a surface with a variable collection renders it without a data-ui-list marker',
+  'F8.pill': 'the resource bar pills differ in height or value type, or hold an image larger than the icon well',
 };
+
+/** Rules a `'*'` does not switch on: each is listed by name under a screen in FEEL_ON when the slice that passes it lands (scripts/ui-gates/feel-layout.mjs). */
+export const OPT_IN_RULES = ['F7.list', 'F7.marker', 'F8.pill'];
 
 /** Owner-tunable numbers. */
 export const FEEL_BUDGETS = {
@@ -52,6 +58,7 @@ export const FEEL_SCREENS = {
  */
 export const FEEL_ON = {
   hq: ['*'], board: ['*'], brief: ['*'], deploy: ['*'], live: ['*'], debrief: ['*'],
+  'team-patrol': [], 'team-command': [],
   path: ['F6.taps'],
 };
 
@@ -331,5 +338,6 @@ export function judgeScreen(result, { scale = 1, density = true, shortcut = fals
 /** Is `rule` enforced on `screen` under FEEL_ON (or the override from the command line)? */
 export function enforced(rule, screen, on = FEEL_ON) {
   const list = on[screen] ?? [];
-  return list.includes('*') || list.includes(rule) || (on['*'] ?? []).includes(rule);
+  if (list.includes(rule) || (on['*'] ?? []).includes(rule)) return true;
+  return list.includes('*') && !OPT_IN_RULES.includes(rule);
 }
