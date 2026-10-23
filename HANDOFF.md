@@ -217,7 +217,18 @@ squad swaps), which Phase 5 needs first.
 | station-art | Sonnet, generation by Codex | 2, art | its own, from `claude/feel-lead` | `public/art/` (new files and manifests only), the art test registrations in `scripts/validate-art.mjs` and `src/ui/art/validate-art.test.ts` if a new folder needs one, `docs/art/station-rebuild.md` |
 | station-primitives | Sonnet | 3, shared primitives | its own, from `claude/feel-lead`, port 5198 | new `src/ui/motion.ts`, `src/ui/components/Beat.tsx`, `SceneHotspots.tsx` and their CSS, `src/ui/people/story-line.ts`, `src/ui/audio/live-audio.ts`, the `reducedMotion` call sites in `Finance.tsx`, `Settlement.tsx`, `LiveFeed.tsx`, `useViewport.ts`, the sound hint in `src/ui/components/labels.ts`, their tests |
 
-Phases 4 (Build) and 5 (Team) start once both land; they touch different files and can run in parallel.
+Merged 2026-10-23 into `claude/feel-lead`: `claude/hiring-pool`, `claude/station-art-a36117`,
+`claude/station-primitives-e2431b` (0b32cbd); `npm run verify` 3,189 tests, art, build and no-lab green. The lead
+mounted `BeatProvider` in `App.tsx` once for both screens. Known: `check:feel` hq F8.pill at text200 fails on the
+base d5e7f75 too (reported by station-primitives, not reproduced by the lead).
+
+| Session | Model | Phase | Branch | Writes only |
+|---|---|---|---|---|
+| station-build | Sonnet | 4, Build | its own, from `claude/feel-lead`, port 5195 | `src/ui/screens/Build.tsx`, `build-parts.tsx`, `build.css`, `Develop.tsx`, `development.css`, new Build components under `src/ui/screens/build/`, their tests |
+| station-team | Sonnet | 5, Team | its own, from `claude/feel-lead`, port 5196 | `src/ui/screens/Team.tsx`, `team.css`, `Squad.tsx`, `officers.css`, `squad-visual.css`, `Recruit.tsx`, `recruit.css`, `Patrol.tsx`, `patrol.css`, `OfficerSheet.tsx`, `officer-profile.css`, `src/ui/storefront/TrainingStore.tsx`, `src/ui/components/CommandStaff.tsx`, `command-staff.css`, `OfficerCard.tsx`, `OfficerRow.tsx`, `officer-row.css`, `SquadPlacement.tsx`, `squad-placement.css`, the manager portrait paths in `src/sim/staff-pool.ts`, their tests |
+
+Neither touches `App.tsx`, shared CSS, `storefront.css`, `HQ.tsx` or `scripts/ui-gates/`; the lead registers both
+screens in the feel and layout registries at merge.
 
 ## Locks outside normal ownership
 
