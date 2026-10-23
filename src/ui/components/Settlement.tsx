@@ -6,12 +6,11 @@ import { assetUrl } from '../art/assetUrl';
 import { liveMoney, moneyFull, signed, signedMoney } from '../format';
 import { easeToward } from './Finance';
 import { getScenario } from '../../sim/scenario-registry';
+import { reducedMotion } from '../motion';
 import './settlement.css';
 
 /** What the department held before this call settles: the balance and its service toward the next level. */
 export type SettlementDepartment = { funding: number; level: number; service?: number };
-
-const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** Counts from `from` to `to` once, with the resource bar's count-up (Finance easeToward). With `still`
  * (reduced motion, or a call that does not earn a beat) it is the end value from the first frame. */

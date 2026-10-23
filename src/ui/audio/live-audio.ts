@@ -4,13 +4,20 @@
 // follows the crowd, and a low heartbeat in a threat's last quarter. Presentation only: nothing here
 // reads or writes the sim. Silent where the browser has no audio, before the player's first touch
 // (browsers refuse sound until then), and whenever the setting is off.
-import { soundOn } from '../settings/prefs';
+//
+// The station layer (owner 2026-10-23, station rebuild) shares this module and the Sound setting: short
+// stings when the player hires, buys, enrols or promotes, and a faint room tone on HQ and Build. The
+// station layer is also silent under reduced motion; the live call's sounds are unchanged.
+import { soundOn, subscribeSettings } from '../settings/prefs';
+import { REDUCED_MOTION_QUERY, reducedMotion } from '../motion';
 
 type Ctx = AudioContext;
 let ctx: Ctx | null = null;
 let noise: AudioBuffer | null = null;
 let murmur: { source: AudioBufferSourceNode; gain: GainNode } | null = null;
 let unlocked = false;
+let station: { source: AudioBufferSourceNode; lfo: OscillatorNode; hum: OscillatorNode; gain: GainNode } | null = null;
+let ambienceWanted = false;
 
 function audio(): Ctx | null {
   if (!soundOn() || !unlocked) return null;
@@ -27,6 +34,33 @@ export function unlockAudio(): void {
   unlocked = true;
   const c = audio();
   if (c && c.state === 'suspended') void c.resume();
+}
+
+/** Listens once for the first pointer or key press, so a screen that never mounts the live call (HQ,
+ * Build) still unlocks sound on the player's first touch. Safe to call again. */
+let armed = false;
+export function armAudioUnlock(): void {
+  if (armed || typeof window === 'undefined') return;
+  armed = true;
+  const unlock = () => {
+    window.removeEventListener('pointerdown', unlock, true);
+    window.removeEventListener('keydown', unlock, true);
+    unlockAudio();
+    syncAmbience();
+  };
+  window.addEventListener('pointerdown', unlock, true);
+  window.addEventListener('keydown', unlock, true);
+}
+
+/** The context for a station sound, or null: the Sound setting, a first touch (or the browser's own
+ * record of one, so a purchase made before anything armed the listener still sounds) and reduced motion. */
+function stationAudio(): Ctx | null {
+  if (reducedMotion()) return null;
+  const activation = typeof navigator !== 'undefined' ? (navigator as { userActivation?: { hasBeenActive: boolean } }).userActivation : undefined;
+  if (!unlocked && activation?.hasBeenActive) unlocked = true;
+  const c = audio();
+  if (c && c.state === 'suspended') void c.resume();
+  return c;
 }
 
 function noiseBuffer(c: Ctx): AudioBuffer {
@@ -144,4 +178,114 @@ export function stopLiveAudio(): void {
 export function buzz(pattern: number | number[]): void {
   if (!soundOn() || typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
   try { navigator.vibrate(pattern); } catch { /* refused */ }
+}
+
+// ---------------------------------------------------------------- station: stings and room tone
+
+export type StingKind = 'hire' | 'buy' | 'enrol' | 'promotion';
+export const STING_KINDS: readonly StingKind[] = ['hire', 'buy', 'enrol', 'promotion'];
+
+/** Each sting is a few soft notes, a rising figure that says what happened: a badge clasp (hire), a
+ * till (buy), a page turned and two chimes (enrol), a short ascent that holds (promotion). */
+const STINGS: Record<StingKind, { notes: readonly (readonly [offset: number, freq: number, peak: number, release: number])[]; type: OscillatorType; buzz: number | number[] }> = {
+  hire: { type: 'triangle', buzz: [18, 40, 18], notes: [[0, 523, 0.09, 0.14], [0.1, 659, 0.09, 0.14], [0.2, 784, 0.1, 0.32]] },
+  buy: { type: 'sine', buzz: 14, notes: [[0, 880, 0.08, 0.1], [0.08, 1320, 0.09, 0.3]] },
+  enrol: { type: 'sine', buzz: [12, 30, 12], notes: [[0, 660, 0.07, 0.18], [0.16, 880, 0.08, 0.34]] },
+  promotion: { type: 'triangle', buzz: [18, 40, 18, 40, 30], notes: [[0, 392, 0.09, 0.14], [0.12, 523, 0.09, 0.14], [0.24, 659, 0.09, 0.16], [0.38, 784, 0.11, 0.55]] },
+};
+
+/** A short sting for a commitment that landed (the Beat primitive plays one with its stamp). Silent
+ * with Sound off, under reduced motion, or before the first touch. The phone buzzes with it where it can. */
+export function playSting(kind: StingKind): void {
+  const c = stationAudio();
+  if (!c) return;
+  const at = c.currentTime;
+  const def = STINGS[kind];
+  for (const [offset, freq, peak, release] of def.notes) {
+    const osc = c.createOscillator();
+    osc.type = def.type;
+    osc.frequency.value = freq;
+    osc.connect(envelope(c, at + offset, peak, 0.005, release));
+    osc.start(at + offset);
+    osc.stop(at + offset + release + 0.05);
+  }
+  buzz(def.buzz);
+}
+
+/** The station's room tone: brown noise through a slowly moving low-pass, over a faint mains hum.
+ * Fainter than the crowd murmur, and it never starts without Sound on, a first touch and full motion. */
+function startRoomTone(c: Ctx): void {
+  if (station) { station.gain.gain.setTargetAtTime(0.03, c.currentTime, 1.2); return; }
+  const source = c.createBufferSource();
+  source.buffer = noiseBuffer(c);
+  source.loop = true;
+  const low = c.createBiquadFilter();
+  low.type = 'lowpass';
+  low.frequency.value = 420;
+  const lfo = c.createOscillator();
+  lfo.frequency.value = 0.07;
+  const sweep = c.createGain();
+  sweep.gain.value = 120;
+  lfo.connect(sweep).connect(low.frequency);
+  const hum = c.createOscillator();
+  hum.type = 'sine';
+  hum.frequency.value = 60;
+  const humGain = c.createGain();
+  humGain.gain.value = 0.18;
+  const gain = c.createGain();
+  gain.gain.value = 0.0001;
+  source.connect(low).connect(gain);
+  hum.connect(humGain).connect(gain);
+  gain.connect(c.destination);
+  source.start();
+  lfo.start();
+  hum.start();
+  gain.gain.setTargetAtTime(0.03, c.currentTime, 1.2);
+  station = { source, lfo, hum, gain };
+}
+
+function silenceRoomTone(): void {
+  if (!station) return;
+  const { source, lfo, hum, gain } = station;
+  station = null;
+  if (ctx) gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.25);
+  window.setTimeout(() => { for (const node of [source, lfo, hum]) { try { node.stop(); } catch { /* already stopped */ } } }, 1200);
+}
+
+/** Starts or stops the room tone to match what is allowed right now. */
+function syncAmbience(): void {
+  const c = ambienceWanted ? stationAudio() : null;
+  if (c) startRoomTone(c); else silenceRoomTone();
+}
+
+let watching = false;
+function watchAmbience(): void {
+  if (watching || typeof window === 'undefined') return;
+  watching = true;
+  subscribeSettings(syncAmbience);
+  window.matchMedia?.(REDUCED_MOTION_QUERY)?.addEventListener?.('change', syncAmbience);
+  document.addEventListener('visibilitychange', () => {
+    if (!station || !ctx) return;
+    station.gain.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.03, ctx.currentTime, 0.3);
+  });
+}
+
+/** HQ and Build call this on entry: the room tone fades in once sound is allowed. */
+export function startStationAmbience(): void {
+  ambienceWanted = true;
+  armAudioUnlock();
+  watchAmbience();
+  syncAmbience();
+}
+
+/** Leaving HQ or Build: the room tone fades out and stops. */
+export function stopStationAmbience(): void {
+  ambienceWanted = false;
+  silenceRoomTone();
+}
+
+/** Test seam: forget the context, the unlock and every node this module holds. */
+export function resetAudioForTests(): void {
+  ctx = null; noise = null; murmur = null; station = null;
+  unlocked = false; ambienceWanted = false; armed = false; watching = false;
 }

@@ -12,12 +12,22 @@ initCandidates();
 // Decide before importing either app: the game's store opens, ticks and saves the campaign as soon as
 // it loads, so the lab must never pull it in. A normal build folds the lab branch away.
 if ((import.meta.env.DEV || __LAB_BUILD__) && isLabLocation(location.pathname, location.search, import.meta.env.BASE_URL)) {
-  const { LabApp } = await import('./dev/lab/LabApp');
-  root.render(
-    <StrictMode>
-      <LabApp />
-    </StrictMode>,
-  );
+  // /lab?station is the station-rebuild primitives page (src/dev/station-lab); folded away with the lab.
+  if (new URLSearchParams(location.search).has('station')) {
+    const { StationLab } = await import('./dev/station-lab/StationLab');
+    root.render(
+      <StrictMode>
+        <StationLab />
+      </StrictMode>,
+    );
+  } else {
+    const { LabApp } = await import('./dev/lab/LabApp');
+    root.render(
+      <StrictMode>
+        <LabApp />
+      </StrictMode>,
+    );
+  }
 } else {
   // The retired daily featured operation kept its best results here; clear them once.
   try {

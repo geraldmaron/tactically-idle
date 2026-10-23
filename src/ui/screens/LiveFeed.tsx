@@ -13,9 +13,8 @@ import { formatCount } from '../../sim/pressure-sources';
 import { Icon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { buzz, playSquelch, playTick } from '../audio/live-audio';
+import { reducedMotion } from '../motion';
 import { CHAT_FADE_MS, chatGapMs, chatPhase, chatTick, countRefreshMs, drawChatLine, drawStateLine, nextChatHandle, nextLiveCount, seenCount, seenState } from './live-chat';
-
-const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** A small seeded generator, so each source refreshes and picks its chat in its own steady pattern. */
 function rng(seed: number) {

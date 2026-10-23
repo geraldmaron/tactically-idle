@@ -10,10 +10,10 @@ import { ECONOMY_TUNING, HOUR_MS, officerRates } from '../../sim/economy';
 import { fullName } from '../../sim/officer';
 import { Icon, type IconName } from '../icons';
 import { duration, money, moneyFull, perHour, rate, relativeTime, signedMoney } from '../format';
+import { REDUCED_MOTION_QUERY, reducedMotion } from '../motion';
 import './finance.css';
 import { nextPatrolEventTime } from '../../sim/patrol';
 
-const reducedMotion = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Smaller changes than this are not news: no floating chip for them. */
 export const MIN_NEWS = 25;
@@ -89,7 +89,7 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
     // re-renders when the shown whole-dollar figure changes.
     let frame = 0;
     let last = performance.now();
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const media = window.matchMedia(REDUCED_MOTION_QUERY);
     const onMotion = () => {
       shownRef.current = gRef.current.department.funding;
       setShown(shownRef.current);

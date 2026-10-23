@@ -2,9 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Rect } from './geometry';
 import { clampView } from './camera';
+import { reducedMotion } from '../motion';
 export { MAX_ZOOM, clampView, unitsPerPixel } from './camera';
-
-const prefersReducedMotion = (): boolean => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function useViewport(base: Rect, sceneKey = '') {
   const [view, setView] = useState<Rect>(base);
@@ -36,7 +35,7 @@ export function useViewport(base: Rect, sceneKey = '') {
   const animateTo = useCallback((target: Rect) => {
     const goal = clampView(target, baseRef.current);
     stop();
-    if (prefersReducedMotion()) {
+    if (reducedMotion()) {
       publish(goal);
       return;
     }
