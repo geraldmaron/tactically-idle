@@ -91,7 +91,7 @@
 .bottomnav .navlabel { position: relative; font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
 .bottomnav .navicon .icon { display: block; }
 /* 14px count with 4px clear above and below, so the box is the text plus 8px. */
-.bottomnav .navbadge { top: -10px; right: -14px; min-width: calc(min(var(--s14), 14px) + 8px); height: calc(min(var(--s14), 14px) + 8px); padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 min(var(--s14), 14px)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
+.bottomnav .navbadge { top: calc(var(--s14) * -0.5 - 6px); right: calc(var(--s14) * -0.5 - 8px); min-width: calc(var(--s14) + 8px); height: calc(var(--s14) + 8px); padding: 0 var(--sp1); border: 0; box-sizing: border-box; font: 700 var(--s14)/1 var(--f-ui); background: var(--act); color: var(--act-ink); }
 .bottomnav .live-dot { top: -4px; right: -6px; }
 .bottomnav .navdot { top: -3px; right: -5px; background: var(--act); }
 
