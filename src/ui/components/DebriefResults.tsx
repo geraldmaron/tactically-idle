@@ -2,10 +2,9 @@ import type { DebriefResult, DecisionView, Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
 import { Icon } from '../icons';
 import { opMinutes, signed, signedMoney } from '../format';
-import { Card, Chip, Meter, SubHead } from './ui';
+import { Card, Chip, Meter, Ring, SubHead } from './ui';
 import { STRESS_LABEL, StressDisplay, changeText } from './StressDisplay';
 import { stressBand } from '../../sim/officer';
-import type { ReactNode } from 'react';
 import { CivilianOutcomeList, OfficerInjuryResult } from './IncidentPeople';
 import './debrief-results.css';
 import { Disclosure } from './Disclosure';
@@ -17,19 +16,13 @@ export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstNam
 type Condition = DebriefResult['officerCondition'][number];
 const scoreTone = (value: number) => value >= 70 ? 'hi' : value >= 40 ? 'mid' : 'lo';
 
-/** A score as a filled ring: mint from 80, amber from 50, danger below. The number or icon sits inside. */
-export function ScoreRing({ value, size = 34, children }: { value: number; size?: number; children?: ReactNode }) {
-  const v = Math.max(0, Math.min(100, value));
-  const tone = v >= 80 ? 'var(--mint)' : v >= 50 ? 'var(--warn)' : 'var(--danger)';
-  return <span className="score-ring" aria-hidden="true" style={{ width: size, height: size, background: `conic-gradient(${tone} ${v * 3.6}deg, rgba(255,255,255,.1) 0deg)` }}><span className="score-ring-core" style={{ width: size - 8, height: size - 8 }}>{children}</span></span>;
-}
 
 export function DebriefSummary({ debrief: d, includeRewards = true }: { debrief: DebriefResult; includeRewards?: boolean }) {
   return <Card className="result-summary">
     {d.disposition && <CompletionResult debrief={d} />}
     {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
       {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className={`result-score result-score-${scoreTone(result.score)}`} key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
-        <ScoreRing value={result.score} size={58}><strong className="result-score-value">{Math.round(result.score)}</strong></ScoreRing>
+        <Ring value={result.score} size={58}><strong className="result-score-value">{Math.round(result.score)}</strong></Ring>
         <span className="result-score-text">
           <span className="result-score-label"><Icon name={icon} size={14} />{label}</span>
           <span className="result-score-outcome">{result.label}</span>

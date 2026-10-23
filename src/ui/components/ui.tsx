@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { RATING_META, STATUS_META, ratingTone } from './labels';
@@ -213,6 +213,19 @@ export function KV({ k, v, tone, strong, icon }: { k: ReactNode; v: ReactNode; t
       <span className={`kv-v${tone ? ` tone-${tone}` : ''}`}>{v}</span>
     </div>
   );
+}
+
+/** The one ring: a value from 0 to 100 drawn as a filled arc around its content (an icon, a number or a
+ * face). `tone` colors the arc; `score` picks good, amber or harm by the value (80 and 50, as results
+ * read). Decorative: the value's words belong to the element that holds it. */
+export type RingTone = 'score' | 'act' | 'good' | 'warn' | 'harm' | 'trust' | 'level';
+const RING_COLOR: Record<Exclude<RingTone, 'score'>, string> = { act: 'var(--act)', good: 'var(--good)', warn: 'var(--warn)', harm: 'var(--harm)', trust: 'var(--good)', level: 'var(--act)' };
+export const ringColor = (tone: RingTone, value: number) => tone === 'score' ? (value >= 80 ? 'var(--mint)' : value >= 50 ? 'var(--warn)' : 'var(--danger)') : RING_COLOR[tone];
+export function Ring({ value, size = 34, tone = 'score', className, children }: { value: number; size?: number; tone?: RingTone; className?: string; children?: ReactNode }) {
+  const v = Math.max(0, Math.min(100, value));
+  return <span className={`ring${className ? ` ${className}` : ''}`} aria-hidden="true" style={{ width: size, height: size, '--ring-fill': v, '--ring-color': ringColor(tone, v) } as CSSProperties}>
+    <span className="ring-core">{children}</span>
+  </span>;
 }
 
 /** Horizontal meter with a text label so condition is never colour alone. */

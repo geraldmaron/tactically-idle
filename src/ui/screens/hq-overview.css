@@ -7,8 +7,6 @@
 .debrief-tile-poor::before { background: var(--harm); }
 .debrief-tile:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .debrief-rings { display: grid; gap: var(--sp2); flex-shrink: 0; }
-.score-ring { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; }
-.score-ring-core { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink-1); color: var(--t2); }
 .debrief-tile-main { display: grid; gap: var(--sp1); min-width: 0; flex: 1 1 auto; }
 .debrief-tile-kicker { display: flex; align-items: center; gap: var(--sp2); min-width: 0; font-family: var(--f-title); font-size: var(--s14); font-weight: 600; color: var(--t2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .debrief-tile-title { font-family: var(--f-title); font-size: 17px; font-weight: 600; line-height: 1.15; letter-spacing: 0.02em; overflow-wrap: anywhere; }
@@ -21,8 +19,8 @@
 .debrief-reward { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); font-weight: 600; font-variant-numeric: tabular-nums; }
 .debrief-tile-go { flex-shrink: 0; color: var(--t3); }
 
-/* HQ (screens/HQ.tsx): the plate, one hero for the next move, notices, squads two to a row with a
-   roster summary, patrol and the department net, trust and level, command staff, results. */
+/* HQ (screens/HQ.tsx): the plate, one hero for the next move, notices, what is on the clock, squads
+   two to a row with a roster summary, patrol, command staff, results. */
 .hq-page { gap: var(--sp4); }
 .hq-move { position: relative; display: grid; gap: var(--sp2); padding: var(--sp3); border: 1px solid var(--act); border-radius: var(--r2); background: var(--act-soft); isolation: isolate; overflow: hidden; }
 .hq-move-scene > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center 55%; }
@@ -33,6 +31,14 @@
 .hq-move-main span { font-size: var(--s14); color: var(--t2); }
 .hq-move-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); }
 .hq-move-foot .btn { margin-left: auto; }
+.hq-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp1); margin: 0; padding: 0; list-style: none; }
+.hq-stage { display: grid; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t3); }
+.hq-stage > span:last-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hq-stage-bar { height: 4px; border-radius: 2px; background: var(--hair-2); }
+.hq-stage-done { color: var(--t2); }
+.hq-stage-done .hq-stage-bar { background: var(--good); }
+.hq-stage-current { color: var(--t1); }
+.hq-stage-current .hq-stage-bar { background: var(--act); box-shadow: 0 0 8px var(--act); }
 .hq-move-more { display: flex; align-items: center; gap: var(--sp2); min-height: var(--touch); margin: 0 calc(-1 * var(--sp3)) calc(-1 * var(--sp3)); padding: 0 var(--sp3); border: 0; border-top: 1px solid var(--hair); background: color-mix(in srgb, var(--ink-0) 60%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); text-align: left; cursor: pointer; }
 .hq-move-more > span { flex: 1 1 auto; }
 .hq-move-more .icon { color: var(--t2); }
@@ -40,32 +46,42 @@
 
 .hq-notices { display: grid; gap: var(--sp2); }
 .hq-report .hq-link { color: var(--t1); font-weight: 600; text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; }
-.hq-window-icon { color: var(--warn-text); }
-.hq-window-paused-icon { color: var(--harm); }
+
 .hq-faces { display: inline-flex; }
 .hq-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
-.hq-faces-md > * + * { margin-left: calc(-1 * var(--sp4)); }
 
-.hq-summary { display: flex; flex-wrap: wrap; gap: var(--sp1); margin-bottom: var(--sp2); }
-.hq-summary-item { display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-1); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
-.hq-summary-warn { border-color: color-mix(in srgb, var(--warn) 55%, transparent); color: var(--warn-text); }
-.hq-summary-harm { border-color: color-mix(in srgb, var(--harm) 55%, transparent); color: var(--harm-text); }
+.hq-summary { display: flex; flex-wrap: wrap; gap: 0 var(--sp3); margin-bottom: var(--sp1); }
+.hq-summary-item { position: relative; display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); padding: 0; border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
+.hq-summary-warn { color: var(--warn-text); }
+.hq-summary-harm { color: var(--harm-text); }
 .hq-summary-item:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
-.hq-duties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
-.hq-duties > .empty { grid-column: 1 / -1; }
-.hq-squad { gap: var(--sp2); padding: var(--sp3); }
-.hq-squad-open { display: grid; justify-items: start; gap: var(--sp2); width: 100%; padding: 0; border: 0; background: none; color: var(--t1); text-align: left; cursor: pointer; }
-.hq-squad-open:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
-.hq-squad-name { display: flex; align-items: center; justify-content: space-between; width: 100%; font: 600 var(--s18)/1.2 var(--f-title); color: var(--t1); }
-.hq-squad-name .icon { color: var(--t3); }
-.hq-squad-state { display: flex; }
-.hq-squad-note { display: grid; gap: var(--sp1); margin: 0; font-size: var(--s14); color: var(--t2); }
-.hq-squad-note > span { display: flex; align-items: flex-start; gap: var(--sp1); }
-.hq-squad-note .icon { flex: none; margin-top: var(--sp1); }
-.hq-squad-strain { color: var(--warn-text); }
-.hq-squad .choice-rail { width: 100%; }
-.hq-squad .choice-rail-item { gap: var(--sp1); justify-content: center; padding-inline: var(--sp2); }
-.hq-duty-icon { display: none; }
+/* Variable-count sets on HQ are inset grouped lists (component contract 2): one surface, rows split by
+   a hairline, leads and trails on the card's inner gutter. */
+.hq-list { display: grid; padding: 0 var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.hq-list > :last-child { border-bottom-color: transparent; }
+
+.hq-squad-row { min-height: 64px; padding-top: var(--sp3); }
+.hq-faces-stack > * + * { margin-left: calc(-1 * var(--sp3)); }
+.hq-row-link { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); margin-block: calc((var(--touch) - 1.2em) / -2); padding: 0; border: 0; background: none; color: var(--t1); font: 600 var(--s16)/1.2 var(--f-title); cursor: pointer; }
+/* The name is drawn at the full touch height; the negative margin keeps the row's line height. */
+.hq-row-link .icon { color: var(--t3); }
+.hq-row-link:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
+/* The duty switch keeps its words, so it takes its own line under the squad, ending at the gutter:
+   with a four-face stack there is no phone width where it fits beside the name and facts. */
+.hq-squad-row { flex-wrap: wrap; row-gap: var(--sp1); }
+.hq-squad-row .ui-row-main { flex: 1 1 0; }
+.hq-squad-row .ui-row-trail:has(.choice-rail) { display: flex; flex: 1 0 100%; justify-content: flex-end; }
+.hq-clock-open { display: grid; place-items: center; width: 40px; height: 40px; border: 1px dashed var(--hair-2); border-radius: 50%; color: var(--t1); }
+.hq-clock .ring-core { color: var(--t1); }
+.hq-tone-warn { color: var(--warn-text); }
+.hq-tone-harm { color: var(--harm-text); }
+.hq-watch { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp3); margin-top: var(--sp2); font-size: var(--s14); color: var(--t2); }
+.hq-watch-head { display: inline-flex; align-items: center; gap: var(--sp1); }
+/* Section headers (component contract 4): count and action together on the right, one baseline. */
+.hq-page .section-count { margin-left: auto; }
+.section-link { position: relative; display: inline-flex; align-items: center; gap: var(--sp1); padding: 0; border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
+.section-link::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--touch); transform: translateY(-50%); }
+.section-link:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
 .hq-duty-auto { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: var(--touch); font-size: var(--s14); color: var(--t2); cursor: pointer; }
 .hq-duty-auto input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .hq-duty-auto .toggle-ui { margin-top: 0; }
@@ -84,32 +100,34 @@
 .hq-patrol-rate span { font-size: var(--s14); color: var(--t2); white-space: nowrap; }
 .hq-patrol-rate strong { color: var(--good-text); font: 700 var(--s18)/1 var(--f-title); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hq-patrol-rate strong.tone-danger { color: var(--harm); }
-.hq-patrol-lines { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); margin: 0; padding-top: var(--sp2); border-top: 1px solid var(--hair); }
-.hq-patrol-lines div { display: grid; gap: var(--sp1); min-width: 0; }
-.hq-patrol-lines dt { font-size: var(--s14); color: var(--t2); }
-.hq-patrol-lines dd { margin: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hq-seat { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border: 1px dashed var(--hair-2); border-radius: 50%; background: var(--ink-1); color: var(--t3); }
+.hq-seat-sm { width: var(--face-sm); height: var(--face-sm); }
+.hq-faces > .hq-seat { margin-left: var(--sp1); }
+.hq-seat-more { font: 600 var(--s14)/1 var(--f-ui); color: var(--t2); }
+.hq-move-faces { flex-wrap: wrap; min-width: 0; }
+.hq-patrol-gross { flex-basis: 100%; font-weight: 500; }
+.hq-patrol-split { display: grid; gap: var(--sp1); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
+.hq-patrol-bar { display: flex; height: 8px; overflow: hidden; border-radius: 4px; background: var(--hair-2); }
+.hq-patrol-kept { background: var(--good); }
+.hq-patrol-cost { background: color-mix(in srgb, var(--harm) 70%, transparent); }
+.hq-patrol-legend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp1) var(--sp3); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); font-variant-numeric: tabular-nums; }
+.hq-patrol-legend > span { display: inline-flex; align-items: center; gap: var(--sp1); }
+.hq-key { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+.hq-key-kept { background: var(--good); }
+.hq-key-cost { background: color-mix(in srgb, var(--harm) 70%, transparent); }
 .hq-patrol-boost { display: flex; align-items: center; gap: var(--sp2); margin: 0; font-size: var(--s14); color: var(--good-text); }
-.hq-patrol-next { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); padding-top: var(--sp2); border-top: 1px solid var(--hair); font-size: var(--s14); color: var(--t2); }
+.hq-patrol-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp2) var(--sp3); padding-top: var(--sp2); border-top: 1px solid var(--hair); font-size: var(--s14); color: var(--t2); }
+.hq-patrol-next > span { flex: 1 1 calc(var(--s14) * 12); min-width: 0; }
 .hq-patrol-next .btn { flex: none; }
 
-.hq-vitals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2); }
-.hq-vital { gap: var(--sp1); padding: var(--sp3); text-align: left; }
-.hq-vital-head { display: flex; align-items: center; gap: var(--sp2); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
-.hq-vital-value { font: 700 var(--s28)/1 var(--f-title); color: var(--t1); font-variant-numeric: tabular-nums; }
-.hq-vital-sub { font-size: var(--s14); color: var(--t2); }
+.hq-staff { display: grid; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r1); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.hq-staff-next { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp2) var(--sp3); padding-top: var(--sp2); border-top: 1px solid var(--hair); }
+.hq-staff-next-text { display: grid; flex: 1 1 calc(var(--s14) * 12); gap: var(--sp1); min-width: 0; font-size: var(--s14); color: var(--t2); }
+.hq-staff-next-text strong { font: 600 var(--s16)/1.2 var(--f-title); color: var(--t1); }
+.hq-staff-next .btn { flex: none; }
 
-.hq-staff { gap: var(--sp2); padding: var(--sp3); text-align: left; }
-.hq-staff-faces { display: flex; gap: var(--sp2); }
-.hq-staff-face { display: block; border-radius: 50%; overflow: hidden; }
-.hq-staff-face-off { opacity: 0.6; }
-.hq-staff-seat { display: grid; place-items: center; width: 40px; height: 40px; border: 1px dashed var(--hair-2); border-radius: 50%; color: var(--t3); }
-.hq-staff-line { font-size: var(--s14); color: var(--t2); }
-
-/* The narrowest phones: the duty switch keeps its icons and drops the words; the call's pay chips give way. */
+/* The narrowest phones: the call's pay chips give way. The duty switch keeps its words (sol 2026-10-23:
+   a symbol alone is not enough for a duty choice). */
 @container game (max-width: 359px) {
-  .hq-duty-word { display: none; }
-  .hq-duty-icon { display: inline-flex; }
   .hq-move-top .chip:nth-child(n + 4) { display: none; }
-  .hq-faces-md > * + * { margin-left: calc(-1 * var(--sp5)); }
-  .hq-staff-faces { gap: var(--sp1); }
 }

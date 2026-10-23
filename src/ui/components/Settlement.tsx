@@ -1,29 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DebriefResult } from '../../sim/types';
 import { levelProgress } from '../../sim/department-level';
 import { Card, Chip, EmptyState, Meter, SubHead } from './ui';
 import { assetUrl } from '../art/assetUrl';
-import { liveMoney, signed, signedMoney } from '../format';
+import { liveMoney, moneyFull, signed, signedMoney } from '../format';
+import { easeToward } from './Finance';
+import { getScenario } from '../../sim/scenario-registry';
 import './settlement.css';
 
-const SETTLE_MS = 900;
 /** What the department held before this call settles: the balance and its service toward the next level. */
 export type SettlementDepartment = { funding: number; level: number; service?: number };
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** Counts from `from` to `to` once. With `still` (reduced motion, or a call that does not earn a beat)
- * it is the end value from the first frame. */
+/** Counts from `from` to `to` once, with the resource bar's count-up (Finance easeToward). With `still`
+ * (reduced motion, or a call that does not earn a beat) it is the end value from the first frame. */
 function useSettle(from: number, to: number, still: boolean): number {
   const [value, setValue] = useState(still ? to : from);
   useEffect(() => {
     if (still) { setValue(to); return; }
-    const start = performance.now();
+    let current = from;
+    let last = performance.now();
     let frame = 0;
     const step = (at: number) => {
-      const k = Math.min(1, (at - start) / SETTLE_MS);
-      setValue(from + (to - from) * (1 - (1 - k) ** 3));
-      if (k < 1) frame = window.requestAnimationFrame(step);
+      current = easeToward(current, to, at - last);
+      last = at;
+      setValue(current);
+      if (current !== to) frame = window.requestAnimationFrame(step);
     };
     frame = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(frame);
@@ -37,8 +40,15 @@ function useSettle(from: number, to: number, still: boolean): number {
  * to celebrate. The money itself is paid by Next call (closeDebrief), as before. */
 export function Settlement({ debrief: d, department, still: quiet = false }: { debrief: DebriefResult; department?: SettlementDepartment; still?: boolean }) {
   const still = quiet || reducedMotion();
-  const before = department?.funding ?? 0;
+  // The balance before this call, read once per debrief: the live balance keeps ticking with patrol
+  // income, and following it would replay the payout on every tick.
+  const snapshot = useRef<{ runId: string; from: number } | null>(null);
+  if (!snapshot.current || snapshot.current.runId !== d.runId) snapshot.current = { runId: d.runId, from: department?.funding ?? 0 };
+  const before = snapshot.current.from;
   const funding = useSettle(before, before + d.fundingReward, still);
+  // The board offers the call's full pay; the payout scales with the result (sim/operation.ts), so a
+  // short payout says what it was measured against.
+  const offered = getScenario(d.scenarioId)?.rewards?.funding;
   const promotions = d.officerCondition.reduce((total, c) => total + (c.promotions?.length ?? 0), 0);
   const service = d.serviceEarned ?? 0;
   const from = department?.service !== undefined ? levelProgress({ level: department.level, service: department.service }) : null;
@@ -60,6 +70,7 @@ export function Settlement({ debrief: d, department, still: quiet = false }: { d
         <span className="settle-stack">
           <span className="settle-value" aria-hidden="true">{liveMoney(funding)}</span>
           <span className={`settle-delta${d.fundingReward < 0 ? ' tone-danger' : ' tone-mint'}`}>{signedMoney(d.fundingReward)} funding</span>
+          {offered !== undefined && offered > d.fundingReward && d.fundingReward > 0 && <span className="settle-offer">{`${moneyFull(d.fundingReward)} of the ${moneyFull(offered)} on offer. The pay follows how the call ended.`}</span>}
         </span>
         <span className="sr-only">Funding {signedMoney(d.fundingReward)}</span>
       </div>}

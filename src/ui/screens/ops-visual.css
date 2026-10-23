@@ -194,8 +194,7 @@
 .result-summary.card { gap: 12px; }
 .result-scores { gap: 10px; }
 .result-score { display: flex; align-items: center; gap: 10px; }
-.result-score .score-ring { flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; }
-.result-score .score-ring-core { display: grid; place-items: center; border-radius: 50%; background: var(--ink-1); }
+.result-score .ring { flex-shrink: 0; }
 .result-score .result-score-value { font-size: 22px; line-height: 1; }
 .result-score-text { display: grid; gap: 3px; min-width: 0; flex: 1 1 auto; }
 .result-score-text .result-score-outcome { font-size: 13px; font-weight: 600; line-height: 1.25; }

@@ -48,24 +48,53 @@ describe('HQ surfaces', () => {
   afterEach(() => vi.useRealTimers());
   const html = () => renderToStaticMarkup(createElement(HQ));
 
-  it('shows the move, squads, patrol with the department net, vitals, command staff and results', () => {
+  it('shows the move, the clocks, squads, patrol with its own net, command staff and results', () => {
     const page = html();
-    for (const part of ['aria-label="Your move"', 'SWAT readiness', 'Patrol and funding', 'Department net', 'hq-patrol-rate', 'Trust', 'Level', 'Command staff', 'Recent results'])
+    for (const part of ['aria-label="Your move"', 'On the clock', 'SWAT readiness', 'Patrol and funding', 'Patrol net', 'hq-patrol-rate', 'Command staff', 'No results yet'])
       expect(page, part).toContain(part);
   });
 
-  it('stacks every member of a squad on its tile', () => {
-    const tiles = html().split('class="hq-faces hq-faces-md"').slice(1);
-    expect(tiles).toHaveLength(state.squads.length);
-    tiles.forEach((tile, i) => expect(tile.split('hq-squad-name')[0].match(/class="face face-md/g)).toHaveLength(state.squads[i].officerIds.length));
+  it('leaves funding, trust and level to the resource bar', () => {
+    const page = html();
+    for (const part of ['Department net', 'hq-vital', 'Recent results']) expect(page, part).not.toContain(part);
   });
 
-  it('warns when hourly income is about to stop, and when it has', () => {
-    expect(html()).not.toContain('Hourly income');
+  it('rings every squad face with its stress and badges whoever is not simply ready', () => {
+    const [first] = state.squads;
+    const officer = state.officers[first.officerIds[0]];
+    state = { ...state, officers: { ...state.officers, [officer.id]: { ...officer, injury: { label: 'Sprained wrist', until: NOW + 3 * HOUR_MS } } } };
+    const page = html();
+    expect(page.match(/class="face-status face-status-sm/g)?.length).toBeGreaterThanOrEqual(state.squads.reduce((n, s) => n + s.officerIds.length, 0));
+    expect(page).toContain('face-mark-injured');
+    expect(page).toContain(`${officer.surname} is back`);
+  });
+
+  it('lists every squad as one row with every member in its face stack', () => {
+    const page = html();
+    expect(page).toContain('data-ui-list');
+    const rows = page.split('class="hq-faces hq-faces-stack"').slice(1);
+    expect(rows).toHaveLength(state.squads.length);
+    rows.forEach((row, i) => expect(row.split('hq-row-link')[0].match(/class="face face-sm/g)).toHaveLength(state.squads[i].officerIds.length));
+  });
+
+  it('shows every command post as a seat, and opens a closed post as a Build upgrade, not a hire', () => {
+    const page = html();
+    expect(page.match(/command-room-post-compact/g)).toHaveLength(5);
+    expect(page).toContain('Next post · ');
+  });
+
+  it('sends the patrol card to the patrol team', () => {
+    expect(html()).toContain('Open the patrol team');
+  });
+
+  it('keeps the income window on the clock, warning as it closes and when it has', () => {
+    expect(html()).not.toContain('hq-clock-warn');
     vi.setSystemTime(NOW + 20 * HOUR_MS);
-    expect(html()).toContain('Stops in');
+    expect(html()).toContain('hq-clock hq-clock-warn');
     vi.setSystemTime(NOW + 25 * HOUR_MS);
-    expect(html()).toContain('Paused. Your next order resumes it.');
+    const page = html();
+    expect(page).toContain('hq-clock hq-clock-harm');
+    expect(page).toContain('Any order resumes it');
   });
 
   it('offers a waiting shift report', () => {

@@ -36,6 +36,7 @@ import { STRESS_LABEL, whole } from '../components/StressDisplay';
 import { CERT_NAME } from '../../content/certs';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
 import { describeConstruction } from '../../sim/spatial';
+import { Face } from '../components/Face';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
@@ -135,7 +136,9 @@ export interface LiveViewProps {
  * blocked store just means the map starts open). */
 const MAP_FOLD_KEY = 'ti.live.mapFolded';
 function readMapFolded(): boolean {
-  try { return typeof localStorage !== 'undefined' && localStorage.getItem(MAP_FOLD_KEY) === '1'; } catch { return false; }
+  // Folded unless the player opened it: under 4B the scene comes before the choices, and an open map
+  // by default would push the first choice off a 390x844 screen. A choice the player made is kept.
+  try { return typeof localStorage === 'undefined' || localStorage.getItem(MAP_FOLD_KEY) !== '0'; } catch { return true; }
 }
 function writeMapFolded(folded: boolean): void {
   try { if (typeof localStorage !== 'undefined') localStorage.setItem(MAP_FOLD_KEY, folded ? '1' : '0'); } catch { /* the choice just isn't remembered */ }
@@ -185,7 +188,9 @@ export function LiveView(p: LiveViewProps) {
     io.observe(el);
     watchedChoice.current = { el, io };
   });
-  useLayoutEffect(() => () => watchedChoice.current?.io.disconnect(), []);
+  // Clear the remembered element too: StrictMode runs this cleanup and then the effect above again,
+  // which must observe afresh rather than find the same element and skip.
+  useLayoutEffect(() => () => { watchedChoice.current?.io.disconnect(); watchedChoice.current = null; }, []);
   const [officerOpen, setOfficerOpen] = useState<Id | null>(null);
   const expanded = expandedStage === p.progress.stage;
   const available = p.actions.map((action) => action.id === sel?.id ? sel : action);
@@ -261,10 +266,14 @@ export function LiveView(p: LiveViewProps) {
         return <li key={o.id}>
           <button type="button" className={`live-squad-face${casualty ? ' live-squad-out' : ''}${acting ? ' live-squad-acting' : ''}`} onClick={() => { setOfficerOpen(o.id); p.onSelectOfficer(o.id); }}
             aria-label={`${o.firstName} ${o.surname}${focus?.leaderId === o.id ? ', leads the squad' : ''}, ${casualty ? `injured: ${casualty.label}, out of action` : `stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}. Open their card`}>
-            <LeadFace officer={o} size={36} />
-            <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}</span>
-            {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
-              : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{whole(o.stress)}</span>}
+            {/* The face carries stress as a ring and an injury from this call as a badge (the run's
+                casualty record, not the officer's saved injury), so the row stays one line high. */}
+            <Face size="sm" kind="officer" officer={o} status={{ stress: o.stress, band, surname: o.surname, mark: casualty ? 'injured' : null, until: null, label: casualty ? `${o.surname} is out of action` : `${o.surname}, ${STRESS_LABEL[band].toLowerCase()}` }} />
+            <span className="live-squad-text">
+              <span className="live-squad-name">{o.surname}{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}</span>
+              {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
+                : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{whole(o.stress)}</span>}
+            </span>
           </button>
         </li>;
       })}
@@ -282,69 +291,20 @@ export function LiveView(p: LiveViewProps) {
         </> : <>
           {p.feedback}
           <section className="call operation-choices" aria-label="Your call">
-            {/* The prompt, what was said and the choices lead; the live radio follows them.
-                The stage rail names the stage, and
+            {/* 4B (docs/ops-experience.md "The decide beat"): the moment (prompt and transcript), then
+                what is said on scene in its reserved box, then the choices. The stage rail names the stage, and
                 the strip carries the threat and what each source does to the odds, so neither repeats
                 here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
             <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
-              onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
-            {commsLog}
+              guidance={commsLog} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
           </section>
           {p.failedResponse}
           {p.supportContext}
         </>}
       </div>;
 
-  const screen = (
-    <div ref={liveRoot} className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
-      {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
-          pressure that bites soonest, the threat or a gauge that fills. */}
-      <header className={`live-head${p.scene ? ' plate' : ''}`}>
-        <PlateArt src={p.scene ?? null} />
-        <div className="live-strip-head">
-          {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
-              comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
-          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={20} /><span className="live-stepout-text">Step out</span></button>}
-          <div className="live-title-block">
-            <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
-              <span className="live-name">{p.title}</span>
-              <Icon name="info" size={16} className="live-title-more" />
-              {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
-            </button>
-            <p className="live-sub">
-              <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
-              <span className="live-status" aria-label="Call time and pressure">
-                <span className="hud-pill"><Icon name="clock" size={16} />{opMinutes(p.clock)}</span>
-                <span className="hud-pill" title="Situation pressure">
-                  <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
-                    <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
-                  </span>
-                  <span>{pressureWord(p.pressure)}</span>
-                </span>
-              </span>
-            </p>
-          </div>
-          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
-            const live = event.currentTarget.closest('.live');
-            const firstChoice = live?.querySelector('.operation-choices .callbtn') ?? live?.querySelector('.operation-choice-count');
-            firstChoice?.scrollIntoView({ block: 'center' });
-          }}><Icon name="chevronDown" size={20} /></button>}
-          <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog" aria-label="Full map"><Icon name="blueprint" size={20} /></button>
-        </div>
-      </header>
-      <div className="live-bar live-strip">
-        {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
-        <StageSteps progress={p.progress} />
-        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
-        {fills.length > 0 && <div className="live-sources">
-          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} threat={p.progress.threat ?? null} dither={p.dither ?? 0} /> : <FillGauge key={view.id} view={view} />)}
-        </div>}
-      </div>
-
-      {story}
-      {/* The decision and its consequences lead. The supporting scene remains inspectable here
-          and through the Full map control beside the call title. */}
-      <section className="live-scene" aria-label="The scene">
+  const sceneSection = (
+    <section className="live-scene" aria-label="The scene">
         <div className="live-scene-head">
           <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={16} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
           <span className="live-scene-actions">
@@ -395,6 +355,61 @@ export function LiveView(p: LiveViewProps) {
         </Sheet>
         {(beat === 'decide' || sceneOpen) && squadRow}
       </section>
+  );
+
+  const screen = (
+    <div ref={liveRoot} className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
+      {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
+          pressure that bites soonest, the threat or a gauge that fills. */}
+      <header className={`live-head${p.scene ? ' plate' : ''}`}>
+        <PlateArt src={p.scene ?? null} />
+        <div className="live-strip-head">
+          {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
+              comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
+          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={20} /><span className="live-stepout-text">Step out</span></button>}
+          <div className="live-title-block">
+            <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
+              <span className="live-name">{p.title}</span>
+              <Icon name="info" size={16} className="live-title-more" />
+              {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
+            </button>
+            <p className="live-sub">
+              <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
+              <span className="live-status" aria-label="Call time and pressure">
+                <span className="hud-pill"><Icon name="clock" size={16} />{opMinutes(p.clock)}</span>
+                <span className="hud-pill" title="Situation pressure">
+                  <span className="pmeter" role="img" aria-label={`Pressure ${Math.round(p.pressure)} of 100`}>
+                    <i style={{ width: `${Math.max(4, Math.min(100, p.pressure))}%` }} />
+                  </span>
+                  <span>{pressureWord(p.pressure)}</span>
+                </span>
+              </span>
+            </p>
+          </div>
+          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
+            const live = event.currentTarget.closest('.live');
+            const firstChoice = live?.querySelector<HTMLElement>('.operation-choices .callbtn') ?? live?.querySelector<HTMLElement>('.operation-choice-count');
+            firstChoice?.scrollIntoView({ block: 'center' });
+            // Keyboard and screen-reader users land where the jump took the eye.
+            if (firstChoice?.matches('.callbtn')) firstChoice.focus({ preventScroll: true });
+          }}><Icon name="chevronDown" size={20} /></button>}
+          <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog" aria-label="Full map"><Icon name="blueprint" size={20} /></button>
+        </div>
+      </header>
+      <div className="live-bar live-strip">
+        {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
+        <StageSteps progress={p.progress} />
+        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
+        {fills.length > 0 && <div className="live-sources">
+          {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} threat={p.progress.threat ?? null} dither={p.dither ?? 0} /> : <FillGauge key={view.id} view={view} />)}
+        </div>}
+      </div>
+
+      {/* 4B: on the decide beat the scene (where the squad is, the map and its faces) comes before the
+          last decision, the moment and the choices. The result beat leads with the story. */}
+      {beat === 'decide' && sceneSection}
+      {story}
+      {beat !== 'decide' && sceneSection}
 
       <Sheet open={briefingOpen} onClose={() => setBriefingOpen(false)} title="Briefing"
         footer={p.canCancel ? <Button variant="danger" block aria-label="Cancel the call" onClick={() => { setBriefingOpen(false); p.onCancel?.(); }}>Cancel the call</Button> : undefined}>

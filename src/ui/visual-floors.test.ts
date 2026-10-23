@@ -296,8 +296,10 @@ const OBLIGATIONS: Obligation[] = [
       const stats = byClass(parse(html), 'stat');
       return [
         ...(stats.length === 3 ? [] : [`expected three stats (funds with the rate, trust, level), found ${stats.length}`]),
-        ...(['rate', 'trust', 'level'] as const).flatMap((key) => html.includes(svgOf(RESOURCE_ICON[key], 16, 'res-icon')) ? [] : [`the bar has no ${key} icon`]),
-        ...(stats.some((stat) => classes(stat).includes('stat-cash') && find(stat, (node) => node.tag === 'img' && classes(node).includes('resource-cash-art') && (node.attrs.src ?? '').includes('tex_cash.webp')).length === 1) ? [] : ['the funding target has no cash art']),
+        // Component contract 5 (owner, 2026-10-23): every pill leads with its kit icon in a well; cash
+        // is a pill like the others (a kit icon, not the photo) with the rate as a suffix.
+        ...(['funds', 'trust', 'level'] as const).flatMap((key) => html.includes(svgOf(RESOURCE_ICON[key], 16, 'res-icon')) ? [] : [`the bar has no ${key} icon`]),
+        ...(html.match(/data-ui-pill/g)?.length === 3 ? [] : ['the bar does not mark its three pills']),
         ...(html.includes(svgOf(RESOURCE_ICON.menu, 20)) ? [] : ['the bar has no menu icon']),
         ...stats.flatMap((stat) => leadOf(stat) === 'visual' ? [] : [`stat "${words(stat)}" does not lead with its icon`]),
       ];
