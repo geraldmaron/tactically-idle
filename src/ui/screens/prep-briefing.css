@@ -1,6 +1,8 @@
 /* The brief: flat sections on the page, not boxes in boxes. The orders lead as numbered rows with
    the threat under them, then the cold open whole, then the people as cards. */
 .pb { display: grid; gap: var(--sp5); }
+.pb-scene { display: flex; align-items: flex-end; height: var(--plate-h); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); }
+.pb-scene-place { display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); }
 .pb-block { display: grid; gap: var(--sp2); }
 .pb-block ul, .pb-block ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp2); }
 .pb-h-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); }
@@ -15,7 +17,7 @@
 
 .pb-threats { margin-top: var(--sp1) !important; }
 .pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp2); align-items: start; }
-.pb-threat-icon { margin-top: 2px; color: var(--harm); }
+.pb-threat-icon { margin-top: var(--sp1); color: var(--harm); }
 .pb-threat-claim { margin: 0; font-size: var(--s16); font-weight: 600; line-height: 1.4; color: var(--t1); }
 .pb-threat-where { font-weight: 500; color: var(--t2); }
 .pb-threat-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); margin: var(--sp1) 0 0; font-size: var(--s14); color: var(--t2); }
@@ -23,10 +25,7 @@
 .pb-cold-open { margin: 0; }
 
 .pb-people { grid-template-columns: 1fr; }
-.pb-person { display: grid; grid-template-columns: 44px 1fr; gap: var(--sp3); align-items: start; padding: var(--sp3); border-radius: var(--r2); border: 1px solid var(--hair); background: var(--ink-1); }
-.pb-avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--hair-2); background: var(--ink-2); font: 600 var(--s14)/1 var(--f-title); color: var(--t1); }
-.pb-person[data-kind='subject'] .pb-avatar { border-color: var(--subject); }
-.pb-person[data-kind='civilian'] .pb-avatar { border-color: var(--civilian); }
+.pb-person { display: grid; grid-template-columns: var(--face-md) 1fr; gap: var(--sp3); align-items: start; padding: var(--sp3); border-radius: var(--r2); border: 1px solid var(--hair); background: var(--ink-1); }
 .pb-person-text { min-width: 0; display: grid; gap: var(--sp1); }
 .pb-person-text strong { font-size: var(--s16); display: inline-flex; align-items: center; gap: var(--sp1); }
 .pb-person-text p { margin: 0; font-size: var(--s14); line-height: 1.45; color: var(--t-plate); }

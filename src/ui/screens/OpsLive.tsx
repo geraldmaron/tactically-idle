@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getState, send, setLiveCallShown, settleLapse, useGame } from '../store';
 import { liveDither } from '../timer';
 import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
-import { leadingPressure, liveFillViews } from './fill-gauge';
+import { liveFillViews } from './fill-gauge';
 import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
@@ -12,7 +12,7 @@ import { ChromeFoot, useChromeMode } from '../components/chrome';
 import { Sheet } from '../components/Sheet';
 import { Button } from '../components/ui';
 import { OpenInLab } from '../components/OpenInLab';
-import { ActionSheet, FillGauge, LiveView, RoomSheet, ThreatPill } from './LiveView';
+import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { Blueprint } from '../blueprint/Blueprint';
 import { OperationFeedback } from './OperationFeedback';
 import { sceneFor } from '../art/Plates';
@@ -119,7 +119,6 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
 
   if (!screen) return <div className="page"><p className="dim">This call's building is unavailable.</p></div>;
   const { model, review } = screen;
-  const livePressure = beat === 'decide' ? leadingPressure(model.progress.threat ?? null, dither, liveFillViews(g, dither)) : null;
   const { deployed, focus, view, acting, support, actionRule, maxActing, resupply, lead, bestFit, leadOrder, leadOfficerId, leadMarks, leadBlend, leadCerts, alternatives, scenario, spaceById, targetLabel, availableMembers, actorUnavailable, floorOf } = review;
   const actions = model.actions;
   const spaces = model.spaces;
@@ -233,11 +232,6 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
         <Button variant="danger" block onClick={() => { setPanel('none'); setConfirmFailure({ runId: failurePlan.runId, revision: failurePlan.revision }); }}>Review failed response</Button>
       </section>}
     >
-      {livePressure && <ChromeFoot><div className="live-pressure-cue">
-        {livePressure.kind === 'threat'
-          ? <ThreatPill label={livePressure.label} minutes={livePressure.minutes} dither={dither} />
-          : <FillGauge view={{ ...livePressure.view, effect: null }} />}
-      </div></ChromeFoot>}
       <ActionSheet
         open={panel === 'action'}
         preview={view && <div className="action-sheet-map" aria-label={`Where ${view.title} happens`}>

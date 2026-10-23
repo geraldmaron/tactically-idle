@@ -1,0 +1,10 @@
+/* Face (components/Face.tsx): a round portrait at one of three sizes, a role silhouette when there is no photograph. */
+.face { position: relative; display: inline-grid; place-items: center; flex: none; overflow: hidden; border-radius: 50%; border: 2px solid var(--hair-2); background: linear-gradient(160deg, var(--ink-3), var(--ink-1)); color: var(--person); }
+.face-sm { width: var(--face-sm); height: var(--face-sm); }
+.face-md { width: var(--face-md); height: var(--face-md); }
+.face-lg { width: var(--face-lg); height: var(--face-lg); }
+.face > img, .face > div { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.face-silhouette { grid-area: 1 / 1; width: 100%; height: 100%; fill: currentColor; opacity: 0.85; }
+.face-officer, .face-patrol { color: var(--officer); }
+.face-subject { border-color: var(--subject); color: var(--subject); }
+.face-civilian { border-color: var(--civilian); color: var(--civilian); }

@@ -345,7 +345,7 @@ describe('persistent decision results', () => {
     expect(debrief.endingSummary).toBeTruthy();
     expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
     expect(html).toContain(`Decision log<span class="disclosure-count">${decisionViews(state).length}</span>`);
-    expect(html).toContain('>Done<');
+    expect(html).toContain('>Next call<');
     expect(html).not.toContain('Battery pack');
     const closed = apply(state, { type: 'closeDebrief' });
     expect(closed.result.ok).toBe(true);

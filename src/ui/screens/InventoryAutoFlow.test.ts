@@ -22,6 +22,7 @@ const hooks = vi.hoisted(() => ({ values: [] as unknown[], cursor: 0 }));
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
   useMemo: (factory: () => unknown) => factory(),
+  useEffect: () => {},
   useLayoutEffect: () => {},
   useRef: () => ({ current: null }),
   useState: (initial: unknown) => {

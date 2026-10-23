@@ -1,51 +1,54 @@
 
 /* Recent debriefs: a result reads at a glance from rings, tone and faces before any words. */
-.debrief-tile { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; padding: 10px 12px 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, var(--panel-2), var(--panel)); color: var(--text); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
-.debrief-tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--muted); }
-.debrief-tile-good::before { background: var(--mint); }
+.debrief-tile { position: relative; display: flex; align-items: center; gap: var(--sp3); width: 100%; min-width: 0; padding: var(--sp3) var(--sp3) var(--sp3) var(--sp4); border: 1px solid var(--hair); border-radius: var(--r1); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); color: var(--t1); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.debrief-tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--t3); }
+.debrief-tile-good::before { background: var(--good); }
 .debrief-tile-mixed::before { background: var(--warn); }
-.debrief-tile-poor::before { background: var(--danger); }
-.debrief-tile:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-.debrief-rings { display: grid; gap: 6px; flex-shrink: 0; }
+.debrief-tile-poor::before { background: var(--harm); }
+.debrief-tile:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.debrief-rings { display: grid; gap: var(--sp2); flex-shrink: 0; }
 .score-ring { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; }
-.score-ring-core { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--panel); color: var(--text-dim); }
-.debrief-tile-main { display: grid; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.debrief-tile-kicker { display: flex; align-items: center; gap: 6px; min-width: 0; font-family: var(--font-cond); font-size: var(--s14); font-weight: 600; color: var(--t2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.debrief-tile-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; line-height: 1.15; letter-spacing: 0.02em; overflow-wrap: anywhere; }
-.debrief-tile-sub { display: flex; align-items: center; gap: 6px; font-size: var(--s14); color: var(--text-dim); }
+.score-ring-core { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink-1); color: var(--t2); }
+.debrief-tile-main { display: grid; gap: var(--sp1); min-width: 0; flex: 1 1 auto; }
+.debrief-tile-kicker { display: flex; align-items: center; gap: var(--sp2); min-width: 0; font-family: var(--f-title); font-size: var(--s14); font-weight: 600; color: var(--t2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.debrief-tile-title { font-family: var(--f-title); font-size: 17px; font-weight: 600; line-height: 1.15; letter-spacing: 0.02em; overflow-wrap: anywhere; }
+.debrief-tile-sub { display: flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
 .debrief-tile-sub .kit-mark { flex: none; }
-.debrief-tile-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
+.debrief-tile-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp1) var(--sp3); margin-top: var(--sp1); }
 .debrief-team { display: inline-flex; }
-.debrief-team-face { display: block; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 2px solid var(--panel); }
-.debrief-team-face + .debrief-team-face { margin-left: -7px; }
-.debrief-reward { display: inline-flex; align-items: center; gap: 3px; font-size: var(--s14); font-weight: 600; font-variant-numeric: tabular-nums; }
-.debrief-tile-go { flex-shrink: 0; color: var(--muted); }
+.debrief-team-face { display: block; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 2px solid var(--ink-1); }
+.debrief-team-face + .debrief-team-face { margin-left: calc(-1 * var(--sp2)); }
+.debrief-reward { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); font-weight: 600; font-variant-numeric: tabular-nums; }
+.debrief-tile-go { flex-shrink: 0; color: var(--t3); }
 
 /* Department header: money and roster readiness at a glance. */
 /* Inside the header the money row already titles the breakdown; show only the lines. */
 
-/* HQ as status (screens/HQ.tsx): the name under the cutaway, one "your move" card, duty rows. */
+/* HQ as status (screens/HQ.tsx): the plate, one "your move" card, squad rows, patrol income, results. */
 .hq-page { gap: var(--sp4); }
-.hq-move { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3) var(--sp4); border: 1px solid rgba(242, 178, 52, 0.35); border-radius: var(--r2); background: var(--act-soft); }
-.hq-move-scene { position: relative; isolation: isolate; overflow: hidden; min-height: 104px; }
+.hq-move { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3) var(--sp4); border: 1px solid var(--act); border-radius: var(--r2); background: var(--act-soft); }
+.hq-move-scene { position: relative; isolation: isolate; overflow: hidden; min-height: var(--plate-h); }
 .hq-move-scene > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: center 55%; }
 .hq-move-scene::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, color-mix(in srgb, var(--ink-0) 95%, transparent), color-mix(in srgb, var(--ink-0) 65%, transparent)); }
-.hq-move-main { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.hq-move-main { display: grid; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
 .hq-move-main strong { font: 600 var(--s16)/1.25 var(--f-ui); color: var(--t1); }
 .hq-move-main span { font-size: var(--s14); color: var(--t2); }
-.hq-move .btn { flex: none; min-height: 48px; }
+.hq-move .btn { flex: none; }
 .hq-report .hq-link { color: var(--t1); font-weight: 600; text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 4px; }
 .hq-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp1) var(--sp3); margin-bottom: var(--sp1); }
 .hq-head .section-title { margin: 0; }
-.hq-head-note { font-size: var(--s14); color: var(--t3); }
 .hq-duties { display: flex; flex-direction: column; }
-.hq-duty .squad-badge { width: 24px; height: 24px; font: 700 var(--s14)/1 var(--f-title); }
-.hq-duty-select select { min-height: 44px; padding: 0 var(--sp6) 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 22px; background-color: transparent; color: var(--t1); font: 500 var(--s14)/1 var(--f-ui); }
-.hq-duty-select select:disabled { color: var(--t3); }
-.hq-duty-auto { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: 44px; font-size: var(--s14); color: var(--t2); cursor: pointer; }
+.hq-squad { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp2) var(--sp3); padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); }
+.hq-duty { flex: 1 1 11rem; min-width: 0; border-bottom: 0; }
+.hq-squad > .choice-rail { flex: 0 0 auto; }
+.hq-squad > .hq-duty-auto { flex: 1 0 100%; }
+.hq-squad:last-child { border-bottom: 0; }
+.hq-faces { display: inline-flex; }
+.hq-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
+.hq-duty-auto { position: relative; display: inline-flex; align-items: center; gap: var(--sp2); min-height: var(--touch); font-size: var(--s14); color: var(--t2); cursor: pointer; }
 .hq-duty-auto input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .hq-duty-auto .toggle-ui { margin-top: 0; }
 .hq-duty-auto input:checked + .toggle-ui { background: var(--good); }
 .hq-duty-auto input:checked + .toggle-ui::after { transform: translateX(18px); background: var(--t1); }
 .hq-duty-auto input:focus-visible + .toggle-ui { outline: 2px solid var(--act); outline-offset: 2px; }
-.hq-duty-blurb { margin: var(--sp2) 0 0; font-size: var(--s14); color: var(--t3); }
+.hq-patrol-rate strong { color: var(--good-text); font: 700 var(--s18)/1 var(--f-title); white-space: nowrap; font-variant-numeric: tabular-nums; }

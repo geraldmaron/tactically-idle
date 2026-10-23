@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useGame } from '../store';
 import {
@@ -23,7 +23,7 @@ import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
 import { ActionBar, Button, Stepper, SubHead } from '../components/ui';
-import { Portrait } from '../portraits/Portrait';
+import { Face } from '../components/Face';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
@@ -42,7 +42,7 @@ import { PrepBriefing } from './PrepBriefing';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
-import { joinNames, squadName as nameOf, toggleDeploymentSquad } from './operation-squads';
+import { bestFitSquad, joinNames, squadName as nameOf, toggleDeploymentSquad } from './operation-squads';
 import { callFlow, draftField, type FlowStep } from './call-flow';
 import { FlowScreen } from '../components/chrome';
 import './preparation-options.css';
@@ -72,6 +72,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   // The draft (call-flow.ts): read fresh on every render, written through the flow's store.
   const draft = callFlow.draft(scenarioId);
   const [chosen, setChosen] = draftField(scenarioId, draft, 'chosen');
+  const [squadsTouched, setSquadsTouched] = draftField(scenarioId, draft, 'squadsTouched');
   const [positions, setPositions] = draftField(scenarioId, draft, 'positions');
   const [optionalLoadouts, setLoadouts] = draftField(scenarioId, draft, 'loadouts');
   const [explicit, setExplicit] = draftField(scenarioId, draft, 'explicit');
@@ -168,7 +169,18 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built]);
   const check = prepCheck(g, now, cmd, timerSetting());
 
+  // A call that takes exactly one squad opens its deploy step with the best-fit ready squad chosen:
+  // the one with the most officers fit to go. The player can still pick another or clear it.
+  useEffect(() => {
+    if (step !== 'deploy' || squadsTouched || chosen.length > 0 || range.min !== 1 || range.max !== 1) return;
+    setSquadsTouched(true);
+    const best = bestFitSquad(g.squads.map((s) => ({ id: s.id, ...squadReadiness(g, s.id, Date.now()) })));
+    if (best) setChosen([best]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, squadsTouched, chosen.length, range.min, range.max]);
+
   const toggleSquad = (id: SquadId) => {
+    setSquadsTouched(true);
     setAutoUndo(null);
     setChosen(toggleDeploymentSquad(chosen, id, maxSquads));
   };
@@ -269,7 +281,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   const footStatus = chosen.length === 0
     ? { text: 'Choose who goes', tone: 'act' }
     : check.issues.length > 0
-      ? { text: check.issues.length === 1 && check.issues[0].length <= 48 ? check.issues[0] : `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix first`, tone: 'warn' }
+      ? { text: `${check.issues.length} ${check.issues.length === 1 ? 'thing' : 'things'} to fix first`, tone: 'warn' }
       : visibleWarnings.length > 0
         ? { text: `Ready, ${visibleWarnings.length} ${visibleWarnings.length === 1 ? 'warning' : 'warnings'}`, tone: 'act' }
         : { text: 'Ready', tone: 'good' };
@@ -302,7 +314,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
 
   const deployStep = <>
     <section className="cl-section" aria-labelledby="cl-who-h">
-      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title"><Icon name="people" size={18} />Who goes</h2><span className="cl-section-aside">{takes}</span></div>
+      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title"><Icon name="people" size={20} />Who goes</h2><span className="cl-section-aside">{takes} · <span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span></span></div>
       {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads">
         {g.squads.map((s) => {
           const r = squadReadiness(g, s.id, now);
@@ -319,7 +331,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
                 <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
               </span>
               <span className="cl-faces" aria-hidden="true">
-                {members.slice(0, 4).map((officer) => <span key={officer.id} className="cl-face"><Portrait officer={officer} size={30} /></span>)}
+                {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} />)}
               </span>
             </button>
           );
@@ -335,14 +347,14 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       const way = goingIn(sid);
       return <section key={sid} className="cl-section cl-squad-plan" aria-label={`${squadName(sid)} plan`} data-squad={sid}>
         <div className="cl-section-head">
-          <h2 className="cl-section-title"><Icon name="box" size={18} />{squadName(sid)} carries</h2>
+          <h2 className="cl-section-title"><Icon name="box" size={20} />{squadName(sid)} carries</h2>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
         </div>
         {index === 0 && <p className="cl-basic-kit">{BASIC_KIT_LINE}</p>}
         {kit.length > 0 ? <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={22} />{item.text}</li>)}</ul>
           : <p className="cl-muted">Nothing from the Armory.</p>}
         <div className="cl-section-head">
-          <h3 className="cl-section-title"><Icon name="door" size={18} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
+          <h3 className="cl-section-title"><Icon name="door" size={20} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
           <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
         </div>
         <p className="cl-going"><strong>{way.title}</strong>{way.detail && <span>{way.detail}</span>}</p>
@@ -385,7 +397,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   // A pushed flow (components/chrome.tsx): the shell draws the head and the action bar; the tabs go.
   const footer = step === 'brief'
     ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => callFlow.goStep('deploy') }} />
-    : <ActionBar className="cl-actions" summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{title} · {chosen.length} of {range.max} squad{range.max > 1 ? 's' : ''}</span></>}
+    : <ActionBar className="cl-actions"
       primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
     <FlowScreen title={step === 'brief' ? title : 'Deploy'} icon={step === 'brief' ? <CallTypeBadge type={scenario?.incident?.type} size={24} /> : <Icon name="people" size={20} />} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
@@ -437,7 +449,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
             <span className="prep-item-art" aria-hidden="true"><GearArt itemId={o.item.id} size={34} />{qty > 0 && <b className="prep-item-qty">×{qty}</b>}</span>
             <span className="prep-item-main">
               <strong>{o.item.name}</strong>
-              <span className="prep-item-sub">{`${free} free${others ? ` · ${others} with other squads` : ''}`}{useful && <span className="prep-item-useful"><Icon name="star" size={11} />Useful</span>}</span>
+              <span className="prep-item-sub">{`${free} free${others ? ` · ${others} with other squads` : ''}`}{useful && <span className="prep-item-useful"><Icon name="star" size={16} />Useful</span>}</span>
             </span>
             <span className="prep-item-ctl"><Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} /></span>
             {(units.length > 0 || units.length < qty) && <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
@@ -446,11 +458,11 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
                 const state = unitStateOf(condition, o.item.wear);
                 const meta = UNIT_STATE_META[state];
                 return <li key={u.id} className={`lo-unit lo-unit-${meta.tone}`} title={`${u.serial} · ${Math.round(condition)}% · ${state}`}>
-                  <Icon name={meta.icon} size={12} /><b>{u.serial}</b>
+                  <Icon name={meta.icon} size={16} /><b>{u.serial}</b>
                   <span>{Math.round(condition)}%{meta.tone === 'bad' ? ` · ${state} · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}</span>
                 </li>;
               })}
-              {units.length < qty && <li className="lo-unit lo-unit-bad lo-unit-missing"><Icon name="warning" size={12} /><span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span></li>}
+              {units.length < qty && <li className="lo-unit lo-unit-bad lo-unit-missing"><Icon name="warning" size={16} /><span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span></li>}
             </ul>}
           </li>;
         })}
@@ -468,7 +480,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     const pickPosition = (id: Id) => { setPositions((p) => ({ ...p, [sid]: id })); setStaging((st) => omit(st, sid)); };
     return <section className="cl-going-workspace" aria-label={`${squadName(sid)} way in`} data-squad={sid}>
       <label className="field">
-        <span className="field-label"><Icon name="pin" size={14} />Starting position</span>
+        <span className="field-label"><Icon name="pin" size={16} />Starting position</span>
         <select value={way.position ?? ''} onChange={(e) => pickPosition(e.target.value)} disabled={brief.entries.length === 0}>
           {brief.entries.length === 0 && <option value="">No entries listed</option>}
           {brief.entries.map((en) => <option key={en.id} value={en.id}>{en.label}</option>)}
@@ -479,7 +491,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
           highlightSpaceIds={brief.entries.map((entry) => entry.id)} onSelectSpace={(id) => { if (brief.entries.some((entry) => entry.id === id)) pickPosition(id); }} {...blueprintExtras} />
       </div>}
       {way.points.length > 0 && <div className="field">
-        <span className="field-label" id={`stage-${sid}`}><Icon name="door" size={14} />Staging point</span>
+        <span className="field-label" id={`stage-${sid}`}><Icon name="door" size={16} />Staging point</span>
         <div className="stagelist" role="radiogroup" aria-labelledby={`stage-${sid}`}>
           {stageLabels(built, way.points, way.position).map(({ point, title: pointTitle, sub, icon }) => (
             <StageOption key={point.id} on={way.pickedId === point.id} icon={icon} title={pointTitle} sub={point.id === way.nearest?.id ? 'Nearest door' : sub}
@@ -507,7 +519,7 @@ function StageOption({ on, icon, title, sub, onPick }: { on: boolean; icon: Icon
         <strong>{title}</strong>
         {sub && <span className="dim">{sub}</span>}
       </span>
-      <span className="stageopt-check">{on && <Icon name="check" size={18} />}</span>
+      <span className="stageopt-check">{on && <Icon name="check" size={20} />}</span>
     </button>
   );
 }

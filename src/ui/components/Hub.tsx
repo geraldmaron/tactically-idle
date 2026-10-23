@@ -1,36 +1,33 @@
-// The HQ cutaway: the department building as a picture of its state. Rooms are not buttons to the
-// tabs (docs/ui-ux-audit.md, "HQ"); a room speaks with a pin only when something in it needs the
-// player, and a pin that leads somewhere is a button. Without the painting the pins sit on a plain
-// block, so the hub reads the same without the image.
+// The HQ plate: the department building painted at the shared plate height, the department's name
+// and the date on it. It shows a painted tone on the first frame, so the title never sits on a blank
+// band while the painting loads. Facts that repeat on the screen (calls waiting, squads ready, patrol
+// coverage) are not repeated here; a pin appears only for something the screen below does not say.
 import { useState } from 'react';
 import { plateUrl } from '../art/Plates';
+import { Button, Chip } from './ui';
 import './hub.css';
 
-export type HubRoom = 'dispatch' | 'training' | 'lockers' | 'armory' | 'briefing' | 'garage';
 export interface HubPin {
-  room: HubRoom;
+  room: string;
   text: string;
-  detail?: string;
-  /** act: the player's move (a call waits); harm: something is going wrong. */
-  tone?: 'act' | 'harm';
+  /** harm: something is going wrong. */
+  tone?: 'harm';
   onOpen?: () => void;
 }
 
-/** A compact department scene. State chips name actual conditions, not invented room positions. */
 export function Hub({ pins, title, meta }: { pins: HubPin[]; title?: string; meta?: string }) {
   const src = plateUrl('hub_hq');
-  const [failed, setFailed] = useState(false);
-  const painted = !!src && !failed;
+  const [state, setState] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  const painted = !!src && state !== 'failed';
   return <section className={`hub${painted ? '' : ' hub-plain'}`} aria-label="Headquarters">
-    {painted && <img className="hub-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onError={() => setFailed(true)} />}
-    {title && <div className="hub-identity"><span>{meta}</span><h1>{title}</h1></div>}
+    <div className={`hub-plate${state === 'loaded' ? ' hub-plate-loaded' : ''}`}>
+      {painted && <img className="hub-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onLoad={() => setState('loaded')} onError={() => setState('failed')} />}
+      {title && <div className="hub-identity"><h1>{title}</h1>{meta && <span>{meta}</span>}</div>}
+    </div>
     {pins.length > 0 && <ul className="hub-pins">
-      {pins.map((pin) => {
-        const body = <>{pin.tone === 'act' && <i className="hub-dot" aria-hidden="true" />}<span className="hub-pin-text"><strong>{pin.text}</strong>{pin.detail && <span>{pin.detail}</span>}</span></>;
-        return <li key={pin.room} className={`hub-pin${pin.tone ? ` hub-pin-${pin.tone}` : ''}`}>
-          {pin.onOpen ? <button type="button" onClick={pin.onOpen}>{body}</button> : <span>{body}</span>}
-        </li>;
-      })}
+      {pins.map((pin) => <li key={pin.room}>
+        {pin.onOpen ? <Button size="sm" variant="quiet" onClick={pin.onOpen}>{pin.text}</Button> : <Chip tone={pin.tone === 'harm' ? 'harm' : 'neutral'}>{pin.text}</Chip>}
+      </li>)}
     </ul>}
   </section>;
 }

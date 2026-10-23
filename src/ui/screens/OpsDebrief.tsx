@@ -37,15 +37,16 @@ export function SavedDebriefReview({ debrief, officers, onClose }: { debrief: De
   </Sheet>;
 }
 
-/** The debrief as a flow with no Back (docs/ui-ux-audit.md, exit table): Done settles the call
- * (closeDebrief pays, awards experience and releases the squads) and then leaves for the board. A tab
+/** The debrief as a flow with no Back (docs/ui-ux-audit.md, exit table): Next call settles the call
+ * (closeDebrief pays, awards experience and releases the squads) and then leaves for the board, never
+ * for a particular call. A tab
  * change or browser Back leaves it unsettled, and the Calls tab returns to it. */
 export function OpsDebrief() {
   const g = useGame();
   const { act } = useToast();
   const d = pendingDebrief(g);
   const done = () => { if (act({ type: 'closeDebrief' }).ok) callFlow.close(); };
-  const footer = <ActionBar className="cl-actions" primary={{ label: 'Done', onClick: done }} />;
+  const footer = <ActionBar className="cl-actions" primary={{ label: 'Next call', onClick: done }} />;
   if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
   </FlowScreen>;
@@ -58,7 +59,7 @@ export function OpsDebrief() {
   // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
   return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page debrief cl-flow-body">
-      <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} />
+      <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} heroAction={import.meta.env.DEV && <OpenInLab getState={() => g} />} department={{ funding: g.department.funding, level: g.department.level, service: g.department.service }} />
     </div>
   </FlowScreen></GamePeopleProvider>;
 }
