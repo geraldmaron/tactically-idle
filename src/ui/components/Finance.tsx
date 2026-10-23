@@ -24,6 +24,9 @@ interface FundingFeedback {
 const FundingContext = createContext<FundingFeedback>({ pending: 0, arrival: 0 });
 export const useFundingFeedback = () => useContext(FundingContext);
 export const CASH_FLIGHT_MS = 650;
+/** Smaller changes than this are not news: no flying cash and no floating chip. Patrol accrual ticks in
+ * dollars all day; only a payout worth a look earns the motion. */
+export const MIN_NEWS = 25;
 export const MAX_CASH_SPRITES = 24;
 
 /** One shell-owned layer. It presents receipts; it never dispatches or changes saved money. */
@@ -59,7 +62,7 @@ export function FundingFeedbackProvider({ children }: { children: ReactNode }) {
   }, [reconcile]);
 
   const collect = useCallback((sequence: number, amount: number, origin: { x: number; y: number }, actions: number) => {
-    if (!mounted.current || flights.current.has(sequence) || amount <= 0) return;
+    if (!mounted.current || flights.current.has(sequence) || amount < MIN_NEWS) return;
     const host = layer.current;
     const target = host?.parentElement?.querySelector<HTMLElement>('[data-funding-target]');
     if (!host || !target || reducedMotion() || document.hidden || typeof target.animate !== 'function') {
@@ -185,7 +188,7 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
     // One chip per frame of news: several events at once read as their sum.
     // A folded entry announces only its newest posting; the rest was announced when it happened.
     const amount = visual.reduce((sum, e) => sum + (e.latest ?? e.amount), 0);
-    if (Math.round(amount) === 0) return;
+    if (Math.abs(amount) < MIN_NEWS) return;
     const delta = { key: lastSeq, amount, label: visual.length === 1 ? visual[0].label : `${visual.length} changes` };
     setDeltas((list) => [...list.slice(-2), delta]);
     const timer = window.setTimeout(() => setDeltas((list) => list.filter((d) => d.key !== delta.key)), 1800);
@@ -215,6 +218,9 @@ export function useLiveFunding(g: GameState): { shown: number; deltas: FundingDe
       }
       const k = 1 - Math.pow(0.65, Math.min(1000, at - last) / 100);
       last = at;
+      // Ambient accrual is a few dollars at a time: hold the figure until the gap is worth showing, so it
+      // does not crawl. A real payout or a purchase is far larger and still counts across.
+      if (Math.abs(target - current) < 5 && pendingRef.current === 0) { frame = window.requestAnimationFrame(step); return; }
       const next = Math.abs(target - current) < 1 ? target : current + (target - current) * k;
       shownRef.current = next;
       if (Math.round(next) !== Math.round(current)) setShown(next);
