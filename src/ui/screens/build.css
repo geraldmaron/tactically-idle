@@ -19,3 +19,7 @@
 .facility-room-ready .cost-quote-value { color: var(--t1); }
 .build-capacity { border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
 .facility-build-page .develop-page { padding: var(--sp3) 0; }
+/* Enlarged text: the price drops under the name instead of breaking it mid-word. */
+.facility-building .facility-room { flex-wrap: wrap; }
+.facility-building .facility-room > .ui-row-main { flex: 1 1 9em; }
+.facility-building .facility-room > .ui-row-trail { margin-left: auto; }

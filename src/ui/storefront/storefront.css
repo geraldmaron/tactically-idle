@@ -84,3 +84,6 @@
 .store-group-count { margin-left: auto; }
 .store-results-count { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); }
 .store-results-count > .icon { color: var(--t3); }
+.store-list > .store-tile { flex-wrap: wrap; }
+.store-list > .store-tile > .ui-row-main { flex: 1 1 9em; }
+.store-list > .store-tile > .ui-row-trail { margin-left: auto; }
