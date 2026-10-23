@@ -43,7 +43,7 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
   return (<>
     <div className="page cl-board">
       <header className="cl-board-top">
-        <h1 className="cl-board-title"><Icon name="calls" size={20} />Calls</h1>
+        <h1 className="cl-board-title"><Icon name="calls" size={24} />Calls</h1>
         <span className="cl-board-aside">
           <span className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</span>
           <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
@@ -53,7 +53,7 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
         {arrival && <span className="cl-board-next"><Icon name="clock" size={16} />{arrival}</span>}
         No penalty for skipping a call. One nobody takes goes to another unit.
       </p>}
-      {live.length === 0 && <EmptyState compact icon="calls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.{arrival ? ` ${arrival}.` : ''}</EmptyState>}
+      {live.length === 0 && <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.{arrival ? ` ${arrival}.` : ''}</EmptyState>}
       <div className="cl-board-list" data-ui-list>
         {live.map((e) => (
           <BoardCard key={e.card.id} g={g} entry={e} now={now} isNew={fresh.has(e.card.id)} onOpen={onOpen} />

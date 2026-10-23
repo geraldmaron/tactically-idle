@@ -47,7 +47,7 @@
 .cl-ready-badges .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
 .cl-ready-text { min-width: 0; }
 .cl-card-pay { display: grid; justify-items: end; gap: 0; flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
-.cl-card-pay-up { color: var(--t3); font-size: var(--s12); }
+.cl-card-pay-up { color: var(--t3); }
 .cl-card-pay b { font-size: var(--s16); color: var(--t1); }
 .cl-card-chevron { flex: 0 0 auto; color: var(--t3); }
 .cl-card .optile-bring { position: relative; z-index: 2; }
