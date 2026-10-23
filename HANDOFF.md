@@ -286,8 +286,10 @@ Wave 2 (visual only, from 3254345): live-debrief (local_8cb0246e, 5180), team (l
 hq (local_47377257, 5175), store (local_05ca9623, 5177). Ownership and routed items: the plan's wave 2 table.
 
 Wave 2 merged, untested (owner's visual-only rule): hq (4eeff85), team (35683d4), store (135612a, pill rules moved
-in 91c47b1), live-debrief (13b51a5). Next: wave 3 calls lane and the lead's shared batch, both listed at the end
-of the plan.
+in 91c47b1), live-debrief (13b51a5). Wave 3 merged, untested: shared-file batch (ba3ed00) and calls (5d42996). Every planned screen has had its visual
+pass. Open: testing resumes only on the owner's word (then regenerate `ui-debt.json`, `SMALL_TEXT_CEILING` and
+`docs/architecture.md`, merge the paused gates lane, update e2e selectors from the READY notes); the owner plays the
+merged build on lead-5182 and signs off the UI.
 Lead-owned during the wave: `src/ui/ui-debt.json` and `SMALL_TEXT_CEILING` (lanes lower them on their own branch;
 the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme.css`, `app.css`, `skin.css`,
 `player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
