@@ -197,6 +197,13 @@ function screenIdentity(page: El, headingClass: string, name: string, icon: Icon
   ];
 }
 
+/** A compact empty state is one row that leads with a kit icon, not a Spot picture. */
+const iconEmptyIn = (page: El, title: string): string[] => {
+  const empty = find(page, (node) => classes(node).includes('empty-compact') && words(node).includes(title));
+  if (empty.length !== 1) return [`expected one compact empty state "${title}", found ${empty.length}`];
+  return leadOf(empty[0]) === 'visual' ? [] : [`"${title}" does not lead with its icon`];
+};
+
 const spotIn = (page: El, title: string): string[] => {
   const empty = find(page, (node) => classes(node).includes('empty') && words(node).includes(title));
   if (empty.length !== 1) return [`expected one empty state "${title}", found ${empty.length}`];
@@ -288,7 +295,7 @@ const OBLIGATIONS: Obligation[] = [
       const html = renderToStaticMarkup(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: () => {}, onClose: () => {}, onOpenMenu: () => {} }));
       const stats = byClass(parse(html), 'stat');
       return [
-        ...(stats.length === 4 ? [] : [`expected four stats, found ${stats.length}`]),
+        ...(stats.length === 3 ? [] : [`expected three stats (funds with the rate, trust, level), found ${stats.length}`]),
         ...(['rate', 'trust', 'level'] as const).flatMap((key) => html.includes(svgOf(RESOURCE_ICON[key], 16, 'res-icon')) ? [] : [`the bar has no ${key} icon`]),
         ...(stats.some((stat) => classes(stat).includes('stat-cash') && find(stat, (node) => node.tag === 'img' && classes(node).includes('resource-cash-art') && (node.attrs.src ?? '').includes('tex_cash.webp')).length === 1) ? [] : ['the funding target has no cash art']),
         ...(html.includes(svgOf(RESOURCE_ICON.menu, 20)) ? [] : ['the bar has no menu icon']),
@@ -384,8 +391,8 @@ const OBLIGATIONS: Obligation[] = [
   } },
 
   // ---- each empty state has its Spot
-  { id: 'empty-hq-squads', screen: 'HQ (On duty)', fixture: 'no squads', check: () => { state = { ...state, squads: [] }; return spotIn(mount(createElement(HQ)), 'No squads yet'); } },
-  { id: 'empty-hq-results', screen: 'HQ (Recent results)', fixture: 'no debriefs', check: () => spotIn(mount(createElement(HQ)), 'No results yet') },
+  { id: 'empty-hq-squads', screen: 'HQ (On duty)', fixture: 'no squads', check: () => { state = { ...state, squads: [] }; return iconEmptyIn(mount(createElement(HQ)), 'No squads yet'); } },
+  { id: 'empty-hq-results', screen: 'HQ (Recent results)', fixture: 'no debriefs', check: () => iconEmptyIn(mount(createElement(HQ)), 'No results yet') },
   { id: 'empty-calls', screen: 'OpsBoard', fixture: 'nothing on the board', check: () => { state = { ...state, incidents: [] }; return spotIn(mount(createElement(OpsBoard, { onOpen: () => {} })), 'No calls right now'); } },
   { id: 'empty-squads', screen: 'SquadScreen (Squads)', fixture: 'no squads', check: () => { state = { ...state, squads: [] }; return spotIn(mount(createElement(SquadScreen), { squadSection: 'squads' }), 'No squads yet'); } },
   { id: 'empty-hire', screen: 'SquadScreen (Hire)', fixture: 'no candidates', check: () => { state = { ...state, candidates: [] }; return spotIn(mount(createElement(SquadScreen), { squadSection: 'hire' }), 'No candidates right now'); } },

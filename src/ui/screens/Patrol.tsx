@@ -6,7 +6,6 @@ import {
 import type { Command, GameState, Id, PatrolEmployee, PatrolGrade, PatrolReceipt } from '../../sim/types';
 import { ManagerPortrait } from '../art/ManagerArt';
 import { PlateArt, plateUrl } from '../art/Plates';
-import { Disclosure } from '../components/Disclosure';
 import { useNav } from '../components/nav';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
@@ -76,24 +75,6 @@ function PatrolScene({ game, onHire }: { game: GameState; onHire?: () => void })
       })}
     </div>
   </div>;
-}
-
-/** HQ's automatic workforce summary and one useful next staffing action. */
-export function PatrolActivity({ game, departmentNet }: { game: GameState; departmentNet: number }) {
-  const nav = useNav();
-  const employees = employedPatrol(game);
-  const candidates = patrolCandidates(game);
-  const hire = candidates[0] ? patrolHireQuote(game, candidates[0].id) : null;
-  const trainee = employees.find((employee) => patrolTrainingQuote(game, employee.id).ok);
-  const next = trainee ? { label: 'Train patrol', detail: profileName(trainee.profileId), act: () => nav.openPatrol({ kind: 'training', employeeId: trainee.id }) }
-    : hire?.ok ? { label: 'Hire patrol', detail: `${moneyFull(hire.upfront)} · ${rate(hire.netDelta)} base net`, act: () => nav.openPatrol({ kind: 'hire' }) }
-      : { label: 'Manage patrol', detail: `${employees.length} of ${patrolCapacity(game)} positions filled`, act: () => nav.setTeamSection('patrol') };
-  const rates = patrolRates(game, game.department.clockHighWater);
-  return <section className="hq-patrol" aria-label="Patrol activity">
-    <div className="hq-patrol-top" data-patrol-funding-origin><span className="hq-patrol-faces" aria-hidden="true">{employees.slice(0, 3).map((employee) => <PatrolPortrait key={employee.id} profileId={employee.profileId} size={32} />)}</span><div><strong>Patrol coverage</strong><span>{rates.productive} productive · {rates.employed} employed</span></div><div className="hq-patrol-rate"><span>Department net</span><strong>{rate(departmentNet)}</strong></div></div>
-    <div className="hq-patrol-next"><span>{next.detail}</span><Button variant="primary" onClick={next.act}>{next.label}</Button></div>
-    <Disclosure name="hq-patrol-funding" summary="Patrol funding breakdown"><dl className="patrol-money-grid"><div><dt>Patrol gross</dt><dd>{rate(rates.gross)}</dd></div><div><dt>Patrol payroll</dt><dd>{perHour(rates.wages)}</dd></div><div><dt>Patrol operations</dt><dd>{perHour(rates.operating)}</dd></div><div><dt>Patrol net</dt><dd>{rate(rates.net)}</dd></div></dl><p>Funding is credited automatically. Department net also includes SWAT payroll and other department costs.</p></Disclosure>
-  </section>;
 }
 
 function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmployee; game: GameState; onReview: (kind: 'dismiss' | 'training') => void }) {
