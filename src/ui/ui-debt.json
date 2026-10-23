@@ -297,14 +297,15 @@
  "rendered": {
   "R12.truncated": {
    "target": 0,
-   "total": 24,
+   "total": 25,
    "counts": {
     "25-live-decide-2@320": 4,
     "25-live-decide-2@390": 4,
     "25-live-decide-2@430": 4,
     "25-live-decide-3@320": 4,
     "25-live-decide-3@390": 4,
-    "25-live-decide-3@430": 4
+    "25-live-decide-3@430": 4,
+    "32-long-names-deploy@320": 1
    }
   },
   "R13": {
@@ -332,7 +333,7 @@
   },
   "R15": {
    "target": 0,
-   "total": 54,
+   "total": 56,
    "counts": {
     "02-hq@320": 1,
     "02-hq@390": 1,
@@ -375,7 +376,9 @@
     "26-debrief@430": 1,
     "27-board-after@320": 1,
     "27-board-after@390": 1,
-    "27-board-after@430": 1
+    "27-board-after@430": 1,
+    "33-empty-board@390": 1,
+    "33-empty-board@430": 1
    }
   },
   "R2.gutter": {
@@ -407,7 +410,7 @@
   },
   "R7.control": {
    "target": 0,
-   "total": 148,
+   "total": 151,
    "counts": {
     "02-hq@320": 1,
     "02-hq@390": 1,
@@ -467,12 +470,15 @@
     "25-live-decide-3@430": 9,
     "26-debrief@320": 3,
     "26-debrief@390": 3,
-    "26-debrief@430": 3
+    "26-debrief@430": 3,
+    "32-long-names-deploy@320": 1,
+    "32-long-names-deploy@390": 1,
+    "32-long-names-deploy@430": 1
    }
   },
   "R9.rendered": {
    "target": 0,
-   "total": 84,
+   "total": 90,
    "counts": {
     "03-finance-sheet@320": 1,
     "03-finance-sheet@390": 1,
@@ -512,7 +518,10 @@
     "25-live-decide-3@430": 4,
     "26-debrief@320": 1,
     "26-debrief@390": 1,
-    "26-debrief@430": 1
+    "26-debrief@430": 1,
+    "32-long-names-deploy@320": 2,
+    "32-long-names-deploy@390": 2,
+    "32-long-names-deploy@430": 2
    }
   }
  }

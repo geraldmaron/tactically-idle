@@ -5,6 +5,7 @@
 // and is not touched; this is its own driver so the feel rules can be switched on screen by screen.
 import { CAMPAIGN_SEED, FIXED_TIME, HEIGHTS, INSET_FIXTURES } from './manifest.mjs';
 import { LAYOUT_EXEMPT, LAYOUT_REGISTRY, judgeLists, judgeMarkers, judgePills, layoutProbe } from './feel-layout.mjs';
+import { emptyBoard, installTickHold, seedLongNames } from './edge-states.mjs';
 import { FEEL_SCREENS, exerciseJump, feelProbe, judgeBlocked, judgePaddedChrome, judgeScreen, judgeShift, judgePrimary } from './feel.mjs';
 
 /** The scenario matrix. `paint` scenarios hold art back so the first frame and the load shift can be seen. */
@@ -32,9 +33,15 @@ export const SCENARIOS = [
   { id: 'lay-430-text200', width: 430, height: HEIGHTS[430], textScale: 2, layout: true, layoutOnly: true, stopAfter: 'board' },
   // Every officer unassigned through window.__ti (dev builds), so no squad can deploy. Walks to the Deploy screen only.
   { id: 'blocked', width: 390, height: HEIGHTS[390], blocked: true },
+  // Squads renamed to the 20-character limit (edge-states.mjs), walked through HQ, the Team, Build and Store
+  // surfaces, the board, the brief and the Deploy screen where the squads are picked.
+  { id: 'long-names-320', width: 320, height: HEIGHTS[320], layout: true, longNames: true, density: false, stopAfter: 'deploy' },
+  { id: 'long-names-390', width: 390, height: HEIGHTS[390], layout: true, longNames: true, stopAfter: 'deploy' },
+  // The Calls board with every call expired and no new one dealt (edge-states.mjs). Walks to that screen only.
+  { id: 'empty-board-320', width: 320, height: HEIGHTS[320], emptyBoard: true },
+  { id: 'empty-board-390', width: 390, height: HEIGHTS[390], emptyBoard: true },
 ];
-// Not seedable by the harness today, so not walked: long names (no rename action) and the empty board
-// (reached only by playing every call; F4 skips below two items anyway).
+// Not walked: long officer names (officers are generated and cannot be renamed).
 
 const ART_DELAY_MS = 1200;
 const STOP = Symbol('end of a scenario that walks only part of the flow');
@@ -63,6 +70,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
     for (const sc of scenarios) {
       const context = await browser.newContext({ viewport: { width: sc.width, height: sc.height }, hasTouch: true, deviceScaleFactor: 2 });
       await context.addInitScript((seed) => { Object.defineProperty(Crypto.prototype, 'getRandomValues', { configurable: true, writable: true, value(a) { a.fill(seed); return a; } }); }, CAMPAIGN_SEED);
+      await installTickHold(context);
       await context.addInitScript((timer) => { if (timer) try { localStorage.setItem('ti-settings', JSON.stringify({ timer })); } catch { /* storage blocked */ } }, sc.timer ?? null);
       await context.addInitScript(() => {
         window.__cls = 0; window.__paint = {};
@@ -162,6 +170,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
             }, sc.squads);
             if (!ok) throw new Error('could not seed the squad count through window.__ti');
           }
+          if (sc.longNames) await seedLongNames(page);
           if (sc.blocked) {
             const n = await page.evaluate(() => Object.values(window.__ti.getState().officers ?? {}).map((o) => window.__ti.send({ type: 'assignToSquad', officerId: o.id, squadId: null }).ok).filter(Boolean).length);
             if (!n) throw new Error('could not unassign any officer through window.__ti');
@@ -169,21 +178,40 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
         });
         if (sc.cold) { const p = await page.evaluate(() => window.__paint); cold.push({ scenario: sc.id, firstContentfulPaintMs: p['first-contentful-paint'] ?? null, largestContentfulPaintMs: p['largest-contentful-paint'] ?? null, note: 'dev server, art held back 1.2s, not gated' }); }
         const tab = (t) => page.locator('nav.bottomnav').getByText(t, { exact: true }).click();
-        await step('hq', async () => { await tab('HQ'); await measure('hq'); await measureLayout('hq'); if (sc.stopAfter === 'hq') throw STOP; });
-        await step('team', async () => {
-          if (!sc.layout) return;
+        await step('hq', async () => { if (sc.emptyBoard) return; await tab('HQ'); await measure('hq'); await measureLayout('hq'); if (sc.stopAfter === 'hq') throw STOP; });
+        // The Team, Build and Store surfaces. A surface that cannot be reached is recorded as a failure and the walk goes on.
+        await step('surfaces', async () => {
+          if (!sc.layout || sc.emptyBoard) return;
           const section = (n) => page.locator('.team-page [aria-label="Team sections"]').getByRole('button', { name: n, exact: true }).click();
-          await tab('Team'); await section('Patrol'); await page.locator('.patrol-page').waitFor(); await measureLayout('team-patrol');
-          await section('Command'); await page.locator('.team-command .command-room').waitFor(); await measureLayout('team-command');
+          const swat = (n) => page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: n, exact: true }).click();
+          const surface = async (name, reach) => {
+            try { await reach(); await measure(name); await measureLayout(name); } catch (e) {
+              failures.push(`${sc.id} ${name}: ${String(e).slice(0, 160)}`);
+              for (let i = 0; i < 3 && (await page.locator('.sheet').count()); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(200); }
+            }
+          };
+          const swatView = (name, sub, ready) => surface(name, async () => { await tab('Team'); await section('SWAT'); await swat(sub); await page.locator(ready).first().waitFor(); });
+          await swatView('team-swat', 'Squads', '.squad-list');
+          await swatView('team-roster', 'Roster', '.officer-rows');
+          await swatView('team-hire', 'Hire', '.cand-list');
+          await swatView('team-training', 'Training', '.course-grid');
+          await surface('team-patrol', async () => { await tab('Team'); await section('Patrol'); await page.locator('.patrol-page').waitFor(); });
+          await surface('team-command', async () => { await section('Command'); await page.locator('.team-command .command-room').waitFor(); });
+          await surface('build', async () => { await tab('Build'); await page.locator('.room-list').waitFor(); });
+          await surface('store', async () => { await tab('Store'); await page.locator('.store-screen-head').waitFor(); });
+          await surface('store-boosts', async () => { await page.locator('.store-screen-head [aria-label="Store sections"]').getByRole('button', { name: 'Boosts', exact: true }).click(); await page.locator('.patrol-boosts').waitFor(); });
         });
-        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await measure('board'); await measureLayout('board'); if (sc.stopAfter === 'board') throw STOP; });
+        await step('board', async () => { await tab('Calls'); await page.locator('.cl-card').first().waitFor();
+          if (sc.emptyBoard) { await emptyBoard(page); await measure('board-empty'); await measureLayout('board-empty'); throw STOP; }
+          await measure('board'); await measureLayout('board'); if (sc.stopAfter === 'board') throw STOP; });
         await step('brief', async () => {
           const welcome = page.locator('.welcome-sheet'); if (await welcome.count()) await welcome.getByRole('button', { name: 'Continue', exact: true }).click();
           await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor(); await measure('brief');
         });
         await step('deploy', async () => {
           await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await page.locator('.cl-flow-body[data-step="deploy"]').waitFor();
-          await measure('deploy'); // the state the player lands in
+          await measure('deploy'); await measureLayout('deploy'); // the state the player lands in
+          if (sc.stopAfter === 'deploy') throw STOP;
           if (sc.blocked) throw STOP;
           if (!(await page.locator('.cl-squads button[aria-pressed="true"]').count())) await page.locator('.cl-squads button.cl-squad:not([aria-label*="not deployable"]):not([aria-label*=" 0 of "])').first().click();
           const buy = page.getByRole('button', { name: /^Buy \d+ radios? · / }); if (await buy.count()) { await buy.first().click(); await page.waitForTimeout(400); }

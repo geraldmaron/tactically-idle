@@ -59,6 +59,8 @@ export const STATES = [
   { id: '08-recruit-card', kind: 'screen' },
   { id: '08-hire-contract-sheet', kind: 'sheet' },
   { id: '09-training', kind: 'screen' },
+  { id: '09-training-chooser-sheet', kind: 'sheet' },
+  { id: '09-training-review-sheet', kind: 'sheet' },
   { id: '10-develop', kind: 'screen' },
   { id: '11-develop-sheet', kind: 'sheet' },
   { id: '12-store', kind: 'screen' },
@@ -87,6 +89,11 @@ export const STATES = [
   { id: '29-restock-unlocked-sheet', kind: 'sheet' },
   { id: '30-presets-unlocked-sheet', kind: 'sheet' },
   { id: '31-saves-error', kind: 'sheet' },
+  // Edge states (scripts/ui-gates/edge-states.mjs): squads named to the 20-character limit, and a board with no calls.
+  { id: '32-long-names-hq', kind: 'screen' },
+  { id: '32-long-names-squads', kind: 'screen' },
+  { id: '32-long-names-deploy', kind: 'screen' },
+  { id: '33-empty-board', kind: 'screen' },
 ];
 
 export const stateIds = () => STATES.map((s) => s.id);

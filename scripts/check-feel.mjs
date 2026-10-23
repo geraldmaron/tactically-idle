@@ -70,7 +70,7 @@ async function main() {
     }
     if (!rows.size) console.log('(no findings)');
     // What was measured, so a clean result can be told from a walk that never got there.
-    for (const sc of scenarios) console.log(`measured ${sc.id}: ${walked.results.filter((r) => r.scenario === sc.id).map((r) => r.screen).join(', ') || 'nothing'}${sc.blocked ? ` (reason: ${walked.results.find((r) => r.scenario === sc.id)?.raw.blocked?.text ?? 'none'})` : ''}`);
+    for (const sc of scenarios) console.log(`measured ${sc.id}: ${[...new Set(walked.results.filter((r) => r.scenario === sc.id).map((r) => r.screen))].join(', ') || 'nothing'}${sc.blocked ? ` (reason: ${walked.results.find((r) => r.scenario === sc.id)?.raw.blocked?.text ?? 'none'})` : ''}`);
     // What F5 actually saw, so a clean result can be told from a blind one.
     for (const sc of scenarios.filter((x) => x.paint)) {
       const seen = walked.results.filter((r) => r.scenario === sc.id).map((r) => `${r.screen} ${(r.raw.plates ?? []).filter((p) => p.pendingArt > 0).length}/${(r.raw.plates ?? []).length}`);
