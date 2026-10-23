@@ -7,7 +7,7 @@
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { FEEL_ON, FEEL_RULES, FEEL_SCREENS, enforced, judgeTaps } from './ui-gates/feel.mjs';
+import { FEEL_ON, FEEL_RULES, FEEL_SCREENS, OPT_IN_RULES, enforced, judgeTaps } from './ui-gates/feel.mjs';
 import { runFeelControls } from './ui-gates/feel-controls.mjs';
 import { SCENARIOS, feelWalk } from './ui-gates/feel-walk.mjs';
 import { serve } from './ui-gates/serve.mjs';
@@ -21,7 +21,7 @@ const CHROME = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Conte
 
 /** FEEL_ON, widened by --all or --on for this run. */
 function enforcement() {
-  if (flag('all')) return Object.fromEntries([...Object.keys(FEEL_ON).filter((k) => k !== 'path'), 'path'].map((k) => [k, ['*', 'F6.taps']]));
+  if (flag('all')) return Object.fromEntries([...Object.keys(FEEL_ON).filter((k) => k !== 'path'), 'path'].map((k) => [k, ['*', 'F6.taps', ...OPT_IN_RULES]]));
   const on = Object.fromEntries(Object.entries(FEEL_ON).map(([k, v]) => [k, [...v]]));
   for (const item of (option('on') ?? '').split(',').filter(Boolean)) { const [screen, rule] = item.split(':'); (on[screen] ??= []).push(rule); }
   return on;
