@@ -9,29 +9,13 @@ entries instead of keeping history. Rules are in `COORDINATION.md`; work to do i
 Merged so far: #36 (coordination rules), #37 (`e2e-script`),
 #38 (`small-screen-map`), #39 (barricade design sheet), #40 (`gear-by-action`), #41 (rescue design sheet), #42 (`hq-tiles`), #43 (`lab-compare`), #44 (hostage review leftovers, all but B9), #45 (`intel-odds` engine work), #46 (`clock-runout-routing` engine work), #49 (`lab-armed-counts` with the armed leaf), #50 (`manager-names-disjoint`), #47 (`manager-art`), #48 (hostage armed line; `intel-odds` complete), #53 (`board-risk-card`), #54 (callCounts test pins), #51 (R-B1), #55 (last-seen lines), #52 (`clock-edges-in-tooling`), #57 (stable string checker), #58 (lab clock lookup), #56 (hostage clock route; `clock-runout-routing` complete), #59 (R-B2), #60 (clock tests on fixtures), #61 (R-B3; `barricade-engine-requests` complete), #63 (`second-squad` engine side, `joint-operation` journey), #65 (`clock-forks-read-travel`), #66 (`exit-via-reachable`), #68 (`moves-skip-pruned`), #67 (owner_down test fixtures), #62 (`hostage-owner-down-cleanup`). #70 closed as a duplicate of #68. #71 (hostage repro test), #69 (barricade and squad pins), #64 (`hostage-gate-requests`), #72 (`deploy-disabled-after-injury`), #73 (engine tests off barricade-order), #74 (`xray-band-minutes`), #75 (house fixture guard), #78 (`short-squad-deploys` engine side).
 
-## Lead (from 2026-10-22)
+## Lead (from 2026-10-23)
 
-Local `main` was fast-forwarded to the integration tip on 2026-10-22 (owner: "reconcile and merge these into
-main locally"); nothing pushed. The code there passed `npm run verify` and the e2e at 3c840ca. Still outside
-main on purpose: the Going Live chain (`claude/hopeful-pike-69bdac`, under writing review, old-call tests not
-yet rewritten) and ui-gates (`claude/quizzical-fermi-734e3c`, in progress). The lead keeps main equal to the
-integration branch after each merge.
-
-The session "Project coordination handoff" leads, on `claude/angry-edison-cae68b` in
-`.claude/worktrees/angry-edison-cae68b` (local, unpushed: owner keeps everything local until one
-final verified push). It plans and merges; Sonnet and Haiku sessions build; Codex (default model)
-challenges, tests and generates art. Earlier leads ("UI/UX audit and mobile-first plan", "Project
-patterns review and antipatterns") stand down.
-
-Current lead: local_57697767-1f17-4edc-9de5-edbdf721af55, from the 2026-10-22 rotation (took over
-from local_0ef35909, which is archived once the owner agrees). Every idle lane has been told this id;
-until the old lead is archived the title matches two sessions, so lanes message the id.
-
-The branch holds everything: the Desk and Street redesign, paid details (save version 17), the
-Standard-only stall lift, the hook-pattern research and every earlier branch (reconciled
-2026-10-22; nothing local or on GitHub is missing from it). `npm run verify` passed at 70ae94b;
-the e2e was not rerun there (no dev server was up). Lead dev port 5182; 5173 holds the owner's own
-older save.
+Current lead: local_74f265d1-361d-40c4-913d-2844627571d7 ("Feel pass" planning session), on
+`claude/feel-lead` in `.claude/worktrees/feel-lead`, cut from df9a3e9 (`codex/blue-hour-overhaul`,
+Codex's patrol economy and blue-hour UI, one commit ahead of `main`). df9a3e9 is the base for all
+feel-pass work. Every earlier lead session is archived. Everything stays local until one final
+verified push. The plan, approved by the owner on 2026-10-23, is backlog `feel-slice`.
 
 ## Wave 1 (2026-10-22)
 
@@ -176,6 +160,23 @@ re-run on 7375045, the owner's direct ask that made `Row.lead` and `Section.icon
 call sites in `SettingsSheet.tsx`, `HQ.tsx`, `Recruit.tsx` plus `LiveView.tsx` and `live-call.css`). The lead
 looked at the merged captures (`ui-audit/after-primitives/`): chips keep their inset; the Menu's switch rows
 still lack leads (P5). Its dev servers on 5175 and 5176 are its own; it stops them when told.
+
+## Feel pass (2026-10-23, owner go)
+
+Owner: the app feels flat, oversized and not one experience. Plan: one vertical slice (HQ to debrief)
+on existing primitives, checks that measure feel, then `ui-surfaces` P2 to P8 to the same standard.
+Codex rejected the first draft (3 blockers, all owner-decision reversals); the approved plan keeps
+those decisions (backlog `feel-slice`).
+
+| Session | Model | Item | Branch | Writes only |
+|---|---|---|---|---|
+| feel-checks (local_31c01514) | Sonnet | `feel-slice` checks | `claude/great-tereshkova-043339`, rebased to df9a3e9 | `scripts/ui-gates/`, `scripts/check-ui.mjs`, `scripts/play-loop.mjs`, `package.json` scripts |
+| feel-slice (local_16bb6632) | Sonnet | `feel-slice` screens | `claude/lucid-thompson-850b6e`, rebased to df9a3e9 | `src/ui/components/` (TopBar, Hub, toast, new Face), `src/ui/screens/` (HQ, OpsBoard, CallTile, OpsPrepare, PrepBriefing, LiveView, OpsLive, OpsDebrief, DebriefContents) and their CSS incl. `ops-visual.css`, `live-call.css`; `public/` |
+
+Both sessions started from `main` by mistake and were stopped within a minute and told to reset to
+df9a3e9 before editing. The lead checks each branch's base before merging. The lead regenerates
+`src/ui/ui-debt.json` and owns `JOURNEYS` and the manifest. Checkpoint: nothing from P2 to P8 starts
+until the owner plays the slice.
 
 ## Locks outside normal ownership
 

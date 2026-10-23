@@ -1,7 +1,7 @@
 # UI/UX audit and a new direction: Desk and Street
 
 **Status (2026-10-22):** built on `claude/angry-edison-cae68b` (local, not pushed): `ui-system`,
-`chrome-contract`, `calls-say-once` and `four-tabs` shipped and left the backlog. The plan was
+`chrome-contract`, `calls-say-once` and `four-tabs` shipped and left the backlog. Superseded on tabs by `store-destination` (df9a3e9, 2026-10-22): five tabs, HQ, Calls, Team, Build and Store, with the Armory under Store and Build holding Develop only; the four-tab sections below are history. The plan was
 challenged by Codex before building (see [Challenge](#challenge)). One gap remains: the plan only
 listed what to remove, so the shipped screens lost art and icons; `visual-story` in
 `docs/backlog.md` puts them back. Results are in [What shipped](#what-shipped). The owner asked for a full audit of

@@ -22,6 +22,8 @@ patrol capacity, prepare SWAT, play a call, then invest. There is no repeated in
 
 ## What exists and what changes
 
+Built 2026-10-22 (df9a3e9): the patrol workforce, grades, boosts and receipts are in `src/sim/patrol.ts`, the SWAT patrol line is gone from `src/sim/economy.ts`, and the save version is 18. The paragraph below records the economy this design replaced.
+
 Inspected in this worktree: `src/sim/economy.ts` currently pays a $600/hour allocation and $150/hour
 for each available SWAT officer on patrol, then deducts officer wages, enabled Command Staff salaries,
 $120/hour facilities and $80/hour supplies. Income and recurring costs share a 24-hour accrual cap.
