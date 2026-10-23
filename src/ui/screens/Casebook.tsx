@@ -2,7 +2,7 @@ import { ChoiceRail } from '../components/ChoiceRail';
 import { useMemo, useState } from 'react';
 import './casebook.css';
 import type { CasebookBest, GameState } from '../../sim/types';
-import { Card, Chip, Section } from '../components/ui';
+import { Card, Chip, Row, Section } from '../components/ui';
 import { familyLabel } from '../components/incident';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon } from '../icons';
@@ -38,44 +38,29 @@ export function Casebook({ state }: { state: GameState }) {
         ]} />
         {filtered && <p className="dim casebook-shown" role="status">{shown.length} shown</p>}
       </div>
-      {shown.length === 0 ? <p className="dim">No frameworks match these filters.</p> : <ul className="casebook-rows">
+      {shown.length === 0 ? <p className="dim">No frameworks match these filters.</p> : <ul className="casebook-rows" data-ui-list>
         {shown.map((row) => <CasebookRowView key={row.type} row={row} />)}
       </ul>}
     </Card>
   </Section>;
 }
 
-/** Situations found as pips, so progress per kind of call reads at a glance. */
-function SituationPips({ found, total }: { found: number; total: number }) {
-  return <span className="casebook-pips" aria-hidden="true">{Array.from({ length: total }, (_, i) => <i key={i} className={i < found ? 'on' : undefined} />)}</span>;
-}
+const lead = (row: CasebookRow) => <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion />{row.status === 'locked' && <Icon name="lock" size={13} className="casebook-lock" />}</span>;
 
+/** One kind of call as a row: its badge, the best result or what it needs, and the situations found. */
 function CasebookRowView({ row }: { row: CasebookRow }) {
   if (row.status === 'locked') return <li className="casebook-row casebook-locked" data-status="locked" data-type={row.type}>
-    <div className="casebook-row-head">
-      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /><Icon name="lock" size={13} className="casebook-lock" /></span>
-      <span className="casebook-name">{row.label}</span>
-    </div>
-    <div className="casebook-meter"><Chip tone="warn">Locked</Chip></div>
-    <p className="casebook-line">Not yet dispatched to your department. Needs:</p>
+    <Row lead={lead(row)} title={row.label} detail="Not yet dispatched to your department. Needs:" trail={<Chip tone="warn">Locked</Chip>} />
     <ul className="casebook-needs">{row.missing.map((line) => <li key={line}>{line}</li>)}</ul>
   </li>;
   if (row.status === 'unfound') return <li className="casebook-row" data-status="unfound" data-type={row.type}>
-    <div className="casebook-row-head">
-      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /></span>
-      <span className="casebook-name">{row.label}</span>
-    </div>
-    <div className="casebook-meter"><SituationPips found={0} total={row.situationsTotal} /><Chip>0 of {row.situationsTotal}</Chip></div>
-    <p className="casebook-line dim">Not taken yet · {row.situationsTotal} {row.situationsTotal === 1 ? 'situation' : 'situations'} to find</p>
+    <Row lead={lead(row)} title={row.label} detail={`Not taken yet · ${row.situationsTotal} ${row.situationsTotal === 1 ? 'situation' : 'situations'} to find`} trail={<Chip>0 of {row.situationsTotal}</Chip>} />
   </li>;
   const left = row.situationsTotal - row.situations.length;
   return <li className="casebook-row casebook-found" data-status="found" data-type={row.type}>
-    <div className="casebook-row-head">
-      <span className="casebook-icon"><CallTypeBadge type={row.type} size={40} medallion /></span>
-      <span className="casebook-name">{row.label}</span>
-    </div>
-    <div className="casebook-meter"><SituationPips found={row.situations.length} total={row.situationsTotal} /><Chip tone="mint">{row.situations.length} of {row.situationsTotal}</Chip></div>
-    <p className="casebook-line">Best: <strong>{bestText(row.best)}</strong>{left > 0 && <span className="dim"> · {left} more {left === 1 ? 'situation' : 'situations'} to find</span>}</p>
+    <Row lead={lead(row)} title={row.label}
+      detail={<>Best: <strong>{bestText(row.best)}</strong>{left > 0 ? ` · ${left} more ${left === 1 ? 'situation' : 'situations'} to find` : ''}</>}
+      trail={<Chip tone="mint">{row.situations.length} of {row.situationsTotal}</Chip>} />
     <p className="casebook-line dim casebook-buildings">Visited: {row.buildings.map(familyLabel).join(', ')}</p>
     {row.missing.length > 0 && <p className="casebook-line dim">Not dispatched now. Needs {row.missing.join('; ').toLowerCase()}.</p>}
   </li>;

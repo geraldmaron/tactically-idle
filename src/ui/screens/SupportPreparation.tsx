@@ -5,7 +5,7 @@ import { readyUnits } from '../../sim/inventory';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
 import { supportStartCheck } from '../../sim/support-vehicles';
 import type { BuiltLocation, GameState, Id, ItemDefinition, ItemUnit } from '../../sim/types';
-import { Button, Card, Chip, Section } from '../components/ui';
+import { Button, Card, Chip, Row, Section } from '../components/ui';
 import { unitStateOf } from '../components/labels';
 import { moneyFull } from '../format';
 import { Icon } from '../icons';
@@ -59,11 +59,10 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
   const readyTotal = options.reduce((total, option) => total + readyUnits(state, option.item.id, upkeep, now).length, 0);
   return <Section title="Operation support" icon="pin" hint="Optional. One support vehicle waits outside the building.">
     <Card className="prep-support-summary">
-      <div className="prep-support-heading">
-        <Chip tone={selectedId ? 'amber' : 'neutral'}>{selectedId ? '1 support vehicle selected' : 'No support vehicle selected'}</Chip>
-        <span className="prep-support-ready">{readyTotal} ready</span>
-        {selectedId && <Button size="sm" onClick={() => onSelect(null)}>Clear support</Button>}
-      </div>
+      <Row className="prep-support-row" lead={<span className="prep-support-well"><Icon name="van" size={24} /></span>}
+        title={selectedId ? '1 support vehicle selected' : 'No support vehicle selected'}
+        detail={`${readyTotal} ready`}
+        trail={selectedId ? <Button size="sm" variant="quiet" onClick={() => onSelect(null)}>Clear support</Button> : <Chip tone="neutral">Optional</Chip>} />
       {selectedIssues.map((issue) => <p key={issue} className="note note-warn"><Icon name="warning" size={16} />{issue}</p>)}
     </Card>
     <Disclosure name="prep-support" className="prep-support-more" open={!!selectedId || readyTotal > 0} icon="list" summary="Vehicles and requirements" count={options.length}>
@@ -76,7 +75,7 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
         : 'Choose a squad and an outside starting position the vehicle can reach.'}</p>
       <p className="dim">Available funding: {moneyFull(state.department.funding)}. Select an owned unit below; purchase vehicles on the Gear tab.</p>
     </div>
-    <div className="prep-support-list">
+    <div className="prep-support-list" data-ui-list>
       {options.map((option) => {
         const { item } = option;
         const choices = supportChoices(state, now, cmd, item);
