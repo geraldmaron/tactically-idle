@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "check:art": "node scripts/validate-art.mjs",
     "check:ui": "node scripts/check-ui.mjs",
+    "check:feel": "node scripts/check-feel.mjs",
     "ui:baseline": "node scripts/check-ui.mjs --baseline",
     "verify": "npm run typecheck && npm test && npm run check:art && npm run build && node scripts/check-no-lab.mjs",
     "test:e2e": "node scripts/play-loop.mjs",

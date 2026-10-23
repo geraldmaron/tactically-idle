@@ -2,7 +2,6 @@
 //   npm run check:ui -- [baseURL] [--widths 320,390,430]   controls, then the walk, compared with src/ui/ui-debt.json
 //   npm run ui:baseline -- [baseURL]                        rewrite src/ui/ui-debt.json from today's UI
 // Without a baseURL it starts its own dev server on port 5174 (or uses the one already there).
-import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -11,6 +10,7 @@ import { FELL_HELP, RAISED_HELP, entry, readBaseline, writeBaseline } from './ui
 import { RENDERED_RULES, aggregate, compareRendered, countsOf, coverage, firstChoiceVerdict } from './ui-gates/evaluate.mjs';
 import { STATES, WIDTHS } from './ui-gates/manifest.mjs';
 import { runControls } from './ui-gates/controls.mjs';
+import { serve } from './ui-gates/serve.mjs';
 import { walk } from '../docs/captures/ui-ux-audit/tools/capture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,22 +18,7 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
 const option = (name) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : undefined; };
 const positional = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && ['widths'].includes(args[i - 1].slice(2))));
-const PORT = 5174;
 const CHROME = process.env.CHROME_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-
-async function reachable(url) { try { return (await fetch(url)).ok; } catch { return false; } }
-
-/** The URL to walk: the one given, the dev server already on 5174, or one this run starts and stops. */
-async function serve() {
-  const given = positional[0] ?? process.env.UI_GATES_URL;
-  if (given) return { url: given, stop: () => {} };
-  const url = `http://localhost:${PORT}/`;
-  if (await reachable(url)) return { url, stop: () => {} };
-  const child = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore', detached: false });
-  for (let i = 0; i < 60 && !(await reachable(url)); i++) await new Promise((r) => setTimeout(r, 500));
-  if (!(await reachable(url))) { child.kill(); throw new Error(`could not start a dev server on port ${PORT}`); }
-  return { url, stop: () => child.kill() };
-}
 
 function renderedCounts(result, widths) {
   const { report, failures } = result;
@@ -62,7 +47,7 @@ async function main() {
     if (failed.length) { console.error(`\nA rendered rule did not do what its control expects:\n  ${failed.join('\n  ')}`); process.exit(1); }
     if (flag('controls-only')) return;
   }
-  const server = await serve();
+  const server = await serve({ root: ROOT, given: positional[0] });
   try {
     const frames = [];
     const result = await walk({ repo: ROOT, baseURL: server.url, widths, onFrame: (f) => frames.push(f), log: (...a) => console.log(...a) });
