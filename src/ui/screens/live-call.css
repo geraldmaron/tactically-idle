@@ -8,8 +8,7 @@
 .live .live-head.plate > .plate-art { opacity: .25; }
 .live .live-map-access, .live .live-choice-access { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: var(--touch); min-width: var(--touch); padding: 0; }
 /* The jump to the first choice shows only where the choices start below the fold. */
-.live .live-choice-access { display: none; }
-@media (max-height: 640px) { .live .live-choice-access { display: inline-flex; } .live .live-choice-access[hidden] { visibility: hidden; } }
+.live .live-choice-access[hidden] { visibility: hidden; }
 .live .live-strip { position: relative; z-index: 1; display: grid; gap: 3px; padding: 4px var(--gutter) 6px; border-bottom: 1px solid var(--hair); background: var(--ink-1); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.9); }
 .live .live-strip-head { display: flex; align-items: center; gap: var(--sp2); min-width: 0; }
 .live .live-stepout { display: inline-flex; flex: 0 0 auto; align-items: center; gap: var(--sp1); min-height: var(--touch); margin-left: calc(-1 * var(--sp2)); padding: 0 var(--sp2); border: 0; background: none; color: var(--t2); font: 500 var(--s16)/1 var(--f-ui); cursor: pointer; }
