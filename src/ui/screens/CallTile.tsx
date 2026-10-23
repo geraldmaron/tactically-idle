@@ -68,7 +68,8 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
         {(readiness || pay || onOpen) && <div className="cl-card-foot">
           <span className="cl-card-ready">{readiness}</span>
           {pay && <span className="cl-card-pay" aria-label={`Pays up to ${money(pay.funding)} and ${pay.xp} experience. How the call ends sets what it pays.`}>
-            <b aria-hidden="true">{money(pay.funding)}</b><span aria-hidden="true">{pay.xp} XP</span>
+            <span className="cl-card-pay-top" aria-hidden="true"><span className="cl-card-pay-up">Up to</span> <b>{money(pay.funding)}</b></span>
+            <span aria-hidden="true">{pay.xp} XP</span>
           </span>}
           {onOpen && <Icon name="chevronRight" size={20} className="cl-card-chevron" />}
         </div>}

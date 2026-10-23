@@ -2,14 +2,14 @@
 
 /* ------------------------------------------------------------ board */
 .cl-board { display: flex; flex-direction: column; gap: var(--sp2); }
-.cl-board-title { margin: 0; font: 700 var(--s28)/1.1 var(--f-title); }
-.cl-board-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); }
-.cl-board-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp1) var(--sp3); flex-wrap: wrap; }
-.cl-board-count { margin: 0; font: 600 var(--s18)/1.2 var(--f-ui); color: var(--t2); }
-.cl-board-next { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); color: var(--t2); }
-.cl-board-link { display: inline-flex; align-items: center; min-height: var(--touch); color: var(--t1); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.cl-board-title { display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s18)/1.2 var(--f-title); color: var(--t1); }
+.cl-board-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp1) var(--sp3); min-height: var(--touch); flex-wrap: wrap; }
+.cl-board-aside { display: inline-flex; align-items: center; gap: var(--sp3); margin-left: auto; }
+.cl-board-count { font-size: var(--s14); color: var(--t3); }
+.cl-board-next { display: inline-flex; align-items: center; gap: var(--sp1); margin-right: var(--sp2); color: var(--t2); vertical-align: bottom; }
+.cl-board-link { display: inline-flex; align-items: center; min-height: var(--touch); color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); text-decoration: none; }
 .cl-board-note { margin: 0; font-size: var(--s14); color: var(--t3); }
-.cl-board-list { display: flex; flex-direction: column; gap: var(--sp3); }
+.cl-board-list { display: flex; flex-direction: column; gap: var(--sp2); }
 .cl-board-casebook { scroll-margin-top: var(--sp4); }
 
 .cl-card { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
@@ -46,7 +46,8 @@
 .cl-ready-badges { display: inline-flex; gap: var(--sp1); }
 .cl-ready-badges .squad-badge { width: 28px; height: 28px; font-size: var(--s14); }
 .cl-ready-text { min-width: 0; }
-.cl-card-pay { display: inline-flex; align-items: baseline; gap: var(--sp2); flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
+.cl-card-pay { display: grid; justify-items: end; gap: 0; flex: 0 0 auto; font-size: var(--s14); color: var(--t2); font-variant-numeric: tabular-nums; }
+.cl-card-pay-up { color: var(--t3); font-size: var(--s12); }
 .cl-card-pay b { font-size: var(--s16); color: var(--t1); }
 .cl-card-chevron { flex: 0 0 auto; color: var(--t3); }
 .cl-card .optile-bring { position: relative; z-index: 2; }

@@ -42,18 +42,19 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
 
   return (<>
     <div className="page cl-board">
-      <div className="cl-board-top">
-        <h1 className="section-title cl-board-title"><Icon name="calls" size={24} />Calls</h1>
-        <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
-      </div>
-      <header className="cl-board-head">
-        <h2 className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</h2>
-        {arrival && <span className="cl-board-next"><Icon name="clock" size={16} />{arrival}</span>}
+      <header className="cl-board-top">
+        <h1 className="cl-board-title"><Icon name="calls" size={20} />Calls</h1>
+        <span className="cl-board-aside">
+          <span className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</span>
+          <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
+        </span>
       </header>
-      {live.length === 0
-        ? <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.</EmptyState>
-        : <p className="cl-board-note">No penalty for skipping a call. One nobody takes goes to another unit.</p>}
-      <div className="cl-board-list">
+      {live.length > 0 && <p className="cl-board-note">
+        {arrival && <span className="cl-board-next"><Icon name="clock" size={16} />{arrival}</span>}
+        No penalty for skipping a call. One nobody takes goes to another unit.
+      </p>}
+      {live.length === 0 && <EmptyState compact icon="calls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.{arrival ? ` ${arrival}.` : ''}</EmptyState>}
+      <div className="cl-board-list" data-ui-list>
         {live.map((e) => (
           <BoardCard key={e.card.id} g={g} entry={e} now={now} isNew={fresh.has(e.card.id)} onOpen={onOpen} />
         ))}
@@ -87,12 +88,12 @@ function useFreshIncidents(g: GameState): Set<Id> {
 /** Who can go, on one row: the ready squads by name with their letter, and how many the call takes.
  * The first thing in the way, when something is, in warning colour. */
 function Readiness({ g, card }: { g: GameState; card: ScenarioCard }) {
-  const range = card.squadRange.min === card.squadRange.max ? `${card.squadRange.min} squad${card.squadRange.min > 1 ? 's' : ''}` : `${card.squadRange.min} to ${card.squadRange.max} squads`;
+  const range = card.squadRange.min === card.squadRange.max ? (card.squadRange.min > 1 ? `${card.squadRange.min} squads` : null) : `${card.squadRange.min} to ${card.squadRange.max} squads`;
   const ready = card.eligibleSquadIds;
   return <>
     <span className="cl-ready-badges" aria-hidden="true">{ready.slice(0, 3).map((id) => <span key={id} className="squad-badge">{id}</span>)}</span>
     <span className={`cl-ready-text${ready.length === 0 ? ' cl-warn' : ''}`}>
-      {ready.length === 0 ? 'No squad ready' : `${joinNames(ready.map((id) => squadName(g.squads, id)))} ready`} · {range}
+      {ready.length === 0 ? 'No squad ready' : `${joinNames(ready.map((id) => squadName(g.squads, id)))} ready`}{range ? ` · ${range}` : ''}
     </span>
   </>;
 }

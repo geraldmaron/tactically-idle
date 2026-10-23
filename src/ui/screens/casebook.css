@@ -1,44 +1,22 @@
-.casebook-card { gap: 10px; }
+.casebook-card { gap: var(--sp2); }
 .casebook-card p { margin: 0; }
-.casebook-totals { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
-.casebook-totals strong { color: var(--text); }
-.casebook-filters { display: grid; gap: 8px; min-width: 0; }
-.casebook-shown { font-size: 12px; }
-.casebook-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.casebook-row {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-.casebook-locked { border-style: dashed; }
-.casebook-row-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-.casebook-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-.casebook-name > .icon { flex: 0 0 auto; }
-.casebook-line { font-size: 14px; overflow-wrap: anywhere; }
-.casebook-needs { margin: 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
-/* Keep the situation count on one line on 320px phones; the name wraps instead. */
-.casebook-row-head > .chip { flex: none; white-space: nowrap; }
+.casebook-totals { font-size: var(--s14); color: var(--t2); overflow-wrap: anywhere; }
+.casebook-totals strong { color: var(--t1); }
+.casebook-filters { display: grid; gap: var(--sp2); min-width: 0; }
+.casebook-shown { font-size: var(--s12); }
+/* An inset grouped list: rows split by hairlines. Selectors carry .casebook-card to win over the
+   older tile rules in ops-visual.css until the lead deletes them. */
+.casebook-card .casebook-rows { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.casebook-card .casebook-row { display: flex; flex-direction: column; gap: var(--sp1); min-width: 0; padding: 0; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; background: transparent; opacity: 1; }
+.casebook-card .casebook-row:last-child { border-bottom: 0; }
+.casebook-card .casebook-row .ui-row { min-height: 64px; border-bottom: 0; }
+.casebook-card .casebook-row .ui-row-detail { overflow-wrap: anywhere; }
+.casebook-card .casebook-row .ui-row-detail strong { color: var(--t1); }
+.casebook-card .casebook-line { padding-left: calc(40px + var(--sp3)); padding-bottom: var(--sp2); font-size: var(--s14); line-height: 1.3; overflow-wrap: anywhere; }
+.casebook-card .casebook-needs { margin: 0; padding: 0 0 var(--sp2) calc(40px + var(--sp3) + var(--sp4)); font-size: var(--s14); color: var(--t2); }
+.casebook-card .casebook-buildings { padding-top: 0; }
+.casebook-icon { position: relative; display: grid; place-items: center; width: 40px; height: 40px; }
+.casebook-locked .casebook-icon .ct-badge { opacity: 0.55; }
+.casebook-lock { position: absolute; right: -5px; bottom: -5px; color: var(--warn-text); }
+.casebook-bar { display: block; height: var(--sp1); border-radius: 2px; background: var(--ink-2); overflow: hidden; }
+.casebook-bar i { display: block; height: 100%; background: var(--good); }
