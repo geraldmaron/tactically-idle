@@ -16,7 +16,7 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | scenario | 10 | 3149 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
 | engine | 68 | 15468 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | qa | 39 | 6136 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 177 | 22430 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| ui | 177 | 22496 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
 | lab | 104 | 18234 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 398 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
@@ -29,8 +29,8 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | officer | 21 | 2616 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 7 | 1394 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 68 | 15603 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 31 | 5505 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 273 | 41052 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| metric | 31 | 5519 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 273 | 41104 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 

@@ -4,6 +4,9 @@
 //                         [--all]                  enforce every rule on every screen (what the old UI fails)
 //                         [--on board:F1.primary,F4.density,path:F6.taps]   enforce just these
 //                         [--no-controls] [--controls-only] [--no-taps]
+// Without a baseURL it starts this worktree's own dev server on a free port; it never reuses one already
+// running. A baseURL (or UI_GATES_URL) is reused only if its served code files match this worktree's
+// (scripts/ui-gates/serve.mjs); otherwise the run is refused.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';

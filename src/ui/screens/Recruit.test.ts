@@ -206,6 +206,9 @@ describe('candidate hire review', () => {
     const contract = elements(receipt.tree).find((element) => element.type === HireContract) as ReactElement<Parameters<typeof HireContract>[0]>;
     const sheet = capture(() => HireContract(contract.props));
     expect(sheet.html).toContain(`${original.c.officer.firstName} ${original.c.officer.surname} is now on your roster`);
+    // The sheet's title turns to the signed state; it no longer asks to hire someone already hired.
+    expect(sheet.html).toContain(`aria-label="${original.c.officer.firstName} ${original.c.officer.surname} signed"`);
+    expect(sheet.html).not.toContain(`aria-label="Hire ${original.c.officer.firstName}`);
     expect(sheet.html).not.toContain('Confirm hire');
     expect(receipt.html).toContain(`Signing ${money(projection.upfront)} paid`);
     expect(receipt.html).toContain('Unassigned');

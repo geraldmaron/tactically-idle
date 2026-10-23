@@ -95,6 +95,10 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   const options = courseOptions(game, officer?.id ?? null, game.department.clockHighWater)
     .filter(({ course }) => [course.name, course.grants.cert ? CERT_NAME[course.grants.cert] : '', course.grants.rating?.key ?? ''].join(' ').toLowerCase().includes(search.trim().toLowerCase()));
   const inTraining = officers.filter((member) => member.assignment?.kind === 'training').length;
+  // What holds the chosen officer back from every course (already in training, deployed) is said once, on the
+  // officer, not on each course card: by the condition line when it is an assignment, else by its own line.
+  // A full department is shown by the places pips instead.
+  const sharedReason = officer ? sharedHoldBack(options.map(({ reason }) => reason), fullName(officer)) : null;
   const selectedCourse = choice ? COURSES[choice.courseId] : null;
   const candidates = selectedCourse ? trainingCandidates(game, selectedCourse.id) : [];
   const reviewing = choice?.reviewOfficerId && !choice.enrolment ? candidates.find((candidate) => candidate.officer.id === choice.reviewOfficerId) : null;
@@ -146,6 +150,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       <Portrait officer={officer} size={44} className="training-portrait" />
       <div className="training-person-name"><strong>{fullName(officer)}</strong><span className="dim">{ROLE_META[officer.role].label} · {trainingOfficerCondition(officer, game.department.clockHighWater)}</span><span className="training-strengths">Highest ratings: {trainingStrongestRatings(officer).map((rating) => `${rating.short} ${officer.ratings[rating.key]}`).join(' · ')}</span></div>
       <StressDisplay value={officer.stress} compact />
+      {sharedReason && !officer.assignment && <p className="reason training-officer-reason" role="status">{sharedReason}</p>}
       <Button size="sm" variant="ghost" icon="x" className="training-clear" onClick={() => setOfficerId('')} aria-label={`Clear ${fullName(officer)} as the officer to train`} />
     </section>}
     <div className="training-search">
@@ -183,7 +188,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
                 {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
                 {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
                 {/* A full department is shown once by the places pips, not repeated on every tile. */}
-                {reason && reason !== 'No free training slot' && <p className="reason">{reason}</p>}
+                {reason && reason !== 'No free training slot' && reason !== sharedReason && <p className="reason">{reason}</p>}
                 {officer && available && <p className="training-eligible"><Icon name="check" size={16} />{officer.firstName} can enrol</p>}
                 {feedback?.courseId === course.id && <p className={feedback.ok ? 'training-course-receipt' : 'reason'} role="status">{feedback.ok && <Icon name="check" size={16} />}{feedback.text}</p>}
               </div>
@@ -262,6 +267,15 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
   </div>;
 }
 
+/** The reason about the officer (it names them) that two or more courses give: it belongs to the officer, so
+ * the screen says it once. Reasons about a course or the department stay on their cards. */
+export function sharedHoldBack(reasons: readonly (string | undefined | null)[], officerName: string): string | null {
+  const counts = new Map<string, number>();
+  for (const reason of reasons) if (reason?.startsWith(officerName)) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  const [top] = [...counts].sort((a, b) => b[1] - a[1]);
+  return top && top[1] >= 2 ? top[0] : null;
+}
+
 /** Keep the previous Enrol hit area inert so a repeated tap cannot dismiss the sheet. */
 export function TrainingEnrolmentActions({ course, paid = course.cost, onDone }: { course: Course; paid?: number; onDone: () => void }) {
   return <>
@@ -300,7 +314,7 @@ export function TrainingPlaces({ used, total, bare = false }: { used: number; to
   const pips = <span className="training-pips" aria-hidden="true">{Array.from({ length: Math.max(total, used) }, (_, index) => <i key={index} className={index < used ? 'on' : ''} />)}</span>;
   if (bare) return pips;
   return <span className="training-places" role="img" aria-label={`${used} of ${total} training places in use`}>
-    <Icon name="mortarboard" size={16} />{pips}<b>{used}/{total}</b>
+    <Icon name="mortarboard" size={16} /><span className="training-places-label">Training places</span>{pips}<b>{used}/{total}</b>
   </span>;
 }
 

@@ -1,7 +1,9 @@
 // The rendered UI gate and the baseline writer. See docs/visual-kit.md, "UI gates".
 //   npm run check:ui -- [baseURL] [--widths 320,390,430]   controls, then the walk, compared with src/ui/ui-debt.json
 //   npm run ui:baseline -- [baseURL]                        rewrite src/ui/ui-debt.json from today's UI
-// Without a baseURL it starts its own dev server on port 5174 (or uses the one already there).
+// Without a baseURL it starts this worktree's own dev server on a free port and stops it afterwards; it never
+// reuses a server already running. A baseURL (or UI_GATES_URL) is reused only if its served code files match
+// this worktree's, byte for byte (scripts/ui-gates/serve.mjs); otherwise the run is refused.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';

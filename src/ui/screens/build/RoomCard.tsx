@@ -1,13 +1,16 @@
 // The room cards and the "Next for the station" card. Each is one button: the room's painting, a line on
 // what it does for people, the faces it helps, and the price last with small pips for what is built.
+import { useEffect, useRef } from 'react';
 import type { GameState, Id } from '../../../sim/types';
 import { Face } from '../../components/Face';
 import { officerFaceStatus } from '../../components/face-status';
 import { Icon } from '../../icons';
 import { moneyFull } from '../../format';
+import { turnIndex } from '../../people/story-line';
+import { useStoryClock } from '../../people/story-clock';
 import { CostTag, Segments } from '../build-parts';
 import { RoomArt } from './Station';
-import { nameList, nodeSummary, personById, roomFaces, stepQuote, stepHelp, type GarageView, type RoomView } from './room-model';
+import { nameList, nodeSummary, personById, roomFaces, roomLines, stepQuote, stepHelp, type GarageView, type RoomView } from './room-model';
 
 /** Up to three faces, overlapped, through the same Face the rest of the game uses. Decorative: the
  * card's label names them. */
@@ -18,6 +21,21 @@ export function FaceStack({ game, ids, now, size = 'sm' }: { game: GameState; id
     if (!person) return null;
     return <Face key={id} size={size} kind="officer" officer={person} status={game.officers[id] ? officerFaceStatus(game, id, now) : null} />;
   })}</span>;
+}
+
+/** The card's one line of copy. It turns through what the room is for and a recorded fact about each person
+ * it helps, on the shared story clock; reduced motion holds it on the first. Decorative: the card's own
+ * label carries the first line. */
+function RoomLine({ game, view, now }: { game: GameState; view: RoomView; now: number }) {
+  const clock = useStoryClock();
+  const lines = roomLines(game, view, now);
+  // First paint says what the room is for; the turn starts with the clock.
+  const shown = useRef<string | null>(null);
+  const text = lines[clock.still || shown.current === null ? 0 : turnIndex(lines.length, clock.now, view.room.id)];
+  // The line fades in only when it turns over, never on first paint.
+  const turned = shown.current !== null && shown.current !== text;
+  useEffect(() => { shown.current = text; });
+  return <span key={text} className={turned ? 'room-line room-line-turned' : 'room-line'}>{text}</span>;
 }
 
 export function RoomCard({ game, view, now, onOpen }: { game: GameState; view: RoomView; now: number; onOpen: () => void }) {
@@ -33,11 +51,12 @@ export function RoomCard({ game, view, now, onOpen }: { game: GameState; view: R
     <RoomArt room={room} open={view.open} />
     <span className="room-main" aria-hidden="true">
       <span className="room-title">{room.name}</span>
-      <span className="room-line">{room.line}</span>
+      <RoomLine game={game} view={view} now={now} />
       <FaceStack game={game} ids={faces} now={now} />
     </span>
     <span className="room-trail" aria-hidden="true">
-      {state === 'ready' ? <span className="room-status" data-state="ready"><Icon name="check" size={16} />Ready</span> : !view.open ? <span className="room-status" data-state="closed"><Icon name="lock" size={16} />Closed</span> : null}
+      {/* Not a tick: a tick reads as built. This says only that the next step is within reach. */}
+      {state === 'ready' ? <span className="room-status" data-state="ready"><Icon name="unlock" size={16} />Can afford</span> : !view.open ? <span className="room-status" data-state="closed"><Icon name="lock" size={16} />Closed</span> : null}
       <CostTag part="value" quote={quote} />
       <Segments done={view.owned} total={view.total} />
     </span>

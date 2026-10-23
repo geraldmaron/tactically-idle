@@ -6,7 +6,7 @@ import { establishedDepartment } from '../../sim/department-test-fixtures';
 import { dispatch } from '../../sim/game';
 import { HOUR_MS } from '../../sim/economy';
 import { DEFAULT_NAV, NavContext, type NavApi } from '../components/nav';
-import { TrainingEnrolmentActions, TrainingEnrolmentReceipt, TrainingOfficerCard, TrainingStore } from './TrainingStore';
+import { TrainingEnrolmentActions, TrainingEnrolmentReceipt, TrainingOfficerCard, TrainingPlaces, TrainingStore, sharedHoldBack } from './TrainingStore';
 import { trainingCandidates } from './training-officers';
 import { splitCourses } from './training-picks';
 
@@ -79,6 +79,26 @@ describe('course-first Training presentation', () => {
     expect(html).toContain('For Mei');
     expect(html).toContain('Communication: 84 → 87');
     expect(html).not.toContain('data-course-id="drone_course"');
+  });
+
+  it('says once that the chosen officer is already in training, on the officer and not on every course', () => {
+    state.officers.off_chen.assignment = { kind: 'training', courseId: 'communication_refresher', startedAt: NOW, endsAt: NOW + 4 * HOUR_MS };
+    const html = markup(createElement(TrainingStore), { trainingRequest: 4, trainingFocus: { officerId: 'off_chen' } });
+    expect(html).toContain('In training');
+    expect(html).not.toContain('Mei Chen is already in training');
+  });
+
+  it('hoists only a reason that names the officer and repeats; course reasons stay on their cards', () => {
+    expect(sharedHoldBack(['Mei Chen is deployed', 'Mei Chen is deployed', null], 'Mei Chen')).toBe('Mei Chen is deployed');
+    expect(sharedHoldBack(['Mei Chen is deployed', null], 'Mei Chen')).toBeNull();
+    expect(sharedHoldBack(['No free training slot', 'No free training slot'], 'Mei Chen')).toBeNull();
+    expect(sharedHoldBack(['Needs $600 (have $0)', 'Needs $600 (have $0)'], 'Mei Chen')).toBeNull();
+  });
+
+  it('labels the training places in words, for the eye and for assistive technology', () => {
+    const html = markup(createElement(TrainingPlaces, { used: 1, total: 2 }));
+    expect(html).toContain('>Training places<');
+    expect(html).toContain('aria-label="1 of 2 training places in use"');
   });
 
   it('shows unavailable officers with actual ratings and reasons, without an enabled Select', () => {

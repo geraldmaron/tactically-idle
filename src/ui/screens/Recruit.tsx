@@ -186,7 +186,7 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
   const detail = detailRate(o);
   const career = useCareerSnapshot(o);
   return (
-    <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={`Hire ${o.firstName} ${o.surname}`} className="hire-contract"
+    <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={hired ? `${o.firstName} ${o.surname} signed` : `Hire ${o.firstName} ${o.surname}`} className="hire-contract"
       subtitle={`${ROLE_META[o.role].label} · ${perHour(o.wage)}`}
       footer={hired
         ? <><p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster{kit.length ? ', with their kit in the Armory' : ''}.</p><Button variant="primary" block onClick={onClose}>Done</Button></>

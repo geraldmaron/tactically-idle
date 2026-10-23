@@ -22,6 +22,7 @@
 @media (prefers-reduced-motion: reduce) {
   .station-light { transition: none; }
   .station-light[data-fresh] { animation: none; }
+  .room-line-turned { animation: none; }
 }
 
 /* Cards: painting, text, price. The room list is one card of buttons split by hairlines. */
@@ -34,6 +35,11 @@
 .room-main, .next-main { display: grid; gap: var(--sp1); min-width: 0; }
 .room-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); font: 600 var(--s16)/1.25 var(--f-ui); }
 .room-line { font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.room-main > .room-line { min-height: calc(var(--s14) * 1.3 * 2); }
+.room-line-turned { animation: room-line-in 400ms ease-out; }
+@keyframes room-line-in { from { opacity: 0; } to { opacity: 1; } }
+/* The beat plays over the diorama, the room it lights, and never over the card that says what is next. */
+.app:has(.build-page) .beat-layer { align-content: start; padding-top: var(--sp3); }
 .room-trail { display: grid; justify-items: end; gap: var(--sp1); }
 .room-trail .segments > i { width: 6px; }
 .room-status { display: inline-flex; align-items: center; gap: var(--sp1); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t3); }

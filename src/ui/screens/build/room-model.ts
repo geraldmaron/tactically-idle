@@ -13,7 +13,9 @@ import { developmentTierDefinition } from '../../../sim/development-tiers';
 import { STRESS_BANDS } from '../../../sim/officer';
 import { employedPatrol, patrolCapacity } from '../../../sim/patrol';
 import type { GameState, Id, NodeEffect, Officer } from '../../../sim/types';
+import { officerFaceStatus } from '../../components/face-status';
 import { duration, money } from '../../format';
+import { rotation } from '../../people/story-line';
 import type { CostQuote } from '../build-parts';
 import { ROOMS, roomOfBranch, type RoomDef, type RoomId } from './rooms';
 
@@ -41,7 +43,8 @@ function plainEffect(e: NodeEffect): string | null {
     case 'rosterCap': return `Room for ${places(e.delta, 'more officer')}`;
     case 'candidatePool': return `${places(e.delta, 'more candidate')} to choose from`;
     case 'income': return `Records fees add ${money(e.perHour)} an hour`;
-    case 'commandStaff': return `Opens the ${MANAGERS[e.managerId].title} post`;
+    // The step's own name already says which post; the line says what the step does for you.
+    case 'commandStaff': return 'Opens a post for you to fill';
     case 'unlockCourse': case 'unlockItem': return null;
     default: return describeEffect(e);
   }
@@ -271,7 +274,8 @@ export function stepHelp(game: GameState, option: NodeOption): StepHelp {
       case 'commandStaff': {
         const manager = MANAGERS[effect.managerId];
         const tired = effect.managerId === 'watch_commander' || effect.managerId === 'peer_support_lead' ? strained(game).filter((o) => o.stress >= STRESS_BANDS.strained).slice(0, 3) : [];
-        add({ key: `post-${effect.managerId}`, officerIds: tired.map((o) => o.id), label: manager.title, from: 'Post closed', to: 'Post open',
+        // The post is named once, by the step's own title; the row says who is under strain, not which post helps.
+        add({ key: `post-${effect.managerId}`, officerIds: tired.map((o) => o.id), label: tired.length ? 'Under strain' : 'Command post', from: 'Post closed', to: 'Post open',
           note: tired.length ? `${places(strained(game).filter((o) => o.stress >= STRESS_BANDS.strained).length, 'officer')} above ${STRESS_BANDS.strained} stress now` : undefined,
           reaction: `The ${manager.title} post is open. You choose who fills it.` });
         break;
@@ -287,6 +291,22 @@ export function roomFaces(game: GameState, view: RoomView, limit = 3): Id[] {
   const option = view.next ?? view.options.find((o) => o.currentTier > 0);
   return option ? stepHelp(game, option).faces.slice(0, limit) : [];
 }
+
+/** The lines a room card turns through: what the room is for, first, then one recorded fact about each
+ * person its next step helps (their state, an earned trait, calls worked). Held to what fits two lines
+ * of the card. Under reduced motion the card keeps the first. */
+export function roomLines(game: GameState, view: RoomView, now: number, limit = 3): string[] {
+  const facts = roomFaces(game, view, limit).flatMap((id) => {
+    const officer = game.officers[id];
+    if (!officer) return [];
+    const status = officerFaceStatus(game, id, now);
+    const line = rotation({ kind: 'officer', officer, status }, now).find((l) => l.kind !== 'persona');
+    const text = line ? `${officer.surname}. ${line.text}` : null;
+    return text && text.length <= ROOM_LINE_MAX ? [text] : [];
+  });
+  return [view.room.line, ...facts];
+}
+const ROOM_LINE_MAX = 62;
 
 /** The officers in a list, for a line of names ("Okafor, Brooks and Lee"). */
 export function nameList(game: GameState, ids: readonly Id[]): string {
