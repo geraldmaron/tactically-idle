@@ -9,7 +9,7 @@ import { crewInitials, crimeBand, crimeLabel, moodLine, projectCrime, sparklineP
 import { firstSentences, firstCard } from './first-call';
 import { CITY_LAYOUT, MAP_H, MAP_W, percentX, percentY, polygonPoints, type Point } from './layout';
 import { nowItem } from './now';
-import { DEFAULT_NOTIFY, parseNotify } from './notify-prefs';
+import { DEFAULT_NOTIFY, fromSettings } from './notify-prefs';
 import { radioItem, radioItems } from './radio-lines';
 import { fundingRows, LONG_AWAY_MS, reportView, welcomeView } from './report';
 
@@ -247,8 +247,7 @@ describe('the return report', () => {
 
 describe('notification choices', () => {
   it('defaults to the two event categories on, the digest off, and ignores junk', () => {
-    expect(parseNotify(null)).toEqual(DEFAULT_NOTIFY);
-    expect(parseNotify('not json')).toEqual(DEFAULT_NOTIFY);
-    expect(parseNotify(JSON.stringify({ finished: false, calls: 'yes', digest: true, asked: true }))).toEqual({ finished: false, calls: true, digest: true, asked: true });
+    expect(fromSettings({ notifyShifts: false, notifyCalls: false, notifyDigest: false, notifyAsked: false })).toEqual(DEFAULT_NOTIFY);
+    expect(fromSettings({ notifyShifts: false, notifyCalls: true, notifyDigest: true, notifyAsked: true })).toEqual({ finished: false, calls: true, digest: true, asked: true });
   });
 });

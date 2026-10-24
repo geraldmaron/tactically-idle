@@ -73,7 +73,7 @@ describe('districts and coverage', () => {
     expect(refused(s, { type: 'setDistrictCoverage', districtId: 'larkin', units: total + 1 }, T0)).toMatch(/employed/);
     expect(refused(s, { type: 'setDistrictCoverage', districtId: 'pike', units: 1 }, T0)).toMatch(/instead/);
     s = run(s, { type: 'setDistrictCoverage', districtId: 'larkin', units: 0 }, T0);
-    expect(s.patrol.personnel.every((p) => p.districtId === undefined)).toBe(true);
+    expect(s.patrol.personnel.every((p) => (p.districtId ?? 'pike') === 'pike')).toBe(true);
     // Staff on Larkin Heights meet people there.
     s = run(s, { type: 'setDistrictCoverage', districtId: 'larkin', units: 4 }, T0);
     s = tick(s, T0 + 40 * H);
@@ -94,18 +94,20 @@ describe('warrants and armed contacts', () => {
   }
   const run1 = (c: { id: string }, leadId: string, subjectId: string) => ({ id: 'r1', scenarioId: 'none', squadIds: [], world: { kind: 'warrant', caseId: c.id, leadId, subjectId, caseTier: 3, districtId: 'pike' } }) as unknown as OperationRun;
 
-  it('refuses a warrant until a call is written, and keeps the lead', () => {
+  it('puts a warrant card on the board for a ready lead, once', () => {
     const { s, lead } = withLead('proactive');
-    expect(refused(s, { type: 'openWarrant', leadId: lead.id }, T0)).toMatch(/No warrant call is written yet/);
-    expect(s.world.leads.find((l) => l.id === lead.id)!.status).toBe('open');
+    const after = run(s, { type: 'openWarrant', leadId: lead.id }, T0);
+    expect(after.world.leads.find((l) => l.id === lead.id)!.status).toBe('warrant');
+    expect(after.incidents.filter((card) => card.world?.leadId === lead.id)).toHaveLength(1);
+    const again = run(after, { type: 'openWarrant', leadId: lead.id }, T0);
+    expect(again.incidents.filter((card) => card.world?.leadId === lead.id)).toHaveLength(1);
   });
 
   it('answers an armed contact only inside its live window', () => {
     const { s, lead } = withLead('armed_contact');
     expect(lead.liveUntil).toBe(T0 + 10 * 60_000);
-    expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 5 * 60_000)).toMatch(/No warrant call is written yet/);
+    expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 5 * 60_000)).toBe('');
     expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 11 * 60_000)).toMatch(/passed/);
-    expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0)).not.toBe('');
   });
 
   it('settles a lawful resolution through the review clock and pays once', () => {

@@ -53,9 +53,12 @@ export function foundDepartment(d: GameState, name: string, districtId: District
   if (clean.length < 2 || clean.length > 40) return fail('A department name is 2 to 40 characters');
   const def = DISTRICTS[districtId];
   if (!def) return fail('No such district');
-  if (d.department.level < def.openAtLevel) return fail(`${def.name} opens at department level ${def.openAtLevel}`);
+  if (!def.startable) return fail(`${def.name} is not a starting district`);
   const now = d.department.clockHighWater;
   d.department.name = clean;
+  // The chosen district is the department's only open district at founding, and patrol starts there.
+  for (const other of Object.values(w.districts)) if (other.id !== districtId && other.open) { other.open = false; other.openedAt = null; }
+  for (const p of employedPatrol(d)) p.districtId = districtId;
   openDistrictState(d, districtId, now);
   // Everyone the city started with can now be known by an officer from their streets.
   for (const id of Object.keys(w.subjects)) seedTiesForSubject(d, id);

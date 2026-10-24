@@ -1,10 +1,9 @@
-// The three notification categories asked once, when the first shift starts (docs/world-redesign.md, "Notifications":
-// asked when the player starts something they want to hear about; declining changes nothing). Kept in
-// localStorage like the other settings, read and written in try/catch. The browser build delivers no
-// notifications yet, so this records the choice for the build that does; Settings (F2) reads the same key.
-import { useSyncExternalStore } from 'react';
-
-export const NOTIFY_KEY = 'ti-notify';
+// The three notification categories asked once, when the first shift starts (docs/world-redesign.md,
+// "Notifications": asked when the player starts something they want to hear about; declining changes
+// nothing). One store: the player settings (src/ui/settings/prefs.ts), which Settings shows too. The browser
+// build delivers no notifications yet; it records the choice for the builds that do.
+import { readSettings, updateSettings } from '../../settings/prefs';
+import { useSettings } from '../../settings/SettingsControls';
 
 export interface NotifyPrefs {
   /** Shifts and training finish. */
@@ -19,42 +18,24 @@ export interface NotifyPrefs {
 
 export const DEFAULT_NOTIFY: Readonly<NotifyPrefs> = Object.freeze({ finished: true, calls: true, digest: false, asked: false });
 
-let unsaved: NotifyPrefs | null = null;
-let cache: { raw: string | null; value: NotifyPrefs } | null = null;
-const listeners = new Set<() => void>();
-
-export function parseNotify(raw: string | null): NotifyPrefs {
-  let data: Record<string, unknown> = {};
-  try {
-    const parsed: unknown = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
-  } catch { /* unreadable: defaults */ }
-  const flag = (key: keyof NotifyPrefs) => (typeof data[key] === 'boolean' ? data[key] as boolean : DEFAULT_NOTIFY[key]);
-  return { finished: flag('finished'), calls: flag('calls'), digest: flag('digest'), asked: data.asked === true };
-}
+/** Before the ask is answered the ask shows its suggested picks; after, the stored choice. */
+export const fromSettings = (s: Pick<ReturnType<typeof readSettings>, 'notifyShifts' | 'notifyCalls' | 'notifyDigest' | 'notifyAsked'>): NotifyPrefs =>
+  s.notifyAsked ? { finished: s.notifyShifts, calls: s.notifyCalls, digest: s.notifyDigest, asked: true } : { ...DEFAULT_NOTIFY };
 
 export function readNotify(): NotifyPrefs {
-  if (unsaved) return unsaved;
-  let raw: string | null = null;
-  try { raw = globalThis.localStorage?.getItem(NOTIFY_KEY) ?? null; } catch { /* refused: defaults */ }
-  if (cache?.raw !== raw) cache = { raw, value: parseNotify(raw) };
-  return cache.value;
+  return fromSettings(readSettings());
 }
 
 export function writeNotify(patch: Partial<NotifyPrefs>): void {
-  const next = parseNotify(JSON.stringify({ ...readNotify(), ...patch }));
-  try {
-    if (!globalThis.localStorage) throw new Error('no storage');
-    globalThis.localStorage.setItem(NOTIFY_KEY, JSON.stringify(next));
-    unsaved = null;
-  } catch {
-    unsaved = next;
-  }
-  listeners.forEach((listener) => listener());
+  updateSettings({
+    ...(patch.finished !== undefined ? { notifyShifts: patch.finished } : {}),
+    ...(patch.calls !== undefined ? { notifyCalls: patch.calls } : {}),
+    ...(patch.digest !== undefined ? { notifyDigest: patch.digest } : {}),
+    ...(patch.asked !== undefined ? { notifyAsked: patch.asked } : {}),
+  });
 }
 
-const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const useNotifyPrefs = (): NotifyPrefs => useSyncExternalStore(subscribe, readNotify, () => DEFAULT_NOTIFY);
+export const useNotifyPrefs = (): NotifyPrefs => fromSettings(useSettings());
 
-/** Test seam. */
-export function resetNotifyMemory(): void { unsaved = null; cache = null; }
+/** Test seam (the settings store keeps its own). */
+export function resetNotifyMemory(): void {}

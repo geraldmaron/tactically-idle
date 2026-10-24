@@ -16,6 +16,8 @@ export interface DistrictDef {
   blurb: string;
   /** The department level that opens this district. */
   openAtLevel: number;
+  /** A district a new department can choose as its first (founding). */
+  startable?: true;
   /** Crime when the district opens, 0..100. */
   startCrime: number;
   /** Crews working it from the day it opens. */

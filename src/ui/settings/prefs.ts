@@ -37,8 +37,10 @@ export interface PlayerSettings {
   /** Notification categories (the browser build only stores the choice; the app builds act on it).
    * Never purchases, never officer distress. */
   notifyShifts: boolean;
-  notifyDecisions: boolean;
+  notifyCalls: boolean;
   notifyDigest: boolean;
+  /** The first-shift ask has been answered, either way (city/notify-prefs.ts). */
+  notifyAsked: boolean;
 }
 
 export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
@@ -51,8 +53,9 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   personalLives: true,
   purchases: true,
   notifyShifts: false,
-  notifyDecisions: false,
+  notifyCalls: false,
   notifyDigest: false,
+  notifyAsked: false,
 });
 
 /** The value chosen on this page when storage refused it; null while storage holds the choice. */
@@ -81,8 +84,9 @@ export function parseSettings(raw: string | null): PlayerSettings {
     personalLives: data.personalLives !== false,
     purchases: data.purchases !== false,
     notifyShifts: data.notifyShifts === true,
-    notifyDecisions: data.notifyDecisions === true,
+    notifyCalls: data.notifyCalls === true,
     notifyDigest: data.notifyDigest === true,
+    notifyAsked: data.notifyAsked === true,
   };
 }
 

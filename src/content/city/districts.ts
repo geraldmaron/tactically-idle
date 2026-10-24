@@ -5,6 +5,7 @@ import type { DistrictDef } from './types';
 export const DISTRICTS: Readonly<Record<DistrictId, DistrictDef>> = {
   pike: {
     id: 'pike',
+    startable: true,
     name: 'Pike Street',
     blurb: 'A long commercial strip of walk-ups, a laundromat and a bakery, busy from the first bus to the last.',
     openAtLevel: 1,
@@ -14,6 +15,7 @@ export const DISTRICTS: Readonly<Record<DistrictId, DistrictDef>> = {
   },
   larkin: {
     id: 'larkin',
+    startable: true,
     name: 'Larkin Heights',
     blurb: 'Hillside apartment blocks above the river, with a pharmacy at the bottom of the stairs.',
     openAtLevel: 2,
@@ -23,6 +25,7 @@ export const DISTRICTS: Readonly<Record<DistrictId, DistrictDef>> = {
   },
   harbor: {
     id: 'harbor',
+    startable: true,
     name: 'Harbor Flats',
     blurb: 'Warehouses, a fish market and long loading docks that empty out after the last ferry.',
     openAtLevel: 3,

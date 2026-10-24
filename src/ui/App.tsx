@@ -18,7 +18,7 @@ import { BottomNav } from './components/BottomNav';
 import { ToastProvider } from './components/toast';
 import { BeatProvider } from './components/BeatProvider';
 import { OverlayRootContext } from './components/Sheet';
-import { NavContext, topTab, usePlayerNavigation } from './components/nav';
+import { NavContext, topTab, useNav, usePlayerNavigation } from './components/nav';
 import type { TopTab } from './components/nav';
 import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
@@ -103,6 +103,7 @@ function GameShell() {
                 <SaveManager open={savesOpen} onClose={() => setSavesOpen(false)} />
                 <OfficerSheet officerId={nav.officerId} onClose={nav.closeOfficer} />
                 <WelcomeBack />
+                <FoundingHandoff />
                 <GrantToasts />
               </BeatProvider>
               </ToastProvider>
@@ -133,4 +134,19 @@ function useChromeInsets(app: HTMLElement | null, head: HTMLElement | null, foot
     observer.observe(foot);
     return () => observer.disconnect();
   }, [app, head, foot]);
+}
+
+/** When the first call's debrief closes, founding happens on City (docs/world-redesign.md, first session):
+ * take the player there once, whichever tab they closed the debrief on. */
+function FoundingHandoff() {
+  const stage = useGame().world.onboarding.stage;
+  const nav = useNav();
+  const [sent, setSent] = useState(false);
+  useEffect(() => {
+    if (stage === 'founding' && !sent) {
+      setSent(true);
+      if (topTab(nav.tab) !== 'city') nav.go('city');
+    }
+  }, [stage, sent, nav]);
+  return null;
 }

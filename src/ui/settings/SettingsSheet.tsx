@@ -75,7 +75,7 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
     <Section id="menu-notifications" icon="bell" title={SHEET_TEXT.notifications} hint={SHEET_TEXT.notifyNote}>
       <Card className="inset-list">
         <SwitchRow icon="clock" title={SHEET_TEXT.notifyShifts} detail={SHEET_TEXT.notifyShiftsDetail} checked={settings.notifyShifts} onChange={(notifyShifts) => updateSettings({ notifyShifts })} />
-        <SwitchRow icon="people" title={SHEET_TEXT.notifyDecisions} detail={SHEET_TEXT.notifyDecisionsDetail} checked={settings.notifyDecisions} onChange={(notifyDecisions) => updateSettings({ notifyDecisions })} />
+        <SwitchRow icon="people" title={SHEET_TEXT.notifyCalls} detail={SHEET_TEXT.notifyCallsDetail} checked={settings.notifyCalls} onChange={(notifyCalls) => updateSettings({ notifyCalls })} />
         <SwitchRow icon="calendar" title={SHEET_TEXT.notifyDigest} detail={SHEET_TEXT.notifyDigestDetail} checked={settings.notifyDigest} onChange={(notifyDigest) => updateSettings({ notifyDigest })} />
       </Card>
     </Section>
