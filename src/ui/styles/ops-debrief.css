@@ -1,0 +1,64 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: operations. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ Debrief */
+
+.debrief-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.debrief-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+}
+.drows {
+  gap: 0;
+  padding: var(--sp1) var(--sp3);
+}
+.drow {
+  padding: var(--sp3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.drow:last-child {
+  border-bottom: 0;
+}
+.drow-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp2);
+  margin: 0 0 var(--sp2);
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: var(--s14);
+  color: var(--text-dim);
+}
+.offrows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.offrows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: var(--sp1) var(--sp3);
+  font-size: var(--s14);
+}
+.offrows li strong {
+  font-family: var(--font-cond);
+  font-size: var(--s16);
+  letter-spacing: 0.03em;
+}
+.causes {
+  margin: 0;
+  padding-left: var(--sp4);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}

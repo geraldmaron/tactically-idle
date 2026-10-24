@@ -1,0 +1,38 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: hq-store-settings. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ Develop */
+
+.branch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp3);
+}
+.rail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.node {
+  position: relative;
+  padding: 0 0 var(--sp3) var(--sp5);
+}
+.node::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 14px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--line-strong);
+}
+.req {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+  padding: 1px var(--sp2);
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--warn-text);
+}

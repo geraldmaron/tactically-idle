@@ -1,0 +1,180 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: team. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ Squad */
+
+.inline-form {
+  display: flex;
+  gap: var(--sp2);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.inline-form .field {
+  flex: 1 1 140px;
+}
+.rename {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--sp2);
+  align-items: center;
+}
+.rename input {
+  flex: 1 1 110px;
+  width: 0;
+}
+.squadpanel {
+  gap: var(--sp3);
+}
+.squadpanel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+}
+.squadpanel-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.squadpanel-name strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 0.03em;
+}
+.squadpanel-name span {
+  font-size: var(--s14);
+  color: var(--muted);
+}
+.ratings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.rating {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(24px, 1fr) 28px;
+  align-items: center;
+  gap: var(--sp3);
+  font-size: var(--s14);
+}
+.traits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.traits li {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--s14);
+}
+.traits strong {
+  display: flex;
+  align-items: center;
+  gap: var(--sp2);
+  font-family: var(--font-cond);
+  font-size: var(--s16);
+  letter-spacing: 0.03em;
+}
+.traits span {
+  color: var(--muted);
+}
+.cond {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp2);
+}
+.factors {
+  margin: 0;
+  padding-left: var(--sp4);
+  font-size: var(--s14);
+  color: var(--text-dim);
+}
+.courses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.course {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp3);
+  padding: var(--sp2) var(--sp3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  padding: var(--sp3);
+  border-radius: 8px;
+  border: 1px solid var(--hair-2);
+  background: var(--ink-2);
+}
+.confirm p {
+  margin: 0;
+  font-size: var(--s14);
+}
+.refresh {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  align-items: flex-start;
+}
+.cand {
+  gap: var(--sp3);
+}
+.cand-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+}
+.cand-portrait {
+  flex: 0 0 auto;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+}
+.cand-portrait > * {
+  display: block;
+}
+.cand-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp1);
+}
+.cand-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--s18);
+  letter-spacing: 0.03em;
+}
+.cand-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp2);
+}

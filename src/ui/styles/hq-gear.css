@@ -1,0 +1,61 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: hq-store-settings. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ Gear */
+
+.gear {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  padding: var(--sp3);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+}
+.counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp1);
+  margin: 0;
+}
+.counts div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp1) 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--white) 4%, transparent);
+}
+.counts dt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-family: var(--font-cond);
+  font-size: var(--s12);
+  color: var(--muted);
+  text-align: center;
+}
+.counts dd {
+  margin: 0;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--s16);
+}
+.preset,
+.rule {
+  gap: var(--sp3);
+}
+.rule-controls {
+  display: flex;
+  gap: var(--sp4);
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.rule-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp1);
+  font-size: var(--s14);
+  color: var(--muted);
+  font-family: var(--font-cond);
+}

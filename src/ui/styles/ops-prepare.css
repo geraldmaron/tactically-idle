@@ -1,0 +1,124 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: operations. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ Ops: board and prepare */
+.prep-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.prep-map {
+  position: relative;
+  height: 230px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+}
+.prep-map > *,
+.live-map-inner > * {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.brief {
+  margin-bottom: var(--sp2);
+}
+.brief:last-child {
+  margin-bottom: 0;
+}
+.brief-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp2);
+  margin: 0 0 var(--sp1);
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--s14);
+}
+.brief ul {
+  margin: 0;
+  padding-left: var(--sp5);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.squadpick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.prepsquad {
+  gap: var(--sp3);
+}
+.prepsquad-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp2);
+  font-family: var(--font-display);
+  font-size: var(--s18);
+  letter-spacing: 0.03em;
+}
+.prepsquad-lo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp2);
+  justify-content: space-between;
+  align-items: center;
+}
+.prepsquad-lo .sub-h {
+  margin: 0;
+}
+.loadout {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}
+.lo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp3);
+  padding: var(--sp2) var(--sp2);
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink-1) 60%, transparent);
+}
+.lo-useful {
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
+  background: color-mix(in srgb, var(--good) 6%, transparent);
+}
+.lo-useful > .icon {
+  color: var(--good);
+}
+.lo-main {
+  flex: 1 1 100px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+}
+.stickyfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 calc(var(--gutter) * -1) -24px;
+  padding: var(--sp4) var(--gutter) var(--sp4);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 0%, transparent), var(--bg) 35%);
+}
+.prepfoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp3);
+}
+.prepfoot .btn-primary {
+  flex: 1;
+}
+.prepcheck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+}

@@ -1,6 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
+import './styles/team-officer-card.css';
+import './styles/city-report.css';
+import './styles/team-squad.css';
+import './styles/ops-prepare.css';
+import './styles/ops-live.css';
+import './styles/ops-debrief.css';
+import './styles/hq-build.css';
+import './styles/hq-gear.css';
+import './styles/app-tail.css';
 import './player-navigation.css';
 import './skin.css';
 import { textureVars } from './art/Plates';

@@ -1,0 +1,194 @@
+/* Split from app.css on 2026-10-24 so each wave-2 lane owns its cascade (docs/world-build-plan.md).
+   Owner: team. Imported from App.tsx in the original order, so nothing renders differently. */
+/* ------------------------------------------------------------ officer card (reference strip card) */
+
+.ocard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--ink-2), var(--ink-1));
+  border: 1px solid var(--hair-2);
+  border-radius: var(--r2);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  container-type: inline-size;
+  font: inherit;
+}
+button.ocard {
+  cursor: pointer;
+}
+.ocard-on {
+  border-color: var(--act);
+}
+.ocard-dim {
+  opacity: 0.7;
+}
+.ocard-art {
+  min-height: 146px;
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink-2);
+}
+.ocard-art > :first-child {
+  display: block;
+  max-width: none;
+}
+.ocard-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 0%, transparent) 52%, color-mix(in srgb, var(--ink-0) 92%, transparent) 100%);
+  pointer-events: none;
+}
+.ocard-name small { display: block; font: 500 var(--s14)/1.2 var(--f-ui); margin-bottom: 2px; color: var(--t-plate); }
+.ocard-condition { display: block; padding: 0 var(--sp2) var(--sp3); font-size: var(--s14); }
+.ocard-name {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--s14);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--black) 90%, transparent);
+}
+.ocard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp1);
+  padding: var(--sp1) var(--sp2) var(--sp2);
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: var(--s12);
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+}
+.ocard-role {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+  min-width: 0;
+}
+.ocard-role span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ocard-role .icon {
+  flex: 0 0 auto;
+}
+@container (max-width: 74px) {
+  .ocard-role .icon {
+    display: none;
+  }
+  .ocard-name {
+    font-size: var(--s12);
+  }
+}
+.ocard-chip {
+  position: absolute;
+  z-index: 3;
+  top: 4px;
+  left: 4px;
+  max-width: calc(100% - 8px);
+}
+.capchip {
+  display: block;
+  padding: 1px var(--sp1);
+  border-radius: 3px;
+  background: var(--ink-3);
+  color: var(--t1);
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--s12);
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.capchip-neg {
+  background: var(--warn);
+}
+.capchip-quiet {
+  background: color-mix(in srgb, var(--ink-0) 82%, transparent);
+  color: var(--text-dim);
+  border: 1px solid color-mix(in srgb, var(--white) 20%, transparent);
+}
+.ocard-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+  position: absolute;
+  z-index: 3;
+  top: 4px;
+  right: 4px;
+  padding: 1px var(--sp1);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-0) 88%, transparent);
+  border: 1px solid currentColor;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--s12);
+}
+.ocard-chip + .ocard-status {
+  top: auto;
+  right: 4px;
+  bottom: 22px;
+}
+.ocard-leader {
+  position: absolute;
+  z-index: 3;
+  right: 5px;
+  bottom: 4px;
+  color: var(--t1);
+}
+.ocard-roster .ocard-name {
+  font-size: 17px;
+  left: 8px;
+}
+.ocard-roster .ocard-row {
+  font-size: 13px;
+  padding: var(--sp2) var(--sp2);
+}
+.ocard-sub {
+  display: block;
+  padding: 0 var(--sp2) var(--sp2);
+  font-size: 13px;
+  color: var(--muted);
+}
+.ocard-note {
+  padding: 0 var(--sp2) var(--sp2);
+  font-size: var(--s12);
+  color: var(--muted);
+}
+.ogrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp3);
+}
+.oslot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp1);
+  min-height: 170px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: var(--s14);
+}
