@@ -181,7 +181,7 @@ export const APPROACH_NODES: TreeNode[] = [
       // The crowd as a source: slow, public, and only worth it while it can still be read.
       { id: 'ask_chat', title: 'Read the comments for who knows', icon: 'search', check: check(READ, 4), minutes: 5, certBonus: SURVEILLANCE, favors: [OBSERVANT_ON_CHAT],
         modifiers: [{ label: 'The clerk couldn’t say', mark: 'clerk_unsure', value: 4 }],
-        onlyIf: { notMarks: ['phone_wall', 'cut', 'stream_off'] },
+        onlyIf: { notMarks: ['cut', 'stream_off'] },
         summary: '{lead} scrolls the comments on a tablet, looking for anyone who has laid eyes on that bag since Tuesday. {rider.first} is watching the same feed and reads aloud the comments {rider.he} likes. It takes five minutes, and {manager.first} spends them on the floor.',
         pull: 'Four hundred people may know something nobody in the store does.',
         cost: 'The count keeps climbing while you read, and {rider.first} hears which comments you stopped on.',
@@ -205,9 +205,9 @@ export const APPROACH_NODES: TreeNode[] = [
             extra: { mark: ['turned_chat'], moves: { rider: 'provoked' }, bump: { stream: 20 }, pressure: 8 } }),
         } },
       { id: 'camera_wall', title: 'Ask {rider.him} to turn the camera to the wall', icon: 'radio', talksTo: 'rider', check: check(TALK, 14), minutes: 4, certBonus: NEGOTIATOR, favors: [STEADY_ON_CAMERA],
-        summary: '{lead} asks {rider.first} to turn the phone to the wall and leave the sound on, so everyone hears and nobody sees. The comments stay on {rider.first}’s screen, and nobody on your side will read them.',
-        pull: 'Fewer people join a stream that shows a wall.',
-        cost: 'With the picture gone, nobody reads the comments for what anyone knows about the bag.',
+        summary: '{lead} asks {rider.first} to turn the phone to the wall and leave the sound on, so the stream hears {manager.first} and nobody sees {manager.him}. The same picture is the only view of the counter your squad has.',
+        pull: 'Strangers stop watching {manager.first} on the floor.',
+        cost: 'Your squad loses its only view of the counter and works from sound until the phone turns back.',
         preview: { favorable: '{rider.first} faces the phone at the wall and answers you.', mixed: 'The phone turns away, then back when the comments complain.', adverse: 'The viewers {rider.first} came for turn on {rider.him} for hiding.' },
         outcomes: {
           favorable: [

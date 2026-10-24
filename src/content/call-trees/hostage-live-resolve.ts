@@ -29,7 +29,7 @@ export const RESOLVE_NODES: TreeNode[] = [
       { when: { marks: ['held_back'] }, prompt: '{manager.first} wouldn’t say it on camera, and {rider.first} can’t tell whether that was a kindness. {rider.He} {rider~asks|ask} which door, and what {manager.first} meant by ask me again.' },
       { when: { marks: ['clerk_named'] }, prompt: '{rider.first} keeps looking at the stockroom door. The comment naming {clerk.first} is still on the screen, and {rider.he} {rider~asks|ask} which door you will use for {clerk.him}.' },
       { when: { marks: ['news_on'] }, prompt: '{outlet} has reposted the footage. {rider.first} asks you which door to use.' },
-      { when: { marks: ['phone_wall'] }, prompt: 'The phone faces the wall, and nobody reads the comments coming through the speaker. {rider.first} is asking the negotiator about the door.' },
+      { when: { marks: ['phone_wall'] }, prompt: 'The phone faces the wall. Your squad has the sound and no picture of the counter, and {rider.first} is asking the negotiator about the door.' },
       { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} thinks {clerk.first} is on {rider.his} side and keeps asking when {clerk.first} will say so to the camera.' },
       { when: { marks: ['turned_chat'] }, prompt: 'The comments have turned and are calling {rider.first} a liar. {rider.He} {rider~stands|stand} by the register with the phone in one hand and the handgun in the other, and {rider~asks|ask} the line how anyone is supposed to walk out of here.' },
     ],
