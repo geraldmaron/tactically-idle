@@ -73,14 +73,16 @@
   --siren-b: #3d7dff;
   --siren-b-dim: #0e2350;
   /* Named people in call text keep their role colours; each pairs with a second cue
-     (src/ui/people/people.css). */
-  --subject: #b99cff;
+     (src/ui/people/people.css). Hues sit far apart so a role reads at a glance (owner, 2026-10-24:
+     lavender and pink were too close): the subject warm red, as on the live call's threat pill;
+     civilians green; officers cyan; anyone unconfirmed grey. */
+  --subject: #ff8f80;
   /* Call-type badge colours (src/ui/icons/kit.css) */
   --ct-hostage: #b99cff;
   --ct-barricade: #4fc3d9;
   --ct-armed: #ff7a8a;
   --ct-rescue: #6ea8ff;
-  --civilian: #ffa6da;
+  --civilian: #a3e08a;
   --person: #8d9cb4;
   --officer: var(--intel-text);
   /* Dev-only marks (the candidate switch, test buttons). */
