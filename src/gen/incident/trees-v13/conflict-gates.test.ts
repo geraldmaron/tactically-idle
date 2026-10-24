@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { CALL_TREES } from '../../../content/call-trees';
 import type { CallTree, TreeOutcome } from '../../../content/call-trees/types';
 
-/** The three trees written before the redesign, exempt by name until their model-first rewrites land
- * (docs/backlog.md barricade-model-first, armed-model-first, rescue-model-first). Nothing else is. */
-const LEGACY = new Set(['barricaded', 'active_armed_incident', 'protected_rescue']);
+/** The trees written before the redesign, exempt by name until their model-first rewrites land
+ * (docs/backlog.md armed-model-first, rescue-model-first). Nothing else is: the barricaded kind is the warrant
+ * call now (The Room Next Door), written model-first, and holds to every gate below. */
+const LEGACY = new Set(['active_armed_incident', 'protected_rescue']);
 
 const trees = Object.values(CALL_TREES).filter((tree): tree is CallTree => !!tree && !LEGACY.has(tree.type));
 
@@ -22,8 +23,8 @@ const costs = (outcome: TreeOutcome) => !!(outcome.mark?.length || outcome.moves
   || (outcome.next && 'ending' in outcome.next));
 
 describe('every call forces conflict', () => {
-  it('exempts only the three legacy trees', () => {
-    expect(Object.values(CALL_TREES).filter(tree => tree && LEGACY.has(tree.type)).length).toBeLessThanOrEqual(3);
+  it('exempts only the legacy trees', () => {
+    expect(Object.values(CALL_TREES).filter(tree => tree && LEGACY.has(tree.type)).length).toBeLessThanOrEqual(2);
     expect(trees.length).toBeGreaterThan(0);
   });
 

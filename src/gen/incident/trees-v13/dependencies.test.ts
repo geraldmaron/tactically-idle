@@ -97,7 +97,7 @@ describe('static lint', () => {
     // The same choice with its mark's only writer (the hit) removed.
     const found = lintTree(armedWithoutHitMark()).filter(finding => finding.code === 'never_offered');
     expect(found.map(finding => finding.id)).toEqual([`never_offered:n.${HIT_FIXTURE.node}/c.${HIT_FIXTURE.choice}/f.onlyIf`]);
-    expect(found[0].message).toContain('officer_down can never be set in this call');
+    expect(found[0].message).toContain(`${HIT_FIXTURE.mark} can never be set in this call`);
   });
 
   it('keeps finding ids stable and unique across runs', () => {
@@ -142,7 +142,9 @@ describe('requirement trees', () => {
       .find(entry => ([] as unknown[]).concat(entry.o.if ?? []).some(c => typeof c === 'object' && c !== null && 'fact' in c))!;
     const outcome = leaves(requirementTree(tree, { outcome: [withIf.n.id, withIf.c.id, withIf.band, withIf.i] }));
     expect(outcome).toContainEqual({ kind: 'band', band: withIf.band });
-    expect(JSON.stringify(outcome)).toContain('raised');
+    // The hidden fact the outcome's `if` reads is among the clauses.
+    const read = ([] as unknown[]).concat(withIf.o.if ?? []).find((c): c is { fact: string } => typeof c === 'object' && c !== null && 'fact' in c)!;
+    expect(outcome).toContainEqual(expect.objectContaining({ kind: 'fact', fact: read.fact }));
   });
 
   it('reaches a turn node only through its turn, and an ending through a drawn result where one routes there', () => {

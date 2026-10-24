@@ -384,7 +384,7 @@ describe('call trees: generated calls', () => {
     let state = 2024, made = 0;
     const turnsSeen = new Set<string>();
     for (let i = 0; i < 60; i++) {
-      const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type] });
+      const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type], includeWorldOnly: true });
       state = drawn.state;
       const s = generateIncident(drawn.spec);
       made++;
@@ -480,7 +480,7 @@ describe('v13 squad range', () => {
   it('deploys only as many squads as one of the call\'s choices can put to work', () => {
     let seed = 4242;
     for (const tree of TREES) {
-      const drawn = drawIncidentSpec(seed, { level: 10, trust: 90, unlockedTypes: [tree.type] });
+      const drawn = drawIncidentSpec(seed, { level: 10, trust: 90, unlockedTypes: [tree.type], includeWorldOnly: true });
       seed = drawn.state;
       const s = generateIncident(drawn.spec);
       const most = Math.max(...scenarioActions(s).map(squadsPutToWork));
@@ -499,7 +499,7 @@ describe('v13 squad range', () => {
   });
 
   it('counts acting squads, supporters and required squads', () => {
-    const action = scenarioActions(generateIncident(drawIncidentSpec(7, { level: 10, trust: 90, unlockedTypes: [TREES[0].type] }).spec))[0];
+    const action = scenarioActions(generateIncident(drawIncidentSpec(7, { level: 10, trust: 90, unlockedTypes: [TREES[0].type], includeWorldOnly: true }).spec))[0];
     expect(squadsPutToWork(action)).toBe(1);
     expect(squadsPutToWork({ ...action, maxActing: 2 })).toBe(2);
     expect(squadsPutToWork({ ...action, support: { max: 6, coverSpaceId: action.targetId, reachMinutes: 5, maxSquads: 1, label: 'covering the back', task: 'cover' } })).toBe(2);

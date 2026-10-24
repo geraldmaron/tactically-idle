@@ -1,6 +1,6 @@
 // A call with a choice only a drawn hit can open, for tests of the never_offered lint and how the lab
 // words and pins it. Never dispatched. Built from the hostage call at test time: a choice at `threat`
-// needs `officer_down`. With `withHit`, the shot at the glass marks an officer down (fire.mark), so
+// needs the fixture's own mark. With `withHit`, the shot at the glass marks an officer down (fire.mark), so
 // the choice is offered and lint notes a drawn-only mark; without it nothing sets the mark, so the
 // compiler drops that choice in every call and lint reports it.
 import type { CallTree, TreeChoice } from '../../../content/call-trees/types';
@@ -8,7 +8,8 @@ import { INCIDENT_TEMPLATES } from '../../../content/incidents';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 
 const BANDS = ['favorable', 'mixed', 'adverse'] as const;
-export const HIT_FIXTURE = { node: 'threat', choice: 'treat_ours', mark: 'officer_down' } as const;
+// The mark is the fixture's own: a live call writes `officer_down` itself, so a live name would never be unset.
+export const HIT_FIXTURE = { node: 'threat', choice: 'treat_ours', mark: 'fixture_hit' } as const;
 
 export function hitMarkFixture(withHit: boolean): IncidentTemplate {
   const base = INCIDENT_TEMPLATES.hostage_crisis!;

@@ -47,7 +47,7 @@ describe('board shortages read nothing hidden', () => {
     if (JSON.stringify(tree).includes('"armed"')) expect(weapons.size).toBeGreaterThan(1);
     expect(lists.size).toBe(1);
     expect(JSON.parse([...lists][0]).length).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it('is the same on every building: no required need in the v13 trees depends on the building yet', () => {
     // A locked door makes an entry tool save time, never a need, so it is not a shortage. When

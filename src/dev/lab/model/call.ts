@@ -79,6 +79,25 @@ const int = (value: string | null, fallback: number, lo: number, hi: number) => 
   return value !== null && value !== '' && Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.floor(n))) : fallback;
 };
 
+const HOSTING_SEEDS = new Map<string, number>();
+/** The building seed a link without one opens: 7 where that building hosts the call, else the next that
+ * does (a call that needs an upstairs, like the warrant, is not hosted by every house), so the default
+ * link opens a call and not a notice that the generator moved it. */
+function defaultSeed(type: IncidentType, family: string, variant: Variant, pacing: ScenarioCharacteristic, tier: number): number {
+  const key = `${type}|${family}|${variant}|${pacing}|${tier}`;
+  const known = HOSTING_SEEDS.get(key);
+  if (known !== undefined) return known;
+  let found = 7;
+  for (let seed = 7; seed < 7 + 200; seed++) {
+    try {
+      const made = generateIncident(specForSituation(type, family, variant, seed, pacing, tier));
+      if (made.locationSeed === seed && made.locationFamilyId.split('__')[0] === family) { found = seed; break; }
+    } catch { /* this building cannot host the call; try the next */ }
+  }
+  HOSTING_SEEDS.set(key, found);
+  return found;
+}
+
 export function readParams(q: URLSearchParams): LabParams {
   const entry = catalogEntry(q.get('type') ?? '') ?? CATALOG[0];
   const family = entry.families.includes(q.get('family') ?? '') ? q.get('family')! : entry.families[0];
@@ -86,8 +105,10 @@ export function readParams(q: URLSearchParams): LabParams {
   const pacing: ScenarioCharacteristic = q.get('pacing') === 'deliberate_answers' ? 'deliberate_answers' : 'ordinary';
   let variant = int(q.get('variant'), 0, 0, 2) as Variant;
   if (!situations.some(s => s.variant === variant && s.characteristic === pacing)) variant = (situations.find(s => s.characteristic === pacing)?.variant ?? 0) as Variant;
+  const tier = int(q.get('tier'), 2, 1, 5);
+  const seedGiven = q.get('seed') !== null && q.get('seed') !== '';
   return {
-    type: entry.type, family, seed: int(q.get('seed'), 7, 0, 0xffffffff), variant, pacing, tier: int(q.get('tier'), 2, 1, 5),
+    type: entry.type, family, seed: seedGiven ? int(q.get('seed'), 7, 0, 0xffffffff) : defaultSeed(entry.type, family, variant, pacing, tier), variant, pacing, tier,
     call: q.get('call') === null ? null : int(q.get('call'), 0, 0, 0xffffffff), id: q.get('id') || null,
     kit: isKit(q.get('kit')) ? q.get('kit') as Kit : 'day1', path: q.get('path') ?? '',
   };

@@ -27,7 +27,7 @@ describe('incident templates', () => {
       let state = 404;
       const signatures = new Set<string>();
       for (let i = 0; i < 24; i++) {
-        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type] });
+        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type], includeWorldOnly: true });
         state = drawn.state;
         const s = generateIncident(drawn.spec);
         const instance = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!;
@@ -54,7 +54,7 @@ describe('incident templates', () => {
     for (const template of templates) {
       let state = 77;
       for (let i = 0; i < 6; i++) {
-        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type] });
+        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type], includeWorldOnly: true });
         state = drawn.state;
         const s = generateIncident(drawn.spec);
         const built = buildLocation(s.locationFamilyId, s.locationSeed);
@@ -74,7 +74,7 @@ describe('incident templates', () => {
     for (const template of templates) {
       let state = 9001;
       for (let i = 0; i < 80; i++) {
-        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type] });
+        const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [template.type], includeWorldOnly: true });
         state = drawn.state;
         const s = generateIncident(drawn.spec);
         const instance = drawInstance(template, buildLocation(s.locationFamilyId, s.locationSeed), { ...s.incident!, familyId: s.locationFamilyId.split('__')[0], buildingSeed: s.locationSeed });
@@ -103,7 +103,7 @@ describe('incident templates', () => {
     // The engine's house call (a frozen barricade) names no group.
     const barricade = HOUSE_TEMPLATE;
     const loose: IncidentTemplate = { ...barricade, cast: barricade.cast.map(slot => slot.id === 'subjects' ? { ...slot, count: { min: 2, max: 2 } } : slot) };
-    const s = generateIncident(drawIncidentSpec(5, { level: 10, trust: 90, unlockedTypes: ['barricaded'] }).spec);
+    const s = generateIncident(drawIncidentSpec(5, { level: 10, trust: 90, unlockedTypes: ['barricaded'], includeWorldOnly: true }).spec);
     const spec = { ...s.incident!, familyId: s.locationFamilyId.split('__')[0], buildingSeed: s.locationSeed };
     expect(() => drawInstance(loose, buildLocation(s.locationFamilyId, s.locationSeed), spec)).toThrow(/names no group/);
   });

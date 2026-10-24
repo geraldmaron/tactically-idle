@@ -77,8 +77,9 @@ export function incidentSubjects(scenario: ScenarioDefinition, run: Pick<Operati
     const threat = person.threat!;
     const arm = person.armamentFactId ? run.knowledge[person.armamentFactId] : 'confirmed';
     // A disproved claim that they hold anything means they hold nothing; a disproved report of one
-    // weapon leaves what they hold unknown.
-    const none = arm === 'disproved' && person.armamentClaim === 'any';
+    // weapon leaves what they hold unknown, unless they hold nothing at all: the team that has seen
+    // them empty-handed knows it, and learning the truth never makes the work harder than the report did.
+    const none = arm === 'disproved' && (person.armamentClaim === 'any' || threat.armament === 'none');
     const armSource = arm === 'confirmed' || none ? 'confirmed' as const : arm === 'reported' ? 'reported' as const : 'assumed' as const;
     const temper = person.dispositionFactId ? known(run.knowledge[person.dispositionFactId]) : false;
     // Moved (scenarioWithPeopleNow, R-B3): already where the team believes they are now.

@@ -50,10 +50,12 @@ describe('incident factors: the people and the building change the odds', () => 
     const reported = odds(s, '_shots_go_now');
     const unknown = odds(s, '_shots_go_now', (_, knowledge) => { knowledge[subject.armamentFactId!] = 'unknown'; });
     expect(unknown.p).not.toBe(reported.p);
-    const hostage = calls('hostage_crisis', 12).find(entry => entry.incidentPeople?.some(person => person.threat?.disposition === 'hostile' && person.dispositionFactId))!;
-    const taker = hostage.incidentPeople!.find(person => person.threat)!;
-    const hidden = odds(hostage, '_going_live_on_stream');
-    const revealed = odds(hostage, '_going_live_on_stream', (_, knowledge) => { knowledge[taker.dispositionFactId!] = 'confirmed'; });
+    // A shipping call carries no temper fact today, so the talk is read on the frozen armed fixture's hostile subject.
+    const hostile = armed.find(entry => entry.incidentPeople?.some(person => person.threat?.disposition === 'hostile' && person.dispositionFactId))!;
+    expect(hostile, 'a drawn armed call with a hostile subject whose temper can be learned').toBeDefined();
+    const shooter = hostile.incidentPeople!.find(person => person.threat?.disposition === 'hostile' && person.dispositionFactId)!;
+    const hidden = odds(hostile, '_shots_announce');
+    const revealed = odds(hostile, '_shots_announce', (_, knowledge) => { knowledge[shooter.dispositionFactId!] = 'confirmed'; });
     expect(revealed.p).toBeLessThan(hidden.p);
   });
 

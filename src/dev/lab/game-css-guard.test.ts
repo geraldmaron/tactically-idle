@@ -16,6 +16,13 @@ const ALLOWED = new Set([
   'app.css|:root', 'app.css|button:focus-visible', 'app.css|select:focus-visible', 'app.css|input:focus-visible',
   // Found when the guard was written (not in the spec's list): the same focus ring on <summary>.
   'app.css|summary:focus-visible',
+  // styles/app-tail.css: the small-screen gutter token, split out of app.css with the rest of that sheet.
+  'styles/app-tail.css|:root',
+  // screens/store.css: the three precinct looks only remap accent tokens on the root when the game sets
+  // data-precinct (the lab never does), so they restyle nothing of the lab's chrome.
+  'screens/store.css|:root[data-precinct="harbour"]', 'screens/store.css|:root[data-precinct="records"]', 'screens/store.css|:root[data-precinct="greenline"]',
+  // skin.css: the press and focus states of a button that holds the game's .nav-pill; no other element matches.
+  'skin.css|button:active > .nav-pill', 'skin.css|button:focus-visible > .nav-pill',
 ]);
 
 describe('game CSS stays class-scoped', () => {

@@ -12,11 +12,11 @@ import { getScenario } from '../sim/scenario-registry';
 import { generateIncident } from '../gen/incident';
 import { hashSeed } from '../sim/rng';
 import { buildLocation } from '../sim/location';
-import { openingFlag } from '../sim/resolution';
+import { bandProbabilities, openingFlag } from '../sim/resolution';
 import { actionViews } from '../sim/operation-selectors';
 import { NOW } from '../sim/test-fixtures';
-import type { GameState, RatingKey } from '../sim/types';
-import type { CheckKind } from '../sim/scenario-types';
+import type { GameState, Id, RatingKey } from '../sim/types';
+import type { CheckKind, ScenarioDefinition } from '../sim/scenario-types';
 import type { System } from './manifest';
 
 export interface Probe {
@@ -38,6 +38,9 @@ export interface Probe {
   /** Only choices of these check kinds count: the input reaches no other kind by design, so a menu
    * that adds a look or a move doesn't read as lost wiring. */
   kinds?: readonly CheckKind[];
+  /** Only calls that carry the input count: a call with no pressure source cannot respond to a source
+   * pulling on it, and says so by omission rather than by a dead choice in the measure. */
+  applies?: (scenario: ScenarioDefinition) => boolean;
   /** Gap: what is missing and where it was found. */
   gap?: string;
   evidence: string;
@@ -60,10 +63,28 @@ export function onAnotherBuilding(scenarioId: string): string | null {
   return null;
 }
 
-/** Measured 2026-10-18 (6 of 33 opening choices); floors only rise. */
-const MIN_BUILDING_SHARE = 0.18;
-/** Share of opening choices whose travel changes on another building, measured 2026-10-18 (6 of 33). */
-export const MIN_BUILDING_TRAVEL_SHARE = 0.18;
+/** Measured 2026-10-24 on the two shipping trees (6 of 18 opening choices); floors only rise. */
+const MIN_BUILDING_SHARE = 0.33;
+/** Share of opening choices whose travel changes on another building, measured 2026-10-24 (12 of 18). */
+export const MIN_BUILDING_TRAVEL_SHARE = 0.66;
+
+/** A world call on the sampled run: it serves a subject the world knows, and `officer` has a tie to `subjectId`
+ * on record or not. The tie contributor reads the run's world reference, the subject and the people ties
+ * (knowingOfficers, src/sim/resolution.ts). */
+const withTie = (state: GameState, tie: { officerId: Id | null; subjectId?: Id; onRecord?: boolean }) => edit(state, draft => {
+  draft.activeRun!.world = { kind: 'warrant', caseId: 'c_probe', leadId: 'l_probe', subjectId: 's_probe', caseTier: 3, districtId: 'pike' };
+  draft.world.subjects.s_probe = {
+    id: 's_probe', firstName: 'Probe', surname: 'Subject', pronouns: 'he', nameKey: { first: 0, last: 0 }, crewId: null,
+    tier: 3, districtId: 'pike', status: 'free', traits: [], known: true, reservedBy: null, history: [],
+  };
+  if (tie.officerId) draft.people.ties.push({ id: 't_probe', officerId: tie.officerId, subjectId: tie.subjectId ?? 's_probe', kind: 'gym', origin: 'play', onRecord: tie.onRecord ?? true, since: 0 });
+});
+const squadAHead = (state: GameState) => squadOfficers(state)[0].id;
+const outsideSquadA = (state: GameState) => {
+  const inA = new Set(squadOfficers(state).map(officer => officer.id));
+  return Object.values(state.officers).find(officer => !inA.has(officer.id))!.id;
+};
+const TIE_CONTROL = 'Negative control, by design: a tie adds its plus 4 only when it is on record, to the subject this call serves, for an officer taking part (docs/world-redesign.md, "Officers know people"), so this must stay at zero.';
 
 export const WIRING: readonly Probe[] = [
   {
@@ -77,23 +98,23 @@ export const WIRING: readonly Probe[] = [
     evidence: '`conditionFraction` takes strain off each rating (src/sim/officer.ts)',
   },
   {
-    id: 'officer-certs', system: 'officer', input: 'Certificates (squad A holds none)', direction: 'down', status: 'live', minShare: 0.086,
+    id: 'officer-certs', system: 'officer', input: 'Certificates (squad A holds none)', direction: 'down', status: 'live', minShare: 0.38,
     perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.certs = []; }),
-    evidence: 'A choice with a certBonus credits the first officer taking part who holds it (src/sim/resolution.ts): a crisis negotiator on the talk, an advanced first aider on care, a surveillance specialist on a watch (owner 2026-10-20: the certificates finally matter). Measured 2026-10-20: 10 of 115 sampled choices, all hostage; the legacy trees carry none yet.',
+    evidence: 'A choice with a certBonus credits the first officer taking part who holds it (src/sim/resolution.ts): a crisis negotiator on the talk, an advanced first aider on care, a surveillance specialist on a watch (owner 2026-10-20: the certificates finally matter). Measured 2026-10-24: 36 of 93 sampled choices on Going Live and the warrant call.',
   },
   {
-    id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.2, openingOnly: true,
+    id: 'items-none', system: 'item', input: 'Carried equipment (squad A deploys with nothing)', direction: 'down', status: 'live', minShare: 0.5, openingOnly: true,
     perturb: (_state, restart) => restart({ items: [] }),
-    evidence: 'A choice gets the gear its physical act asks for (src/gen/incident/action-gear.ts): a shield when the team goes in, the hailer for a voice through the walls, observation aids for a watch from outside, plus any gear the choice authors. Phone calls, texts, waits and walk-outs ask nothing of carried gear, and radios are standard issue, so neither responds. Measured 2026-10-18: 6 of 30 opening choices.',
+    evidence: 'A choice gets the gear its physical act asks for (src/gen/incident/action-gear.ts): a shield when the team goes in, the hailer for a voice through the walls, observation aids for a watch from outside, plus any gear the choice authors. Phone calls, texts, waits and walk-outs ask nothing of carried gear, and radios are standard issue, so neither responds. Measured 2026-10-24: 9 of 18 opening choices.',
   },
   {
-    id: 'blueprint-locked', system: 'blueprint', input: 'Door and window states (every opening locked)', direction: 'any', status: 'live', minShare: 0.27,
+    id: 'blueprint-locked', system: 'blueprint', input: 'Door and window states (every opening locked)', direction: 'any', status: 'live', minShare: 0.26,
     perturb: state => edit(state, draft => {
       const run = draft.activeRun!;
       const built = buildLocation(run.locationFamilyId, run.locationSeed);
       run.flags = [...run.flags, ...built.location.openings.map(opening => openingFlag(opening.id, 'locked'))];
     }),
-    evidence: 'A choice that moves the team (TreeTeam: into a room, to a vantage, an escort) or walks someone out routes through the building, so a locked door costs force time or the entry tool (src/gen/incident/trees-v13/compile.ts). Phone calls, waits and a voice through a door that was already shut never respond, and should not.',
+    evidence: 'A choice that moves the team (TreeTeam: into a room, to a vantage, an escort) or walks someone out routes through the building, so a locked door costs force time or the entry tool (src/gen/incident/trees-v13/compile.ts). Phone calls, waits and a voice through a door that was already shut never respond, and should not. Re-measured 2026-10-24 on Going Live (10 of 54) and the warrant call (15 of 40), which is mostly talk through a door, so the floor sits at the pair\'s share.',
   },
   {
     id: 'blueprint-building', system: 'blueprint', input: 'The building (the same call on another building of its type)', direction: 'any', status: 'live', minShare: MIN_BUILDING_SHARE, openingOnly: true,
@@ -101,15 +122,15 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Routes, doors, room sizes, how far the subject stands from a door and what a sightline reads all come from the generated building (src/sim/resolution.ts), and a sightline fact is settled by it (src/sim/spatial-factors.ts sightFromStreet).',
   },
   {
-    id: 'subject-armament', system: 'subject', input: 'The subject\'s weapon (the reported weapon disproved)', direction: 'up', status: 'live', minShare: 0.83,
+    id: 'subject-armament', system: 'subject', input: 'The subject\'s weapon (the reported weapon disproved)', direction: 'up', status: 'live', minShare: 0.85,
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       for (const person of scenario.incidentPeople ?? []) if (person.armamentFactId) draft.activeRun!.knowledge[person.armamentFactId] = 'disproved';
     }),
-    evidence: '`incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts), group members included: their weapon fact claims anything at all, so disproving it reads them unarmed (`armamentClaim`). The rescue tree has no armed person on scene, so it never responds.',
+    evidence: '`incidentSubjects` reads armament knowledge into `threatFx` (src/sim/incident-factors.ts), group members included: their weapon fact claims anything at all, so disproving it reads them unarmed (`armamentClaim`). A call with no armed person on scene (the rescue tree, the warrant call\'s situation where the handgun went back to the crew) never responds, because there is no weight to take off.',
   },
   {
-    id: 'intel-confirmed', system: 'subject', input: 'What the team has confirmed (every person\'s weapon and location settled to the truth)', direction: 'up', status: 'live', minShare: 0.82,
+    id: 'intel-confirmed', system: 'subject', input: 'What the team has confirmed (every person\'s weapon and location settled to the truth)', direction: 'up', status: 'live', minShare: 0.76,
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       const facts = new Map(scenario.facts.map(fact => [fact.id, fact]));
@@ -118,7 +139,7 @@ export const WIRING: readonly Probe[] = [
         if (fact) draft.activeRun!.knowledge[fact.id] = fact.truth ? 'confirmed' : 'disproved';
       }
     }),
-    evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit. Measured 2026-10-18: 97 of 117 sampled choices.',
+    evidence: 'A weapon held only on report costs a share of the threat on top (THREAT_TUNING.unconfirmed, src/sim/threat.ts), and an entry or a look into a room goes better once the team has seen where the armed person in it is (INTEL_V1.knownPosition, src/sim/incident-factors.ts). Confirming either takes the cost off or adds the credit. Re-measured 2026-10-24: 73 of 95 sampled choices on Going Live (45 of 54) and the warrant call (28 of 41, where a talk through a door or the family\'s window does not turn on where the armed person stands).',
   },
   {
     id: 'reputation-lean', system: 'metric', input: 'Department reputation (a full name for going in hard)', direction: 'any', status: 'live', minShare: 1, everyTree: true, kinds: ['contact', 'pressure', 'execution'],
@@ -131,9 +152,9 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Trait effects are data (src/content/traits.ts TRAIT_EFFECTS), each with its condition; the resolver names every one that holds (src/sim/resolution.ts). A calm voice reaches contact checks only, and a choice can favor it on top (ActionDefinition.favors).',
   },
   {
-    id: 'officer-role', system: 'officer', input: 'Officer role (squad A all negotiators by training)', direction: 'up', status: 'live', minShare: 0.9, kinds: ['contact'],
+    id: 'officer-role', system: 'officer', input: 'Officer role (squad A all negotiators by training)', direction: 'up', status: 'live', minShare: 0.98, kinds: ['contact'],
     perturb: state => edit(state, draft => { for (const officer of squadOfficers(draft)) officer.role = 'comms'; }),
-    evidence: 'ROLE_CHECKS (src/content/traits.ts): a seat trained for the check adds a small named line. Officers already in that role don\'t move, so the floor sits below 1. Measured 2026-10-21: 18 of 18 on Going Live.',
+    evidence: 'ROLE_CHECKS (src/content/traits.ts): a seat trained for the check adds a small named line. Officers already in that role don\'t move, so the floor sits below 1. Measured 2026-10-24: 62 of 63 on Going Live and the warrant call.',
   },
   {
     id: 'officer-history', system: 'officer', input: 'Calls like this one worked before (squad A, four each)', direction: 'up', status: 'live', minShare: 1, everyTree: true,
@@ -144,18 +165,44 @@ export const WIRING: readonly Probe[] = [
     evidence: 'Officer.career.byType counts each type at debrief (src/sim/operation.ts); the resolver credits it as familiarity, capped (TYPE_HISTORY, src/content/traits.ts).',
   },
   {
-    id: 'source-pull', system: 'scenario', input: 'Pressure sources (every source nearly full, its first cue heard)', direction: 'down', status: 'live', minShare: 1, kinds: ['contact', 'pressure', 'coordination', 'execution'],
+    id: 'source-pull', system: 'scenario', input: 'Pressure sources (every source nearly full, its first cue heard)', direction: 'down', status: 'live', minShare: 1, kinds: ['contact', 'pressure', 'coordination'],
+    applies: scenario => (scenario.clocks ?? []).some(def => def.source?.odds),
     perturb: state => edit(state, draft => {
       const scenario = getScenario(draft.activeRun!.scenarioId)!;
       for (const def of scenario.clocks ?? []) if (def.source?.odds && draft.activeRun!.clocks?.[def.id]) draft.activeRun!.clocks[def.id] = { value: 95, cued: Math.max(1, draft.activeRun!.clocks[def.id].cued) };
     }),
-    evidence: 'PressureSource.odds (src/sim/pressure-sources.ts sourceOdds): a source whose first cue is heard takes points off the checks it weighs on, named with its count. In Going Live the stream weighs on contact, pressure and coordination.',
+    evidence: 'PressureSource.odds (src/sim/pressure-sources.ts sourceOdds): a source whose first cue is heard takes points off the checks it weighs on, named with its count. In Going Live the stream weighs on contact, pressure and coordination; a call with no pressure source (the warrant call) is not in the measure.',
   },
   {
     id: 'funding-balance', system: 'metric', input: 'Funding (the department ten million richer)', direction: 'any', status: 'gap', minShare: 0,
     perturb: state => edit(state, draft => { draft.department.funding += 10_000_000; }),
     gap: 'By design, never wired (docs/player-profile.md): money changes the odds only through what it buys, the kit and the people, never directly. This probe must stay at zero.',
     evidence: 'The resolver never reads Department.funding or the ledger (src/sim/resolution.ts).',
+  },
+  {
+    id: 'tie-known', system: 'officer', input: 'An officer knows the person the call is about (an on-record tie, a world call)', direction: 'up', status: 'live', minShare: 0.87, everyTree: true, kinds: ['contact'],
+    perturb: state => withTie(state, { officerId: squadAHead(state) }),
+    evidence: 'knowingOfficers (src/sim/resolution.ts) adds one visible line of TIE_KNOWS for a tied officer taking part in a contact check with the subject, or with no one in particular, however many are tied. Checks aimed at someone else (the manager on air, the parent upstairs), and every other kind, never respond. Measured 2026-10-24: 55 of 63 contact choices, Going Live 28 of 34 and the warrant call 27 of 29.',
+  },
+  {
+    id: 'tie-absent', system: 'officer', input: 'A world call with nobody tied to its subject', direction: 'any', status: 'gap', minShare: 0, kinds: ['contact'],
+    perturb: state => withTie(state, { officerId: null }),
+    gap: TIE_CONTROL, evidence: 'The world reference alone, with no tie on record, adds nothing (src/sim/resolution.ts knowingOfficers).',
+  },
+  {
+    id: 'tie-hidden', system: 'officer', input: 'A tie that has not surfaced (not on record)', direction: 'any', status: 'gap', minShare: 0, kinds: ['contact'],
+    perturb: state => withTie(state, { officerId: squadAHead(state), onRecord: false }),
+    gap: TIE_CONTROL, evidence: 'A hidden tie surfaces as story, never as an odds boost (src/sim/people/types.ts Tie.onRecord).',
+  },
+  {
+    id: 'tie-unrelated', system: 'officer', input: 'A tie to someone else, not the subject of the call', direction: 'any', status: 'gap', minShare: 0, kinds: ['contact'],
+    perturb: state => withTie(state, { officerId: squadAHead(state), subjectId: 's_someone_else' }),
+    gap: TIE_CONTROL, evidence: 'knowingOfficers keeps only ties whose subject is the call\'s subject.',
+  },
+  {
+    id: 'tie-away', system: 'officer', input: 'A tie held by an officer who is not on the call (another squad)', direction: 'any', status: 'gap', minShare: 0, kinds: ['contact'],
+    perturb: state => withTie(state, { officerId: outsideSquadA(state) }),
+    gap: TIE_CONTROL, evidence: 'The line names the officer taking part, so a tied officer who is not in the acting squad adds nothing (src/sim/resolution.ts).',
   },
   {
     id: 'metric-pressure', system: 'scenario', input: 'Time pressure on the call (pressure 95)', direction: 'down', status: 'live', minShare: 1, everyTree: true,
@@ -195,13 +242,15 @@ export interface ProbeResult { probe: Probe; choices: number; moved: number; wro
 type Odds = Map<string, { eligible: boolean; favorable: number }>;
 const odds = (state: GameState): Odds => new Map(actionViews(state, NOW, 'A').map(view => [view.id, { eligible: view.eligible, favorable: view.likelihood.favorable }]));
 const EPS = 0.005;
+/** The favorable chance at the ends of the curve: a lucky break and a setback exist at any margin. */
+const STOPS = { low: bandProbabilities(-Infinity).favorable, high: bandProbabilities(Infinity).favorable };
 
 export function measureWiring(probes: readonly Probe[] = WIRING, points: readonly Point[] = samplePoints()): ProbeResult[] {
   return probes.map(probe => {
     const byTree: ProbeResult['byTree'] = {};
     const wrong: string[] = [];
     let flips = 0;
-    for (const point of points.filter(p => !probe.openingOnly || p.opening)) {
+    for (const point of points.filter(p => (!probe.openingOnly || p.opening) && (!probe.applies || probe.applies(getScenario(p.scenarioId)!)))) {
       const base = baseline(point.state);
       const restart = (opts?: Parameters<typeof startGateRun>[2], scenarioId = point.scenarioId) => baseline(startGateRun(scenarioId, 719, opts));
       const before = odds(base), after = odds(probe.perturb(base, restart));
@@ -212,8 +261,12 @@ export function measureWiring(probes: readonly Probe[] = WIRING, points: readonl
         if (!b.eligible) continue;
         if (kindOf && !probe.kinds!.includes(kindOf.get(id)!)) continue;
         if (!a || !a.eligible) { flips++; continue; }
-        tree.choices++;
+        // A choice already at the curve's stop in the direction the input pushes cannot show it (an earlier
+        // play left the subject too worked up for any skill to matter); it is not a choice that ignores the input.
         const delta = a.favorable - b.favorable;
+        const atLow = b.favorable <= STOPS.low + EPS, atHigh = b.favorable >= STOPS.high - EPS;
+        if ((probe.direction === 'down' && atLow) || (probe.direction === 'up' && atHigh) || (probe.direction === 'any' && (atLow || atHigh) && Math.abs(delta) <= EPS)) continue;
+        tree.choices++;
         if (Math.abs(delta) <= EPS) continue;
         const right = probe.direction === 'any' || (probe.direction === 'up' ? delta > 0 : delta < 0);
         if (right) tree.moved++; else wrong.push(`${id} ${b.favorable.toFixed(3)} -> ${a.favorable.toFixed(3)}`);
@@ -272,12 +325,13 @@ export function buildingTravelChanges(points: readonly Point[] = samplePoints())
 }
 
 /** Share of sampled observing choices whose favorable result settles where someone is, measured
- * 2026-10-18 (15 of 15: barricade 1, armed 11, rescue 3). A floor: it may only rise. */
+ * 2026-10-18 (15 of 15: barricade 1, armed 11, rescue 3). A floor: it may only rise. Only a look into a
+ * room with someone in it whose place is not yet settled counts (see `sightingsWiring`). */
 export const MIN_SIGHTING_SHARE = 1;
 
 /** What being there teaches the team (sim/sightings.ts). At every sampled point, each eligible
  * choice is committed on a favorable result: a choice that observes a room (ActionDefinition.
- * observes) counts when it settles where someone is, and a choice that observes nothing must
+ * observes) and has someone to find counts when it settles where someone is, and a choice that observes nothing must
  * never settle anyone's location, since no authored outcome does. So `observes` can't go silently
  * dead: if the engine stopped reading it, no observing choice would respond. */
 export function sightingsWiring(points: readonly Point[] = samplePoints()): { choices: number; moved: number; wrong: string[]; byTree: Record<string, { choices: number; moved: number }> } {
@@ -287,6 +341,10 @@ export function sightingsWiring(points: readonly Point[] = samplePoints()): { ch
     const run = point.state.activeRun!;
     const scenario = getScenario(run.scenarioId)!;
     const located = new Set((scenario.incidentPeople ?? []).flatMap(person => person.locationFactId ? [person.locationFactId] : []));
+    // Someone in a room the choice looks into, whose place the team has not yet settled: a look into an
+    // empty room, or at a person already found, has nothing left to teach.
+    const toLearn = (action: { observes?: readonly string[] }) => (scenario.incidentPeople ?? []).some(person =>
+      person.locationFactId && action.observes?.includes(person.spaceId) && run.knowledge[person.locationFactId] !== 'confirmed');
     const views = actionViews(point.state, NOW, 'A');
     const tree = (byTree[point.type] ??= { choices: 0, moved: 0 });
     for (const action of scenario.stages[run.stage as keyof typeof scenario.stages]?.actions ?? []) {
@@ -294,7 +352,9 @@ export function sightingsWiring(points: readonly Point[] = samplePoints()): { ch
       const after = applyMove(point.state, { kind: 'decide', actionId: action.id, band: 'favorable' }, views);
       if (!after) continue;
       const learned = (after.activeRun?.history.at(-1)?.knowledgeChanges ?? []).filter(change => located.has(change.factId));
-      if (action.observes?.length) { tree.choices++; if (learned.length) tree.moved++; }
+      // A favorable result that closes the call leaves nothing to find out.
+      const closes = after.activeRun?.stage === 'debrief';
+      if (action.observes?.length) { if (toLearn(action) && !closes) { tree.choices++; if (learned.length) tree.moved++; } }
       else if (learned.length) wrong.push(`${action.id} settled ${learned.map(change => change.factId).join(', ')} without observing a room`);
     }
   }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from './game';
 import { createInitialState } from './department';
-import { HOUR_MS, ratesAt } from './economy';
+import { HOUR_MS, netRate, ratesAt } from './economy';
+import { PEOPLE_TUNING } from './people/tuning';
+import { rehireCandidateId } from './people/records';
 import { deployability } from './officer';
 import {
   budget,
@@ -89,7 +91,8 @@ describe('hiring and dismissal', () => {
     const next = ok(s, { type: 'hire', candidateId: cand.id }, T0);
     expect(next.department.funding).toBe(s.department.funding - cand.signingCost);
     expect(budget(next).wages).toBe(budget(s).wages + cand.officer.wage);
-    expect(budget(next).net).toBeCloseTo(p.netAfter, 6);
+    // The projection prices a permanent commitment, so it reads the sustainable net (allocation at its floor, no boosts).
+    expect(netRate(next)).toBeCloseTo(p.netAfter, 6);
     expect(next.officers[cand.officer.id].squadId).toBeNull();
     expect(next.officers[cand.officer.id].assignment).toBeNull();
     expect(next.candidates.find((c) => c.id === cand.id)).toBeUndefined();
@@ -147,14 +150,24 @@ describe('hiring and dismissal', () => {
     expect(projectDismiss(s, 'off_chen', T0).ok).toBe(false);
   });
 
-  it('dismissed officers never return to the candidate pool', () => {
-    let s = ok(createInitialState(T0), { type: 'dismiss', officerId: 'off_reyes' }, T0);
+  it('dismissed officers stay out of the candidate pool through the rehire cooldown, then return once, as themselves', () => {
+    const start = createInitialState(T0);
+    const surname = start.officers.off_reyes.surname;
+    let s = ok(start, { type: 'dismiss', officerId: 'off_reyes' }, T0);
+    const cooldown = PEOPLE_TUNING.rehireCooldownMs;
     let t = T0;
     for (let i = 0; i < 6; i++) {
       t += 5 * HOUR_MS;
       s = ok(s, { type: 'refreshCandidates' }, t);
-      expect(s.candidates.map((c) => c.officer.id)).not.toContain('off_reyes');
-      expect(s.candidates.map((c) => c.officer.surname)).not.toContain('Reyes');
+      const reyes = s.candidates.filter((c) => c.officer.surname === surname);
+      if (t - T0 < cooldown) {
+        expect(s.candidates.map((c) => c.officer.id)).not.toContain('off_reyes');
+        expect(reyes).toEqual([]);
+      } else {
+        // Past the cooldown the same person is on offer once, never a lookalike under another id.
+        expect(reyes.map((c) => c.officer.id)).toEqual(['off_reyes']);
+        expect(reyes[0].id).toBe(rehireCandidateId('off_reyes'));
+      }
     }
   });
 

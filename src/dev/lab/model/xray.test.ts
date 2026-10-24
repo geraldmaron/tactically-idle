@@ -135,7 +135,7 @@ describe('truthStrip', () => {
     const s = openCall(REFERENCE);
     const strip = truthStrip(s.scenario, currentFrame(s).state.activeRun!);
     const truth = Object.fromEntries(strip.map(entry => [entry.fact, entry.truth]));
-    expect(truth).toMatchObject({ rider_clear: false, raised: true, handgun: true });
+    expect(truth).toMatchObject({ rider_clear: false, proof: false, handgun: true });
     expect(strip.find(entry => entry.fact === 'handgun')?.team).toBe('reported');
     expect(strip.find(entry => entry.fact === 'rider_clear')?.team).toBe('unknown');
     expect(strip.every(entry => !/[{}]/.test(entry.label))).toBe(true);

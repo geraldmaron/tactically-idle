@@ -19,6 +19,7 @@ import { isHotCall } from '../../../../sim/authorization';
 import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews, openThreat, stalledRun } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
 import { getScenario } from '../../../../sim/scenario-registry';
+import { callFee } from '../../../../sim/operation';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
 import { decisionsOf, isLapse } from '../../../../sim/types';
 import { DepartmentContext } from '../../../../ui/components/department-context';
@@ -541,7 +542,7 @@ function BriefScreen({ state }: { state: GameState }) {
   const built = useMemo(() => builtForScenario(run.scenarioId), [run.scenarioId]);
   const intel = useMemo(() => buildIntel(scenario ?? null, built), [scenario, built]);
   const brief = useMemo(() => briefing(run.scenarioId, state, run.squadIds), [run.scenarioId, state, run.squadIds]);
-  return <div className="page"><PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} /></div>;
+  return <div className="page"><PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} fee={scenario ? callFee(state, run, scenario) : 0} /></div>;
 }
 
 /** The debrief, with "What was really there" as the game shows it. */

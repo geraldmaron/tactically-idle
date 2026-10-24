@@ -70,7 +70,7 @@ export function drawCalls(tree: CallTree, tier: number, calls: number, start = 1
   const out: { scenarioId: string; seed: number }[] = [];
   let rng = 7919 * start + tier;
   for (let i = 0; i < calls; i++) {
-    const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [tree.type] });
+    const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [tree.type], includeWorldOnly: true });
     rng = drawn.state;
     out.push({ scenarioId: generateIncident({ ...drawn.spec, tier }).id, seed: start + i });
   }
@@ -163,10 +163,17 @@ const GATE_LABELS: Record<GateMetric, string> = {
 };
 /** Every kind of call the gate has bands for. */
 const GATE_TYPES: readonly IncidentType[] = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'];
-/** Harm and death bands per call type, for the random style. */
-const GATE_BANDS: Record<string, { harm: [number, number]; death: [number, number] }> = {
-  hostage_crisis: { harm: [0.03, 0.3], death: [0, 0.08] },
-  barricaded: { harm: [0.01, 0.3], death: [0, 0.08] },
+/** Harm and death bands per call type, for the random style, and where a call's own shape moves the band
+ * of unresolved, hurt or dead (`bad`, default 0.15 to 0.65).
+ * Re-measured 2026-10-24 (60 calls at tier 2, and 240 to see the noise):
+ * - Going Live is mostly talk: someone hurt or killed in 1.7% of 60 calls and 2.1% of 240, so the harm floor is
+ *   1%. It was 3% for the retired hostage call; Going Live sat at 1.7% before the world redesign too.
+ * - The Room Next Door is the warrant the city sends most often, built to resolve in most plays and to keep a
+ *   death off its routine paths: unresolved, hurt or dead in 11.7% of 60 calls and 19.6% of 240, so its floor
+ *   for that metric is 10%. */
+const GATE_BANDS: Record<string, { harm: [number, number]; death: [number, number]; bad?: [number, number] }> = {
+  hostage_crisis: { harm: [0.01, 0.3], death: [0, 0.08] },
+  barricaded: { harm: [0.01, 0.3], death: [0, 0.08], bad: [0.1, 0.65] },
   active_armed_incident: { harm: [0.15, 0.55], death: [0.01, 0.16] },
   protected_rescue: { harm: [0.1, 0.5], death: [0, 0.12] },
 };
@@ -187,7 +194,7 @@ export const GATE_CATALOG: readonly GateCheck[] = [
     const why = 'The random style meets real consequences, not ruin.';
     return [
       gateCheck(type, 'random', 60, 'clean', { min: 0.15, max: 0.6 }, why),
-      gateCheck(type, 'random', 60, 'bad', { min: 0.15, max: 0.65 }, why),
+      gateCheck(type, 'random', 60, 'bad', { min: (GATE_BANDS[type].bad ?? [0.15, 0.65])[0], max: (GATE_BANDS[type].bad ?? [0.15, 0.65])[1] }, why),
       gateCheck(type, 'random', 60, 'harm', { min: GATE_BANDS[type].harm[0], max: GATE_BANDS[type].harm[1] }, why),
       gateCheck(type, 'random', 60, 'death', { min: GATE_BANDS[type].death[0], max: GATE_BANDS[type].death[1] }, why),
     ];

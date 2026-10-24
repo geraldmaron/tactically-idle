@@ -266,7 +266,9 @@ export const testCallId = (name: keyof typeof TEST_CALLS): Id => fixtureIncident
 /** A call for `spec`: generated from the shipping call of its kind, or for a retired kind from its
  * frozen fixture, registered under the generated id so the engine resolves it like any call. */
 export function fixtureIncident(spec: IncidentSpec): ScenarioDefinition {
-  if (templateAt(spec.type)) return generateIncident(spec);
+  // The shipping call hosts only its own families: the warrant call took the barricaded kind (world redesign),
+  // so a frozen house fixture on a family it does not host is still the retired call.
+  if (templateAt(spec.type)?.tree.families.includes(spec.familyId)) return generateIncident(spec);
   const id = incidentId(spec);
   return SCENARIOS[id] ??= generateIncident(spec, FIXTURE_TEMPLATES[spec.type]);
 }
@@ -279,7 +281,7 @@ export function callsOfKind(type: IncidentSpec['type'], n: number, seed = 1312):
   const out: ScenarioDefinition[] = [];
   let state = seed;
   for (let i = 0; i < n; i++) {
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type] });
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [type], includeWorldOnly: true });
     state = drawn.state;
     out.push(generateIncident(drawn.spec));
   }

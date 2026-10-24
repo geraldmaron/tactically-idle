@@ -21,6 +21,7 @@ import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
 import { getScenario } from '../../sim/scenario-registry';
+import { callFee } from '../../sim/operation';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
@@ -432,7 +433,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     </div>}
   </>;
 
-  const merged = <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt}>
+  const merged = <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} fee={scenario ? callFee(g, { world: incidentsOf(g).find((i) => i.id === scenarioId)?.world }, scenario) : 0} openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt}>
     <div className="cl-team">{teamSections}</div>
   </PrepBriefing>;
 

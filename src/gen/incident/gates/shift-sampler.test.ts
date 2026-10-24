@@ -1,6 +1,6 @@
 // Crisis calls per shift (hostage review N21), measured on the board's own schedule. Report only:
 // the counts print, and the assertions hold the sampler itself honest, never the content.
-import { SCENARIO_TYPES } from '../../../content/scenario-types';
+import { boardTypes } from '../../../sim/incidents';
 import { describe, expect, it } from 'vitest';
 import { CRISIS_CAP, CRISIS_TYPES, sampleShifts, shiftReport } from './shift-sampler';
 
@@ -36,8 +36,9 @@ describe('shift sampler: crisis calls per shift', () => {
     expect(total('takes-crisis-calls')).toBeGreaterThanOrEqual(total('takes-every-call'));
   }, 120000);
 
-  it('opens every type when the department can answer them', () => {
+  it('opens every type the board draws when the department can answer them', () => {
+    // The warrant call only the world sends never comes onto the board at random.
     const types = new Set(sampleShifts({ shifts: SHIFTS, department: 'every-type' }).calls.flatMap(byType => Object.keys(byType)));
-    expect([...types].sort()).toEqual(SCENARIO_TYPES.map(info => info.type).sort());
+    expect([...types].sort()).toEqual(boardTypes().sort());
   }, 120000);
 });

@@ -19,7 +19,7 @@ describe('cue order in a decision result', () => {
     state.activeRun!.clocks = { ...state.activeRun!.clocks, stream: { ...state.activeRun!.clocks!.stream, value: last.at - 0.5, cued: stream.cues.length - 1 } };
     state = applyMove(state, { kind: 'decide', actionId: choiceActionId('hostage_crisis', 'on_air', 'cut_feed'), band: 'favorable' })!;
     const said = state.activeRun!.history.at(-1)!.committed!.consequences;
-    const cue = said.indexOf(last.text), cut = said.findIndex(line => line.startsWith('The stream drops'));
+    const cue = said.indexOf(last.text), cut = said.findIndex(line => /^The stream (drops|cuts out)/.test(line));
     expect(cue, said.join('\n')).toBeGreaterThanOrEqual(0);
     expect(cut).toBeGreaterThan(cue);
   });
@@ -29,8 +29,10 @@ describe('cue order in a decision result', () => {
     const scenario = getScenario(s.id)!;
     const run = startGateRun(s.id, 719).activeRun!;
     const stream = scenario.clocks!.find(def => def.id === 'stream')!;
-    // Time alone wouldn't reach the first cue before the threat; the beats' and landing's bumps do.
+    // Time alone wouldn't reach the first cue before the threat; the beats' and landing's bumps do. The
+    // gauge starts just short of what time alone would carry it to the cue, whatever the call opens at.
     const minutes = openThreat(scenario, run)!.minutes;
+    run.clocks = { ...run.clocks, stream: { ...run.clocks!.stream, value: stream.cues[0].at - stream.ratePerMin * minutes - 1 } };
     expect(run.clocks!.stream.value + stream.ratePerMin * minutes).toBeLessThan(stream.cues[0].at);
     const stalled = stalledRun(scenario, run, minutes);
     expect(stalled.clocks!.stream.value).toBeGreaterThanOrEqual(stream.cues[0].at);

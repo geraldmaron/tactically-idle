@@ -51,7 +51,7 @@ describe('a face on an order', () => {
   it('renders a face and the order number on each person order, and a number well on the others', () => {
     const scenario = getScenario(testCallId('hostage'))!;
     const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built) });
+    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built), fee: 1600 });
     const html = renderToStaticMarkup(createElement(PeopleProvider, { lexicon: lexiconFor(scenario, null, []), children: page }));
     const orders = html.slice(html.indexOf('pb-orders'), html.indexOf('What the team faces'));
     expect((orders.match(/class="pb-lead"/g) ?? []).length).toBe(scenario.objectives.filter((o) => orderPerson(o, lexiconFor(scenario, null, []))).length);
@@ -60,7 +60,7 @@ describe('a face on an order', () => {
   it('shows the plain person on an order face when the provider has names off, whatever else is saved', () => {
     const scenario = getScenario(testCallId('hostage'))!;
     const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built) });
+    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built), fee: 1600 });
     const off = renderToStaticMarkup(createElement(PeopleProvider, { lexicon: null, children: page }));
     const orders = off.slice(off.indexOf('pb-orders'), off.indexOf('What the team faces'));
     expect(orders).toContain('pb-lead');

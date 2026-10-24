@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../content/content-descriptors';
 import { callTreeAt } from '../content/call-trees';
+import { templateAt } from '../content/incidents';
 import { scenarioRecipe } from '../content/scenario-recipes';
 import { SCENARIO_TYPES } from '../content/scenario-types';
 import { drawIncidentSpec, parseIncidentId } from '../gen/incident';
@@ -12,7 +13,7 @@ import { createInitialState } from './department';
 import { applyIncidentsDue, drawableKinds, drawableSituations, excludedDescriptors, seedIncidentBoard, type ContentExclusion } from './incidents';
 import type { GameState } from './types';
 
-// Every kind unlocked, as in incidents.test.ts, so a filter is tested against all four kinds.
+// Every kind unlocked, as in incidents.test.ts, so a filter is tested against every kind the board draws.
 vi.mock('../gen/incident', async (importOriginal) => {
   const m = await importOriginal<typeof import('../gen/incident')>();
   return { ...m, drawIncidentSpec: vi.fn(m.drawIncidentSpec) };
@@ -20,6 +21,8 @@ vi.mock('../gen/incident', async (importOriginal) => {
 const draw = vi.mocked(drawIncidentSpec);
 const realDraw = draw.getMockImplementation()!;
 const EVERY_TYPE = SCENARIO_TYPES.map((info) => info.type);
+/** What the board can draw at random: the warrant call only the world sends never comes up. */
+const BOARD_TYPES = EVERY_TYPE.filter((type) => !templateAt(type)?.worldOnly);
 beforeEach(() => {
   draw.mockReset();
   draw.mockImplementation((rng, ctx) => realDraw(rng, { ...ctx, unlockedTypes: EVERY_TYPE }));
@@ -31,8 +34,9 @@ const HOUR = 3_600_000;
 /** Every subset of the descriptors, in list order. */
 const COMBOS: ContentExclusion[] = Array.from({ length: 1 << CONTENT_DESCRIPTORS.length }, (_, mask) => ({ avoid: CONTENT_DESCRIPTORS.filter((_, i) => mask & (1 << i)) }));
 /** The sensitive themes the board survives together: those no curated call carries in every
- * situation (Going Live carries suicide risk in both, so avoiding it would empty the board, and the
- * setting refuses that). */
+ * situation (Going Live carries suicide risk, death, injury and police gunfire in all three, so avoiding
+ * any of them would empty the board, and the setting refuses that). The warrant call only the world sends
+ * never counts: the board does not draw it. */
 const THEMES: ContentDescriptor[] = (['suicide_self_harm', 'child_at_risk', 'domestic_violence'] as ContentDescriptor[])
   .filter((descriptor) => drawableKinds({ avoid: [descriptor] }).length > 0);
 const label = (e: ContentExclusion) => (e.avoid.length ? `avoid ${e.avoid.join(', ')}` : 'avoid nothing');
@@ -74,7 +78,7 @@ describe('content exclusion', () => {
           expect(wider.every((index) => kept[type].includes(index))).toBe(true);
         }
       }
-      expect(drawableKinds(exclusion)).toEqual(EVERY_TYPE.filter((type) => kept[type].length));
+      expect(drawableKinds(exclusion)).toEqual(BOARD_TYPES.filter((type) => kept[type].length));
       table[label(exclusion)] = kept;
     }
     // The record of what each combination leaves on the board. A change here is a content change:
@@ -87,6 +91,7 @@ describe('content exclusion', () => {
     const emptying = CONTENT_DESCRIPTORS.filter((d) => drawableKinds({ avoid: [d] }).length === 0);
     expect(emptying).toMatchInlineSnapshot(`
       [
+        "death",
         "suicide_self_harm",
         "injury",
         "police_gunfire",

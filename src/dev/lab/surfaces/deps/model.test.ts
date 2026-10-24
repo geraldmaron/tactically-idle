@@ -42,7 +42,7 @@ describe('lint in words (J6)', () => {
   });
 
   it('reads raw ids in lint messages as names', () => {
-    // A clock writer from an owned fixture, and the armed call with nothing setting officer_down,
+    // A clock writer from an owned fixture, and the hit fixture with nothing setting its mark,
     // so its medic choice is never offered.
     const fixture = clockFixtureTemplate(), armed = armedWithoutHitMark();
     const clock = lintTree(fixture).find(f => f.code === 'clock_writer')!;
@@ -52,9 +52,9 @@ describe('lint in words (J6)', () => {
     expect(text).toBe('Courier bolts is also set when courier nerve runs out.');
     const never = lintTree(armed).find(f => f.code === 'never_offered')!;
     const read = humanizeFinding(never, names(armed), dependencyIndex(armed));
-    expect(read).not.toMatch(/treat_ours|officer_down/);
+    expect(read).not.toMatch(new RegExp(`treat_ours|${HIT_FIXTURE.mark}`));
     expect(read.startsWith(`${names(armed).node(HIT_FIXTURE.node)} › `)).toBe(true);
-    expect(read).toMatch(/^.+ › .+ is never offered: officer down can never be set in this call/);
+    expect(read).toMatch(new RegExp(`^.+ › .+ is never offered: ${HIT_FIXTURE.mark.replace(/_/g, ' ')} can never be set in this call`));
   });
 
   it('names and explains every code', () => {
@@ -142,7 +142,7 @@ describe('conditions in words', () => {
     const index = dependencyIndex(template);
     const read = (text: string) => humanizeCondition(text, template.tree, index, t => t.replace(/\{(\w+)\.first\}/g, (_m, id: string) => id.toUpperCase()), () => 'The stream’s count');
     expect(read('rider_clear = true and stream out')).toBe('Who took the bag: true and the stream’s count has run out');
-    expect(read('raised = false and rider breaking')).toBe('The view of the counter: false and the delivery courier is breaking');
+    expect(read('proof = false and rider breaking')).toBe('What the viewers know: false and the delivery courier is breaking');
     // A mark by name, read from an owned fixture so a content change can't remove it.
     const fixture = clockFixtureTemplate();
     expect(humanizeCondition(`no mark ${CLOCK_FIXTURE_IDS.outMark}`, fixture.tree, dependencyIndex(fixture), t => t, () => '')).toBe('not: courier bolts');

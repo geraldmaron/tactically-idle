@@ -51,26 +51,29 @@ describe('evaluateReq', () => {
   it('a notMarks clause lists the sites that write the mark, and fails once it is set', () => {
     const s = open(REFERENCE);
     const deps = dependencyIndex(s.template);
-    const target = { choice: ['on_air', 'team_glass'] as [string, string] };
+    // Walking out on the stream is closed once the lie is found, the feed is cut or the stream is off.
+    const target = { choice: ['way_out', 'walk_live'] as [string, string] };
     const req = labRequirementTree(s.tree, target);
     const at = evaluateReq(req, s, currentFrame(s), deps, target);
-    const [account] = leafOf(at.root, 'mark');
-    expect(account.node).toEqual({ leaf: { kind: 'mark', mark: 'looked', want: false } });
-    expect(account.label).toMatch(/^Mark not set: /);
-    expect(account.writers.length).toBeGreaterThan(0);
-    expect(account.writers).toEqual(deps.keys.get('mark:looked')!.writers);
-    expect(account.now).toBe('pass');
+    const marks = leafOf(at.root, 'mark');
+    expect(marks.map(entry => entry.node)).toEqual(['lie_found', 'cut', 'stream_off'].map(mark => ({ leaf: { kind: 'mark', mark, want: false } })));
+    for (const account of marks) {
+      expect(account.label).toMatch(/^Mark not set: /);
+      expect(account.writers.length).toBeGreaterThan(0);
+      expect(account.writers).toEqual(deps.keys.get(`mark:${(account.node as { leaf: { mark: string } }).leaf.mark}`)!.writers);
+      expect(account.now).toBe('pass');
+    }
     // Not at the node yet: a state clause fails, so the fix is a path to where it is eligible.
     expect(leafOf(at.root, 'at')[0].now).toBe('fail');
-    expect(at.fixes).toContainEqual({ kind: 'find-path', goal: { eligible: 't13_hostage_crisis_on_air_team_glass' } });
-    // Where the squad already watched from the corner, the clause fails.
-    const taken = explore(s.frames[0].state, { flags: ['mark:looked', 'at:on_air'] });
-    expect(taken.path).not.toBeNull();
-    const there = currentFrame(replayTokens(s, taken.path!));
+    expect(at.fixes).toContainEqual({ kind: 'find-path', goal: { eligible: 't13_hostage_crisis_way_out_walk_live' } });
+    // Where one of the marks is already set at the node, that clause fails and the choice is gone.
+    const closing = ['lie_found', 'cut', 'stream_off'].map(mark => ({ mark, taken: explore(s.frames[0].state, { flags: [`mark:${mark}`, 'at:way_out'] }) })).find(entry => entry.taken.path !== null)!;
+    expect(closing, 'a mark that can be set where the walk out is on offer').toBeDefined();
+    const there = currentFrame(replayTokens(s, closing.taken.path!));
     const after = evaluateReq(req, s, there, deps, target);
-    expect(leafOf(after.root, 'mark')[0].now).toBe('fail');
+    expect(leafOf(after.root, 'mark').find(entry => (entry.node as { leaf: { mark: string } }).leaf.mark === closing.mark)!.now).toBe('fail');
     expect(leafOf(after.root, 'at')[0].now).toBe('pass');
-    expect(there.views.find(view => view.id === 't13_hostage_crisis_on_air_team_glass')).toBeUndefined();
+    expect(there.views.find(view => view.id === 't13_hostage_crisis_way_out_walk_live')).toBeUndefined();
   }, 30000);
 
   it('reads a fact `if` per situation from the hidden truth', () => {
@@ -111,7 +114,7 @@ describe('holdsAt', () => {
     const req = labRequirementTree(s.tree, { choice: [s.tree.root, s.tree.nodes[0].choices[0].id] });
     const start = s.frames[0].state;
     expect(holdsAt(req, start, s)).toBe(true);
-    expect(holdsAt(labRequirementTree(s.tree, { choice: ['on_air', 'team_glass'] }), start, s)).toBe(false);
+    expect(holdsAt(labRequirementTree(s.tree, { choice: ['way_out', 'walk_live'] }), start, s)).toBe(false);
     const ctx = stateContext(start)!;
     expect(ctx.tree).toBe(s.tree);
     expect(ctx.counts).toEqual(s.counts);
@@ -122,14 +125,16 @@ describe('holdsAt', () => {
 
 describe('blockedBecause', () => {
   it('names the hidden truth that rules an ending out of this situation', () => {
-    // Every route into manager_killed needs raised true; situation 1 of the reference call has it false.
-    const s = open(REFERENCE.replace('variant=1', 'variant=0'));
-    expect(s.tree.situations[s.situation]!.truth.raised).toBe(false);
+    // Every route into in_with_family needs the back of the house to be the way out (leaving true); situation 2 of
+    // the warrant call (The kid) has it false. Going Live has no ending every route to which a fact rules out.
+    const WARRANT = 'type=barricaded&tier=2';
+    const s = open(`${WARRANT}&variant=1`);
+    expect(s.tree.situations[s.situation]!.truth.leaving).toBe(false);
     const deps = dependencyIndex(s.template);
-    const text = blockedBecause(s, { ending: 'manager_killed' }, deps);
-    expect(text).toMatch(/^Every route there needs the hidden truth “.+” to be true, and situation 1 has it false\.$/);
-    // The same ending in situation 2 is reachable: nothing fixed rules it out.
-    expect(blockedBecause(open(REFERENCE), { ending: 'manager_killed' }, deps)).toBeNull();
+    const text = blockedBecause(s, { ending: 'in_with_family' }, deps);
+    expect(text).toMatch(/^Every route there needs the hidden truth “.+” to be true, and situation 2 has it false\.$/);
+    // The same ending in situation 1 (Leaving) is reachable: nothing fixed rules it out.
+    expect(blockedBecause(open(`${WARRANT}&variant=0`), { ending: 'in_with_family' }, deps)).toBeNull();
   });
 
   for (const subject of certSubjects()) it(`${subject.source}: names the missing cert for a locked choice, and nothing once it is granted`, () => {

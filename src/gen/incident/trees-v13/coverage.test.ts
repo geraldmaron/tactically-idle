@@ -94,7 +94,7 @@ function startsFor(tree: CallTree): Start[] {
   const met = () => [...targets].every(([target, n]) => (count.get(target) ?? 0) >= n);
   for (let i = 0; i < MAX_DRAWS && !(quiet >= QUIET_DRAWS && met()); i++) {
     quiet++;
-    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type] });
+    const drawn = drawIncidentSpec(state, { level: 10, trust: 90, unlockedTypes: [tree.type], includeWorldOnly: true });
     state = drawn.state;
     const s = generateIncident(drawn.spec);
     const picked = scenarioRecipe(s.incident!);

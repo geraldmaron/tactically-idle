@@ -22,7 +22,7 @@ import { certSubjects, clockSubjects, groupFixtureSession, stoppedClockSession }
 import { CLOCK_FIXTURE_IDS } from '../../../gen/incident/gates/clock-fixture';
 import type { Session } from './session';
 
-const REFERENCE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=1';
+const REFERENCE = 'type=hostage_crisis&family=market_row&seed=7&tier=2&variant=0';
 
 function open(query: string): Session {
   const opened = openSession(parseLabUrl(`?${query}`).url, null);
@@ -37,10 +37,12 @@ const replayed = (s: Session, path: string) => {
 
 const graphOf = (s: Session): CallGraph => callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
 const inCallEndings = (graph: CallGraph) => graph.vertices.filter(v => v.kind === 'ending' && v.inCall).map(v => v.treeId).sort();
-/** Every route into the ending this call keeps needs a fact this situation's truth says is false. */
-const blockedByTruth = (graph: CallGraph, ending: string, fact: string) => {
+/** Every route into the ending this call keeps needs a fact this situation's truth says is false: on the
+ * route itself, or (a route with no condition of its own) on the choice that takes it, whose mark only that
+ * fact's proof can set. `gatedChoices` names those choices. */
+const blockedByTruth = (graph: CallGraph, ending: string, fact: string, gatedChoices: readonly string[] = []) => {
   const into = graph.edges.filter(edge => edge.inCall && edge.to === `ending:${ending}`);
-  return into.length > 0 && into.every(edge => edge.conditions.some(c => c.kind === 'fact' && c.fact === fact && c.holds === false));
+  return into.length > 0 && into.every(edge => edge.conditions.some(c => c.kind === 'fact' && c.fact === fact && c.holds === false) || (!edge.conditions.length && gatedChoices.includes(`${edge.node}/${edge.choice}`)));
 };
 /** A live state where the engine offers no move at all (no band of any choice, no continuation, no
  * report): the only way to the failed-response fallback (handed_over), whose report the walk takes
@@ -63,21 +65,23 @@ describe('explore', () => {
       expect(path).not.toMatch(/~roll/);
     }
     const missing = inCallEndings(graph).filter(ending => !(ending in all.endings!));
-    // Situation 2 of 2 (raised true): every ending the call keeps but the failed-response fallback.
-    expect(s.tree.situations[s.situation]!.truth.raised).toBe(true);
+    // Situation 1 of 3 (the rider is clear, the clerk took the bag): every ending the call keeps but the
+    // failed-response fallback.
+    expect(s.tree.situations[s.situation]!.truth.rider_clear).toBe(true);
     expect(missing).toEqual(['handed_over']);
     expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 1);
-    // Where the handgun never comes up (raised false), the endings that need it are missing, and
-    // every route into each needs raised.
-    const calm = open(REFERENCE.replace('variant=1', 'variant=0'));
-    expect(calm.tree.situations[calm.situation]!.truth.raised).toBe(false);
+    // Where the rider took the bag (rider_clear false), the ending that walks him out clear is missing, and
+    // every route into it needs rider_clear: on the route, or on the choice that sends the porch clip (which
+    // needs proof nobody here has).
+    const calm = open(REFERENCE.replace('variant=0', 'variant=1'));
+    expect(calm.tree.situations[calm.situation]!.truth.rider_clear).toBe(false);
     const calmGraph = graphOf(calm);
     const calmAll = explore(calm.frames[0].state, null);
     expect(calmAll.truncated).toBe(false);
     const calmMissing = inCallEndings(calmGraph).filter(ending => !(ending in calmAll.endings!));
     const needRaised = calmMissing.filter(ending => ending !== 'handed_over');
-    expect(needRaised).toEqual(expect.arrayContaining(['manager_killed', 'manager_killed_rider_hurt']));
-    for (const ending of needRaised) expect(blockedByTruth(calmGraph, ending, 'raised')).toBe(true);
+    expect(needRaised).toEqual(['out_cleared']);
+    for (const ending of needRaised) expect(blockedByTruth(calmGraph, ending, 'rider_clear', ['way_out/send_clip'])).toBe(true);
     // handed_over is the failed-response fallback: no state in this call leaves the player without a move.
     expect(explore(start, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     // A goal stops at the shortest path to it.
@@ -87,10 +91,9 @@ describe('explore', () => {
     expect(one.states).toBeLessThanOrEqual(all.states);
   }, 120000);
 
-  it('reaches the manager killed in the situation where the handgun comes up, by aiming the team\'s force', () => {
+  it('reaches the manager killed, by aiming the team\'s force', () => {
     // Firing needs a carried sidearm and an officer qualified for it (sim/force-risk.ts qualifiedForceUnit).
     const keeps = open(`${REFERENCE}&kit=full&certs=entry_team`);
-    expect(keeps.tree.situations[keeps.situation]!.truth.raised).toBe(true);
     const graph = graphOf(keeps);
     const all = explore(keeps.frames[0].state, null);
     expect(all.truncated).toBe(false);
@@ -150,7 +153,7 @@ describe('explore', () => {
     expect(toNode.path).not.toBeNull();
     expect(nodeAt(replayed(s, toNode.path!), s.tree)).toBe('on_air');
     expect(explore(start, { node: s.tree.root }).path).toBe('');
-    const id = choiceActionId('hostage_crisis', 'on_air', 'team_glass');
+    const id = choiceActionId('hostage_crisis', 'on_air', 'manager_speaks');
     for (const goal of [{ offered: id }, { eligible: id }]) {
       const found = explore(start, goal);
       expect(found.path).not.toBeNull();
