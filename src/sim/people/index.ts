@@ -1,53 +1,48 @@
-// The people layer's entry points (docs/world-build-plan.md, "The contract"). Wave 0 lands these as stubs;
-// the people-engine lane fills them in behind the same signatures.
-import type { DebriefResult, GameState, HandlerMap, HandlerResult, Id, OperationRun, PeopleCommandType } from '../types';
-import type { PeopleState } from './types';
+// The people layer's entry points (docs/world-build-plan.md, "The contract"). Officers as people: a record
+// through every employment change, jacket pages, memory facts, imprints with an aftercare fork, settled
+// traits, bonds, ties and romance. Rules live in the modules beside this file; authored text lives in
+// src/content/people/. The signatures below are the contract the other lanes call.
+import type { GameState, HandlerMap, Id, PeopleCommandType } from '../types';
+import { markSeen, decideAftercare } from './aftercare';
+import { easeTenseBonds, nextBondEventTime } from './bonds';
+import { endAftercareAssignments, endExpiredImprints, easeSettledStrains, nextImprintEventTime } from './imprints';
 
-const fail = (reason: string): HandlerResult => ({ ok: false, reason });
+export { createPeople, onOfficerHired, onOfficerDeparted, rehireCandidates, rehireCheck, isRehire } from './records';
+export { applyPeopleDebrief } from './debrief';
+export { recordShiftFact } from './shifts';
+export { recordCaseFact, seedTiesForSubject } from './ties';
+export { bondContributor } from './contributor';
+export { validPeopleState } from './validate';
+export { jacketView, bondWeb, aftercareView, peopleBeatsFor, teamPeopleSummary } from './selectors';
+export { PEOPLE_TUNING } from './tuning';
 
-/** A canonical record for every starting officer. */
-export function createPeople(d: Pick<GameState, 'officers'>, now: number): PeopleState {
-  const records: PeopleState['records'] = {};
-  for (const o of Object.values(d.officers)) {
-    records[o.id] = { officerId: o.id, identityId: o.identityId ?? o.id, status: 'employed', hiredAt: o.hiredAt ?? now, pagesOpen: 1, shared: {}, openToRelationship: false };
-  }
-  return { records, facts: [], imprints: [], settled: [], bonds: [], ties: [], beats: [], nextId: 1 };
+/** The next time strictly after t when a note ends, a stand-down or peer-support shift ends, a settled strain
+ * eases or a tense bond eases. Pending decisions never expire, so they offer no time. */
+export function nextPeopleEventTime(d: GameState, t: number): number | null {
+  const a = nextImprintEventTime(d, t), b = nextBondEventTime(d, t);
+  return a === null ? b : b === null ? a : Math.min(a, b);
 }
 
-/** The next time strictly after t when an imprint ends or a fork opens. */
-export function nextPeopleEventTime(_d: GameState, _t: number): number | null {
-  return null;
+/** Advance the people over (from, to]; push ids of new beats onto `beats`. Deterministic: every effect has
+ * its own time in state, so one long walk, many short ones and a save in between all agree. */
+export function settlePeople(d: GameState, from: number, to: number, beats: Id[]): void {
+  if (to <= from) return;
+  endExpiredImprints(d, from, to);
+  endAftercareAssignments(d, from, to);
+  easeTenseBonds(d, from, to, beats);
+  easeSettledStrains(d, from, to);
 }
-
-/** Advance imprints and bond drift over [from, to); push ids of new beats onto `beats`. */
-export function settlePeople(_d: GameState, _from: number, _to: number, _beats: Id[]): void {}
-
-/** Called by operation.closeDebrief after the career loop: memory facts, imprints, bonds, ties. */
-export function applyPeopleDebrief(_d: GameState, _run: OperationRun, _result: DebriefResult, _verdict: 'favorable' | 'adverse' | null): void {}
-
-/** Bridges the world and roster call (contract, so neither lane edits the other's files). Each is a no-op
- * until the people-engine lane fills it in. */
-/** A world investigation an officer worked has closed: record an `arrest` fact and any prior_arrest tie. */
-export function recordCaseFact(_d: GameState, _caseId: Id): void {}
-/** A proactive shift stopped: record `shift` facts and drift the bonds of the officers who rode it. */
-export function recordShiftFact(_d: GameState, _shiftId: Id): void {}
-/** A world subject was generated: create jacket ties for officers from that subject's district. */
-export function seedTiesForSubject(_d: GameState, _subjectId: Id): void {}
-/** An officer joined (hire or rehire): create or restore their record. */
-export function onOfficerHired(_d: GameState, _officerId: Id): void {}
-/** An officer is about to leave (dismissal or retirement): snapshot them before removal. */
-export function onOfficerDeparted(_d: GameState, _officerId: Id, _reason: 'dismissed' | 'retired'): void {}
 
 export const PEOPLE_HANDLERS: HandlerMap<PeopleCommandType> = {
-  decideAftercare: () => fail('Not built yet'),
+  decideAftercare: (d, c) => decideAftercare(d, c.imprintId, c.choice, c.partnerId),
   acknowledgeBeat: (d, c) => {
     const beat = d.people.beats.find((b) => b.id === c.beatId);
-    if (!beat) return fail('Nothing to acknowledge');
+    if (!beat) return { ok: false, reason: 'Nothing to acknowledge' };
     beat.acknowledged = true;
     return { ok: true };
   },
   markTelegraphSeen: (d, c) => {
-    for (const imprint of d.people.imprints) if (c.imprintIds.includes(imprint.id)) imprint.seen = true;
+    markSeen(d, c.imprintIds);
     return { ok: true };
   },
 };

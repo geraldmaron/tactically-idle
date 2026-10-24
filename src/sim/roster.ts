@@ -25,6 +25,7 @@ import { gameDay, simNow } from './calendar';
 import { PERSONAS } from '../content/personas';
 import { applyRetention, CAREER_TUNING, retentionCheck, mandatoryRetirementDay } from './career';
 import { markEmployed } from './personnel';
+import { eligibleRehires, isRehire, onOfficerDeparted, onOfficerHired, rehireCandidate, rehireCandidateId, rehireCandidates, rehireCheck } from './people/records';
 import { applySquadArrangement, setSquadArrangementLock, undoSquadArrangement } from './squad-optimizer';
 import { tunable } from './tuning';
 import { postFunding } from './ledger';
@@ -74,7 +75,11 @@ export function hireCheck(state: GameState, candidateId: Id, netRate: NetRate): 
   const wage = cand.officer.wage;
   const netAfter = netBefore - wage;
   const base = { upfront: cand.signingCost, wageDelta: wage, netBefore, netAfter };
-  if (cand.officer.identityId && state.personnel?.employedIdentityIds.includes(cand.officer.identityId)) return { ...base, ok: false, reason: 'That officer has already served in this campaign' };
+  // Anyone who has served is closed to hire, except a dismissed officer past the cooldown (people/records.ts).
+  if (cand.officer.identityId && state.personnel?.employedIdentityIds.includes(cand.officer.identityId)) {
+    const returning = rehireCheck(state, cand.officer, t);
+    if (!returning.ok) return { ...base, ok: false, reason: returning.reason };
+  }
   if (cand.officer.identityId && state.patrol?.personnel.some((person) => person.profileId === cand.officer.identityId)) return { ...base, ok: false, reason: 'That person has served in the patrol workforce' };
   if (gameDay(state, t) >= mandatoryRetirementDay(cand.officer)) return { ...base, ok: false, reason: 'That candidate has reached retirement age; refresh the pool' };
   const cap = state.department.rosterCap;
@@ -93,12 +98,15 @@ function hire(d: GameState, candidateId: Id, netRate: NetRate): HandlerResult {
   if (!check.ok) return refusal(check.reason ?? 'Cannot hire');
   const idx = d.candidates.findIndex((c) => c.id === candidateId);
   const cand = d.candidates[idx];
+  // A returning officer comes back as they left (the candidate holds their snapshot), with their old kit.
+  const returning = isRehire(d, cand.officer, simNow(d));
   markEmployed(d, cand.officer);
-  postFunding(d.department, -cand.signingCost, 'signing', `Signed ${fullName(cand.officer)}`, simNow(d));
+  postFunding(d.department, -cand.signingCost, 'signing', `${returning ? 'Rehired' : 'Signed'} ${fullName(cand.officer)}`, simNow(d));
   d.candidates.splice(idx, 1);
   d.officers[cand.officer.id] = { ...cand.officer, squadId: null, assignment: null, hiredAt: simNow(d) };
   // The officer's issue kit joins the department pool (its cost is part of the signing).
-  for (const itemId of issueKit(cand.officer)) createUnit(d, itemId, simNow(d));
+  if (!returning) for (const itemId of issueKit(cand.officer)) createUnit(d, itemId, simNow(d));
+  onOfficerHired(d, cand.officer.id);
   return OK;
 }
 
@@ -118,6 +126,7 @@ export function dismissCheck(state: GameState, officerId: Id, netRate: NetRate):
   const base = { upfront: severanceFor(o), wageDelta: -o.wage, netBefore, netAfter: netRate(after) };
   if (o.assignment?.kind === 'operation') return { ...base, ok: false, reason: `${fullName(o)} is deployed and cannot be dismissed` };
   if (o.assignment?.kind === 'proactive') return { ...base, ok: false, reason: `${fullName(o)} is on a proactive shift. Recall the squad first` };
+  if (o.assignment?.kind === 'standdown' || o.assignment?.kind === 'peer_support') return { ...base, ok: false, reason: `${fullName(o)} is on aftercare. Wait until it ends` };
   if (state.department.funding < base.upfront) {
     return { ...base, ok: false, reason: `Severance ${funding(base.upfront)} exceeds the department's ${funding(state.department.funding)}` };
   }
@@ -138,8 +147,10 @@ function dismiss(d: GameState, officerId: Id, netRate: NetRate): HandlerResult {
   if (!check.ok) return refusal(check.reason ?? 'Cannot dismiss');
   postFunding(d.department, -check.upfront, 'severance', `Severance for ${fullName(d.officers[officerId])}`, simNow(d));
   detachFromSquad(d, officerId);
+  // The people layer stores the officer as they leave, so a rehire brings back this person and no other.
+  onOfficerDeparted(d, officerId, 'dismissed');
   delete d.officers[officerId];
-  // Dismissed officers are never added back to the candidate pool.
+  // A dismissed officer returns to the pool only through rehireCandidates, after the cooldown.
   return OK;
 }
 
@@ -191,6 +202,8 @@ export function recruitmentStatus(state: GameState, now: number) {
     if (!build) { unseen++; available++; }
     else if (day < mandatoryRetirementDay(build)) available++;
   }
+  // Dismissed officers past their cooldown can be hired back.
+  available += rehireCandidates(state, now).length;
   return { total: PERSONAS.length, unseen, available, exhausted: available === 0 };
 }
 
@@ -217,12 +230,26 @@ function takenNames(d: GameState, candidates: Candidate[]): Set<string> {
   return taken;
 }
 
+/** Returning officers are listed beside the pool, not counted in its size (ids from people/records.ts). */
+const isRehireCandidate = (c: Candidate): boolean => c.id.startsWith('cand_rehire_');
+
+/** List the dismissed officers who can be hired back now. Shortlisted ones keep their place. */
+function addRehireCandidates(d: GameState, now: number): void {
+  if (!d.people) return;
+  const wanted = eligibleRehires(d, now);
+  const wantedIds = new Set(wanted.map((r) => rehireCandidateId(r.officerId)));
+  d.candidates = d.candidates.filter((c) => !isRehireCandidate(c) || c.shortlisted || wantedIds.has(c.id));
+  for (const r of wanted) if (!d.candidates.some((c) => c.id === rehireCandidateId(r.officerId))) d.candidates.push(rehireCandidate(d, r, now));
+}
+
 /** Fill the pool up to `poolSize` (economy.ts candidatePoolSize) with deterministic candidates; shortlisted ones stay. */
 export function fillCandidates(d: GameState, now: number, poolSize: number): void {
   const kept = d.candidates.filter((c) => c.shortlisted && gameDay(d, now) < mandatoryRetirementDay(c.officer));
+  const keptNew = kept.filter((c) => !isRehireCandidate(c));
   const gen = marketGen(d, d.rngState, d.nextId);
-  const fresh = generateBatch(gen, now, Math.max(0, poolSize - kept.length), kept.map((c) => c.officer.role), takenNames(d, kept), gameDay(d, now), CAREER_TUNING.retireAge, kept.map((c) => c.officer));
+  const fresh = generateBatch(gen, now, Math.max(0, poolSize - keptNew.length), keptNew.map((c) => c.officer.role), takenNames(d, kept), gameDay(d, now), CAREER_TUNING.retireAge, keptNew.map((c) => c.officer));
   d.candidates = [...kept, ...fresh];
+  addRehireCandidates(d, now);
   d.rngState = gen.rng;
   d.nextId = gen.nextId;
   (d.department as DepartmentExt).candidateRefreshedAt = now;
@@ -233,7 +260,8 @@ export function fillCandidates(d: GameState, now: number, poolSize: number): voi
  * shared rng or id counter that incidents and equipment draw on, and offline return still matches
  * online ticks. A search (refreshCandidates) still replaces everyone not shortlisted. */
 export function topUpCandidates(d: GameState, now: number, poolSize: number): void {
-  const missing = poolSize - d.candidates.length;
+  addRehireCandidates(d, now);
+  const missing = poolSize - d.candidates.filter((c) => !isRehireCandidate(c)).length;
   if (missing <= 0 || !d.personnel) return;
   // Seeded by how many people the campaign has met, not the clock, so the same state draws the same people.
   const gen = marketGen(d, hashSeed(`${d.personnel.campaignSeed}:pool:${Object.keys(d.personnel.builds).length}`), 0);

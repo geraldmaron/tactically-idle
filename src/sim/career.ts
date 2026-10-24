@@ -17,6 +17,7 @@ import { next, hashSeed } from './rng';
 import { fullName } from './officer';
 import { tunable } from './tuning';
 import { fundingPerHour } from './format';
+import { onOfficerDeparted } from './people/records';
 
 /** Tunable (sim/tuning.ts). */
 export const CAREER_TUNING = tunable('CAREER_TUNING', {
@@ -233,6 +234,8 @@ function setRetirement(o: Officer, day: number, reason: 'age' | 'service' | 'bur
 }
 
 function removeFromRoster(d: GameState, officerId: Id): void {
+  // The people layer stores the officer as they retire before they leave the roster (people/records.ts).
+  if (d.people) onOfficerDeparted(d, officerId, 'retired');
   for (const sq of d.squads) {
     if (!sq.officerIds.includes(officerId)) continue;
     sq.officerIds = sq.officerIds.filter((id) => id !== officerId);
