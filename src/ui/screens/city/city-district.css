@@ -1,0 +1,68 @@
+/* The district sheet (screens/city/DistrictSheet.tsx), B2. */
+.district-sheet .sheet-sub { font-size: var(--s14); color: var(--t3); }
+.district { display: flex; flex-direction: column; gap: var(--sp3); min-width: 0; padding-top: var(--sp2); }
+.district-kicker { font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: var(--kicker-track); color: var(--t3); text-transform: uppercase; }
+.district-kicker-live { color: var(--live-text); }
+.district-muted { font-size: var(--s14); color: var(--t3); }
+.district-note { margin: 0; font-size: var(--s14); line-height: 1.4; color: var(--t2); }
+
+.district-crime { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp3); }
+.district-crime-main { display: grid; gap: 2px; }
+.district-crime-num { font: 800 44px/1 var(--f-display); font-variant-numeric: tabular-nums; color: var(--t1); }
+.district-crime-num[data-band="low"] { color: var(--intel-text); }
+.district-crime-num[data-band="mid"] { color: var(--warn-text); }
+.district-crime-num[data-band="high"] { color: var(--live-text); }
+.district-crime-word { font-size: var(--s14); color: var(--t3); }
+.district-spark { display: grid; justify-items: end; gap: var(--sp1); }
+.district-spark polyline { fill: none; stroke: var(--t2); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.district-spark polyline[data-band="low"] { stroke: var(--intel-text); }
+.district-spark polyline[data-band="mid"] { stroke: var(--warn-text); }
+.district-spark polyline[data-band="high"] { stroke: var(--live-text); }
+
+.district-card { display: flex; align-items: center; gap: var(--sp3); width: 100%; min-width: 0; padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); color: var(--t1); font: inherit; text-align: left; }
+button.district-card { cursor: pointer; }
+button.district-card:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.district-card-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 3px; min-width: 0; }
+.district-card-text b { font: 600 var(--s16)/1.25 var(--f-ui); }
+.district-card-text > span { font-size: var(--s14); line-height: 1.35; color: var(--t3); }
+
+.district-crest { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border: 1px solid var(--live-edge); border-radius: var(--r0); background: var(--live-soft); color: var(--live-text); font: 800 18px/1 var(--f-display); }
+.district-tiers { display: flex; flex-wrap: wrap; gap: var(--sp1) var(--sp3); font: 500 var(--s12)/1.3 var(--f-mono); color: var(--t3); }
+.district-card-text > .district-tiers { font: 500 var(--s12)/1.3 var(--f-mono); }
+.district-tiers [data-warrant] { color: var(--intel-text); }
+.district-warrant { flex: none; font-size: var(--s14); font-weight: 600; color: var(--intel-text); }
+
+.district-patrol { justify-content: space-between; }
+.district-patrol-step { display: grid; justify-items: center; gap: 2px; flex: none; }
+
+.district-shift { flex-direction: column; align-items: stretch; gap: var(--sp3); border-color: var(--live-edge); background: var(--live-soft); }
+.district-shift-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp3); }
+.district-crew-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp2); }
+.district-member { display: flex; flex-direction: column; align-items: center; gap: var(--sp1); min-width: 0; }
+.district-member-name { font: 600 var(--s14)/1.2 var(--f-ui); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.district-bar { position: relative; display: block; width: 100%; max-width: 56px; height: 5px; border-radius: 3px; background: var(--hair); overflow: hidden; }
+.district-bar i { position: absolute; top: 0; bottom: 0; left: 0; display: block; background: var(--good); }
+.district-bar i[data-band="strained"] { background: var(--warn); }
+.district-bar i[data-band="overloaded"], .district-bar i[data-band="recovery"] { background: var(--harm); }
+.district-bar .district-bar-gain { opacity: 0.55; }
+.district-member-end { font: 500 var(--s12)/1.2 var(--f-mono); color: var(--good-text); font-variant-numeric: tabular-nums; }
+.district-member-end[data-band="strained"] { color: var(--warn-text); }
+.district-member-end[data-band="overloaded"], .district-member-end[data-band="recovery"] { color: var(--harm-text); }
+
+.district-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp2) var(--sp3); margin: 0; }
+.district-facts > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.district-facts dt { font-size: var(--s14); color: var(--t3); }
+.district-facts dd { margin: 0; font: 600 var(--s16)/1.25 var(--f-ui); overflow-wrap: anywhere; }
+.district-facts dd .funds { color: var(--good-text); }
+.district-fact-intel { color: var(--intel-text); }
+.district-fact-strain { color: var(--harm-text); }
+.district-facts dd.district-fact-plain { font-weight: 500; color: var(--t2); }
+.district-line { margin: 0; font-size: var(--s14); line-height: 1.4; color: var(--t2); }
+.district-block { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; padding: var(--sp2) var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-1); font-size: var(--s14); line-height: 1.35; color: var(--t2); }
+.district-block .icon { flex: none; margin-top: 2px; color: var(--t3); }
+.district-residents { display: flex; flex-direction: column; gap: var(--sp1); margin: 0; padding: 0; list-style: none; font-size: var(--s16); color: var(--t2); }
+
+@media (max-width: 340px) {
+  .district-facts { grid-template-columns: minmax(0, 1fr); }
+  .district-crew-faces { gap: var(--sp1); }
+}

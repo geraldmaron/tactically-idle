@@ -1,0 +1,38 @@
+/* The city map (screens/city/CityMap.tsx). Districts are polygons tinted by crime band with token colours:
+   cyan below 50, amber from 50, red from 60. Locked districts take the hatch. Every colour is a token. */
+.city-map { position: relative; width: 100%; aspect-ratio: 390 / 330; background: var(--ink-deep); overflow: hidden; }
+.city-map-dim { opacity: 0.55; }
+.city-map-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.city-ground { fill: var(--ink-deep); }
+.city-hatch-line { stroke: var(--divider); stroke-width: 3; }
+.city-district { stroke: var(--ink-deep); stroke-width: 4; stroke-linejoin: round; cursor: pointer; transition: filter 120ms ease; }
+.city-district:hover { filter: brightness(1.18); }
+.city-district[data-band="low"] { fill: color-mix(in srgb, var(--intel) 22%, var(--ink-0)); }
+.city-district[data-band="mid"] { fill: color-mix(in srgb, var(--warn) 24%, var(--ink-0)); }
+.city-district[data-band="high"] { fill: color-mix(in srgb, var(--live) 32%, var(--ink-0)); }
+.city-district[data-state="locked"], .city-district[data-state="ready"] { fill: url(#city-hatch); }
+.city-district[data-state="ready"] { stroke: var(--intel-edge); stroke-width: 2; }
+.city-river { fill: none; stroke: var(--intel-edge); stroke-width: 10; stroke-linecap: round; }
+.city-streets { fill: none; stroke: var(--ink-deep); stroke-width: 2; opacity: 0.7; pointer-events: none; }
+.city-dot { fill: var(--intel); pointer-events: none; }
+.city-squad { pointer-events: none; }
+.city-squad rect { fill: var(--ink-0); stroke: var(--live); stroke-width: 2; }
+.city-squad text { fill: var(--live-text); font: 800 15px var(--f-display); }
+.city-pin { pointer-events: none; }
+.city-pin-ring { fill: none; stroke: var(--live); stroke-width: 2; opacity: 0.55; transform-box: fill-box; transform-origin: center; animation: city-pulse 2.2s ease-out infinite; }
+.city-pin-dot { fill: var(--live); }
+@keyframes city-pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+
+/* Names on the map: tappable for a pointer, hidden from the tab order (the list under the map is the
+   readable and keyboard version). */
+.city-label { position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-height: var(--touch); max-width: 60%; padding: 0; border: 0; background: none; color: var(--t1); text-align: left; cursor: pointer; text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 80%, transparent); }
+.city-label-name { font: 700 18px/1.15 var(--f-display); text-transform: uppercase; letter-spacing: 0.02em; }
+.city-label-meta { font: 500 var(--s12)/1.3 var(--f-mono); letter-spacing: 0.04em; color: var(--t3); }
+.city-label[data-band="low"] .city-label-meta { color: var(--intel-text); }
+.city-label[data-band="mid"] .city-label-meta { color: var(--warn-text); }
+.city-label[data-band="high"] .city-label-meta { color: var(--live-text); }
+.city-label-locked { align-items: center; text-align: center; cursor: default; transform: translateX(-12%); }
+.city-label-locked .city-label-meta { color: var(--t-meta); white-space: nowrap; }
+button.city-label-locked { cursor: pointer; }
+button.city-label-locked .city-label-name { font-size: var(--s16); color: var(--t2); }
+button.city-label-locked .city-label-meta { color: var(--intel-text); }

@@ -1,0 +1,19 @@
+/* Recent results (screens/city/Results.tsx): a result reads at a glance from rings, a toned border and faces
+   before any words. The tone is the whole border (no bar down one edge). */
+.debrief-tile { position: relative; display: flex; align-items: center; gap: var(--sp3); width: 100%; min-width: 0; padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); color: var(--t1); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.debrief-tile-good { border-color: var(--good-edge); }
+.debrief-tile-mixed { border-color: color-mix(in srgb, var(--warn) 45%, var(--hair)); }
+.debrief-tile-poor { border-color: var(--live-edge); }
+.debrief-tile:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.debrief-rings { display: grid; gap: var(--sp2); flex-shrink: 0; }
+.debrief-tile-main { display: grid; gap: var(--sp1); min-width: 0; flex: 1 1 auto; }
+.debrief-tile-kicker { display: flex; align-items: center; gap: var(--sp2); min-width: 0; font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--t3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.debrief-tile-title { font: 700 var(--s18)/1.15 var(--f-ui); overflow-wrap: anywhere; }
+.debrief-tile-sub { display: flex; align-items: center; gap: var(--sp2); font-size: var(--s14); color: var(--t2); }
+.debrief-tile-sub .kit-mark { flex: none; }
+.debrief-tile-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp1) var(--sp3); margin-top: var(--sp1); }
+.debrief-team { display: inline-flex; }
+.debrief-team-face { display: block; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 2px solid var(--ink-1); }
+.debrief-team-face + .debrief-team-face { margin-left: calc(-1 * var(--sp2)); }
+.debrief-reward { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); font-weight: 600; font-variant-numeric: tabular-nums; }
+.debrief-tile-go { flex-shrink: 0; color: var(--t3); }
