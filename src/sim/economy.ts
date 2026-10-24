@@ -27,6 +27,8 @@ import { RECRUIT_TUNING } from '../content/recruits';
 import { postFunding } from './ledger';
 import { completeDetails } from './detail';
 import { accruePatrolService, applyPatrolDue, nextPatrolEventTime, patrolRates } from './patrol';
+import { newWorldAcc, nextWorldEventTime, settleWorld, worldReport } from './world';
+import { nextPeopleEventTime, settlePeople } from './people';
 
 export const HOUR_MS = 3_600_000;
 
@@ -277,6 +279,8 @@ function nextEventTime(d: GameState, t: number, T: number, W: number, restockAct
   consider(nextCareerEventTime(d, t, (o) => recoveryRate(d, o, t)));
   consider(nextIncidentEventTime(d, t));
   consider(nextPatrolEventTime(d, t));
+  if (d.world) consider(nextWorldEventTime(d, t));
+  if (d.people) consider(nextPeopleEventTime(d, t));
   consider(W);
   if (restockActive) {
     const I = ECONOMY_TUNING.restockIntervalMs;
@@ -326,6 +330,8 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
       .map((o) => o.id),
   );
 
+  const worldAcc = d.world ? newWorldAcc(d) : null;
+  const peopleBeats: Id[] = [];
   const I = ECONOMY_TUNING.restockIntervalMs;
   applyDue(d, L, L, acc, false, exclusion);
   let t = L;
@@ -351,6 +357,9 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     applyUnitWear(d, t, e, acc.equipment, departmentUpkeep(d));
 
     applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W, exclusion);
+    // The world and the people settle on the same walk: one clock, one accrual window.
+    if (worldAcc) settleWorld(d, t, e, W, worldAcc);
+    if (d.people) settlePeople(d, t, e, peopleBeats);
     t = e;
   }
 
@@ -359,7 +368,8 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
   dep.lastSettledAt = T;
 
   // A short settlement is not worth a report unless something happened that the player should see.
-  const notable = acc.courses.length > 0 || acc.patrolTraining.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0 || acc.maintenanceStarted.length > 0;
+  const world = worldAcc ? worldReport(d, worldAcc) : undefined;
+  const notable = acc.courses.length > 0 || acc.patrolTraining.length > 0 || acc.equipment.length > 0 || acc.personnel.length > 0 || acc.maintenanceStarted.length > 0 || !!world || peopleBeats.length > 0;
   if (T - L < ECONOMY_TUNING.reportMinMs && !notable) return;
   const recovered = [...wasRecovering].filter((id) => d.officers[id] && d.officers[id].stress < STRESS_BANDS.recovery);
   const rep: ShiftReport = {
@@ -380,6 +390,8 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     capped: T > W,
     equipment: acc.equipment,
     personnel: acc.personnel,
+    ...(world ? { world } : {}),
+    ...(peopleBeats.length ? { people: peopleBeats } : {}),
   };
   const prev = d.report;
   if (!prev) {
@@ -405,5 +417,14 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     capped: prev.capped || rep.capped,
     equipment: [...(prev.equipment ?? []), ...rep.equipment],
     personnel: [...(prev.personnel ?? []), ...rep.personnel],
+    ...(mergeWorld(prev.world, rep.world) ? { world: mergeWorld(prev.world, rep.world) } : {}),
+    ...(prev.people?.length || rep.people?.length ? { people: [...(prev.people ?? []), ...(rep.people ?? [])] } : {}),
   };
+}
+
+function mergeWorld(a: ShiftReport['world'], b: ShiftReport['world']): ShiftReport['world'] {
+  if (!a || !b) return a ?? b;
+  const crime: NonNullable<ShiftReport['world']>['crime'] = { ...b.crime };
+  for (const [id, pair] of Object.entries(a.crime)) if (pair) crime[id as keyof typeof crime] = [pair[0], b.crime[id as keyof typeof crime]?.[1] ?? pair[1]];
+  return { contacts: a.contacts + b.contacts, casesOpened: a.casesOpened + b.casesOpened, casesClosed: a.casesClosed + b.casesClosed, awards: a.awards + b.awards, leads: [...a.leads, ...b.leads], crime };
 }

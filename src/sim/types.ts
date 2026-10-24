@@ -9,6 +9,8 @@ import type { CommandStaffState, ManagerId, ManagerPolicyPatch } from './command
 import type { RankId } from './ranks';
 import type { UnlockRule } from '../content/unlocks';
 import type { ContentDescriptor } from '../content/content-descriptors';
+import type { DistrictId, Tier, WorldState } from './world/types';
+import type { AftercareChoice, PeopleState } from './people/types';
 
 export type Id = string;
 
@@ -295,7 +297,13 @@ export type Assignment =
   | { kind: 'training'; courseId: Id; startedAt: number; endsAt: number }
   /** Teaching for a neighbouring department (src/sim/detail.ts); `fee` is paid when it ends. */
   | { kind: 'detail'; startedAt: number; endsAt: number; fee: number }
-  | { kind: 'operation'; runId: Id };
+  | { kind: 'operation'; runId: Id }
+  /** A SWAT proactive shift in a district (save v19, src/sim/world/shifts.ts). */
+  | { kind: 'proactive'; shiftId: Id; startedAt: number; endsAt: number }
+  /** Aftercare (save v19, src/sim/people/aftercare.ts): an officer stood down to rest, or a colleague
+   * spending a shift on peer support. Both keep the officer off calls until `endsAt`. */
+  | { kind: 'standdown'; imprintId: Id; startedAt: number; endsAt: number }
+  | { kind: 'peer_support'; imprintId: Id; startedAt: number; endsAt: number };
 
 export interface Officer {
   id: Id;
@@ -599,6 +607,10 @@ export interface Department {
   candidateRefreshedAt?: number;
   /** Epoch ms of game-calendar day 0 (see src/sim/calendar.ts). */
   calendarEpoch: number;
+  /** Lifetime purchases as the platform last reported them (save v19, `syncEntitlements` on every launch
+   * and purchase; ui/entitlements.ts). Settlement and rates read them; nothing that decides a roll does.
+   * Purchases are reconciled from the store account, never trusted from a save. */
+  entitlements?: Entitlements;
 }
 
 export interface ShiftReport {
@@ -626,6 +638,21 @@ export interface ShiftReport {
   equipment: { unitId: Id; event: 'unreliable' | 'failed' | 'expired' | 'serviced' }[];
   /** Retirements announced or completed, birthdays/anniversaries that changed wages. */
   personnel: { officerId: Id; event: 'retirement_announced' | 'retired' | 'anniversary' | 'birthday' | 'promoted'; detail: string }[];
+  /** What the world did in this window (save v19). Ids point into GameState.world. */
+  world?: ShiftReportWorld;
+  /** People beats raised in this window, ids into GameState.people.beats (save v19). */
+  people?: Id[];
+}
+
+export interface ShiftReportWorld {
+  contacts: number;
+  casesOpened: number;
+  casesClosed: number;
+  /** Case awards paid in this window. */
+  awards: number;
+  leads: Id[];
+  /** Crime per open district at the start and end of the window. */
+  crime: Partial<Record<DistrictId, [before: number, after: number]>>;
 }
 
 // ---------------------------------------------------------------- operations
@@ -788,6 +815,8 @@ export interface OperationRun {
   scenarioVersion: number;
   /** Unstarted generated card, retained so cancelling deployment can restore it. */
   sourceIncident?: IncidentCard;
+  /** Copied from the card at dispatch (save v19): the world subject and lead this call serves. */
+  world?: IncidentWorldRef;
   locationFamilyId: Id;
   locationSeed: number;
   contentVersion: number;
@@ -1125,6 +1154,17 @@ export interface IncidentCard {
   /** Drawn a tier lower after a run of bad results (sim/player-profile.ts comebackTier); the card
    * says so. */
   eased?: true;
+  /** A call the world made (save v19): a warrant served on a lead, or an armed contact the player chose
+   * to answer. The subject is cast into the call by name; leads never expire (docs/world-redesign.md). */
+  world?: IncidentWorldRef;
+}
+
+export interface IncidentWorldRef {
+  kind: 'warrant' | 'armed_contact';
+  leadId: Id;
+  subjectId: Id;
+  caseTier: Tier;
+  districtId: DistrictId;
 }
 
 /** Best result on a live call of one recipe. Ranked by completion, then objective, then safety. */
@@ -1181,6 +1221,10 @@ export interface GameState {
   personnel?: PersonnelState;
   /** Casebook, created on the first board draw. Optional for isolated simulation fixtures. */
   casebook?: CasebookState;
+  /** The city: districts, crews, subjects, cases, leads, proactive shifts (save v19). */
+  world: WorldState;
+  /** Officers as people: records, memory, imprints, bonds, ties (save v19). */
+  people: PeopleState;
   /** Command staff, read through commandStaffOf. Optional for isolated simulation fixtures. */
   commandStaff?: CommandStaffState;
   saveVersion: number;
@@ -1245,6 +1289,22 @@ export type Command =
   | { type: 'hireStaff'; managerId: ManagerId; candidateId: Id }
   | { type: 'dismissStaff'; managerId: ManagerId }
   | { type: 'refreshStaffPool'; managerId: ManagerId }
+  // world (src/sim/world/handlers.ts)
+  | { type: 'setDistrictCoverage'; districtId: DistrictId; units: number }
+  | { type: 'openDistrict'; districtId: DistrictId }
+  | { type: 'startProactiveShift'; squadId: SquadId; districtId: DistrictId; hours: 2 | 4 | 8 }
+  | { type: 'recallProactiveShift'; squadId: SquadId }
+  /** Put a warrant card on the board for an open lead with enough intel. */
+  | { type: 'openWarrant'; leadId: Id }
+  /** Answer an armed contact now as a live call (online only); otherwise it stays a lead. */
+  | { type: 'respondToContact'; leadId: Id }
+  // people (src/sim/people/handlers.ts)
+  | { type: 'decideAftercare'; imprintId: Id; choice: AftercareChoice; partnerId?: Id }
+  | { type: 'acknowledgeBeat'; beatId: Id }
+  /** The player opened a jacket or report that shows these imprints' telegraphs. */
+  | { type: 'markTelegraphSeen'; imprintIds: Id[] }
+  // platform
+  | { type: 'syncEntitlements'; entitlements: Entitlements }
   // operations (src/sim/operation.ts)
   | {
       type: 'startOperation';
@@ -1292,6 +1352,13 @@ export interface Ctx {
    * point's time has run out at the rate the screen showed. Without it the engine treats the timer
    * as Off: nothing lapses. */
   timer?: import('./timer-setting').TimerSetting;
+}
+
+export interface Entitlements {
+  /** Department Charter: +25% patrol service grant. */
+  charter: boolean;
+  /** Night Watch Office: offline funding window 7 days instead of 72 hours. */
+  nightWatch: boolean;
 }
 
 /** A successful patrol commitment, presented once by the UI and never persisted as a command. */
@@ -1357,6 +1424,10 @@ export type DepartmentCommandType =
   | 'hireStaff'
   | 'dismissStaff'
   | 'refreshStaffPool';
+
+export type WorldCommandType = 'setDistrictCoverage' | 'openDistrict' | 'startProactiveShift' | 'recallProactiveShift' | 'openWarrant' | 'respondToContact' | 'syncEntitlements';
+
+export type PeopleCommandType = 'decideAftercare' | 'acknowledgeBeat' | 'markTelegraphSeen';
 
 export type OperationCommandType = 'startOperation' | 'cancelOperation' | 'openDecision' | 'pauseDecision' | 'resumeDecision' | 'endFailedResponse' | 'decide' | 'lapse' | 'closeDebrief';
 

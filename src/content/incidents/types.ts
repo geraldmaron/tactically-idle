@@ -248,6 +248,9 @@ export interface IncidentTemplate {
   situations: SituationModel[];
   /** Complication module ids this template allows (milestone 4). */
   complications: string[];
+  /** Drawn only when the world sends it (a warrant or an answered armed contact, save v19), never at
+   * random onto the board (docs/world-redesign.md). */
+  worldOnly?: true;
 }
 
 // ---------------------------------------------------------------- instances

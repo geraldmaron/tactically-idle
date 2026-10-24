@@ -1,3 +1,6 @@
+import { hashSeed } from './rng';
+import { createWorld } from './world';
+import { createPeople } from './people';
 import type { DepartmentCommandType, GameState, HandlerMap, HandlerResult, Id, SquadId } from './types';
 import { startingOfficers, startingSquads } from '../content/officers';
 import { candidatePoolSize, hasEffect, isNodeUnlocked, netRate, settle } from './economy';
@@ -143,6 +146,8 @@ export function createInitialState(now: number, campaignSeed = 12345, exclusion?
     debriefs: [],
     report: null,
     commandStaff: createCommandStaff(),
+    world: createWorld(hashSeed(`${campaignSeed}:world`), now),
+    people: createPeople({ officers }, now),
     nextId: 1,
     rngState: campaignSeed >>> 0,
   };

@@ -105,6 +105,8 @@ export function drawIncidentSpec(
     situations?: Partial<Record<IncidentType, readonly (0 | 1 | 2)[]>> },
 ): { spec: IncidentSpec; state: number } {
   let pool = SCENARIO_TYPES.flatMap(info => Array.from({ length: info.type === 'barricaded' ? 4 : 3 }, () => info));
+  // A call only the world sends (a warrant) never comes onto the board at random (save v19).
+  pool = pool.filter(info => !templateAt(info.type)?.worldOnly);
   if (ctx.unlockedTypes) {
     const open = pool.filter(info => ctx.unlockedTypes!.includes(info.type));
     if (open.length) pool = open;

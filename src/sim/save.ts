@@ -1,3 +1,4 @@
+import { DISTRICT_IDS } from './world/types';
 import { parseRecipeKey } from './casebook';
 import { validCommandStaff } from './command-staff';
 import type { GameState, OperationRun, SaveEnvelope } from './types';
@@ -21,7 +22,7 @@ import { validPatrol } from './patrol';
 export const SAVE_KEY = 'tactically-idle/save';
 
 /** Version written by this build. Other versions are rejected. */
-export const CURRENT_SAVE_VERSION = 18;
+export const CURRENT_SAVE_VERSION = 19;
 
 export interface SaveStorage {
   getItem(key: string): string | null;
@@ -359,6 +360,18 @@ function validCasebook(c: unknown): boolean {
     && (entry.best === undefined || (isObj(entry.best) && isBool(entry.best.completed) && numbers(entry.best, ['objective', 'safety']) && isStr(entry.best.label))));
 }
 
+/** The city (save v19). The world-engine lane deepens this; wave 0 checks the shape the code reads. */
+function validWorld(w: unknown): boolean {
+  if (!isObj(w) || !isNum(w.seed) || !isObj(w.districts) || !isObj(w.subjects) || !isNum(w.rolledThroughHour) || !isNum(w.nextId) || !isBool(w.firstContactDone)) return false;
+  if (!Array.isArray(w.crews) || !Array.isArray(w.cases) || !Array.isArray(w.leads) || !Array.isArray(w.shifts) || !Array.isArray(w.events)) return false;
+  return DISTRICT_IDS.every((id) => { const d = (w.districts as Record<string, unknown>)[id]; return isObj(d) && d.id === id && isBool(d.open) && isNum(d.crime) && isNum(d.patrolUnits); });
+}
+
+/** Officers as people (save v19). The people-engine lane deepens this. */
+function validPeople(p: unknown): boolean {
+  return isObj(p) && isObj(p.records) && isNum(p.nextId) && ['facts', 'imprints', 'settled', 'bonds', 'ties', 'beats'].every((k) => Array.isArray(p[k]));
+}
+
 /** Basic structural validation: enough that the UI and sim cannot crash on a loaded state. */
 function validState(s: unknown): s is GameState {
   if (!validBase(s)) return false;
@@ -370,6 +383,7 @@ function validState(s: unknown): s is GameState {
   }
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
+  if (!validWorld(s.world) || !validPeople(s.people)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
   const patrol = s.patrol as GameState['patrol'];
   const reserved = new Set<string>((s.personnel as GameState['personnel'])?.employedIdentityIds ?? []);

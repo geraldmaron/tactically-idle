@@ -9,6 +9,8 @@ import { RESCUE_TEMPLATE } from '../gen/incident/trees-v13/rescue-fixture';
 import { xpForService } from '../content/ranks';
 import { CURRENT_SAVE_VERSION } from './save';
 import { createPersonnel } from './personnel';
+import { createWorld } from './world';
+import { createPeople } from './people';
 // Test GameState builder for operation tests. Independent of department.ts so the
 // operation engine can be exercised without the department simulation.
 import type { CertId, Command, Ctx, DebriefResult, GameState, HandlerResult, Id, ItemUnit, Officer, Ratings, Role, SquadId, StageId, TraitId } from './types';
@@ -186,6 +188,8 @@ export function makeState(opts: FixtureOptions = {}): GameState {
   return {
     patrol: { personnel: [], nextId: 1, boosts: [] },
     personnel: createPersonnel(opts.rngState ?? 12345, officers),
+    world: createWorld(opts.rngState ?? 12345, 0),
+    people: createPeople({ officers }, 0),
     saveVersion: CURRENT_SAVE_VERSION,
     contentVersion: 13,
     department: {

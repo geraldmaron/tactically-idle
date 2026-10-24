@@ -1,4 +1,6 @@
 import { playerProfile, recordStall, sourceStarts } from './player-profile';
+import { applyWorldDebrief } from './world';
+import { applyPeopleDebrief } from './people';
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
@@ -383,6 +385,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     ...(state.incidents?.some((c) => c.id === scenario.id)
       ? { sourceIncident: structuredClone(state.incidents.find((c) => c.id === scenario.id)!) }
       : {}),
+    ...(state.incidents?.find((c) => c.id === scenario.id)?.world ? { world: structuredClone(state.incidents.find((c) => c.id === scenario.id)!.world!) } : {}),
     locationFamilyId: scenario.locationFamilyId,
     locationSeed: scenario.locationSeed,
     contentVersion: state.contentVersion,
@@ -1341,6 +1344,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
       const type = scenario?.incident?.type;
       if (type) o.career.byType = { ...o.career.byType, [type]: (o.career.byType?.[type] ?? 0) + 1 };
     }
+    applyWorldDebrief(draft, run, result);
+    applyPeopleDebrief(draft, run, result, verdict);
     clearAssignments(draft, run);
     run.settled = true;
     run.status = 'closed';

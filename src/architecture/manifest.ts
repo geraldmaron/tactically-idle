@@ -72,6 +72,9 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/format.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/squad-names.ts', layer: 'kernel', system: 'platform' },
   { glob: '/src/sim/conditions.ts', layer: 'kernel', system: 'platform' },
+  // The world and people records (docs/world-build-plan.md, the contract): shared like types.ts.
+  { glob: '/src/sim/world/types.ts', layer: 'kernel', system: 'platform' },
+  { glob: '/src/sim/people/types.ts', layer: 'kernel', system: 'platform' },
   // world (blueprint)
   { glob: '/src/gen/building/**', layer: 'world', system: 'blueprint' },
   { glob: '/src/content/locations/**', layer: 'world', system: 'blueprint' },
@@ -89,6 +92,10 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/content/unlocks.ts', layer: 'catalog', system: 'scenario' },
   // The city's invented names (apps, the stream site, the news) that call text binds.
   { glob: '/src/content/world.ts', layer: 'catalog', system: 'scenario' },
+  // Districts and crew archetypes as data (docs/world-redesign.md, "Crews").
+  { glob: '/src/content/city/**', layer: 'catalog', system: 'metric' },
+  // Service jackets, imprint packs and bond scenes, authored under swat-officer-stories.
+  { glob: '/src/content/people/**', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/traits.ts', layer: 'catalog', system: 'officer' },
   { glob: '/src/content/items.ts', layer: 'catalog', system: 'item' },
   { glob: '/src/content/capabilities.ts', layer: 'catalog', system: 'item' },
@@ -156,6 +163,10 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   { glob: '/src/sim/shift-report.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/campaign-*.ts', layer: 'engine', system: 'platform' },
   { glob: '/src/sim/game.ts', layer: 'engine', system: 'platform' },
+  // The city: districts, crews, subjects, cases, leads, proactive shifts (docs/world-redesign.md).
+  { glob: '/src/sim/world/**', layer: 'engine', system: 'metric' },
+  // Officers as people: records, memory, imprints, bonds, ties.
+  { glob: '/src/sim/people/**', layer: 'engine', system: 'officer' },
   { glob: '/src/sim/environment.ts', layer: 'engine', system: 'blueprint' },
   { glob: '/src/sim/physical-care.ts', layer: 'engine', system: 'subject' },
   { glob: '/src/sim/story-people.ts', layer: 'engine', system: 'subject' },

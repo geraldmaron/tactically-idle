@@ -63,6 +63,9 @@ export function deployability(o: Officer, now: number): { ok: true } | { ok: fal
   if (o.assignment?.kind === 'training') return { ok: false, reason: `${o.surname} is in training` };
   if (o.assignment?.kind === 'detail') return { ok: false, reason: `${o.surname} is on an instructor detail` };
   if (o.assignment?.kind === 'operation') return { ok: false, reason: `${o.surname} is already deployed` };
+  if (o.assignment?.kind === 'proactive') return { ok: false, reason: `${o.surname} is on a proactive shift` };
+  if (o.assignment?.kind === 'standdown') return { ok: false, reason: `${o.surname} is stood down to rest` };
+  if (o.assignment?.kind === 'peer_support') return { ok: false, reason: `${o.surname} is on peer support` };
   return { ok: true };
 }
 
