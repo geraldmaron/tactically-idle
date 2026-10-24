@@ -51,27 +51,22 @@ export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, 
   const tier = scenario ? callTier(scenario.id) : null;
   return (
     <div className="pb">
-      {/* The scene plate: the call's painted place at the shared plate height. The place is a
-          caption on it and the board clock sits opposite; nothing else competes for the art. */}
+      {/* The scene plate: the call's painted place at the shared plate height. What the call pays and
+          asks runs along its top; the place is a caption at its foot and the board clock sits opposite. */}
       <div className="plate pb-scene">
         <PlateArt src={placeFor(scenario?.locationFamilyId) ?? sceneFor(scenario?.incident?.type)} />
+        {(scenario?.rewards || tier !== null || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
+          {scenario?.rewards && <li><Chip tone="amber" icon="funds" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(fee)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
+          {tier !== null && <li><Chip title="The call's tier"><TierChevrons tier={tier} />Tier {tier}</Chip></li>}
+          {range && <li><Chip icon="people">{`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} ${range.max > 1 ? 'squads' : 'squad'}`}</Chip></li>}
+        </ul>}
         {(place.name || place.kind) && <span className="pb-scene-place"><Icon name="pin" size={16} /><span className="pb-scene-tags">{place.name && <b>{place.name}</b>}{place.kind && <small>{place.kind}</small>}</span></span>}
         {openUntil !== undefined && <OpenFor until={openUntil} />}
       </div>
-      {/* The stakes under the plate: what it pays, how hard it reads, how many squads it takes. */}
-      {(scenario?.rewards || tier !== null || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
-        {scenario?.rewards && <li><Chip tone="amber" icon="funds" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(fee)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
-        {tier !== null && <li><Chip title="The call's tier"><TierChevrons tier={tier} />Tier {tier}</Chip></li>}
-        {range && <li><Chip icon="people">{`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} ${range.max > 1 ? 'squads' : 'squad'}`}</Chip></li>}
-      </ul>}
-      {/* Orders first (docs/ops-experience.md, Brief), each with the face of the one person it names. */}
-      {/* Who is inside leads the brief (owner, 2026-10-24): the orders and threats name these people. */}
-      {(intel.people.length > 0 || unplaced.length > 0) && <Section className="pb-block" id="pb-people-h" level="h3" title="Who’s inside" icon="people" tone="people" count={`${intel.people.length + unplaced.length} named`} well>
-        <ul className="pb-people" data-ui-list>
-          {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} role={whoText.get(id)?.role} who={whoText.get(id)?.text} status={line.status} where={line.where} />; })}
-          {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
-        </ul>
-      </Section>}
+      {/* The situation comes before anything is asked of the player (owner, 2026-10-24: the background
+          sat at the end, after the squad). The call's hook under the plate, then the cold open whole. */}
+      {scenario?.summary && <p className="pb-hook"><PeopleText text={scenario.summary} /></p>}
+      <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" icon="book" />
 
       {/* Each block is a framed panel (canvas "Depth and Framed Sections"): its title in the bar, its
           list pressed into a well. */}
@@ -94,10 +89,16 @@ export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, 
         </ul>
       </Section>}
 
+      {/* Who is inside, one compact row each: face, name, role and where the team thinks they are. The
+          orders and threats above name these people; a person's history opens on a tap. */}
+      {(intel.people.length > 0 || unplaced.length > 0) && <Section className="pb-block" id="pb-people-h" level="h3" title="Who’s inside" icon="people" tone="people" count={`${intel.people.length + unplaced.length} named`} well>
+        <ul className="pb-people" data-ui-list>
+          {intel.people.map((line) => { const id = personOf.get(line.id) ?? line.id; return <PersonCard key={line.id} personId={id} name={line.label} role={whoText.get(id)?.role} who={whoText.get(id)?.text} status={line.status} where={line.where} />; })}
+          {unplaced.map((person) => <PersonCard key={person.personId} personId={person.personId} name={person.name} role={person.role} who={person.text} />)}
+        </ul>
+      </Section>}
+
       {children}
-
-      <ColdOpen text={scenario?.coldOpen} className="pb-cold-open" icon="book" />
-
 
       {intel.environment && <section className="pb-block pb-conditions" aria-label="Conditions">
         <div className="chips"><EnvChips env={intel.environment} /></div>
@@ -149,17 +150,22 @@ function OpenFor({ until }: { until: number }) {
   return <span className={`pb-scene-time${soon ? ' pb-scene-time-soon' : ''}`}><Icon name="clock" size={16} /><span>{countdown(left)} left</span></span>;
 }
 
-/** One person on scene as a card: who they are, their role, and where the team thinks they are. */
+/** One person on scene as a compact row: face, name, role, and where the team thinks they are. Their
+ * history, when the call has one, opens under the row on a tap. */
 function PersonCard({ personId, name, role, who, status, where }: { personId: string; name: string; role?: string; who?: string; status?: KnowledgeStatus; where?: string | null }) {
   const entry = usePeopleEntry(personId);
-  return <li className="pb-person" data-kind={entry?.kind}>
+  const row = <>
     <Face size="md" kind={faceKind(entry?.kind)} seed={personId} role={role} name={entry ? `${name}, ${peopleLabel(entry.kind, entry.squadName)}` : undefined} />
     <div className="pb-person-text">
-      <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}</strong>
-      {role && <span className="pb-role">{role}</span>}
-      {who && <p><PeopleText text={who} /></p>}
+      <strong>{entry && <PeopleGlyph kind={entry.kind} tone />}{name}{role && <span className="pb-role">{role}</span>}</strong>
       {status && <span className="pb-where"><FactStatusChip status={status} />{where && <span className="pb-where-place"><Icon name="pin" size={16} />{where}</span>}</span>}
     </div>
+  </>;
+  if (!who) return <li className="pb-person" data-kind={entry?.kind}>{row}</li>;
+  return <li className="pb-person-item" data-kind={entry?.kind}>
+    <Disclosure name={`pb-person-${personId}`} className="pb-person-more" row="pb-person" summary={row}>
+      <p className="pb-person-who"><PeopleText text={who} /></p>
+    </Disclosure>
   </li>;
 }
 

@@ -1,6 +1,7 @@
 /* The brief: flat sections on the page, each list one inset card of hairline rows (the component
-   contract in docs/game-ux-direction.md). The orders lead with the faces of the people they name, the
-   threat and the unknown sit under them, then the cold open in a frame, then the people. */
+   contract in docs/game-ux-direction.md). The plate and the call's hook, the cold open in a frame, the
+   orders with the faces of the people they name, the threat and the unknown, then who is inside as
+   compact rows whose history opens on a tap, then the team. */
 .pb { display: grid; gap: var(--sp5); }
 .pb-block { display: grid; gap: var(--sp2); }
 .pb-block ul, .pb-block ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp2); }
@@ -17,8 +18,8 @@
 .flow-head .cl-map-chip:active:not(:disabled) { transform: none; box-shadow: none; }
 
 /* The scene plate at the shared plate height: the place on the left, the board clock on the right. */
-.pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: 148px; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); box-shadow: var(--lift-2); }
-.pb-scene.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 88%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 40%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 8%, transparent) 100%); }
+.pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; align-content: space-between; justify-content: space-between; gap: var(--sp2); min-height: 148px; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); box-shadow: var(--lift-2); }
+.pb-scene.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 88%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 40%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 30%, transparent) 78%, color-mix(in srgb, var(--ink-deep) 72%, transparent) 100%); }
 .pb-scene-place { min-width: 0; max-width: 70%; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); overflow-wrap: break-word; }
 .pb-scene-tags { display: grid; gap: 2px; min-width: 0; }
 .pb-scene-tags b { font-weight: 700; }
@@ -26,8 +27,11 @@
 .pb-scene-time { flex: none; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t-plate); font: 600 var(--s14)/1.2 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pb-scene-time-soon { color: var(--warn-text); }
 
-/* The stakes sit under the plate they belong to. */
-.pb-stakes { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: calc(-1 * var(--sp3)) 0 0; padding: 0; list-style: none; }
+/* The stakes run along the plate's top; the plate's scrim darkens its top edge too, so the art never washes them out. */
+.pb-stakes { flex: 1 0 100%; align-self: flex-start; display: flex; flex-wrap: wrap; gap: var(--sp1); margin: 0; padding: 0; list-style: none; }
+
+/* The call's hook under the plate: the situation in two sentences, read before anything else. */
+.pb-hook { margin: calc(-1 * var(--sp2)) 0 0; max-width: 36em; font: 600 var(--s16)/1.5 var(--f-ui); color: var(--t1); }
 .pb-pay-up { color: var(--t2); font-weight: 500; }
 .pb-pay b { color: var(--t1); font-variant-numeric: tabular-nums; }
 
@@ -55,14 +59,18 @@
 /* The cold open reads as story in its own frame: a left rule, a reading measure, whole and never clamped. */
 .pb .pb-cold-open .cold-open-text { max-width: 36em; font-size: var(--s16); line-height: 1.6; color: var(--t1); }
 
-/* Who is inside. */
+/* Who is inside: one compact row each; a row with a history opens it under the row. */
 .pb-block ul.pb-people { gap: 0; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); overflow: hidden; }
 .pb-person { display: grid; grid-template-columns: var(--face-md) 1fr; gap: var(--sp3); align-items: start; min-height: 64px; padding: var(--sp3); border-bottom: 1px solid var(--hair); }
 .pb-person:last-child { border-bottom: 0; }
 .pb-person-text { min-width: 0; display: grid; gap: var(--sp1); }
-.pb-person-text strong { font-size: var(--s16); display: inline-flex; align-items: center; gap: var(--sp1); }
-.pb-person-text p { margin: 0; font-size: var(--s14); line-height: 1.45; color: var(--t-plate); }
-.pb-role { font-size: var(--s14); color: var(--t2); }
+.pb-person-text strong { font-size: var(--s16); display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp1) var(--sp2); }
+.pb-role { font-size: var(--s14); font-weight: 500; color: var(--t2); }
+.pb-person-item { border-bottom: 1px solid var(--hair); }
+.pb-person-item:last-child { border-bottom: 0; }
+.pb-person-more > .disclosure-summary.pb-person { display: grid; grid-template-columns: var(--face-md) 1fr auto; align-items: center; padding: var(--sp3); border-bottom: 0; }
+.pb-person-more > .disclosure-body { padding: 0 var(--sp3) var(--sp3) calc(var(--face-md) + 2 * var(--sp3)); }
+.pb-person-who { margin: 0; max-width: 36em; font-size: var(--s14); line-height: 1.5; color: var(--t-plate); }
 /* Status as a pill, then where or who reported it (owner 2026-10-21: pills and icons, no bare "?"). */
 .pb-where { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); }
 .pb-where-place { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font-size: var(--s14); color: var(--t2); }
@@ -73,7 +81,6 @@
 @media (max-width: 359px) {
   .pb { gap: var(--sp4); }
   .pb-card .pb-row { min-height: 56px; padding: var(--sp1) 0; }
-  .pb-stakes { margin-top: calc(-1 * var(--sp2)); }
 }
 
 /* Framed brief (canvas "Depth and Framed Sections", 2026-10-24): each block's list sits in its panel's
@@ -81,4 +88,4 @@
 .panel-well .pb-list > li { border-bottom: 0; }
 .pb-block .panel-well > ul { gap: 0; }
 .pb-block .panel-well > ul.pb-people { border: 0; border-radius: 0; background: none; box-shadow: none; }
-.panel-well .pb-person { border-bottom: 0; }
+.panel-well .pb-person, .panel-well .pb-person-item { border-bottom: 0; }
