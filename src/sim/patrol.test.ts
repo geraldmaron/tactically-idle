@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
-import { HOUR_MS, ratesAt } from './economy';
-import { deserialize, serialize } from './save';
+import { ECONOMY_TUNING, HOUR_MS, ratesAt } from './economy';
+import { CURRENT_SAVE_VERSION, deserialize, serialize } from './save';
 import {
   PATROL_BOOSTS, PATROL_GRADES, employedPatrol, patrolBoostQuote, patrolCapacity,
   patrolCandidates, patrolRates, patrolTrainingQuote,
@@ -160,21 +160,25 @@ describe('community grant boost', () => {
     ] } } as GameState, T0).factor).toBe(2);
   });
 
-  it('refuses a further extension when the 24-hour accrual cap leaves no eligible return', () => {
+  it('refuses a further extension when the accrual cap leaves no eligible return', () => {
+    const capH = ECONOMY_TUNING.capMs / HOUR_MS;
     let state = createInitialState(T0);
-    state.department.funding = 50_000;
+    state.department.funding = 500_000;
     state = ok(state, { type: 'hirePatrol', profileId: patrolCandidates(state)[0].id });
     state = ok(state, { type: 'activatePatrolBoost', boostId: 'community-grant' });
-    // Six four-hour grant windows can fit inside the same capped accrual window.
-    for (let i = 0; i < 5; i++) {
+    // Four-hour grant windows chain one after another until the capped accrual window is full.
+    let grants = 1;
+    while (patrolBoostQuote(state, 'community-grant').ok) {
       expect(patrolBoostQuote(state, 'community-grant')).toMatchObject({ ok: true, incrementalReturn: 2100 });
       state = ok(state, { type: 'activatePatrolBoost', boostId: 'community-grant' });
+      expect(++grants).toBeLessThanOrEqual(capH);
     }
+    expect(grants).toBe(capH / PATROL_BOOSTS['community-grant'].hours);
     expect(patrolBoostQuote(state, 'community-grant')).toMatchObject({ ok: false, incrementalReturn: 0 });
     const funding = state.department.funding;
     expect(refused(state, { type: 'activatePatrolBoost', boostId: 'community-grant' })).toMatch(/return only 0 funding/);
     expect(state.department.funding).toBe(funding);
-    expect(state.patrol.boosts[0].expiresAt).toBe(T0 + 24 * HOUR_MS);
+    expect(state.patrol.boosts[0].expiresAt).toBe(T0 + capH * HOUR_MS);
   });
 });
 
@@ -201,11 +205,12 @@ describe('patrol settlement and saves', () => {
     expect(offline.patrol.personnel[0]).toMatchObject({ grade: 2, serviceHours: 103, training: null });
   });
 
-  it('caps patrol service accrual to the department 24-hour offline window', () => {
+  it('caps patrol service accrual to the department offline window', () => {
+    const capH = ECONOMY_TUNING.capMs / HOUR_MS;
     const state = createInitialState(T0);
-    const settled = ok(state, { type: 'tick' }, T0 + 30 * HOUR_MS);
-    expect(employedPatrol(settled).map((person) => person.serviceHours).every((hours) => Math.abs(hours - 24) < 1e-9)).toBe(true);
-    expect(settled.department.lastSettledAt).toBe(T0 + 30 * HOUR_MS);
+    const settled = ok(state, { type: 'tick' }, T0 + (capH + 6) * HOUR_MS);
+    expect(employedPatrol(settled).map((person) => person.serviceHours).every((hours) => Math.abs(hours - capH) < 1e-9)).toBe(true);
+    expect(settled.department.lastSettledAt).toBe(T0 + (capH + 6) * HOUR_MS);
   });
 
   it('rolls a refused command back with no elapsed settlement committed', () => {
@@ -216,12 +221,12 @@ describe('patrol settlement and saves', () => {
     expect(employedPatrol(state).map((person) => person.serviceHours)).toEqual([0, 0, 0, 0]);
   });
 
-  it('round-trips v18 patrol state and rejects an old version or malformed patrol workforce', () => {
+  it('round-trips the current save\'s patrol state and rejects an old version or malformed patrol workforce', () => {
     const state = createInitialState(T0);
     const saved = JSON.parse(serialize(state, T0));
-    expect(saved.saveVersion).toBe(18);
+    expect(saved.saveVersion).toBe(CURRENT_SAVE_VERSION);
     expect(deserialize(JSON.stringify(saved))).not.toBeNull();
-    saved.saveVersion = 17;
+    saved.saveVersion = CURRENT_SAVE_VERSION - 1;
     expect(deserialize(JSON.stringify(saved))).toBeNull();
     const malformed = JSON.parse(serialize(state, T0));
     malformed.state.patrol.personnel[0].grade = 4;

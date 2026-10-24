@@ -28,9 +28,11 @@ describe('balance gate definition', () => {
     };
     for (const type of ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue']) {
       expect(band(type, 'random', 'clean')).toEqual([0.15, 0.6]);
-      expect(band(type, 'random', 'bad')).toEqual([0.15, 0.65]);
+      // The warrant call is the routine call the city sends: it resolves in most plays (re-measured 2026-10-24, balance.ts).
+      expect(band(type, 'random', 'bad')).toEqual(type === 'barricaded' ? [0.1, 0.65] : [0.15, 0.65]);
     }
-    expect(band('hostage_crisis', 'random', 'harm')).toEqual([0.03, 0.3]);
+    // Going Live is mostly talk: harm 1.7% of 60 calls and 2.1% of 240, and the same before the world redesign.
+    expect(band('hostage_crisis', 'random', 'harm')).toEqual([0.01, 0.3]);
     expect(band('barricaded', 'random', 'harm')).toEqual([0.01, 0.3]);
     expect(band('active_armed_incident', 'random', 'harm')).toEqual([0.15, 0.55]);
     expect(band('protected_rescue', 'random', 'harm')).toEqual([0.1, 0.5]);

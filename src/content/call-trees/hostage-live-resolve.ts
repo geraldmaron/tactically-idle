@@ -25,7 +25,7 @@ export const RESOLVE_NODES: TreeNode[] = [
         exchange: [{ by: 'rider', line: 'You heard it. Everybody heard it.' }, { by: 'negotiator', line: 'They did. Which door do you want to use?' }] },
       { when: { marks: ['exposed'] }, prompt: 'The stream heard {manager.first} say it, and {rider.first} has quit arguing with the comments. {rider.He} {rider~wants|want} to know which door, and who will be standing on the step when it opens.',
         exchange: [{ by: 'rider', line: 'If I walk out, they all watch me walk out.' }, { by: 'negotiator', line: 'You don’t want them watching you leave. What would make the door easier?' }] },
-      { when: { marks: ['app_said'] }, prompt: '{manager.first} said the app told {manager.him} the bag was delivered. {rider.first} keeps circling it. How does a bag get delivered and not arrive? Nobody on the line can say.' },
+      { when: { marks: ['app_said'] }, prompt: '{manager.first} said {delivery_app} told {manager.him} the bag was delivered. {rider.first} keeps circling it. How does a bag get delivered and not arrive? Nobody on the line can say.' },
       { when: { marks: ['held_back'] }, prompt: '{manager.first} wouldn’t say it on camera, and {rider.first} can’t tell whether that was a kindness. {rider.He} {rider~asks|ask} which door, and what {manager.first} meant by ask me again.' },
       { when: { marks: ['clerk_named'] }, prompt: '{rider.first} keeps looking at the stockroom door. The comment naming {clerk.first} is still on the screen, and {rider.he} {rider~asks|ask} which door you will use for {clerk.him}.' },
       { when: { marks: ['news_on'] }, prompt: '{outlet} has reposted the footage. {rider.first} asks you which door to use.' },
@@ -73,12 +73,12 @@ export const RESOLVE_NODES: TreeNode[] = [
         preview: { favorable: '{rider.first} sets the phone down and walks out to you.', mixed: '{manager.first} walks out, and {rider.first} keeps the phone and stays.', adverse: '{rider.first} won’t put the phone down and stays beside {manager.first}.' },
         outcomes: {
           favorable: [
-            { text: '{rider.first} lays the phone face down on the register and sets the handgun beside it. {manager.first} walks out first. Then {rider.first} follows, hands open, through the {outlet_short} light, and asks the first officer to tell {friend.first} {rider.he} is all right.',
+            { text: '{rider.first} lays the phone face down on the register and sets the handgun beside it. {manager.first} walks out first. Then {rider.first} follows, hands open, through the {outlet_short} light, and asks the first officer to tell {friend.first} {rider.he} {rider~is|are} all right.',
               safe: ['manager'], out: ['rider'], stabilize: ['stream'], next: { ending: 'out_quiet' }, objective: 75, pressure: -12 },
             clerkToo('{clerk.first} slips out the back while the phone is face down.'),
           ],
           mixed: [
-            { when: ON_STREAM, text: '{rider.first} keeps picking the phone back up to read the comments, until {friend.first} types that {friend.he} is still at the tape. Then {rider.he} {rider~sends|send} {manager.first} out and stays behind the counter with the phone in {rider.his} hand.', safe: ['manager'], mark: ['still_armed', 'performing'], next: { node: 'last_word' }, objective: 40, minutes: 25 },
+            { when: ON_STREAM, text: '{rider.first} keeps picking the phone back up to read the comments, until {friend.first} types that {friend.he} {friend~is|are} still at the tape. Then {rider.he} {rider~sends|send} {manager.first} out and stays behind the counter with the phone in {rider.his} hand.', safe: ['manager'], mark: ['still_armed', 'performing'], next: { node: 'last_word' }, objective: 40, minutes: 25 },
             { when: STREAM_CUT, text: '{rider.first} talks on the register phone and asks twice whether the van is still there. Then {manager.first} walks out, and {rider.first} stays at the counter with the dead phone and the handgun.', safe: ['manager'], mark: ['still_armed'], next: { node: 'last_word' }, objective: 40, minutes: 25 },
             { when: STREAM_ENDED, text: '{rider.first} turns the dark phone over twice. {manager.first} is sent out first. {rider.first} stays where {rider.he} {rider~is|are}.', safe: ['manager'], mark: ['still_armed'], next: { node: 'last_word' }, objective: 40, minutes: 25 },
             clerkToo('In that time {clerk.first} slips away through the back.'),
@@ -166,7 +166,7 @@ export const RESOLVE_NODES: TreeNode[] = [
             clerkToo('{clerk.first} is already outside.'),
           ],
           adverse: turnsOn({
-            lead: '“Not till {manager.he} says it,” {rider.first} tells the negotiator, and doesn’t move.',
+            lead: '“Not till {manager.he} {manager~says|say} it,” {rider.first} tells the negotiator, and doesn’t move.',
             threat: '{rider.first} puts the handgun on {manager.first} to make the point.',
             quiet: '{rider.first} sits down on the floor between {manager.first} and the door.',
             quietNext: { node: 'last_word' },
@@ -371,15 +371,15 @@ export const RESOLVE_NODES: TreeNode[] = [
         preview: { favorable: '{rider.first} says one thing to the stream and walks out.', mixed: '{rider.first} says it, then reads the comments back.', adverse: '{rider.first} reads the comments and won’t stop.' },
         outcomes: {
           favorable: [
-            { if: CLEAR, text: '{rider.first} faces the phone and says it plainly, once. Then {rider.he} {rider~sets|set} the handgun on the counter and walks out the front, through the {outlet_short} light, holding the phone out to the officers.',
+            { if: CLEAR, text: '{rider.first} faces the phone and says it plainly, once. Then {rider.he} {rider~sets|set} the handgun on the counter and {rider~walks|walk} out the front, through the {outlet_short} light, holding the phone out to the officers.',
               exchange: [{ by: 'rider', line: 'I did my job. That’s all I wanted anyone to know.' }], out: ['rider'], stabilize: ['stream'], next: { ending: 'out_cleared' }, objective: 40 },
-            { if: TOOK, text: '{rider.first} faces the phone and starts to say it, then stops. {rider.He} {rider~turns|turn} it off with {rider.his} thumb and walks out the front, leaving the handgun on the counter.',
+            { if: TOOK, text: '{rider.first} faces the phone and starts to say it, then stops. {rider.He} {rider~turns|turn} it off with {rider.his} thumb and {rider~walks|walk} out the front, leaving the handgun on the counter.',
               exchange: [{ by: 'rider', line: 'I marked it delivered. I did that.' }], out: ['rider'], stabilize: ['stream'], next: { ending: 'out_on_camera' }, objective: 40 },
             managerToo('{rider.first} sends {manager.first} out ahead of {rider.him}.'),
             clerkToo('{clerk.first} slips out through the stockroom while {rider.first} talks.'),
           ],
           mixed: [
-            { text: '{rider.first} says it, and the comments answer all at once. {rider.He} {rider~reads|read} the angriest ones out loud and stays behind the counter.',
+            { text: '{rider.first} says it, and the comments answer all at once. {rider.He} {rider~reads|read} the angriest ones out loud and {rider~stays|stay} behind the counter.',
               mark: ['performing'], bump: { stream: 12 }, next: { ending: 'rider_held' }, objective: 10, minutes: 30, when: { safe: ['manager'] } },
             ...heldEnd({ when: MANAGER_IN, text: '{rider.first} says it, and the comments answer all at once. {rider.He} {rider~reads|read} the angriest ones out loud, a reach from {manager.first}.', mark: ['performing'], bump: { stream: 12 }, objective: 10, minutes: 30 }, '{clerk.first} stays in the stockroom doorway.', [], MANAGER_IN),
           ],
@@ -397,7 +397,7 @@ export const RESOLVE_NODES: TreeNode[] = [
         preview: { favorable: '{rider.first} reaches the alley with empty hands.', mixed: '{rider.first} comes out the back, filming the whole way.', adverse: '{rider.first} turns around in the stockroom and returns to the counter.' },
         outcomes: {
           favorable: [
-            { text: '{rider.first} sets the phone on a shelf, still live, and comes through the stockroom with open hands. Officers have {rider.him} before {rider.he} reaches the end of the alley.', out: ['rider'], next: { ending: 'out_quiet' }, objective: 32 },
+            { text: '{rider.first} sets the phone on a shelf, still live, and comes through the stockroom with open hands. Officers have {rider.him} before {rider.he} {rider~reaches|reach} the end of the alley.', out: ['rider'], next: { ending: 'out_quiet' }, objective: 32 },
             managerToo('{rider.first} sends {manager.first} out the front first.'),
             clerkToo('{clerk.first} is out the alley door before either of them.'),
           ],
@@ -443,7 +443,7 @@ export const ENDINGS: Record<string, TreeEnding> = {
     epilogue: 'The order number is still open on {delivery_app}’s side.',
     epilogueIf: [
       { when: { marks: ['proof_seen'] }, epilogue: '{delivery_app} had the porch clip by midnight. {rider.first}’s account was back on Friday, and {rider.he} didn’t log in.' },
-      { when: { marks: ['admitted'] }, epilogue: '{manager.first} called {delivery_app} on Monday to say the complaint was wrong, and then drove to {clerk.first}’s mother’s house.' },
+      { when: { marks: ['admitted'] }, epilogue: '{manager.first} called {delivery_app} on Monday to say the complaint was wrong, and then drove to {clerk.first}’s family home.' },
       { when: { marks: ['lie_found'] }, epilogue: '{rider.first} asked an officer who told {rider.him} {clerk.first} backed {rider.him}. Nobody answered.' },
     ] },
   out_on_camera: { title: 'Out on camera', disposition: 'resolved',

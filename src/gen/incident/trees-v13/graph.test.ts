@@ -72,7 +72,7 @@ describe('call graph: one call', () => {
     for (const template of TEMPLATES) {
       let rng = 4242;
       for (let i = 0; i < 12; i++) {
-        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [template.type] });
+        const drawn = drawIncidentSpec(rng, { level: 10, trust: 90, unlockedTypes: [template.type], includeWorldOnly: true });
         rng = drawn.state;
         const s = generateIncident(drawn.spec);
         const instance = instanceOf(s, buildLocation(s.locationFamilyId, s.locationSeed))!;

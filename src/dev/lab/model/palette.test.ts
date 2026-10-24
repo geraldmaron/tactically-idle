@@ -38,16 +38,16 @@ describe('paletteItems', () => {
     expect(nodes).toHaveLength(s.tree.nodes.length);
     expect(nodes.find(item => item.id === 'on_air')).toMatchObject({ title: 'On air', go: { tab: 'play', node: 'on_air' }, play: { node: 'on_air' } });
     expect(items.filter(item => item.kind === 'choice')).toHaveLength(s.tree.nodes.reduce((n, node) => n + node.choices.length, 0));
-    const choice = items.find(item => item.id === 'on_air/team_glass')!;
+    const choice = items.find(item => item.id === 'on_air/manager_speaks')!;
     expect(choice.title).not.toMatch(/\{/);
-    expect(choice.title).toBe(sessionBinder(s)('Move your squad up to the glass'));
+    expect(choice.title).toBe(sessionBinder(s)('Let {manager.first} answer on camera'));
     expect(choice.crumb).toBe(`${s.tree.stageLabels[s.tree.nodes.find(node => node.id === 'on_air')!.stage]} › On air`);
-    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_team_glass' });
+    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_manager_speaks' });
     const ending = items.find(item => item.kind === 'ending' && item.id === 'manager_killed')!;
     expect(ending.title).not.toMatch(/\{/);
     expect(ending).toMatchObject({ go: { sel: { kind: 'ending', ending: 'manager_killed' } }, play: { ending: 'manager_killed' } });
     expect(items.filter(item => item.kind === 'key')).toHaveLength(deps.keys.size);
-    expect(items.find(item => item.kind === 'key' && item.id === 'mark:turned')).toMatchObject({ crumb: 'State · mark:turned', go: { tab: 'deps' } });
+    expect(items.find(item => item.kind === 'key' && item.id === 'mark:turned_chat')).toMatchObject({ crumb: 'State · mark:turned_chat', go: { tab: 'deps' } });
     expect(items.find(item => item.kind === 'row')).toMatchObject({ id: 'talking.prompt@s2', go: { tab: 'script', sel: { kind: 'string', row: 'talking.prompt@s2' } }, play: { node: 'talking' } });
     expect(items.find(item => item.kind === 'field')).toMatchObject({ id: FIELD.path, title: FIELD.label, go: { tab: 'tuning', tuning: { group: 'odds' } } });
   });
@@ -61,10 +61,10 @@ describe('searchPalette', () => {
     expect(searchPalette(items, 'manager_killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
     expect(searchPalette(items, 'manager killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
     expect(searchPalette(items, 'on_air')[0]).toMatchObject({ kind: 'node', id: 'on_air' });
-    const title = items.find(item => item.id === 'on_air/team_glass')!.title;
-    expect(searchPalette(items, title)[0].id).toBe('on_air/team_glass');
+    const title = items.find(item => item.id === 'on_air/manager_speaks')!.title;
+    expect(searchPalette(items, title)[0].id).toBe('on_air/manager_speaks');
     expect(searchPalette(items, 'RESOLUTION_TUNING.favorableAt')[0]).toMatchObject({ kind: 'field' });
-    expect(searchPalette(items, 'mark:turned')[0]).toMatchObject({ kind: 'key', id: 'mark:turned' });
+    expect(searchPalette(items, 'mark:turned_chat')[0]).toMatchObject({ kind: 'key', id: 'mark:turned_chat' });
   });
 
   it('folds curly apostrophes, accents and case', () => {

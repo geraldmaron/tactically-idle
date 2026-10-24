@@ -75,7 +75,8 @@ describe('team moves', () => {
         if (!action) continue;
         const to = choice.team?.to;
         const where = `${action.id}`;
-        if (to === 'scene' || (typeof to === 'object' && 'room' in to)) {
+        // Going up to a subject's door is entering the room it stands in (the landing), by voice or not.
+        if (to === 'scene' || (typeof to === 'object' && ('room' in to || 'doorOf' in to))) {
           entries++;
           expect(action.observes, where).toEqual([action.targetId]);
         } else if (typeof to === 'object' && 'vantage' in to && choice.team?.signal?.channel === 'visual') {

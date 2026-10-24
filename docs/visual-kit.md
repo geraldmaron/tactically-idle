@@ -26,10 +26,10 @@ The R4 picture-first mandate and bans on hiding glyphs are also retired design c
 and rows may lead with text; a redundant decorative glyph may be hidden. The legacy source checks,
 tests and debt entries still need cleanup. They do not require restoring an unwanted picture or icon.
 
-- **A place to return to.** HQ opens on the painted station at blue hour, with the department name,
-  date and actual state chips over a dark lower area. The exterior replaces the earlier room cutaway;
-  chip positions do not claim that an event occurred in a depicted room. `Hub` keeps the identity and
-  state readable when its image fails. The First Run scene, call cards and debrief can carry atmosphere
+- **A place to return to.** The home screen is City (the night map, `src/ui/screens/city/CityScreen.tsx`);
+  the painted station at blue hour now heads the Store. The exterior replaces the earlier room cutaway;
+  chips over it never claim that an event occurred in a depicted room. The old `Hub` component was retired
+  with the old HQ home. The First Run scene, call cards and debrief can carry atmosphere
   without becoming another layer of navigation.
 - **People and objects have size.** Officer portraits carry the squad cards. Command staff keeps a
   face, post and duty state together. Armory equipment, training emblems and development medallions
@@ -57,7 +57,7 @@ screens. The Store uses a recognizable shop symbol. Live calls retain focused na
 commercial offers. Hire and upgrade quotes show immediate and recurring costs, the unboosted net
 change and payback; a patrol-gross boost must not be presented as the same multiplier on department net.
 
-The current `TAB_PLATES` flags are all false. HQ uses `Hub`; the other department roots use their
+The current `TAB_PLATES` flags are all false. City opens on its map; the other department roots use their
 screen heading and content. `TabPlate` remains available as a component, not an obligation to restore
 four matching banners. Source image names, reconstructed generation intent and export dimensions for
 the new station and currency are in [the scene-pass provenance](art/scene-pass/README.md).
@@ -68,7 +68,7 @@ the new station and currency are in [the scene-pass provenance](art/scene-pass/R
 | Name tables | `src/ui/icons/kit.ts` | `TAB_ICON`, `RESOURCE_ICON`, `SKILL_ICON`, `OFFICER_STATUS_ICON`, `OUTCOME_ICON`, `GEAR_CATEGORY_ICON`, `GEAR_SOURCE_ICON`, `BRANCH_ICON`, `CALL_TYPE_ICON`, keyed by the sim's own ids |
 | Call-type badges | `src/ui/icons/CallTypeBadge.tsx` | `<CallTypeBadge type size label? medallion? />` |
 | Call-type medallions | `src/ui/art/Medallions.tsx`, `public/art/medallions/` | painted discs, used by `CallTypeBadge` at 40px and up ([medallions README](art/medallions/README.md)) |
-| HQ scene | `src/ui/components/Hub.tsx`, `public/art/plates/hub_hq.webp` | Painted station exterior with department identity and current state chips |
+| Station painting | `src/ui/screens/Store.tsx`, `public/art/plates/hub_hq.webp` | Painted station exterior; heads the Store (City is the home screen, `src/ui/screens/city/CityScreen.tsx`) |
 | Currency object | `public/art/plates/tex_cash.webp`, `src/ui/components/Finance.tsx` | Retained banknote art; target feedback presents automatic patrol-ledger income. Its current `TapEarn.tsx` use belongs to the superseded preview |
 | Optional tab-root plate | `src/ui/art/TabPlate.tsx`, `src/ui/art/tab-plates.ts` | `<TabPlate tab title meta? />`; currently disabled for every tab in `TAB_PLATES` |
 | Status and outcome marks | `src/ui/icons/marks.tsx` | `<StatusMark status />`, `<OutcomeMark band label />` |

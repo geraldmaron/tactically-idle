@@ -12,7 +12,7 @@ const { TALK, HOLD, ASK, LOOK, MOVE } = CHECKS;
 export const APPROACH_NODES: TreeNode[] = [
   // ------------------------------------------------------------------ stage 1
   { id: 'the_knock', stage: 'assess',
-    threat: { label: 'The alarm next door', minutes: 10, text: 'A phone alarm goes off through the wall. {parent.first} is up and moving around next door, and the boards over the hall have gone still.', pressure: 4, mark: ['family_up'],
+    threat: { label: 'The alarm next door', minutes: 15, text: 'A phone alarm goes off through the wall. {parent.first} is up and moving around next door, and the boards over the hall have gone still.', pressure: 4, mark: ['family_up'],
       beats: [
         { id: 'pacing', at: 1.6, by: 'radio', line: 'Upstairs, somebody pacing. Front room light still off.' },
         { id: 'alarm_time', at: 3.8, by: 'landlord', line: 'Their alarm goes at 5:15. {parent.first} never misses the bus.' },

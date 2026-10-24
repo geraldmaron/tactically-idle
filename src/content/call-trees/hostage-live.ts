@@ -49,7 +49,7 @@ export const HOSTAGE_LIVE: CallTree = {
   families: ['market_row', 'corner_store_flat_g2', 'bar_restaurant_g2'],
   scene: { setting: 'business', rooms: ['retail'], crowd: 2, timeOfDay: 'night' },
   summary: '{rider.first} went live to make the night manager say one sentence. {manager.first} is on the floor by the counter, and {rider.first} has a handgun.',
-  coldOpen: '{delivery_app} shut {rider.first}’s account on Tuesday. The email gave one reason. A bag {rider.he} picked up at {place} at 11:40 never reached the customer, and {manager.first}, who runs the night counter, was the one who reported it. {rider.first} didn’t answer the email. {rider.He} added up what two years of rent looks like without the app, and tonight, close to shutting, {rider.he} walked in, stood {rider.his} phone against the register and went live on {stream_app}. {rider.He} asked {manager.first} to say {rider.he} hadn’t taken the bag. {manager.first} said no. {clerk.first} was coming out of the stockroom with a case of water when the handgun came out of {rider.first}’s jacket, and hasn’t put the water down.',
+  coldOpen: '{delivery_app} shut {rider.first}’s account on Tuesday. The email gave one reason. A bag {rider.he} picked up at {place} at 11:40 never reached the customer, and {manager.first}, who runs the night counter, was the one who reported it. {rider.first} didn’t answer the email. {rider.He} added up what two years of rent looks like without {delivery_app}, and tonight, close to shutting, {rider.he} walked in, stood {rider.his} phone against the register and went live on {stream_app}. {rider.He} asked {manager.first} to say {rider.he} hadn’t taken the bag. {manager.first} said no. {clerk.first} was coming out of the stockroom with a case of water when the handgun came out of {rider.first}’s jacket, and hasn’t put the water down.',
   pressureLabel: '{manager.first} on camera',
   pressure: { start: 18, perMinute: 0.15, threshold: 85, civilianPerMinute: 0.5 },
   briefing: {
@@ -84,7 +84,7 @@ export const HOSTAGE_LIVE: CallTree = {
   situations: [
     { note: '{rider.He} didn’t take the bag. {clerk.first} did, and {manager.first}, who got {clerk.first} the job, filed the complaint against {rider.first} to keep {clerk.him} in it. Nobody watching has seen the bag.', truth: { rider_clear: true, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
     { note: '{rider.He} picked up the bag at 11:40, kept it when the drop failed, marked it delivered and told the stream otherwise. The red light is true. Four hundred people believe {rider.him}.', truth: { rider_clear: false, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
-    { note: '{rider.He} delivered the bag. It sat on the wrong porch and a neighbor carried it in, and the app said delivered while the customer said otherwise. A viewer who lives on that street has the porch clip. Nobody in the store took anything.', truth: { rider_clear: true, proof: true }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
+    { note: '{rider.He} delivered the bag. It sat on the wrong porch and a neighbor carried it in, and {delivery_app} said delivered while the customer said otherwise. A viewer who lives on that street has the porch clip. Nobody in the store took anything.', truth: { rider_clear: true, proof: true }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
   ],
   turns: { clerk_out: ['clerk_talks'] },
   difficulty: { base: 36, perTier: 4 },

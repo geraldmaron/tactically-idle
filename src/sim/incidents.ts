@@ -91,15 +91,16 @@ export function drawableSituations(exclusion: ContentExclusion): Record<Incident
   })) as Record<IncidentType, SituationIndex[]>;
 }
 
-/** A kind only the world sends (a warrant) never comes onto the board at random (gen/incident drawIncidentSpec). */
-const boardDrawn = (type: IncidentType): boolean => !templateAt(type)?.worldOnly;
+/** The kinds the board can draw at random: a call only the world sends (a warrant) never comes up, so it
+ * cannot keep a filtered board alive (save v19). */
+export const boardTypes = (): IncidentType[] => SCENARIO_TYPES.map(({ type }) => type).filter(type => !templateAt(type)?.worldOnly);
 
-/** The kinds of call that can still reach the board under an exclusion, in SCENARIO_TYPES order. A kind only
- * the world sends is not one: the board never draws it, so it cannot keep a board alive.
- * Unlocks aside: a caller intersects these with what the department has unlocked. */
+/** The kinds of call that can still reach the board under an exclusion, in SCENARIO_TYPES order.
+ * Unlocks aside: a caller intersects these with what the department has unlocked. A call only the world
+ * sends is left out: the board never draws it, so it cannot count as something to draw. */
 export function drawableKinds(exclusion: ContentExclusion): IncidentType[] {
   const situations = drawableSituations(exclusion);
-  return SCENARIO_TYPES.map(({ type }) => type).filter(type => boardDrawn(type) && situations[type].length > 0);
+  return boardTypes().filter(type => situations[type].length > 0);
 }
 
 /** Whether a card's situation survives an exclusion. A card that can't be read stays. */
@@ -178,9 +179,8 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
   const arc = playerArcContext(d);
   if (situations) {
     // The draw's own unlock rule: the unlocked kinds, or every kind when none is unlocked.
-    const boardKinds = SCENARIO_TYPES.map((info) => info.type).filter(boardDrawn);
-    const open = boardKinds.filter((type) => arc.unlockedTypes.includes(type));
-    if (!(open.length ? open : boardKinds).some((type) => situations[type].length)) return null;
+    const open = boardTypes().filter((type) => arc.unlockedTypes.includes(type));
+    if (!(open.length ? open : boardTypes()).some((type) => situations[type].length)) return null;
   }
   const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...boardCards(board(d)).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc, ...(situations ? { situations } : {}) });
   // After a run of bad results the next call comes in a tier lower, and its card says why

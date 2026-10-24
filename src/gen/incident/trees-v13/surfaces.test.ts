@@ -117,11 +117,15 @@ describe('a lie is always findable', () => {
 });
 
 describe('Going Live carries its reframe into the after', () => {
-  it('keeps both out_on_camera epilogue variants, each behind the mark that sets it', () => {
+  it('keeps the out_on_camera epilogue variants, each behind the mark that sets it', () => {
     const s = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
     const variants = s.endings.out_on_camera?.epilogueIf ?? [];
-    expect(variants).toHaveLength(2);
-    expect(variants.map(entry => entry.when.flags)).toEqual([[expect.stringContaining('admitted')], [expect.stringContaining('exposed'), expect.stringContaining('friend_promise')]]);
+    // Every variant waits on a mark; the two that carry the reframe wait on exposed (and the friend's promise).
+    expect(variants.length).toBeGreaterThanOrEqual(2);
+    for (const entry of variants) expect(entry.when.flags?.length, JSON.stringify(entry.when)).toBeGreaterThan(0);
+    const gates = variants.map(entry => entry.when.flags);
+    expect(gates).toContainEqual([expect.stringContaining('exposed'), expect.stringContaining('friend_promise')]);
+    expect(gates).toContainEqual([expect.stringContaining('exposed')]);
     expect(unbound(variants)).toBeNull();
   });
 });

@@ -33,7 +33,7 @@ export const APPROACH_NODES: TreeNode[] = [
         preview: { favorable: '{rider.first} tells you what {rider.he} came for, out loud.', mixed: '{rider.first} answers the comments instead of you.', adverse: '{rider.first} reads your questions out for the stream and turns the camera on {manager.first}.' },
         outcomes: {
           favorable: [{ text: '{rider.first} picks up on the second ring and tilts the phone so the stream can hear. It’s the first time tonight {rider.he} {rider~talks|talk} to someone who can answer back.',
-            exchange: [{ by: 'rider', line: 'Eleven-forty, red light on Calloway, two blocks from here. {delivery_app} has the timestamp.' }, { by: 'rider', line: 'One sentence from {manager.first}. That’s all this is.' }, { by: 'negotiator', line: 'Then let’s work out how {manager.he} gets to say it.' }],
+            exchange: [{ by: 'rider', line: 'Eleven-forty, red light on Calloway, two blocks from here. {delivery_app} has the timestamp.' }, { by: 'rider', line: 'One sentence from {manager.first}. That’s all this is.' }, { by: 'negotiator', line: 'Then let’s work out how {manager.he} {manager~gets|get} to say it.' }],
             mark: ['terms'], moves: { rider: 'heard' }, bump: { stream: 10 }, next: { node: 'on_air' }, objective: 15 }],
           mixed: [{ text: '{rider.first} reads each of your questions out to the comments and answers them there. Somebody types that the police are stalling, and {rider.first} turns back to the phone to ask if it’s true.',
             exchange: [{ by: 'rider', line: 'They want to know if you’re stalling. Are you stalling?' }], mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 14 }, next: { node: 'on_air' }, objective: 8 }],
@@ -45,7 +45,7 @@ export const APPROACH_NODES: TreeNode[] = [
             extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 16 }, pressure: 8 } }),
         } },
       { id: 'clerk_out', title: 'Get {clerk.first} out the back', icon: 'door', walks: 'clerk', team: { to: 'escort' }, check: check(MOVE, -2), minutes: 4, consequenceLevel: 'moderate',
-        summary: 'The camera faces the counter, so {lead} takes two officers in through the back to walk {clerk.first} out of the stockroom. If that door moves on the stream, {rider.first} hears it from strangers before {rider.he} sees it.',
+        summary: 'The camera faces the counter, so {lead} takes two officers in through the back to walk {clerk.first} out of the stockroom. If that door moves on the stream, {rider.first} hears it from strangers before {rider.he} {rider~sees|see} it.',
         pull: '{clerk.first} is nineteen and a few steps from the back door.',
         cost: 'The comments may spot the stockroom door before {rider.first} does.',
         preview: { favorable: '{clerk.first} walks out the back unseen.', mixed: '{clerk.first} is out, but the door swings in the corner of the picture.', adverse: '{clerk.first} freezes in the doorway on camera, and {rider.first} fires a shot.' },
@@ -142,7 +142,7 @@ export const APPROACH_NODES: TreeNode[] = [
     promptIf: [
       { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} believes {clerk.first} is on {rider.his} side, and has turned to {manager.first} for the rest. {rider.He} {rider~wants|want} the sentence said on camera, now.' },
       { when: { marks: ['terms'] }, prompt: '{rider.first} has told the stream exactly what ends this. One sentence from {manager.first}, and {rider.he} {rider~walks|walk} out the door. {manager.first} hasn’t said a word since.' },
-      { when: { marks: ['glance'] }, prompt: 'Through the glass, {manager.first} looks at the stockroom door again. The comments keep asking {rider.first} where {rider.he} was at 11:40.' },
+      { when: { marks: ['glance'] }, prompt: 'Through the glass, {manager.first} looks at the stockroom door again. The comments keep asking {rider.first} where {rider.he} {rider~was|were} at 11:40.' },
     ],
     choices: [
       // The truth, out loud, from the one person who filed it. It can't be taken back.
@@ -160,9 +160,9 @@ export const APPROACH_NODES: TreeNode[] = [
             // The rider kept it and marked it delivered. The manager keeps it off the stream if the stream lets her.
             { if: TOOK, text: '{manager.first} gets up holding the cooler door and faces the phone, then turns away from it. The rest, {manager.he} {manager~says|say}, is for the police to hear, and {manager.he} {manager~sits|sit} back down.',
               exchange: [{ by: 'manager', line: 'Not on camera. I won’t do that to you. Put that down and ask me again.' }], mark: ['held_back'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 },
-            // Nobody took it: the manager only knows what the app told her.
+            // Nobody took it: the manager only knows what the delivery app told her.
             { if: CLEAR_PROOF, text: '{manager.first} stands, faces the phone and reads out what the {delivery_app} screen says. The whiteboard behind {manager.him} says the same. “So who’s lying?” {rider.first} asks, and nobody in the store has an answer.',
-              exchange: [{ by: 'manager', line: 'The app said delivered. I wrote down what the app said. That’s all I did.' }], mark: ['app_said'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 },
+              exchange: [{ by: 'manager', line: '{delivery_app} said delivered. I wrote down what {delivery_app} said. That’s all I did.' }], mark: ['app_said'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 },
           ],
           mixed: [
             { if: CLEAR, text: '{manager.first} gets as far as {rider.first}’s name. {rider.first} talks right over {manager.him}, back to the red light and the timestamp, and tells {manager.him} to stand up if {manager.he} {manager~means|mean} it.',
@@ -182,13 +182,13 @@ export const APPROACH_NODES: TreeNode[] = [
       { id: 'ask_chat', title: 'Read the comments for who knows', icon: 'search', check: check(READ, 4), minutes: 5, certBonus: SURVEILLANCE, favors: [OBSERVANT_ON_CHAT],
         modifiers: [{ label: 'The clerk couldn’t say', mark: 'clerk_unsure', value: 4 }],
         onlyIf: { notMarks: ['cut', 'stream_off'] },
-        summary: '{lead} scrolls the comments on a tablet, looking for anyone who has laid eyes on that bag since Tuesday. {rider.first} is watching the same feed and reads aloud the comments {rider.he} likes. It takes five minutes, and {manager.first} spends them on the floor.',
+        summary: '{lead} scrolls the comments on a tablet, looking for anyone who has laid eyes on that bag since Tuesday. {rider.first} is watching the same feed and reads aloud the comments {rider.he} {rider~likes|like}. It takes five minutes, and {manager.first} spends them on the floor.',
         pull: 'Four hundred people may know something nobody in the store does.',
         cost: 'The count keeps climbing while you read, and {rider.first} hears which comments you stopped on.',
         preview: { favorable: 'You find the comment that answers who has seen the bag.', mixed: 'You find a name in the comments, and not a good one.', adverse: 'A comment you stop on gives {rider.first} a bigger audience.' },
         outcomes: {
           favorable: [
-            { if: PROOF, text: 'A comment from {handle} says a sister lives two doors down from the customer. Her porch camera has the bag sitting on the step at 11:52, and the clip is posted right under the comment. At 12:10 a neighbor’s arm reaches in and takes it inside. {rider.first} watches it twice, then stops talking.',
+            { if: PROOF, text: 'A comment from {handle} says a relative lives two doors down from the customer. The porch camera there has the bag sitting on the step at 11:52, and the clip is posted right under the comment. At 12:10 a neighbor’s arm reaches in and takes it inside. {rider.first} watches it twice, then stops talking.',
               exchange: [{ by: 'rider', line: 'That’s my bag. That’s my bag on the step. I delivered it.' }], reveal: ['proof', 'rider_clear'], mark: ['proof_seen', 'knows_truth'], moves: { rider: 'honest' }, bump: { stream: 10 }, next: { node: 'way_out' }, objective: 25, pressure: -8 },
             { if: [CLEAR, NO_PROOF], text: 'A comment from {handle} says {handle} used to work nights at {place}, and that the clerk who got the job through the manager ate out of the cooler every shift. {rider.first} reads it out, reads it again slower, and looks at the stockroom door.',
               reveal: ['proof'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
@@ -342,14 +342,14 @@ export const APPROACH_NODES: TreeNode[] = [
               exchange: [{ by: 'manager', line: 'I reported you to keep {clerk.him} in {clerk.his} job. I should have said so when I filed it.' }], reveal: ['rider_clear'], mark: ['admitted', 'knows_truth'], moves: { rider: 'honest' }, next: { node: 'way_out' }, objective: 20, pressure: -6 },
             { if: TOOK, text: '{manager.first} says it plainly from the floor. The pickup is on the store camera, and the order says delivered. {rider.first} says nothing, then asks who else has seen the clip.',
               exchange: [{ by: 'manager', line: 'I kept the clip. I didn’t want to use it.' }], reveal: ['rider_clear'], mark: ['knows_truth'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 10 },
-            { if: CLEAR_PROOF, text: '{manager.first} tells the room what the app told {manager.him}. {rider.first} asks who the app is lying to, and {manager.first} says {manager.he} doesn’t know.',
+            { if: CLEAR_PROOF, text: '{manager.first} tells the room what {delivery_app} told {manager.him}. {rider.first} asks who {delivery_app} is lying to, and {manager.first} says {manager.he} {manager~doesn’t|don’t} know.',
               exchange: [{ by: 'manager', line: 'I wrote down what it said. I don’t know where the bag went.' }], mark: ['app_said'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 },
           ],
           mixed: [{ text: '{manager.first} answers in two sentences. “That’s what you told {delivery_app},” {rider.first} says, and goes back to pacing.',
             moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 6 }],
           adverse: turnsOn({
             lead: '{manager.first} won’t answer. {rider.first} asks again from a foot away, louder.',
-            threat: '{rider.first} puts the handgun on {manager.first} and says {manager.he} has until the count of ten.',
+            threat: '{rider.first} puts the handgun on {manager.first} and says {manager.he} {manager~has|have} until the count of ten.',
             quiet: '{rider.first} sits on the counter above {manager.first} and says nothing at all.',
             quietNext: { node: 'way_out' },
             extra: { moves: { rider: 'provoked' }, pressure: 8 } }),

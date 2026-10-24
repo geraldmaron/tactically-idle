@@ -30,7 +30,9 @@ describe('seekCallSeed', () => {
       // One want per turn member and per group size the call can draw (Going Live: its one turn member).
       const members = Object.values(template.tree.turns ?? {}).reduce((n, list) => n + list.length, 0);
       expect(wants.length).toBeGreaterThanOrEqual(members);
-      expect(wants.length).toBeGreaterThan(0);
+      // A call with neither a turn nor a group (the warrant) has no draw to seek: the base call is its own answer.
+      if (members > 0 || Object.keys(template.tree.groups ?? {}).length > 0) expect(wants.length).toBeGreaterThan(0);
+      else { expect(wants).toEqual([]); expect(seekCallSeed(template.type, at, {})).toEqual({ call: spec.seed, changed: [] }); }
       for (const want of wants) {
         const found = seekCallSeed(template.type, at, want);
         expect(found, JSON.stringify(want)).not.toBeNull();

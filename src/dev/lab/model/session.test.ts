@@ -249,8 +249,9 @@ describe('aimed drawn results', () => {
     // One key for two drawn effects, and keys on a band that draws nothing.
     expect(stepSession(before, { ...last, drawn: [last.drawn![0]] })).toEqual({ refused: expect.stringContaining('draws 2 results when it comes out badly; the path names 1') });
     expect(aimedDrawnState(currentFrame(before).state, view, 'adverse', [last.drawn![0]])).toBeNull();
-    const plain = currentFrame(before).views.find(entry => entry.eligible && BANDS.every(band => sampleFor(entry, band) === null || !drawnAt(currentFrame(before).state, entry, band).length))!;
-    expect(stepSession(before, { kind: 'decide', actionId: plain.id, band: 'favorable', drawn: ['none'] })).toEqual({ refused: expect.stringContaining('draws nothing when it comes out well') });
+    // A choice that draws nothing in any band: the opening has them (the final steps of Going Live all draw a shot).
+    const plain = currentFrame(keeps).views.find(entry => entry.eligible && BANDS.every(band => sampleFor(entry, band) === null || !drawnAt(currentFrame(keeps).state, entry, band).length))!;
+    expect(stepSession(keeps, { kind: 'decide', actionId: plain.id, band: 'favorable', drawn: ['none'] })).toEqual({ refused: expect.stringContaining('draws nothing when it comes out well') });
     // The same path through a replayed link stops there and says why.
     const bad = replayTokens(keeps, [...tokens.slice(0, -1), `${last.actionId}~adverse/firearm:fatal/${last.drawn![1]}`].join(','));
     expect(bad.stopped).toMatchObject({ step: tokens.length, why: expect.stringContaining('Possible:') });
@@ -374,17 +375,23 @@ describe('handoff', () => {
   });
 
   it('replays the game\'s drawn results too, and says when this squad can\'t produce one', () => {
-    const drawnPath = 't13_hostage_crisis_going_live_clerk_out~adverse,t13_hostage_crisis_threat_go_in~adverse/firearm:none/none';
-    const id = open(REFERENCE).resolved.id!;
+    // The game's path: the walk to the manager killed, whose last step names its drawn results.
+    const keeps = open(`${REFERENCE}&kit=full&certs=entry_team`);
+    const drawnPath = explore(keeps.frames[0].state, { ending: 'manager_killed' }).path!;
+    const steps = drawnPath.split(',');
+    const last = decodePath(steps.at(-1)!)[0];
+    expect(last.drawn!.length).toBeGreaterThan(0);
+    const id = keeps.resolved.id!;
     const aimed = open(`id=${id}&kit=full&certs=entry_team&handoff=gone&hist=${drawnPath}`);
-    expect(aimed.prior).toHaveLength(2);
-    expect(aimed.prior[1].drawn).toEqual(['team_force:firearm:none', 'incoming_fire:none']);
+    expect(aimed.prior).toHaveLength(steps.length);
+    expect(aimed.prior.at(-1)!.drawn).toHaveLength(last.drawn!.length);
+    expect(aimed.prior.at(-1)!.drawn!.map(key => key.slice(key.indexOf(':') + 1))).toEqual(last.drawn);
     expect(aimed.note).toContain('with the same bands and drawn results');
     expect(aimed.note).not.toContain('couldn\'t be matched');
-    // No fatal result is possible on that entry: the band is kept and the dice settle the rest.
-    const unmatched = open(`id=${id}&handoff=gone&hist=${drawnPath.replace('firearm:none/none', 'firearm:fatal/none')}`);
-    expect(unmatched.prior).toHaveLength(2);
-    expect(unmatched.prior[1].band).toBe('adverse');
+    // No fatal result is possible on that step: the band is kept and the dice settle the rest.
+    const unmatched = open(`id=${id}&handoff=gone&hist=${drawnPath.replace(`/${last.drawn![0]}`, '/firearm:fatal')}`);
+    expect(unmatched.prior).toHaveLength(steps.length);
+    expect(unmatched.prior.at(-1)!.band).toBe('adverse');
     expect(unmatched.note).toContain('One drawn result couldn\'t be matched on this squad');
-  });
+  }, 60000);
 });

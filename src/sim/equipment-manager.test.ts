@@ -3,7 +3,7 @@ import { fillOpenPostsForTest } from './staff-fixtures';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './department';
 import { dispatch } from './game';
-import { HOUR_MS } from './economy';
+import { ECONOMY_TUNING, HOUR_MS } from './economy';
 import { ITEMS } from '../content/items';
 import { createUnit, projectedCondition, serviceCheck } from './equipment';
 import { reserveLoadouts, settleRun } from './inventory';
@@ -145,11 +145,13 @@ describe('equipment manager', () => {
     expect(Object.values(state.units).filter((u) => u.uses === 0 && u.status === 'service')).toHaveLength(0);
   });
 
-  it('matches online and offline service events and stops automatic spending beyond the 24-hour income window', () => {
+  it('matches online and offline service events and stops automatic spending beyond the income window', () => {
+    // The window is the funding cap (72 hours); the absence runs six hours past it.
+    const capH = ECONOMY_TUNING.capMs / HOUR_MS;
     const start = ok(workshop(), { type: 'setMaintenanceBudget', perHour: 200 });
     let online = start;
-    for (let now = T0 + 10 * 60_000; now <= T0 + 30 * HOUR_MS; now += 10 * 60_000) online = ok(online, { type: 'tick' }, now);
-    const offline = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
+    for (let now = T0 + 10 * 60_000; now <= T0 + (capH + 6) * HOUR_MS; now += 10 * 60_000) online = ok(online, { type: 'tick' }, now);
+    const offline = ok(start, { type: 'tick' }, T0 + (capH + 6) * HOUR_MS);
     expect(online.department.funding).toBeCloseTo(offline.department.funding, 6);
     expect(online.report?.maintenanceSpend).toBe(offline.report?.maintenanceSpend);
     for (const id of Object.keys(online.units)) {
@@ -157,7 +159,7 @@ describe('equipment manager', () => {
       expect(online.units[id].status).toBe(offline.units[id].status);
       expect(online.units[id].serviceUntil).toBe(offline.units[id].serviceUntil);
     }
-    const atCap = ok(start, { type: 'tick' }, T0 + 24 * HOUR_MS);
+    const atCap = ok(start, { type: 'tick' }, T0 + capH * HOUR_MS);
     expect(offline.report?.maintenanceSpend).toBe(atCap.report?.maintenanceSpend);
     expect(offline.department.funding).toBeCloseTo(atCap.department.funding, 6);
   });

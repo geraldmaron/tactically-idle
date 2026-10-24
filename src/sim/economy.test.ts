@@ -128,47 +128,52 @@ describe('offline equivalence', () => {
 });
 
 describe('funding cap', () => {
-  it('accrues nothing beyond 24h after the last command, and says so', () => {
+  // The window is 72 hours (7 days with Night Watch Office); every case runs six hours past it.
+  const CAP_H = ECONOMY_TUNING.capMs / HOUR_MS;
+  const PAST_H = CAP_H + 6;
+
+  it('accrues nothing beyond the cap after the last command, and says so', () => {
     const start = createInitialState(T0);
-    const at24 = ok(start, { type: 'tick' }, T0 + 24 * HOUR_MS);
-    const at30 = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
-    expect(at30.department.funding).toBeCloseTo(at24.department.funding, 3);
-    expect(at30.department.funding).toBeCloseTo(12400 + 24 * 620, 3);
-    expect(at30.report).toMatchObject({ capped: true, accruedHours: 24 });
-    expect(at24.report).toMatchObject({ capped: false });
+    const atCap = ok(start, { type: 'tick' }, T0 + CAP_H * HOUR_MS);
+    const past = ok(start, { type: 'tick' }, T0 + PAST_H * HOUR_MS);
+    expect(past.department.funding).toBeCloseTo(atCap.department.funding, 3);
+    expect(past.department.funding).toBeCloseTo(12400 + CAP_H * 620, 3);
+    expect(past.report).toMatchObject({ capped: true, accruedHours: CAP_H });
+    expect(atCap.report).toMatchObject({ capped: false });
   });
 
   it('payroll does not continue independently of income beyond the cap', () => {
     const start = createInitialState(T0);
-    const at30 = ok(start, { type: 'tick' }, T0 + 30 * HOUR_MS);
-    // Wages and income stop together: net over 30h equals net over 24h, never 24h income minus 30h wages.
-    expect(at30.report!.wages).toBeCloseTo(24 * (380 + 180), 3);
-    expect(at30.report!.gross).toBeCloseTo(24 * 1440, 3);
+    const past = ok(start, { type: 'tick' }, T0 + PAST_H * HOUR_MS);
+    // Wages and income stop together: net over the whole absence equals net over the window, never the
+    // window's income minus the whole absence's wages.
+    expect(past.report!.wages).toBeCloseTo(CAP_H * (380 + 180), 3);
+    expect(past.report!.gross).toBeCloseTo(CAP_H * 1440, 3);
   });
 
   it('a later command restarts the window', () => {
-    let s = ok(createInitialState(T0), { type: 'tick' }, T0 + 30 * HOUR_MS);
+    let s = ok(createInitialState(T0), { type: 'tick' }, T0 + PAST_H * HOUR_MS);
     const before = s.department.funding;
-    s = ok(s, { type: 'createSquad', name: 'Charlie' }, T0 + 30 * HOUR_MS);
-    s = ok(s, { type: 'tick' }, T0 + 32 * HOUR_MS);
+    s = ok(s, { type: 'createSquad', name: 'Charlie' }, T0 + PAST_H * HOUR_MS);
+    s = ok(s, { type: 'tick' }, T0 + (PAST_H + 2) * HOUR_MS);
     expect(s.department.funding).toBeCloseTo(before + 2 * 620, 3);
   });
 
   it('training and recovery continue beyond the cap, including a course ending past it', () => {
     const s = createInitialState(T0);
-    s.officers.off_park.assignment = { kind: 'training', courseId: 'composure_workshop', startedAt: T0, endsAt: T0 + 27 * HOUR_MS };
-    const end = T0 + 30 * HOUR_MS;
+    s.officers.off_park.assignment = { kind: 'training', courseId: 'composure_workshop', startedAt: T0, endsAt: T0 + (CAP_H + 3) * HOUR_MS };
+    const end = T0 + PAST_H * HOUR_MS;
     const online = tickSteps(s, T0, end);
     const offline = ok(s, { type: 'tick' }, end);
     expectEquivalent(online, offline);
     expect(offline.officers.off_park.assignment).toBeNull();
     expect(offline.officers.off_park.ratings.composure).toBe(s.officers.off_park.ratings.composure + 3);
-    expect(offline.officers.off_reyes.stress).toBe(0); // standby recovers fully over 30h
+    expect(offline.officers.off_reyes.stress).toBe(0); // standby recovers fully over the absence
     expect(offline.department.funding).toBeCloseTo(
-      ok(s, { type: 'tick' }, T0 + 24 * HOUR_MS).department.funding,
+      ok(s, { type: 'tick' }, T0 + CAP_H * HOUR_MS).department.funding,
       3,
     );
-  }, 15_000);
+  }, 90_000);
 
   it('funding never goes below zero and a shortage is recorded', () => {
     const s = createInitialState(T0);

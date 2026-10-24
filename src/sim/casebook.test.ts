@@ -5,6 +5,7 @@ import { HOUR_MS } from './economy';
 import { playerArcContext, takeIncident } from './incidents';
 import { casebookRecipes, noveltyWeights, recipeOfScenario, situationCount } from './casebook';
 import { drawIncidentSpec, incidentId } from '../gen/incident';
+import { CALL_TREES } from '../content/call-trees';
 import { specForSituation } from '../content/scenario-recipes';
 import { SCENARIO_TYPES } from '../content/scenario-types';
 import { DEFAULT_UNLOCK, isUnlocked, missingRequirements, unlockRule, unlockedTypes } from '../content/unlocks';
@@ -133,8 +134,9 @@ describe('v11 board draws', () => {
     const s = createInitialState(T0, 5);
     s.casebook = { frameworksSeen: ['barricaded', 'hostage_crisis'], recipes: { 'hostage_crisis/market_row/0/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/1/ordinary': { firstAt: T0 }, 'hostage_crisis/market_row/2/ordinary': { firstAt: T0 } } };
     const weights = noveltyWeights(s, ['barricaded', 'hostage_crisis', 'active_armed_incident']);
-    // Going Live has two situations, both found here.
-    expect(situationCount('hostage_crisis')).toBe(2);
+    // Going Live has three situations, all found here; the fixture's three recipes cover its count.
+    expect(situationCount('hostage_crisis')).toBe(CALL_TREES.hostage_crisis!.situations.length);
+    expect(Object.keys(s.casebook!.recipes).length).toBeGreaterThanOrEqual(situationCount('hostage_crisis'));
     expect(weights).toEqual({ barricaded: 2, hostage_crisis: 1, active_armed_incident: 3 });
     // A weight never costs an extra draw from the stream.
     const base = { level: 3, trust: 78, contentVersion: 13 };

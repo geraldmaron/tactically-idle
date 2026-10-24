@@ -1,4 +1,3 @@
-import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { CALL_TREES } from '../../content/call-trees';
 import { drawCalls, playToEnd } from './trees-v13/balance';
 import { describe, expect, it } from 'vitest';
@@ -10,6 +9,7 @@ import { validateLocation } from '../../sim/location-validate';
 import { validateScenario } from '../../sim/operation';
 import { briefing, builtForScenario, actionViews, scenarioCards } from '../../sim/operation-selectors';
 import { createInitialState } from '../../sim/department';
+import { boardTypes } from '../../sim/incidents';
 import { deserialize, serialize } from '../../sim/save';
 import { startCmd, apply, NOW } from '../../sim/test-fixtures';
 import { INCIDENT_TYPES, drawIncidentSpec, generateIncident, parseIncidentId } from './index';
@@ -76,7 +76,7 @@ describe('current generated incidents', () => {
       // One live call per kind once there are as many kinds as cards; with one curated kind the
       // board repeats it (sim/incidents.ts), still on distinct buildings.
       expect(cards).toBeGreaterThanOrEqual(1);
-      expect(new Set(state.incidents.map(c => c.type)).size).toBe(Math.min(cards, SCENARIO_TYPES.length));
+      expect(new Set(state.incidents.map(c => c.type)).size).toBe(Math.min(cards, boardTypes().length));
       expect(new Set(state.incidents.map(c => c.familyId)).size).toBe(cards);
       expect(scenarioCards(state, NOW).filter(c => c.id.startsWith('gen:'))).toHaveLength(cards);
     }

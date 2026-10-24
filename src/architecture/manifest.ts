@@ -221,5 +221,7 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   // Officers remember calls (src/sim/people/call-read.ts): memory facts read the call's actions and the building's name.
   'officer -> scenario': 'memory: a debrief writes what the officer did on the call and where',
   'officer -> blueprint': 'memory: a fact names the building the call happened in',
+  // The people layer reads the city's static tables (src/content/city): a memory fact names the district it happened in, and a tie reads the crew archetype it came from.
+  'officer -> metric': 'ties and memory: a fact names its district and a tie reads the crew archetype it came from',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);
