@@ -1,3 +1,4 @@
+import { ARCHETYPES } from '../../content/city/archetypes';
 // Ties (docs/world-redesign.md, "Officers know people"). An officer may know a person from where they grew
 // up (a jacket tie) or from earlier work (a prior arrest). Ties are always on the record when they are used:
 // the knowing officer can talk, someone else makes the arrest and handles evidence. A small share of jacket
@@ -80,7 +81,7 @@ export function recordCaseFact(d: GameState, caseId: Id): void {
   for (const officerId of workers) {
     recordFact(d, {
       officerId, kind: 'arrest', at, place: DISTRICT_PLACE[c.districtId], caseId, with: workers.filter((id) => id !== officerId),
-      slots: { tier: c.tier, caseEnd: CASE_END[c.resolution] ?? 'in a close' },
+      slots: { role: (c.archetype ? ARCHETYPES[c.archetype].tierNames[c.tier - 1] : 'person').toLowerCase(), caseEnd: CASE_END[c.resolution] ?? 'in a close' },
     });
     const existing = d.people.ties.find((t) => t.officerId === officerId && t.subjectId === c.subjectId);
     if (!existing) {

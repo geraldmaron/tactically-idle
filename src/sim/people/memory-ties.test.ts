@@ -80,7 +80,7 @@ describe('memory facts', () => {
       expect(FACT_SHAPES[kind]).toHaveLength(3);
       let fits = 0;
       for (const shape of FACT_SHAPES[kind]) {
-        const text = bindShape(shape, { place: 'Blue Heron Grill', minutes: 41, steps: 4, ending: 'Out on camera', label: 'Fall at the doorway while meeting the resident', colleague: 'Okafor', tier: 2, caseEnd: 'in a charge', hours: 4, days: 3 });
+        const text = bindShape(shape, { place: 'Blue Heron Grill', minutes: 41, steps: 4, ending: 'Out on camera', label: 'Fall at the doorway while meeting the resident', colleague: 'Okafor', role: 'crew lieutenant', caseEnd: 'in a charge', hours: 4, days: 3 });
         if (text && text.length <= 80) fits++;
       }
       expect(fits, kind).toBeGreaterThanOrEqual(2);
@@ -182,8 +182,8 @@ describe('ties', () => {
     recordCaseFact(d, 'nothing');
     const facts = d.people.facts.filter((f) => f.kind === 'arrest');
     expect(facts.map((f) => f.officerId).sort()).toEqual(['off_chen', 'off_ortiz']);
-    expect(facts[0]).toMatchObject({ caseId: 'c1', place: 'Larkin' });
-    expect(facts[0].detail).toMatch(/tier 2/);
+    expect(facts[0]).toMatchObject({ caseId: 'c1', place: 'Larkin Heights' });
+    expect(facts[0].detail).not.toMatch(/tier/);
     expect(facts[0].detail.length).toBeLessThanOrEqual(80);
     const ties = d.people.ties.filter((t) => t.kind === 'prior_arrest');
     expect(ties.map((t) => [t.officerId, t.subjectId, t.onRecord, t.origin]).sort()).toEqual([['off_chen', 's1', true, 'play'], ['off_ortiz', 's1', true, 'play']]);

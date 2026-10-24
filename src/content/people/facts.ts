@@ -22,7 +22,8 @@ export interface FactSlots {
   label?: string;
   /** Surname of the colleague, where the shape needs one. */
   colleague?: string;
-  tier?: number;
+  /** The person's place in their crew, lower case ('runner', 'corner hand'). */
+  role?: string;
   /** A case resolution phrase (see CASE_END). */
   caseEnd?: string;
   hours?: number;
@@ -70,8 +71,8 @@ export const FACT_SHAPES: Readonly<Record<FactKind, readonly string[]>> = {
     'Took {steps} steps at {place} while pressure stayed high.',
   ],
   arrest: [
-    'Closed a tier {tier} case in {place}. It ended {caseEnd}.',
-    'Worked a tier {tier} case in {place} to its close.',
+    'Closed the case on a {role} in {place}. It ended {caseEnd}.',
+    'Worked the case on a {role} in {place} to its close.',
     'Was on the case in {place} that closed {caseEnd}.',
   ],
   shift: [
