@@ -15,17 +15,15 @@ declare const process: { cwd(): string; getBuiltinModule(id: 'node:fs'): { readF
 const ROOT = process.cwd();
 const baseline = readBaseline(ROOT);
 const found = collectStatic(ROOT);
-const retiredStaticRules = new Set(['R4.heading', 'R4.section', 'R4.row', 'R4.hidden-glyph']);
 
 describe('ui gates (static): the debt only falls', () => {
   it('reads the source it gates', () => {
     expect(found['R1'].length, 'the CSS scan found no spacing declarations: the scan is blind').toBeGreaterThan(100);
-    expect(Object.keys(baseline.static).filter((id) => !retiredStaticRules.has(id)).every((id) => id in STATIC_RULES), 'ui-debt.json names a rule the gate no longer has: run npm run ui:baseline').toBe(true);
+    expect(Object.keys(baseline.static).every((id) => id in STATIC_RULES), 'ui-debt.json names a rule the gate no longer has: run npm run ui:baseline').toBe(true);
   });
 
   it('keeps ui-debt.json as the generator wrote it', () => {
     for (const [id, entry] of Object.entries(baseline.static)) {
-      if (retiredStaticRules.has(id)) continue; // The lead regenerates ui-debt.json after the surfaces settle.
       expect(entry.target, `${id} target`).toBe(0);
       expect(entry.total, `${id}: total is not the sum of its counts (hand edit? run npm run ui:baseline)`).toBe(Object.values(entry.counts).reduce((a, b) => a + b, 0));
     }
@@ -43,7 +41,13 @@ describe('ui gates (static): the debt only falls', () => {
 /** R13, static half. The rendered half runs the inset fixtures (npm run check:ui). The shell draws
  * the app edge to edge (viewport-fit=cover), so exactly these stylesheets own the insets; a new
  * reference elsewhere would count one inset twice (padding on a parent and on its child). */
-const SAFE_AREA_OWNERS = ['src/ui/app.css', 'src/ui/player-navigation.css', 'src/ui/components/sheet-viewport.css', 'src/ui/settings/settings.css', 'src/ui/storefront/storefront.css'];
+const SAFE_AREA_OWNERS = [
+  // app.css was split on 2026-10-24: the shell, the map's bottom controls and the small-screen sheet cap moved to the tail and ops-live parts.
+  'src/ui/app.css', 'src/ui/styles/app-tail.css', 'src/ui/styles/ops-live.css',
+  'src/ui/player-navigation.css', 'src/ui/components/sheet-viewport.css', 'src/ui/settings/settings.css', 'src/ui/storefront/storefront.css',
+  // First run draws without the bottom nav, so its sticky action bar is the only inset on that screen.
+  'src/ui/skin.css',
+];
 
 describe('ui gates (static): safe areas', () => {
   it('draws edge to edge and declares who owns each inset', () => {

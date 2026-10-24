@@ -8,7 +8,7 @@ import { CONTENT_DESCRIPTORS, type ContentDescriptor } from '../../content/conte
 import { drawableKinds } from '../../sim/incidents';
 import { ALWAYS_THEMES, AVOIDABLE_THEMES, blockedAlone, canAvoid, leavesCalls } from './avoidable';
 import { FirstRun } from './FirstRun';
-import { ADVISORY_THEMES, BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, CARD_WARNING_TEXT, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes, settingsSummary } from './labels';
+import { ADVISORY_THEMES, BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, CARD_WARNING_TEXT, MENU_TEXT, SETTINGS_TEXT, SHEET_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes, settingsSummary } from './labels';
 import { DEFAULT_SETTINGS } from './prefs';
 import { SettingsControls } from './SettingsControls';
 
@@ -120,23 +120,29 @@ describe('settings screens', () => {
   });
 
   it('the menu always carries a Support row, and settings are rows', () => {
-    const html = text(renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} })));
-    for (const label of [MENU_TEXT.campaign, MENU_TEXT.saves, MENU_TEXT.themes, SETTINGS_TEXT.warningsHeading, SETTINGS_TEXT.timerHeading, SETTINGS_TEXT.soundHeading, SETTINGS_TEXT.flashingHeading, MENU_TEXT.peopleColor, MENU_TEXT.talk]) expect(html).toContain(label);
+    const home = text(renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} })));
+    for (const label of [SHEET_TEXT.calls, SETTINGS_TEXT.timerHeading, SHEET_TEXT.themesRow, SHEET_TEXT.warningsRow, SHEET_TEXT.lives, SHEET_TEXT.notifications, SHEET_TEXT.display, SHEET_TEXT.save, SHEET_TEXT.saves, SHEET_TEXT.purchases, MENU_TEXT.support, MENU_TEXT.talk]) expect(home).toContain(label);
+    // Sound, flashing lights and color by role sit one page in, under Display and accessibility.
+    const display = text(renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, initialPage: 'display' })));
+    for (const label of [SETTINGS_TEXT.soundHeading, SETTINGS_TEXT.flashingHeading, MENU_TEXT.peopleColor]) expect(display).toContain(label);
   });
 
   it('first run and the menu build every switch from the one switch row', () => {
-    const menu = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} }));
-    const themes = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, initialPage: 'themes' }));
-    expect(menu.match(/role="switch"/g)).toHaveLength(3);
-    expect(menu.match(/class="ui-row switch-row"/g)).toHaveLength(3);
+    const page = (initialPage?: 'themes' | 'display') => renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, ...(initialPage ? { initialPage } : {}) }));
+    const [menu, themes, display] = [page(), page('themes'), page('display')];
+    // Personal lives, three notifications and purchases on the home page; sound, flashing and color on Display.
+    expect(menu.match(/role="switch"/g)).toHaveLength(5);
+    expect(menu.match(/class="ui-row switch-row"/g)).toHaveLength(5);
+    expect(display.match(/role="switch"/g)).toHaveLength(3);
+    expect(display.match(/class="ui-row switch-row"/g)).toHaveLength(3);
     expect(themes.match(/role="switch"/g)).toHaveLength(AVOIDABLE_THEMES.length);
     expect(themes.match(/class="ui-row switch-row"/g)).toHaveLength(AVOIDABLE_THEMES.length);
-    expect(`${menu}${themes}`).not.toMatch(/class="toggle[ "]/);
+    expect(`${menu}${themes}${display}`).not.toMatch(/class="toggle[ "]/);
   });
 
   it('the saves entry in the menu is a link row with a chevron, not an underlined word', () => {
     const html = renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {} }));
-    expect(html).toMatch(/<button[^>]*class="ui-row menu-link"[^>]*>.*?Saves.*?<\/button>/s);
+    expect(html).toMatch(/<button[^>]*class="ui-row"[^>]*>(?:(?!<\/button>)[\s\S])*?<span class="menu-trail-word">Saves<\/span><svg[^>]*>(?:(?!<\/button>)[\s\S])*?<\/button>/);
   });
 
   it('the avoid page shows only themes a player can avoid, and names the ones every call carries', () => {

@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { gameDay } from '../../sim/calendar';
+import { jacketView } from '../../sim/people/selectors';
 import { detailRate } from '../../sim/detail';
 import type { Command } from '../../sim/types';
 import { Button } from '../components/ui';
@@ -31,13 +32,15 @@ function elements(node: ReactNode): El[] {
   if (!isValidElement<El['props']>(node)) return [];
   return [node, ...Children.toArray(node.props.children).flatMap(elements)];
 }
-const html = (officerId: string, initialTab: 'overview' | 'career' | 'care' = 'overview') => renderToStaticMarkup(createElement(OfficerSheet, { officerId, onClose: () => {}, initialTab }));
+const html = (officerId: string, initialTab: 'overview' | 'skills' | 'career' | 'care' = 'overview') => renderToStaticMarkup(createElement(OfficerSheet, { officerId, onClose: () => {}, initialTab }));
 /** The footer's actions, rendered through their component so their buttons can be pressed. */
 function footerButtons(officerId: string) {
   let tree!: ReactElement;
   function Capture() { tree = OfficerSheet({ officerId, onClose: () => {} }); return tree; }
   renderToStaticMarkup(createElement(Capture));
-  const actions = (tree as El).props.footer as ReactElement<Record<string, unknown>>;
+  // The sheet returns the profile Sheet and the aftercare sheet side by side; the actions are the first one's footer.
+  const sheet = Children.toArray((tree as El).props.children)[0] as El;
+  const actions = sheet.props.footer as ReactElement<Record<string, unknown>>;
   let rendered!: ReactElement;
   function CaptureActions() { rendered = (actions.type as (props: unknown) => ReactElement)(actions.props); return rendered; }
   renderToStaticMarkup(createElement(CaptureActions));
@@ -55,52 +58,60 @@ beforeEach(() => {
 });
 
 describe('the officer sheet opens on the person', () => {
-  it('puts the note, the earned traits with their cause and the last recorded call above the numbers', () => {
+  it('puts the pressure line, the condition chip, memory and bonds first, and keeps the numbers a tab away', () => {
     const o = state.officers.off_brooks;
     o.traits = ['mentor'];
-    o.promotions = [{ rank: 'sergeant', day: 300, cause: 'after Barricade on Wren Court' }];
-    state.debriefs = [{ runId: 'run_9', scenarioId: 'barricade_wren_court', endingId: 'e', endingTitle: 'Everyone Safe', officerCondition: [{ officerId: o.id, stressBefore: 10, stressAfter: 18, xpGained: 40 }] } as never];
+    const jv = jacketView(state, o.id);
+    const pressure = jv?.page1.pressureLine ?? personaNote(o.identityId);
     const page = html(o.id);
-    const note = personaNote(o.identityId);
-    const person = page.indexOf('aria-label="Who they are"');
-    expect(person).toBeGreaterThan(-1);
-    expect(person).toBeLessThan(page.indexOf('aria-label="Skills"'));
-    expect(person).toBeLessThan(page.indexOf('class="officer-progress'));
-    if (note) expect(page.indexOf(note.replace(/'/g, '&#x27;'))).toBeGreaterThan(person);
-    expect(page).toContain('Earned on promotion to Sergeant, after Barricade on Wren Court');
-    expect(page).toContain('Last call: ');
-    expect(page).toContain('Everyone Safe. Stress 10 to 18. 40 XP.');
-    // The note no longer sits above the tabs in the hero.
-    const hero = page.slice(0, page.indexOf('aria-label="Profile sections"'));
-    if (note) expect(hero).not.toContain(note.replace(/'/g, '&#x27;'));
+    expect(pressure).toBeTruthy();
+    const line = page.indexOf('class="jacket-pressure"');
+    expect(line).toBeGreaterThan(-1);
+    expect(page).toContain(pressure!.replace(/'/g, '&#x27;'));
+    expect(page).toContain('aria-label="Traits and condition"');
+    expect(page).toContain(`Ready ${Math.floor(o.stress)}`);
+    expect(line).toBeLessThan(page.indexOf('aria-label="Memory"'));
+    expect(page.indexOf('aria-label="Memory"')).toBeLessThan(page.indexOf('aria-label="Bonds"'));
+    // The numbers, the earned trait's cause and the ladder are not on the jacket; they open under Skills.
+    for (const numbers of ['aria-label="Skills"', 'class="officer-progress', 'aria-label="Cost and value"']) expect(page).not.toContain(numbers);
+    o.promotions = [{ rank: 'sergeant', day: 300, cause: 'after Barricade on Wren Court' }];
+    const skills = html(o.id, 'skills');
+    for (const numbers of ['aria-label="Skills"', 'class="officer-progress', 'aria-label="Cost and value"']) expect(skills).toContain(numbers);
+    expect(skills).toContain('Earned on promotion to Sergeant, after Barricade on Wren Court');
   });
 
-  it('falls back to the recorded call count, then to saying there are none', () => {
+  it('says there is nothing on file before the game records anything, then lists what it recorded', () => {
     const o = state.officers.off_brooks;
-    state.debriefs = [];
-    o.career.operations = 3;
-    expect(html(o.id)).toContain('3 calls worked with this department.');
-    o.career.operations = 0;
-    expect(html(o.id)).toContain('No calls with this department yet.');
+    state.people.facts = state.people.facts.filter((fact) => fact.officerId !== o.id);
+    expect(html(o.id)).toContain('Nothing on file yet.');
+    state.people.facts.push({ id: 'fact_x', officerId: o.id, at: NOW, kind: 'first_call', place: 'Wren Court', with: [], detail: 'Walked a boy out of the stairwell on his first call.' });
+    const page = html(o.id);
+    expect(page).not.toContain('Nothing on file yet.');
+    expect(page).toContain('Walked a boy out of the stairwell on his first call.');
   });
 });
 
 describe('officer profile', () => {
-  it('leads with cost and value, readiness, and three tabs', () => {
+  it('leads with the jacket and four tabs, with cost and value under Skills and readiness shown when the officer is away', () => {
     const o = state.officers.off_brooks;
     const page = html(o.id);
-    expect(page).toContain('aria-label="Cost and value"');
-    expect(page).toContain(`>${o.wage}/h<`);
-    expect(page).toMatch(new RegExp(`\\+<span class="funds"><svg[^]*?</svg>${detailRate(o)}/h`));
-    expect(page).toContain('aria-label="Readiness"');
-    expect(page).toContain(`Ready · stress ${Math.floor(o.stress)}`);
     expect(page).toContain(rankedName(o));
-    for (const tab of ['Overview', 'Career', 'Care']) expect(page).toContain(`>${tab}</`);
-    expect(page).not.toContain('<details class="osheet-more"');
+    expect(page).toContain('aria-label="Officer"');
+    for (const tab of ['Jacket', 'Skills', 'Career', 'Care']) expect(page).toContain(`>${tab}</`);
+    // A ready officer has no readiness line; the condition chip carries it.
+    expect(page).not.toContain('aria-label="Readiness"');
+    const skills = html(o.id, 'skills');
+    expect(skills).toContain('aria-label="Cost and value"');
+    expect(skills).toContain(`<span class="funds">`);
+    expect(skills).toMatch(new RegExp(`\\+<span class="funds"><svg[^]*?</svg>${detailRate(o)}/h`));
+    o.assignment = { kind: 'operation', runId: 'run_x' };
+    const away = html(o.id);
+    expect(away).toContain('aria-label="Readiness"');
+    expect(away).toContain('On a call');
   });
 
   it('says an uncertified officer cannot teach, and sends a certified one on a detail once', () => {
-    expect(html('off_reyes')).toContain('No cert');
+    expect(html('off_reyes', 'skills')).toContain('No cert');
     press(footerButtons('off_brooks'), /instructor detail/);
     expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'startDetail', officerId: 'off_brooks' }, expect.stringContaining('teaches'));
     expect(state.officers.off_brooks.assignment?.kind).toBe('detail');
@@ -124,7 +135,7 @@ describe('officer profile', () => {
   it('shows a queued squad move for an officer out on a call', () => {
     state.officers.off_chen.assignment = { kind: 'operation', runId: 'run_x' };
     state.pendingSquadMoves = [{ officerId: 'off_chen', squadId: 'B', queuedAt: NOW }];
-    const page = html('off_chen');
+    const page = html('off_chen', 'skills');
     expect(page).toContain('After this call, joins Bravo');
     expect(page).toContain('Remove after the call');
   });
@@ -161,9 +172,9 @@ describe('profile navigation', () => {
     expect(current).toMatchObject({ tab: 'squad', officerId: null });
     nav.openOfficer('off_chen');
     nav.go('store');
-    expect(current).toMatchObject({ tab: 'store', storeSection: 'equipment', officerId: null });
+    expect(current).toMatchObject({ tab: 'store', officerId: null });
     nav.openOfficer('off_chen');
     nav.go('gear');
-    expect(current).toMatchObject({ tab: 'store', storeSection: 'equipment', officerId: null });
+    expect(current).toMatchObject({ tab: 'headquarters', hqSection: 'gear', officerId: null });
   });
 });

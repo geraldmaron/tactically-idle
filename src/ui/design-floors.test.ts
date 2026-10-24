@@ -25,8 +25,8 @@ const THEME_FILES = ['/src/ui/theme.css'];
 const SVG_UNITS = { file: '/src/ui/blueprint/blueprint.css', under: 6 };
 const FLOOR_PX = 12;
 const SMALL_PX = 14;
-/** Declarations under 14px, counted 2026-10-23 after the providers pass (223 before it; 347 before the visual-story pass). Only falls. */
-const SMALL_TEXT_CEILING = 195;
+/** Declarations under 14px, counted 2026-10-24 after the world redesign (195 before it; the new mono kicker and meta labels at 12px add the difference, no decision text is under 14px). Only falls. */
+const SMALL_TEXT_CEILING = 234;
 const TOUCH_PX = 44;
 const BUTTON_CLASS = /\.(btn|pill|icon-btn|stepper-btn|navbtn|hud-btn|linkbtn|live-cancel)(?![\w-])/;
 
@@ -38,6 +38,12 @@ const rules = (file: string): Rule[] =>
   [...stripComments(CSS[file]).matchAll(/([^{}]*)\{([^{}]*)\}/g)].map(([, selector, body]) => ({ file, selector: selector.trim().replace(/\s+/g, ' '), body }));
 const allRules = () => Object.keys(CSS).flatMap(rules);
 const where = (rule: Rule, text: string) => `${rule.file.replace('/src/ui/', '')}: ${rule.selector.slice(0, 80)} { ${text.trim()} }`;
+
+/** A max() or clamp() whose first term is a px size at or over the floor (a 34px title that grows to 44px). */
+const hasPxFloor = (value: string): boolean => {
+  const first = /(?:^|\s)(?:max|clamp)\(\s*([\d.]+)px/.exec(value);
+  return first !== null && Number(first[1]) >= FLOOR_PX;
+};
 
 const fontDeclarations = (rule: Rule) => [...rule.body.matchAll(/(?<![\w-])(font-size|font)\s*:\s*([^;]+)/g)];
 
@@ -76,7 +82,7 @@ describe('design floors', () => {
     // Container and viewport units shrink with the box (officer tile names once fell to 6.7px at
     // 320); em below 1 shrinks with its parent. A max() or clamp() with a px floor is fine.
     const fluid = allRules().flatMap(rule => fontDeclarations(rule)
-      .filter(([, , value]) => (/\d(cq[iwhb]?|vw|vh|vmin)\b/.test(value) && !/^(max|clamp)\(\s*1[2-9]px/.test(value.trim()))
+      .filter(([, , value]) => (/\d(cq[iwhb]?|vw|vh|vmin)\b/.test(value) && !hasPxFloor(value))
         || /(?:^|\s)0?\.\d+em\b/.test(value))
       .map(([text]) => where(rule, text)));
     expect(fluid, `give the size a ${FLOOR_PX}px floor`).toEqual([]);

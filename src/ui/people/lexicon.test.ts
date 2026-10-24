@@ -38,7 +38,9 @@ function drawnCasts(template: IncidentTemplate): { label: string; cast: Record<s
   return Array.from({ length: 12 }, (_, k) => {
     const groups = groupsFor(template, max => k % (max + 1));
     const spec = { type: template.type, familyId: 'market_row', buildingSeed: k, seed: 900 + k, tier: 2, contentVersion: 13 } as IncidentSpec;
-    return { label: `drawn cast ${k}`, cast: drawTreeCast(template.tree, spec, {}, Object.values(groups).flat()), groups };
+    // The instance draws an age for a role whose text names it ({kid.age} in the warrant tree); pronouns stay the role's own.
+    const draws = Object.fromEntries(template.tree.roles.map(role => [role.id, { pronouns: role.pronouns, age: 12 + ((k * 7 + role.id.length) % 50) }]));
+    return { label: `drawn cast ${k}`, cast: drawTreeCast(template.tree, spec, draws, Object.values(groups).flat()), groups };
   });
 }
 

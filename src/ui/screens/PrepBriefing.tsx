@@ -1,5 +1,3 @@
-import { useGame } from '../store';
-import { callFee } from '../../sim/operation';
 // The prepare screen's briefing (rebuilt 2026-10-23 from the owner's "it is weak"): what a player
 // needs before choosing a team, in the order they need it. The place and the clock on the plate, what
 // the call pays and asks, the orders with the faces of the people they name, what the team faces
@@ -29,10 +27,12 @@ import './prep-briefing.css';
 
 /** `built` is the call's building as the player sees it; the briefing reads it through `intel`.
  * `openUntil` is when the call leaves the board (epoch ms); the Lab has no board, so it passes none. */
-export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, children }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
+export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, fee = 0, children }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
   /** Beside the orders' heading: the step ("Step 1 of 2"). */
   aside?: ReactNode;
   openUntil?: number;
+  /** What the call pays at best, from `callFee`. The caller works it out, so this screen never loads the game's store (the Lab renders it). */
+  fee?: number;
   /** Who goes and what they carry, right after what the team faces, so one screen briefs and deploys. */
   children?: ReactNode }): JSX.Element {
   const knownRest = brief.known.filter((k) => !intel.covered.has(k));
@@ -46,8 +46,6 @@ export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, 
   // text. It does not depend on the color preference, which only decides whether prose is tinted.
   const lexicon = useMemo(() => scenario ? lexiconFor(scenario, null, []) : null, [scenario]);
   const range = scenario?.squadRange;
-  const g = useGame();
-  const fee = scenario ? callFee(g, { world: g.incidents.find((c) => c.id === scenario.id)?.world }, scenario) : 0;
   const place = placeTags(scenario?.locationFamilyId, built?.location?.name);
   // The call's tier, never called difficulty or risk: tiers do not compare across call types. Authored calls have none.
   const tier = scenario ? callTier(scenario.id) : null;

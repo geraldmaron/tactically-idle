@@ -121,7 +121,7 @@ describe('validate-art station rebuild sets', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('crests/echo: not a squad crest');
     expect(result.stderr).toContain('managers/janitor: not a Command Staff manager');
-    expect(result.stderr).toContain('plates/room_attic_lit: not a scene, banner or texture id');
+    expect(result.stderr).toContain('plates/room_attic_lit: not a scene, banner, texture, room or place id');
   });
 });
 

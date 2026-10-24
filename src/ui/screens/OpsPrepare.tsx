@@ -11,6 +11,7 @@ import {
 import { BASIC_KIT_LINE } from '../../sim/basic-kit';
 import { officerFaceStatus } from '../components/face-status';
 import type { StartOperationCommand } from '../../sim/operation-selectors';
+import { callFee } from '../../sim/operation';
 import { squadReadiness, storeOptions } from '../../sim/department-selectors';
 import type { StoreOption } from '../../sim/department-selectors';
 import { unitEffectiveness } from '../../sim/inventory';
@@ -432,7 +433,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     </div>}
   </>;
 
-  const merged = <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt}>
+  const merged = <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt} fee={scenario ? callFee(g, { world: g.incidents.find((c) => c.id === scenario.id)?.world }, scenario) : 0}>
     <div className="cl-team">{teamSections}</div>
   </PrepBriefing>;
 

@@ -53,25 +53,29 @@ function markup(child: ReactNode, nav: Partial<NavApi> = {}) {
 }
 
 describe('canonical player navigation', () => {
-  it('keeps exactly HQ, Calls, Team, Build and Store as top-level destinations', () => {
+  it('keeps exactly City, Operations, Team, HQ and Store as top-level destinations', () => {
     const html = markup(createElement(BottomNav));
-    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['HQ', 'Calls', 'Team', 'Build', 'Store']);
+    expect([...html.matchAll(/class="navlabel">([^<]+)/g)].map((match) => match[1])).toEqual(['City', 'Operations', 'Team', 'HQ', 'Store']);
   });
 
-  it('routes legacy gear links to Store while Build keeps department development', () => {
+  it('routes legacy gear and develop ids into HQ sections while the old home id is the City', () => {
     const f = historyFixture();
     f.nav.go('gear');
-    expect(f.route()).toMatchObject({ tab: 'store' });
-    expect(topTab('gear')).toBe('store');
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear' });
+    expect(topTab('gear')).toBe('headquarters');
+    expect(topTab('develop')).toBe('headquarters');
     expect(topTab('store')).toBe('store');
     f.nav.go('hq');
-    expect(f.route()).toMatchObject({ tab: 'hq' });
+    expect(f.route()).toMatchObject({ tab: 'city' });
+    expect(topTab('hq')).toBe('city');
     f.nav.openDevelopment('patrol_1');
-    expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'patrol_1' });
-    expect(topTab(f.route().tab)).toBe('build');
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'build', developmentNode: 'patrol_1' });
+    expect(topTab(f.route().tab)).toBe('headquarters');
+    f.nav.go('develop');
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'build' });
   });
 
-  it('keeps Team sections and SWAT drafts separate and directs training requests into SWAT', () => {
+  it('keeps Team sections and SWAT drafts separate and sends training requests to HQ Training', () => {
     const f = historyFixture();
     f.nav.setSquadSection('hire');
     f.nav.setTeamSection('command');
@@ -82,23 +86,24 @@ describe('canonical player navigation', () => {
     expect(f.route()).toMatchObject({ teamSection: 'patrol', patrolFocus: { kind: 'hire' }, patrolRequest: 2 });
     f.nav.go('hq'); f.nav.go('squad');
     expect(f.route()).toMatchObject({ teamSection: 'patrol', patrolFocus: null });
+    // Training lives in HQ now; the Team drafts stay where the player left them.
     f.nav.openTraining({ certId: 'drone_operator' });
-    expect(f.route()).toMatchObject({ tab: 'squad', teamSection: 'swat', squadSection: 'training' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'training', teamSection: 'patrol', squadSection: 'hire' });
   });
 
-  it('keeps Store selection for ordinary visits and sends item links back to Equipment', () => {
+  it('keeps Store selection for ordinary visits and sends item links to the HQ Armory', () => {
     const f = historyFixture();
     f.nav.setStoreSection('boosts');
     f.nav.go('hq'); f.nav.go('store');
     expect(f.route()).toMatchObject({ tab: 'store', storeSection: 'boosts' });
     f.nav.openEquipment({ itemId: 'trauma_kit' });
-    expect(f.route()).toMatchObject({ tab: 'store', storeSection: 'equipment', equipmentItemId: 'trauma_kit' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear', equipmentItemId: 'trauma_kit', storeSection: 'boosts' });
   });
 
-  it('routes officer, certification and course requests into Squad Training', () => {
+  it('routes officer, certification and course requests into HQ Training', () => {
     const f = historyFixture();
     f.nav.openTraining({ officerId: 'officer-a', certId: 'drone_operator', courseId: 'drone_course' });
-    expect(f.route()).toMatchObject({ tab: 'squad', squadSection: 'training', trainingFocus: { officerId: 'officer-a', certId: 'drone_operator', courseId: 'drone_course' }, trainingRequest: 1 });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'training', trainingFocus: { officerId: 'officer-a', certId: 'drone_operator', courseId: 'drone_course' }, trainingRequest: 1 });
     f.nav.openTraining({ certId: 'advanced_first_aid' });
     expect(f.route()).toMatchObject({ trainingFocus: { certId: 'advanced_first_aid' }, trainingRequest: 2 });
   });
@@ -109,9 +114,9 @@ describe('canonical player navigation', () => {
     f.nav.openTraining({ certId: 'drone_operator' });
     expect(f.route()).toMatchObject({ returnToItem: 'camera_drone', equipmentItemId: null });
     f.nav.openDevelopment('intel_drone');
-    expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'build', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
     f.nav.returnToEquipment();
-    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone', returnToItem: null });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear', equipmentItemId: 'camera_drone', returnToItem: null });
   });
 
   it('browser Back and Forward recover the item and prerequisite destination', () => {
@@ -120,9 +125,9 @@ describe('canonical player navigation', () => {
     f.nav.openEquipment({ itemId: 'camera_drone' });
     f.nav.openDevelopment('intel_drone');
     f.back();
-    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear', equipmentItemId: 'camera_drone' });
     f.forward();
-    expect(f.route()).toMatchObject({ tab: 'develop', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'build', developmentNode: 'intel_drone', returnToItem: 'camera_drone' });
   });
 
   it('repeated detail taps and Close cannot stack history or close twice', () => {
@@ -149,16 +154,16 @@ describe('canonical player navigation', () => {
     expect(f.route()).toMatchObject({ tab: 'ops', equipmentItemId: null, returnToItem: null });
   });
 
-  it('closes an item opened from another tab onto the Armory list without leaving Gear', () => {
+  it('closes an item opened from another tab onto the Armory list without leaving HQ Gear', () => {
     const f = historyFixture();
     f.nav.go('develop');
     f.nav.openEquipment({ itemId: 'trauma_kit' });
     f.nav.closeEquipment();
     expect(f.backCalls()).toBe(0);
-    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: null });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear', equipmentItemId: null });
   });
 
-  it('preserves call preparation and its selected squad through Store and prerequisite detours', () => {
+  it('preserves call preparation and its selected squad through the Armory and prerequisite detours', () => {
     const f = historyFixture();
     const flow = createCallFlow(f.history);
     flow.openCall('call_1'); flow.goStep('deploy');
@@ -167,7 +172,7 @@ describe('canonical player navigation', () => {
     f.nav.openTraining({ certId: 'drone_operator' });
     f.nav.openDevelopment('intel_drone');
     f.nav.returnToEquipment();
-    expect(f.route()).toMatchObject({ tab: 'store', equipmentItemId: 'camera_drone' });
+    expect(f.route()).toMatchObject({ tab: 'headquarters', hqSection: 'gear', equipmentItemId: 'camera_drone' });
     expect(f.history.state[CALL_FLOW_HISTORY_KEY]).toMatchObject({ open: { scenarioId: 'call_1', step: 'deploy' } });
     f.nav.go('ops');
     expect(flow.getSnapshot().open).toEqual({ scenarioId: 'call_1', step: 'deploy' });
@@ -196,19 +201,21 @@ describe('canonical player navigation', () => {
 });
 
 describe('rendered player destinations and persistent drafts', () => {
-  it('keeps equipment in Store and development in Build', () => {
+  it('keeps the lifetime catalog in Store, equipment in HQ Gear and development in HQ Build', () => {
     const store = markup(createElement(StoreScreen), { tab: 'store' });
     expect(store).toContain('Store</h1>');
-    expect(store).toContain('Search equipment');
+    expect(store).toContain('Founder’s Bundle');
+    expect(store).toContain('Restore purchases');
+    expect(store).not.toContain('Search equipment');
     expect(store).not.toContain('Development branches');
-    const build = markup(buildScreen(), { tab: 'develop' });
+    const build = markup(buildScreen(), { tab: 'headquarters', hqSection: 'build' });
     expect(build).toContain('Next for the station');
     expect(build).toContain('data-disclosure="all-department-upgrades"');
     expect(build).not.toContain('Search equipment');
     expect(build).not.toContain('Build sections');
-    const boosts = markup(createElement(StoreScreen), { tab: 'store', storeSection: 'boosts' });
-    expect(boosts).toContain('patrol-boosts');
-    expect(boosts).not.toContain('Search equipment');
+    const gear = markup(createElement(GearScreen), { tab: 'headquarters', hqSection: 'gear' });
+    expect(gear).toContain('aria-label="Show equipment"');
+    expect(gear).not.toContain('Founder’s Bundle');
   });
 
   it.each([{ level: 1, capacity: 6, next: 'Level 3 adds 2 places' }, { level: 3, capacity: 8, next: 'Level 6 adds 4 places' }, { level: 6, capacity: 12, next: 'Every place is open' }])('shows level-gated staffing capacity at department level $level', ({ level, capacity, next }) => {
@@ -223,7 +230,8 @@ describe('rendered player destinations and persistent drafts', () => {
   it('shows one Armory list with owned stock on its tiles and the standing tools in the header (gear-armory)', () => {
     const html = markup(createElement(GearScreen));
     expect(html).not.toContain('aria-label="Gear sections"');
-    expect(html).not.toContain('<details');
+    // Ownership, availability and sort sit one tap away under a single Filter row (canvas order).
+    expect(html).toContain('data-disclosure="equipment-controls"');
     expect(html).toContain('aria-label="Show equipment"');
     expect(html.indexOf('class="armory-head"')).toBeLessThan(html.indexOf('class="inv-grid '));
     expect(html).toContain('class="ui-row qm-row qm-row-not_hired"');

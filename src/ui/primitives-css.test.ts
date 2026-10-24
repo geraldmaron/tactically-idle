@@ -9,11 +9,15 @@ const fs = process.getBuiltinModule('node:fs');
 const read = (file: string) => fs.readFileSync(`${process.cwd()}/src/ui/${file}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const THEME = read('theme.css');
 const APP = read('app.css');
+/** app.css was split into styles/*.css on 2026-10-24; the shared rules live in app.css and app-tail.css. */
+const SHARED = `${APP}\n${read('styles/app-tail.css')}`;
 
+/** A token's hex, following var(--other) aliases (--act is an alias of --live in the night-city theme). */
 const token = (name: string): string => {
-  const match = new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{6})`).exec(THEME);
-  if (!match) throw new Error(`--${name} is not a hex token in theme.css`);
-  return match[1];
+  const match = new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{6}|var\\(--[\\w-]+\\))`).exec(THEME);
+  if (!match) throw new Error(`--${name} is not a hex token or an alias of one in theme.css`);
+  const alias = /^var\(--([\w-]+)\)$/.exec(match[1]);
+  return alias ? token(alias[1]) : match[1];
 };
 const linear = (channel: number) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
 const luminance = (hex: string) => {
@@ -56,7 +60,7 @@ describe('shared geometry', () => {
   });
 
   it('shrinks the gutter at 320 through the token, not a one-off', () => {
-    const small = /@media \(max-width: 360px\)\s*\{\s*:root\s*\{([^{}]*)\}/.exec(APP);
+    const small = /@media \(max-width: 360px\)\s*\{\s*:root\s*\{([^{}]*)\}/.exec(SHARED);
     expect(small?.[1]).toMatch(/--gutter\s*:\s*var\(--sp3\)/);
   });
 });

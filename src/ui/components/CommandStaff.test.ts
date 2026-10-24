@@ -110,10 +110,13 @@ describe('Command Staff in the Team command room', () => {
     expect(html).toContain('src="/art/managers/watch_commander.webp"');
   });
 
-  it('keeps HQ’s compact seats to their one short state', () => {
+  it('keeps the room’s compact seats to their one short state, with what a post does and costs below the strip', () => {
     state = createInitialState(NOW, 1);
     const html = room();
-    expect(html).not.toContain('command-room-post-compact');
+    // Every post is a compact seat in the one strip (canvas pass, 2026-10-24): no seat carries a preview line.
+    expect((html.match(/class="command-room-post [^"]*command-room-post-compact/g) ?? [])).toHaveLength(MANAGER_IDS.length);
+    expect(html).not.toContain('command-room-said');
+    expect((html.match(/class="command-room-state">(?:Build|Vacant|Locked|On duty|Off duty)/g) ?? [])).toHaveLength(MANAGER_IDS.length);
   });
 });
 

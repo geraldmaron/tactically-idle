@@ -21,10 +21,13 @@ beforeEach(() => {
 });
 
 describe('Armory filter rail', () => {
-  it('replaces the collapsed filter box with an always visible rail that counts each view', () => {
+  it('keeps the category rail on the page and the counted view rail under one Filter row', () => {
     const html = render();
     const facets = equipmentFacets(catalogEntries(state), DEFAULT_EQUIPMENT_QUERY);
-    expect(html).not.toContain('<details');
+    // Search and categories lead; ownership, availability and sort are one tap away (canvas order, 2026-10-24).
+    expect(html).toContain('aria-label="Category"');
+    expect(html.match(/data-disclosure="equipment-controls"/g)).toHaveLength(1);
+    expect(html.indexOf('aria-label="Category"')).toBeLessThan(html.indexOf('data-disclosure="equipment-controls"'));
     expect(html).toContain('aria-label="Show equipment"');
     expect(html).toContain(`aria-label="Owned, ${facets.ownership.owned}"`);
     expect(html).toContain(`aria-label="Buy now, ${facets.availability.buy_now}"`);
@@ -54,6 +57,6 @@ describe('Armory filter rail', () => {
     const html = renderToStaticMarkup(createElement(NavContext.Provider, { value: { ...DEFAULT_NAV, equipmentItemId: 'loud_hailer', equipmentQuery: query, setEquipmentQuery: () => {} } }, createElement(EquipmentStore, { active: true })));
     expect(html).toContain('aria-label="Your stock"');
     expect(html).toContain('aria-label="Units"');
-    expect(html).toMatch(/Buy 1 ·/);
+    expect(html).toMatch(/Buy for /);
   });
 });
