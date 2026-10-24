@@ -130,11 +130,15 @@ export function patrolHireQuote(state: GameState, profileId: Id): PatrolQuote {
   return affordability(state, value);
 }
 
-export function patrolDismissQuote(state: GameState, employeeId: Id): PatrolQuote {
+/** `upfront` is what funding pays; `severance` is what the grade owes in full. Funding never blocks a dismissal:
+ * the department pays what it has, so letting someone go stays open when payroll is the problem. */
+export interface PatrolDismissQuote extends PatrolQuote { severance: number }
+export function patrolDismissQuote(state: GameState, employeeId: Id): PatrolDismissQuote {
   const person = employedPatrol(state).find((entry) => entry.id === employeeId);
-  if (!person) return refuse(quote(state, 0), 'No such employed patrol officer');
+  if (!person) return refuse({ ...quote(state, 0), severance: 0 }, 'No such employed patrol officer');
   const grade = PATROL_GRADES[person.grade];
-  return affordability(state, quote(state, grade.wage * PATROL_SEVERANCE_HOURS, person.training ? 0 : -grade.gross, -grade.wage, -grade.operating));
+  const severance = grade.wage * PATROL_SEVERANCE_HOURS;
+  return { ...quote(state, Math.min(severance, Math.max(0, state.department.funding)), person.training ? 0 : -grade.gross, -grade.wage, -grade.operating), severance };
 }
 
 export interface PatrolTrainingQuote extends PatrolQuote { toGrade: PatrolGrade | null; endsAt: number | null; trainingNet: number }
@@ -196,7 +200,8 @@ export function patrolBoostQuote(state: GameState, boostId: Id): PatrolBoostQuot
 }
 
 function receipt(state: GameState, data: Omit<PatrolReceipt, 'sequence'>): HandlerResult {
-  return { ok: true, patrolReceipt: { ...data, sequence: state.department.ledger!.at(-1)!.seq } };
+  // A dismissal with nothing in funding posts no ledger line, so the last entry may not exist.
+  return { ok: true, patrolReceipt: { ...data, sequence: state.department.ledger?.at(-1)?.seq ?? 0 } };
 }
 export function hirePatrol(state: GameState, profileId: Id): HandlerResult {
   const value = patrolHireQuote(state, profileId);

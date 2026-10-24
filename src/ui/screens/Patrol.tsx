@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  employedPatrol, PATROL_BOOSTS, PATROL_GRADES, patrolBoostQuote, patrolCandidates, patrolCapacity,
+  employedPatrol, PATROL_BOOSTS, PATROL_GRADES, PATROL_SEVERANCE_HOURS, patrolBoostQuote, patrolCandidates, patrolCapacity,
   patrolDismissQuote, patrolHireQuote, patrolProfile, patrolRates, patrolTrainingQuote, type PatrolQuote,
 } from '../../sim/patrol';
 import type { Command, GameState, Id, PatrolEmployee, PatrolGrade, PatrolReceipt } from '../../sim/types';
@@ -52,6 +52,7 @@ export function PatrolScreen() {
         : <Card className="patrol-roster-card"><div className="patrol-roster" data-ui-list>{employees.map((employee) => <PatrolEmployeeCard key={employee.id} employee={employee} game={game} onReview={(kind) => setSelection({ kind, employeeId: employee.id })} />)}</div></Card>}
     </Section>
     <PatrolBoosts />
+    <PatrolHistory game={game} />
     {selection?.kind === 'candidates' ? <PatrolHiring onClose={() => setSelection(null)} onChoose={(profileId) => setSelection({ kind: 'hire', profileId })} />
       : selection && <PatrolCommitment key={JSON.stringify(selection)} selection={selection} onClose={() => setSelection(null)} />}
     </div>
@@ -125,6 +126,19 @@ function PatrolEmployeeCard({ employee, game, onReview }: { employee: PatrolEmpl
   </article>;
 }
 
+/** Everyone who has left the patrol roster, newest first. A departed identity stays on record and is never offered again. */
+function PatrolHistory({ game }: { game: GameState }) {
+  const departed = game.patrol.personnel.filter((person) => person.dismissedAt !== null).sort((a, b) => b.dismissedAt! - a.dismissedAt!);
+  if (departed.length === 0) return null;
+  const now = game.department.clockHighWater;
+  return <Section id="patrol-history-h" title="Department history" icon="idcard" hint="Former patrol staff stay on record and cannot be hired again.">
+    <Card className="patrol-roster-card"><div className="patrol-roster" data-ui-list>{departed.map((person) => <article className="patrol-item" key={person.id} aria-label={profileName(person.profileId)}>
+      <Row lead={<Face size="sm" kind="patrol" src={patrolProfile(person.profileId)?.portrait} />} title={profileName(person.profileId)}
+        detail={`Grade ${person.grade} · ${PATROL_GRADES[person.grade].name} · ${Math.floor(person.serviceHours)} funded ${Math.floor(person.serviceHours) === 1 ? 'hour' : 'hours'} · left ${relativeTime(person.dismissedAt!, now)}`} />
+    </article>)}</div></Card>
+  </Section>;
+}
+
 function PatrolHiring({ onClose, onChoose }: { onClose: () => void; onChoose: (profileId: Id) => void }) {
   const game = useGame();
   const candidates = patrolCandidates(game);
@@ -184,8 +198,8 @@ export function PatrolBoosts() {
   </Section>;
 }
 
-function PatrolQuoteRows({ quote, boost = false }: { quote: PatrolQuote; boost?: boolean }) {
-  return <div className="patrol-quote"><dl className="patrol-money-grid"><div><dt>Cost now</dt><dd>{moneyFull(quote.upfront)}</dd></div><div><dt>{boost ? 'Net change while active' : 'Unboosted net change'}</dt><dd>{rate(quote.netDelta)}</dd></div>{!boost && <><div><dt>Payroll change</dt><dd>{rate(quote.wageDelta)}</dd></div><div><dt>Operations change</dt><dd>{rate(quote.operatingDelta)}</dd></div></>}</dl><p className="patrol-projection">Department net{boost ? '' : ' without boosts'}<strong>{rate(quote.netBefore)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {rate(quote.netAfter)}</strong></p>{quote.paybackHours !== null && <p>Estimated payback {Math.round(quote.paybackHours * 10) / 10} productive hours</p>}</div>;
+function PatrolQuoteRows({ quote, boost = false, costLabel = 'Cost' }: { quote: PatrolQuote; boost?: boolean; costLabel?: string }) {
+  return <div className="patrol-quote"><dl className="patrol-money-grid"><div><dt>{costLabel}</dt><dd>{moneyFull(quote.upfront)}</dd></div><div><dt>{boost ? 'Net change while active' : 'Unboosted net change'}</dt><dd>{rate(quote.netDelta)}</dd></div>{!boost && <><div><dt>Payroll change</dt><dd>{rate(quote.wageDelta)}</dd></div><div><dt>Operations change</dt><dd>{rate(quote.operatingDelta)}</dd></div></>}</dl><p className="patrol-projection">Department net{boost ? '' : ' without boosts'}<strong>{rate(quote.netBefore)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {rate(quote.netAfter)}</strong></p>{quote.paybackHours !== null && <p>Estimated payback {Math.round(quote.paybackHours * 10) / 10} productive hours</p>}</div>;
 }
 
 export function PatrolCommitment({ selection, onClose }: { selection: Commitment; onClose: () => void }) {
@@ -198,7 +212,8 @@ export function PatrolCommitment({ selection, onClose }: { selection: Commitment
   const profileId = selection.kind === 'hire' ? selection.profileId : employee?.profileId;
   const who = profileId ? profileName(profileId) : 'Community grant';
   const training = selection.kind === 'training' ? patrolTrainingQuote(game, selection.employeeId) : null;
-  const quote = selection.kind === 'hire' ? patrolHireQuote(game, selection.profileId) : selection.kind === 'dismiss' ? patrolDismissQuote(game, selection.employeeId) : selection.kind === 'boost' ? patrolBoostQuote(game, selection.boostId) : training!;
+  const dismissal = selection.kind === 'dismiss' ? patrolDismissQuote(game, selection.employeeId) : null;
+  const quote = selection.kind === 'hire' ? patrolHireQuote(game, selection.profileId) : dismissal ? dismissal : selection.kind === 'boost' ? patrolBoostQuote(game, selection.boostId) : training!;
   const title = selection.kind === 'hire' ? 'Review hire' : selection.kind === 'dismiss' ? 'Review dismissal' : selection.kind === 'training' ? 'Review training' : 'Community grant';
   const action = selection.kind === 'hire' ? 'Confirm hire' : selection.kind === 'dismiss' ? 'Confirm dismissal' : selection.kind === 'training' ? 'Start training' : 'Activate grant';
   const submit = () => {
@@ -219,8 +234,8 @@ export function PatrolCommitment({ selection, onClose }: { selection: Commitment
   const confirmation = receipt?.kind === 'hire' ? `${who} hired` : receipt?.kind === 'dismiss' ? `${who} dismissed` : receipt?.kind === 'training' ? `${who} enrolled` : 'Community grant activated';
   return <Sheet open onClose={onClose} title={receipt ? 'Patrol update confirmed' : title} subtitle={who} className="patrol-sheet" interactionKey={receipt ? 'receipt' : 'review'} footer={receipt ? <Button block variant="primary" onClick={onClose}>Done</Button> : <div className="patrol-confirm-actions"><Button onClick={onClose}>Cancel</Button><Button variant={selection.kind === 'dismiss' ? 'danger' : 'primary'} disabled={!quote.ok} onClick={submit}>{action} · {moneyFull(quote.upfront)}</Button></div>}>
     <div className="patrol-commitment">{profileId && <div className="patrol-review-person"><PatrolPortrait profileId={profileId} size={108} /><div className="patrol-review-who"><strong>{who}</strong><span>{employee ? `Grade ${employee.grade} · ${PATROL_GRADES[employee.grade].name}` : PATROL_GRADES[1].name}</span><Chip tone={selection.kind === 'dismiss' ? 'warn' : employee?.training ? 'blue' : 'good'} icon={selection.kind === 'hire' ? 'idcard' : employee?.training ? 'mortarboard' : 'check'}>{selection.kind === 'hire' ? 'Candidate' : employee?.training ? 'In training' : 'Covering'}</Chip>{selection.kind === 'hire' && personaNote(profileId) && <p className="patrol-person-note">{personaNote(profileId)}</p>}</div></div>}
-      {receipt ? <div className="patrol-receipt" role="status"><Icon name="check" size={16} /><div><strong>{confirmation}</strong><p>{moneyFull(Math.abs(receipt.amount))} funding paid</p>{receipt.endsAt && <p>{receipt.kind === 'training' ? 'Training completes' : 'Grant ends'} {relativeTime(receipt.endsAt, game.department.clockHighWater)}</p>}{receipt.kind === 'training' ? <p>Current grade and payroll remain until training finishes.</p> : <p>{receipt.kind === 'boost' ? 'Net change while active' : 'Unboosted net change'} {rate(receipt.netDelta)}</p>}</div></div>
-        : <>{training?.toGrade && <div className="patrol-training-plan"><h3>{PATROL_GRADES[training.toGrade].name}</h3><p>{PATROL_GRADES[training.toGrade].trainingHours}h training · department level {PATROL_GRADES[training.toGrade].departmentLevel} · {PATROL_GRADES[training.toGrade].serviceHours} funded service hours</p><p>Unboosted department net during training {rate(training.trainingNet)}. Wages and operating costs continue.</p><p>After completion</p></div>}<PatrolQuoteRows quote={quote} boost={selection.kind === 'boost'} />{training && quote.paybackHours !== null && <p className="patrol-explanation">Training payback includes the gross funding lost during training.</p>}{selection.kind === 'dismiss' && <p>Severance is paid now. This person leaves coverage and remains in department history.</p>}{selection.kind === 'boost' && <p>The grant affects patrol gross only. Its duration extends when purchased again.</p>}{(failure || quote.reason) && <p className="reason" role="status">{failure ?? quote.reason}</p>}</>}
+      {receipt ? <div className="patrol-receipt" role="status"><Icon name="check" size={16} /><div><strong>{confirmation}</strong><p>{receipt.amount === 0 ? 'No funding paid' : `${moneyFull(Math.abs(receipt.amount))} funding paid`}</p>{receipt.endsAt && <p>{receipt.kind === 'training' ? 'Training completes' : 'Grant ends'} {relativeTime(receipt.endsAt, game.department.clockHighWater)}</p>}{receipt.kind === 'dismiss' && <p>They stay in department history and cannot be hired again.</p>}{receipt.kind === 'training' ? <p>Current grade and payroll remain until training finishes.</p> : <p>{receipt.kind === 'boost' ? 'Net change while active' : 'Unboosted net change'} {rate(receipt.netDelta)}</p>}</div></div>
+        : <>{training?.toGrade && <div className="patrol-training-plan"><h3>{PATROL_GRADES[training.toGrade].name}</h3><p>{PATROL_GRADES[training.toGrade].trainingHours}h training · department level {PATROL_GRADES[training.toGrade].departmentLevel} · {PATROL_GRADES[training.toGrade].serviceHours} funded service hours</p><p>Unboosted department net during training {rate(training.trainingNet)}. Wages and operating costs continue.</p><p>After completion</p></div>}<PatrolQuoteRows quote={quote} boost={selection.kind === 'boost'} costLabel={dismissal ? 'Severance paid' : 'Cost'} />{training && quote.paybackHours !== null && <p className="patrol-explanation">Training payback includes the gross funding lost during training.</p>}{dismissal && <p className="patrol-explanation">{dismissal.severance > dismissal.upfront ? `Severance is ${moneyFull(dismissal.severance)}, ${PATROL_SEVERANCE_HOURS} hours of wages. Funding covers ${moneyFull(dismissal.upfront)} and the rest is waived.` : `Severance is ${moneyFull(dismissal.severance)}, ${PATROL_SEVERANCE_HOURS} hours of wages, taken from funding.`} They leave the patrol roster and stay in department history.</p>}{selection.kind === 'boost' && <p>The grant affects patrol gross only. Its duration extends when purchased again.</p>}{(failure || quote.reason) && <p className="reason" role="status">{failure ?? quote.reason}</p>}</>}
     </div>
   </Sheet>;
 }
