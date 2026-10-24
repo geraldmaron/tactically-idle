@@ -34,6 +34,7 @@ import { DEVICE, GameFrame } from './GameFrame';
 import type { ForcePick, FrameToast } from './GameFrame';
 import { LeaderLine } from './LeaderLine';
 import { PathRail } from './PathRail';
+import { ScreenOrder } from './ScreenOrder';
 import { XrayRail } from './XrayRail';
 import './play.css';
 
@@ -296,7 +297,8 @@ function Play({ session }: { session: Session }) {
   // ------------------------------------------------ layout
   const run = frame.state.activeRun;
   const ended = !!run && (run.status !== 'active' || run.stage === 'debrief');
-  const screen = url.screen ?? (ended ? 'debrief' : 'live');
+  // A call opens on its board card, then the briefing with the backstory, then the first decision, as a player meets it.
+  const screen = url.screen ?? (ended ? 'debrief' : steps.length === 0 ? 'card' : 'live');
   const directorButton = narrow ? (
     <button type="button" className={cx('lab-button', 'lab-play-dirbutton', dirOpen && 'lab-play-dirbutton-on')} aria-expanded={dirOpen} onClick={() => setDirOpen(open => !open)}>
       <Glyph name="plan" />Director
@@ -320,6 +322,7 @@ function Play({ session }: { session: Session }) {
         <PathRail steps={steps} prior={prior} shown={shown} revealed={play ? play.at : Infinity} fresh={fresh} flash={flash} chance={chance} who={who}
           onGo={go} compare={compare} onCompare={runCompare} canCompare={session.squad.kind !== 'game'} directorButton={directorButton}
           onOpenSituation={situationRun => situationRun.call !== null && url.call && navigate({ call: { ...url.call, call: situationRun.call, id: null } })} />
+        <ScreenOrder screen={screen} pinned={!!url.screen} onPick={next => navigate({ screen: next }, 'replace')} onFollow={() => navigate({ screen: null }, 'replace')} />
         <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
           tabs={tabs} selectedId={url.xray ? selectedId : null} hoverId={hoverId} playing={!!play} reveal={reveal}
           onReview={id => select(id, true)} onConfirm={confirm} onFail={() => move({ kind: 'fail', actionId: 'response_failure' })}

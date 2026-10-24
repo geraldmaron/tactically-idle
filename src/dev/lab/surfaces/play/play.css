@@ -439,3 +439,12 @@
 .lab-cmp-why { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 6px; font: var(--lab-type-micro); }
 .lab-cmp-note { margin: var(--lab-s2) var(--lab-s4) 0; font: var(--lab-type-row); }
 .lab-cmp-diverge { display: flex; gap: 6px; align-items: baseline; color: var(--amber); }
+
+/* The screens in the order a player meets them: card, backstory and briefing, the call, the debrief. */
+.lab-play-order { flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--lab-s3); flex-wrap: wrap; padding: 6px var(--lab-s3); border-bottom: 1px solid var(--lab-line, rgba(255,255,255,.08)); }
+.lab-play-order ol { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; flex-wrap: wrap; }
+.lab-play-order-step { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid transparent; border-radius: 999px; background: none; color: var(--dim, inherit); font: var(--lab-type-row); cursor: pointer; }
+.lab-play-order-step:hover { border-color: var(--lab-line, rgba(255,255,255,.18)); }
+.lab-play-order-on { border-color: var(--lab-accent, currentColor); color: var(--text); }
+.lab-play-order-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 1px solid currentColor; font-size: 11px; }
+.lab-play-order-nav { display: inline-flex; gap: 4px; }
