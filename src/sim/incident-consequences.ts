@@ -47,7 +47,7 @@ export function civilianOutcomeViews(scenario: ScenarioDefinition, run: Pick<Ope
       : run.flags.includes(person.injuredFlag) ? 'injured_needs_care'
       : run.flags.includes(person.safeFlag) ? 'safe'
       : knowledge === 'disproved' ? 'accounted_elsewhere'
-      : knowledge === 'confirmed' ? 'needs_help' : 'unaccounted';
+      : knowledge === 'confirmed' ? 'needs_help' : knowledge === 'reported' ? 'reported' : 'unaccounted';
     return { id: person.id, label: person.label, status };
   });
 }

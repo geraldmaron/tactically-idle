@@ -926,7 +926,8 @@ export interface OfficerCasualtyRecord {
 export interface CivilianOutcomeView {
   id: Id;
   label: string;
-  status: 'unaccounted' | 'needs_help' | 'safe' | 'injured_needs_care' | 'care_accepted' | 'accounted_elsewhere' | 'deceased';
+  /** `reported` is someone the call has placed at a spot but the team has not confirmed. */
+  status: 'unaccounted' | 'reported' | 'needs_help' | 'safe' | 'injured_needs_care' | 'care_accepted' | 'accounted_elsewhere' | 'deceased';
 }
 
 /** Fictional game balance; no real-world probability or medical prediction. */

@@ -52,7 +52,7 @@ export function responseFailurePlan(state: GameState): ResponseFailurePlan | nul
   }
   const people = civilianOutcomeViews(scenario, run);
   const statusText: Record<string, string> = {
-    unaccounted: 'has not been located', needs_help: 'still needs help', safe: 'has reached safety',
+    unaccounted: 'has not been located', reported: 'has been reported but not confirmed', needs_help: 'still needs help', safe: 'has reached safety',
     injured_needs_care: 'is injured and still needs care', care_accepted: 'has an accepting care team',
     accounted_elsewhere: 'has been accounted for elsewhere', deceased: 'has died; the death and scene duties remain recorded',
   };

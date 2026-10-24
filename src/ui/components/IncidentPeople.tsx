@@ -19,6 +19,7 @@ type OfficerCasualty = OfficerCasualtyRecord;
 
 export const CIVILIAN_OUTCOME_LABEL: Record<CivilianOutcome['status'], string> = {
   unaccounted: 'Not yet located',
+  reported: 'Reported, not yet confirmed',
   needs_help: 'Needs help',
   safe: 'Safe',
   injured_needs_care: 'Injured · needs care',
@@ -38,6 +39,7 @@ type PersonStatus = CivilianOutcome['status'];
 /** Unlocated people use the same dashed amber as reported people on the map. */
 const PERSON_TONE: Record<PersonStatus, PersonTone> = {
   unaccounted: 'pending',
+  reported: 'pending',
   needs_help: 'warn',
   injured_needs_care: 'warn',
   safe: 'ok',
@@ -48,6 +50,7 @@ const PERSON_TONE: Record<PersonStatus, PersonTone> = {
 
 const PERSON_ICON: Record<PersonStatus, IconName> = {
   unaccounted: 'question',
+  reported: 'pin',
   needs_help: 'warning',
   injured_needs_care: 'bandage',
   safe: 'check',
@@ -110,6 +113,7 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
 /** The one word a person's chip says about them, from the same public outcome the status panel shows. */
 const PERSON_SHORT: Record<PersonStatus, string> = {
   unaccounted: 'Not located',
+  reported: 'Reported',
   needs_help: 'Needs help',
   safe: 'Safe',
   injured_needs_care: 'Injured',
@@ -159,7 +163,7 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
   });
   const clocks = clockViews(scenario, run).filter((clock) => clock.latest && !clock.stopped);
   if (!civilians.length && !officers.length && !additionalCasualties.length && !subjects.length && !clocks.length) return null;
-  const located = civilians.filter((person) => person.status !== 'unaccounted').length;
+  const located = civilians.filter((person) => person.status !== 'unaccounted' && person.status !== 'reported').length;
   const needCare = civilians.filter((person) => PERSON_TONE[person.status] === 'warn').length;
   return <section className="incident-people-status" aria-label="People at this call">
     <div className="incident-people-head">

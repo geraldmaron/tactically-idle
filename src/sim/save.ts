@@ -225,7 +225,7 @@ function validDebrief(d: unknown): boolean {
     && (d.endingSummary === undefined || isStr(d.endingSummary)) && (d.endingEpilogue === undefined || isStr(d.endingEpilogue)) && (d.decisions === undefined || isList(d.decisions, validDecisionView))
     && (d.officerCasualties === undefined || isList(d.officerCasualties, validCasualtyRecord))
     && (d.personCasualties === undefined || isList(d.personCasualties, validPersonCasualtyRecord))
-    && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
+    && (d.civilianOutcomes === undefined || isList(d.civilianOutcomes, person => isObj(person) && strings(person, ['id', 'label']) && oneOf(person.status, ['unaccounted', 'reported', 'needs_help', 'safe', 'injured_needs_care', 'care_accepted', 'accounted_elsewhere', 'deceased'])))
     && (d.scoreLines === undefined || isList(d.scoreLines, line => isObj(line) && strings(line, ['key', 'text']) && numbers(line, ['trust', 'strain'])))
     && (d.forceLines === undefined || isList(d.forceLines, line => isObj(line) && isStr(line.text) && (line.reason === undefined || isStr(line.reason))))
     && (d.disposition === undefined || oneOf(d.disposition, COMPLETION_DISPOSITIONS))
