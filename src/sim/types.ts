@@ -1298,6 +1298,8 @@ export type Command =
   | { type: 'dismissStaff'; managerId: ManagerId }
   | { type: 'refreshStaffPool'; managerId: ManagerId }
   // world (src/sim/world/handlers.ts)
+  /** The first session: name the unit and pick the starting district (WorldState.onboarding). */
+  | { type: 'foundDepartment'; name: string; districtId: DistrictId }
   | { type: 'setDistrictCoverage'; districtId: DistrictId; units: number }
   | { type: 'openDistrict'; districtId: DistrictId }
   | { type: 'startProactiveShift'; squadId: SquadId; districtId: DistrictId; hours: 2 | 4 | 8 }
@@ -1433,7 +1435,7 @@ export type DepartmentCommandType =
   | 'dismissStaff'
   | 'refreshStaffPool';
 
-export type WorldCommandType = 'setDistrictCoverage' | 'openDistrict' | 'startProactiveShift' | 'recallProactiveShift' | 'openWarrant' | 'respondToContact' | 'syncEntitlements';
+export type WorldCommandType = 'foundDepartment' | 'setDistrictCoverage' | 'openDistrict' | 'startProactiveShift' | 'recallProactiveShift' | 'openWarrant' | 'respondToContact' | 'syncEntitlements';
 
 export type PeopleCommandType = 'decideAftercare' | 'acknowledgeBeat' | 'markTelegraphSeen';
 

@@ -25,6 +25,19 @@ export function settlePeople(_d: GameState, _from: number, _to: number, _beats: 
 /** Called by operation.closeDebrief after the career loop: memory facts, imprints, bonds, ties. */
 export function applyPeopleDebrief(_d: GameState, _run: OperationRun, _result: DebriefResult, _verdict: 'favorable' | 'adverse' | null): void {}
 
+/** Bridges the world and roster call (contract, so neither lane edits the other's files). Each is a no-op
+ * until the people-engine lane fills it in. */
+/** A world investigation an officer worked has closed: record an `arrest` fact and any prior_arrest tie. */
+export function recordCaseFact(_d: GameState, _caseId: Id): void {}
+/** A proactive shift stopped: record `shift` facts and drift the bonds of the officers who rode it. */
+export function recordShiftFact(_d: GameState, _shiftId: Id): void {}
+/** A world subject was generated: create jacket ties for officers from that subject's district. */
+export function seedTiesForSubject(_d: GameState, _subjectId: Id): void {}
+/** An officer joined (hire or rehire): create or restore their record. */
+export function onOfficerHired(_d: GameState, _officerId: Id): void {}
+/** An officer is about to leave (dismissal or retirement): snapshot them before removal. */
+export function onOfficerDeparted(_d: GameState, _officerId: Id, _reason: 'dismissed' | 'retired'): void {}
+
 export const PEOPLE_HANDLERS: HandlerMap<PeopleCommandType> = {
   decideAftercare: () => fail('Not built yet'),
   acknowledgeBeat: (d, c) => {

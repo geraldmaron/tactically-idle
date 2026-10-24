@@ -398,6 +398,9 @@ export interface EndingDefinition {
   /** Added to every deployed officer's strain at debrief (negative = relief). */
   strain: number;
   disposition?: CompletionDisposition;
+  /** Copied from the tree ending (TreeEnding.world): how a world call's ending resolves the cast subject's
+   * investigation. Compile carries it through (world-calls lane). */
+  world?: { resolution: 'charged' | 'diverted' | 'care' | 'released' | 'cleared' | 'escaped' };
   /** V4 completion is earned by these authored conditions, never by a numeric score alone. */
   completion?: Condition & { acceptedServiceId?: Id };
   /** Public unfinished responsibilities, saved with incomplete debriefs. */

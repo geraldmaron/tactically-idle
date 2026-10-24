@@ -61,6 +61,7 @@ export function worldReport(d: GameState, acc: WorldAcc): ShiftReportWorld | und
 export function applyWorldDebrief(_d: GameState, _run: OperationRun, _result: DebriefResult): void {}
 
 export const WORLD_HANDLERS: HandlerMap<WorldCommandType> = {
+  foundDepartment: () => fail('Not built yet'),
   setDistrictCoverage: () => fail('Not built yet'),
   openDistrict: () => fail('Not built yet'),
   startProactiveShift: () => fail('Not built yet'),
