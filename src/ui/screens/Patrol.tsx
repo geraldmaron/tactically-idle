@@ -48,11 +48,11 @@ export function PatrolScreen() {
     <PatrolScene game={game} onHire={() => setSelection({ kind: 'candidates' })} />
     <div className="page patrol-page">
     <PatrolSummary game={game} onHire={() => setSelection({ kind: 'candidates' })} />
-    <Section id="patrol-team-h" title="Patrol team" icon="patrol" count={employees.length ? `${employees.length} on staff` : undefined} hint="Coverage runs automatically. Patrol staff stay separate from SWAT squads.">
+    <Section id="patrol-team-h" title="Patrol team" icon="patrol" count={employees.length ? `${employees.length} on staff` : undefined}>
       {employees.length === 0 ? <EmptyState spot="noCandidates" title="No patrol staff">Hire into an authorized position to begin patrol coverage.</EmptyState>
         : <div className="patrol-roster panel-well" data-ui-list>{employees.map((employee) => <PatrolEmployeeCard key={employee.id} employee={employee} game={game} onReview={(kind) => setSelection({ kind, employeeId: employee.id })} />)}</div>}
     </Section>
-    <PatrolBoosts />
+    <PatrolBoosts compact />
     <PatrolHistory game={game} />
     {selection?.kind === 'candidates' ? <PatrolHiring onClose={() => setSelection(null)} onChoose={(profileId) => setSelection({ kind: 'hire', profileId })} />
       : selection && <PatrolCommitment key={JSON.stringify(selection)} selection={selection} onClose={() => setSelection(null)} />}
@@ -95,12 +95,10 @@ function PatrolScene({ game, onHire }: { game: GameState; onHire?: () => void })
   const employees = employedPatrol(game);
   const rates = patrolRates(game, game.department.clockHighWater);
   const training = employees.filter((employee) => employee.training);
-  const covering = employees.filter((employee) => !employee.training);
   const first = (employee: PatrolEmployee) => patrolProfile(employee.profileId)?.firstName ?? 'Employee';
   const line = `${employees.length} of ${patrolCapacity(game)} positions · ${rates.productive > 0 ? `${rates.productive} providing coverage` : employees.length ? 'coverage paused for training' : 'positions open'}`;
-  return <TeamScene section="patrol" line={line} label="Patrol garage" action={onHire ? <button type="button" className="section-link" onClick={onHire}>Hire patrol</button> : undefined}>
+  return <TeamScene section="patrol" line={line} label="Patrol garage">
     <div className={`patrol-scene${rates.productive === 0 ? ' patrol-scene-idle' : ''}`} data-patrol-scene-state={employees.length === 0 ? 'empty' : training.length ? 'training' : 'covering'}>
-      {employees.length > 0 && <p className="patrol-scene-who">{covering.length > 0 && <span>Covering: {covering.map(first).join(', ')}.</span>}{training.length > 0 && <span> In training: {training.map(first).join(', ')}.</span>}</p>}
       <div className="patrol-scene-posts" aria-label={`${employees.length} of ${patrolCapacity(game)} patrol positions filled`}>
         {Array.from({ length: patrolCapacity(game) }, (_, index) => {
           const employee = employees[index];
@@ -210,21 +208,24 @@ function BoostCrew({ game }: { game: GameState }) {
   </div>;
 }
 
-/** Reused by Team and Store; the same engine quote and confirmation handle either entry point. */
-export function PatrolBoosts() {
+/** Patrol funding boosts live in Team, Patrol (the Store sells looks and lifetime items, not funding pace). `compact`
+ * is the Patrol section's form: one line on what is running, then the grants, since the net and its split sit
+ * in the panel above. Without it the section brings its own garage plate and net, for any screen that shows it alone. */
+export function PatrolBoosts({ compact = false }: { compact?: boolean } = {}) {
   const game = useGame();
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const at = game.department.clockHighWater;
   const rates = patrolRates(game, at);
   const running = game.patrol.boosts.filter((boost) => boost.expiresAt > at);
-  return <Section id="patrol-boosts-h" title="Patrol funding boosts" icon="trend">
-    <div className="patrol-boost-hero plate" data-boost-state={running.length ? 'active' : 'idle'}>
+  return <Section id="patrol-boosts-h" title="Patrol funding boosts" icon="trend" hint={compact ? (running.length ? undefined : 'No boost running. Patrol earns its base rate.') : undefined}>
+    {compact && running.length > 0 && <p className="patrol-boost-active">Boost running: ×{rates.factor} patrol gross · <Funds value={rates.boostAmount} format="rate" /> extra</p>}
+    {!compact && <div className="patrol-boost-hero plate" data-boost-state={running.length ? 'active' : 'idle'}>
       <PlateArt src={plateUrl('scene_patrol_garage')} />
       <p className="patrol-boost-hero-line">{running.length ? <>Boost running: <b>×{rates.factor}</b> patrol gross · <Funds value={rates.boostAmount} format="rate" /> extra</> : 'No boost running. Patrol earns its base rate.'}</p>
       <p className="patrol-boost-hero-net"><span>Patrol net</span><strong><Funds value={rates.net} format="rate" /></strong></p>
       <dl className="patrol-money-grid patrol-boost-hero-strip"><div><dt>Gross</dt><dd><Funds value={rates.gross} format="rate" /></dd></div><div><dt>Payroll</dt><dd><Funds value={rates.wages} format="perHour" /></dd></div><div><dt>Operations</dt><dd><Funds value={rates.operating} format="perHour" /></dd></div></dl>
       <BoostCrew game={game} />
-    </div>
+    </div>}
     <Card className="patrol-roster-card"><div className="patrol-boosts" data-ui-list>{Object.entries(PATROL_BOOSTS).map(([id, definition]) => {
       const quote = patrolBoostQuote(game, id);
       const active = game.patrol.boosts.find((boost) => boost.id === id && boost.expiresAt > at);

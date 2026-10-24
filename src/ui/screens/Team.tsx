@@ -1,24 +1,36 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CommandStaff } from '../components/CommandStaff';
 import { useBeat } from '../components/Beat';
 import { useNav } from '../components/nav';
 import { managerViews } from '../../sim/command-staff';
+import type { Id } from '../../sim/types';
 import { useGame } from '../store';
 import { PatrolScreen } from './Patrol';
 import { SquadScreen } from './Squad';
 import { TeamScene } from './TeamScene';
 import { newPromotions, promotionLedger } from './team-model';
 import { promotedBeat } from './team-beats';
+import { TeamActionsContext } from './team/team-actions';
+import { BondsSheet } from './team/Bonds';
+import { AftercareSheet } from './team/Aftercare';
 import './team.css';
 
 /** One personnel destination with separate tactical, patrol and command responsibilities. Each section opens
- * on its own scene (TeamScene); the section switch is the scene's title line. */
+ * under the same header (TeamScene); the division switch is part of it. The bond web and aftercare open as sheets
+ * from the header, the rows and the jacket. */
 export function TeamScreen() {
   const nav = useNav();
   usePromotionBeat();
-  return <div className="team-page">
-    {nav.teamSection === 'patrol' ? <PatrolScreen /> : nav.teamSection === 'command' ? <CommandScreen /> : <SquadScreen />}
-  </div>;
+  const [bonds, setBonds] = useState(false);
+  const [aftercare, setAftercare] = useState<Id | null>(null);
+  const actions = useMemo(() => ({ openBonds: () => { nav.closeOfficer(); setBonds(true); }, openAftercare: (id: Id) => setAftercare(id) }), [nav]);
+  return <TeamActionsContext.Provider value={actions}>
+    <div className="team-page">
+      {nav.teamSection === 'patrol' ? <PatrolScreen /> : nav.teamSection === 'command' ? <CommandScreen /> : <SquadScreen />}
+    </div>
+    <BondsSheet open={bonds} onClose={() => setBonds(false)} />
+    <AftercareSheet imprintId={aftercare} onClose={() => setAftercare(null)} />
+  </TeamActionsContext.Provider>;
 }
 
 /** A promotion that lands while the player is on Team (a course finishing, a clock hour settling) plays the

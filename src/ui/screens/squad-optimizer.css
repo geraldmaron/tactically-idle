@@ -34,7 +34,7 @@
 .arrangement-message { padding: 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); }
 .arrangement-empty { padding: 6px 0; }
 .arrangement-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.arrangement-actions .btn { flex: 1 1 120px; }
+.arrangement-actions .btn { flex: 1 1 120px; white-space: normal; overflow-wrap: normal; word-break: normal; }
 .arrangement-actions .btn:first-child { flex: 0 0 auto; min-width: 80px; white-space: nowrap; }
 .arrangement-review { min-width: 0; }
 .arrangement-review-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }

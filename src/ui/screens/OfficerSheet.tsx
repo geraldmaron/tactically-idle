@@ -1,10 +1,9 @@
-// The officer profile (officer-profile): who this officer is, what they cost and bring, how ready
-// they are, and what you can do with them. One full-height sheet opened from anywhere through
-// navigation, so Back closes it. The hero and readiness are always in view; detail sits behind
-// three tabs; actions stay in the footer.
+// The service jacket (canvas E2, officer-profile): who this officer is, in the order a player earns it. It opens on
+// the jacket (portrait, pressure line, radio sample, traits, the ivory card, memory, bonds); what they cost and
+// bring sits under Skills, their record under Career and their stress under Care. One full-height sheet opened from
+// anywhere through navigation, so Back closes it. Actions stay in the footer.
 import './officer-profile.css';
 import { useState } from 'react';
-import { personaNote } from '../../content/personas';
 import { COURSES } from '../../content/courses';
 import { CERT_NAME } from '../../content/certs';
 import { useGame } from '../store';
@@ -17,6 +16,8 @@ import { Sheet } from '../components/Sheet';
 import { useNav } from '../components/nav';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { Button, Chip, RatingBars } from '../components/ui';
+import { JacketHero, JacketStory } from './team/Jacket';
+import { AftercareSheet } from './team/Aftercare';
 import { Overflow } from '../components/Overflow';
 import { rankedName } from '../components/OfficerRow';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
@@ -28,32 +29,32 @@ import { useToast } from '../components/toast';
 import type { StatusKey } from '../components/labels';
 import { CERT_ICON, ROLE_META, STATUS_META, TRAIT_INFO } from '../components/labels';
 import { officerStatus } from './squad-model';
-import { Face } from '../components/Face';
-import { officerFaceStatus } from '../components/face-status';
 import { Icon } from '../icons';
 import { funding, fundingRate, relativeTime, yearsText } from '../format';
 import { Funds } from '../components/Funds';
 import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
-import { lastCallLine, lastCallOf } from './team-model';
 
-export type ProfileTab = 'overview' | 'career' | 'care';
+export type ProfileTab = 'overview' | 'skills' | 'career' | 'care';
 
 export function OfficerSheet({ officerId, onClose, initialTab = 'overview' }: { officerId: Id | null; onClose: () => void; initialTab?: ProfileTab }) {
   const g = useGame();
   const o = officerId ? g.officers[officerId] : undefined;
   const [tab, setTab] = useState<ProfileTab>(initialTab);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
-  const close = () => { setConfirmDismiss(false); setTab('overview'); onClose(); };
-  return (
+  // Aftercare opens over the jacket, so the decision is made where the note is read.
+  const [aftercare, setAftercare] = useState<Id | null>(null);
+  const close = () => { setConfirmDismiss(false); setTab('overview'); setAftercare(null); onClose(); };
+  return <>
     <Sheet open={!!o} onClose={close} title={o ? rankedName(o) : ''} className="profile-sheet" interactionKey={confirmDismiss ? 'dismiss' : 'profile'}
       footer={o ? <ProfileActions o={o} confirmDismiss={confirmDismiss} setConfirmDismiss={setConfirmDismiss} onClose={close} /> : undefined}>
-      {o && <ProfileBody o={o} tab={tab} setTab={setTab} />}
+      {o && <ProfileBody o={o} tab={tab} setTab={setTab} onAftercare={setAftercare} />}
     </Sheet>
-  );
+    <AftercareSheet imprintId={o ? aftercare : null} onClose={() => setAftercare(null)} />
+  </>;
 }
 
-function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: (tab: ProfileTab) => void }) {
+function ProfileBody({ o, tab, setTab, onAftercare }: { o: Officer; tab: ProfileTab; setTab: (tab: ProfileTab) => void; onAftercare: (imprintId: Id) => void }) {
   const g = useGame();
   const now = Date.now();
   const info = recoveryInfo(g, o.id, now);
@@ -64,35 +65,25 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
   const injured = !!o.injury && o.injury.until > now;
   const statusText = injured ? `Injured, ${o.injury!.label}` : o.assignment?.kind === 'training' ? `Training, back ${relativeTime(o.assignment.endsAt, now)}`
     : o.assignment?.kind === 'detail' ? `Teaching, back ${relativeTime(o.assignment.endsAt, now)}` : o.assignment?.kind === 'operation' ? 'On a call' : undefined;
+  const away = !!statusText || !!info.blocker;
   const pace = learningPace(o);
   const detail = detailRate(o);
   return (
     <div className="profile">
-      <section className="profile-hero" aria-label="Officer">
-        <div className="profile-portrait">
-          <Face size="lg" kind="officer" officer={o} status={officerFaceStatus(g, o.id, now)} />
-          {isLeader && <span className="profile-leader" title="Squad leader"><Icon name="star" size={13} /></span>}
-        </div>
-        <div className="profile-id">
-          <p className="profile-facts"><span>{ROLE_META[o.role].label}</span><span>{squad ? `${squad.name}${isLeader ? ', leader' : ''}` : 'Unassigned'}</span><span>Age {career.age}</span><span>{yearsText(career.service)} served</span></p>
-          {career.retirement && <div className="chips"><RetirementChip date={career.retirement.date} inDays={career.retirement.inDays} compact /></div>}
-          {/* The one readiness line: status, stress now, and what keeps them off a call. Stress history is in Care. */}
-          <p className={`profile-ready-line tone-${info.blocker ? 'warn' : 'mint'}`} aria-label="Readiness">
-            <Icon name={info.blocker ? 'lock' : STATUS_META[statusKey].icon} size={16} />
-            <span>{statusText ?? STATUS_META[statusKey].label} · stress {Math.floor(o.stress + 1e-9)}{info.blocker ? <> · {info.blocker}{info.deployableAt !== null && <>, ready {relativeTime(info.deployableAt, now)}</>}</> : null}</span>
-          </p>
-        </div>
-      </section>
-      <dl className="profile-value" aria-label="Cost and value">
-        <div><dt>Wage</dt><dd><Funds value={o.wage} format="perHour" /></dd></div>
-        <div><dt>Learns</dt><dd className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</dd></div>
-        <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : <>+<Funds value={detail} format="perHour" /></>}</dd></div>
-      </dl>
+      <JacketHero o={o} />
       <ChoiceRail value={tab} kind="tabs" grow label="Profile sections" panelId="profile-panel" onChange={setTab} options={[
-        { value: 'overview', label: 'Overview' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
+        { value: 'overview', label: 'Jacket' }, { value: 'skills', label: 'Skills' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
       ]} />
-      <div id="profile-panel" role="tabpanel" className="profile-panel">
-        {tab === 'overview' && <Overview o={o} />}
+      <div id="profile-panel" role="tabpanel" className="profile-panel jacket-panel">
+        {tab === 'overview' && <>
+          <JacketStory o={o} onAftercare={onAftercare} />
+          {/* The one readiness line: why they are off a call, and when they are back. Stress history is in Care. */}
+          {away && <p className={`jacket-ready tone-${info.blocker ? 'warn' : 'mint'}`} aria-label="Readiness">
+            <Icon name={info.blocker ? 'lock' : STATUS_META[statusKey].icon} size={16} />
+            <span>{statusText ?? STATUS_META[statusKey].label}{info.blocker ? <> · {info.blocker}{info.deployableAt !== null && <>, ready {relativeTime(info.deployableAt, now)}</>}</> : null}</span>
+          </p>}
+        </>}
+        {tab === 'skills' && <Skills o={o} pace={pace} detail={detail} squadName={squad ? `${squad.name}${isLeader ? ', leader' : ''}` : 'Unassigned'} age={career.age} service={career.service} retirement={career.retirement} />}
         {tab === 'career' && <CareerTab o={o} />}
         {tab === 'care' && <CareTab o={o} factors={info.factors} />}
       </div>
@@ -100,22 +91,21 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
   );
 }
 
-function Overview({ o }: { o: Officer }) {
-  const g = useGame();
-  const persona = personaNote(o.identityId);
-  const call = lastCallOf(g, o.id, Date.now());
+function Skills({ o, pace, detail, squadName, age, service, retirement }: { o: Officer; pace: ReturnType<typeof learningPace>; detail: number | null; squadName: string; age: number; service: number; retirement: ReturnType<typeof useCareerSnapshot>['retirement'] }) {
   return <div className="profile-stack">
-    {/* The person first: their note, the traits they have earned and why, and the last call the game recorded. */}
-    <section className="profile-person" aria-label="Who they are">
-      {persona && <p className="profile-note persona-note">{persona}</p>}
-      {o.traits.length > 0 && <ul className="profile-traits">{o.traits.map((t) => {
-        // A trait a promotion granted names its cause (swat-officer-stories: earned traits cite the call).
-        const earned = o.promotions?.find((p) => RANKS[p.rank].trait === t);
-        return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={16} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
-          {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {earned.cause}, {formatGameDate(earned.day)}.</span>}</li>;
-      })}</ul>}
-      <p className="profile-lastcall"><Icon name="flag" size={16} />{call ? lastCallLine(call) : o.career.operations > 0 ? `${o.career.operations} ${o.career.operations === 1 ? 'call' : 'calls'} worked with this department.` : 'No calls with this department yet.'}</p>
-    </section>
+    <p className="profile-facts"><span>{ROLE_META[o.role].label}</span><span>{squadName}</span><span>Age {age}</span><span>{yearsText(service)} served</span></p>
+    {retirement && <div className="chips"><RetirementChip date={retirement.date} inDays={retirement.inDays} compact /></div>}
+    <dl className="profile-value" aria-label="Cost and value">
+      <div><dt>Wage</dt><dd><Funds value={o.wage} format="perHour" /></dd></div>
+      <div><dt>Learns</dt><dd className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</dd></div>
+      <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : <>+<Funds value={detail} format="perHour" /></>}</dd></div>
+    </dl>
+    {o.traits.length > 0 && <section aria-label="Traits"><h3 className="profile-head">Traits</h3><ul className="profile-traits">{o.traits.map((t) => {
+      // A trait a promotion granted names its cause (swat-officer-stories: earned traits cite the call).
+      const earned = o.promotions?.find((p) => RANKS[p.rank].trait === t);
+      return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={16} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
+        {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {earned.cause}, {formatGameDate(earned.day)}.</span>}</li>;
+    })}</ul></section>}
     <OfficerProgress officer={o} />
     <section aria-label="Skills"><h3 className="profile-head">Skills</h3><RatingBars ratings={o.ratings} label="Skills out of 100" /></section>
     <section aria-label="Qualifications">
