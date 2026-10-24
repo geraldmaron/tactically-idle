@@ -16,6 +16,9 @@ export function hitMarkFixture(withHit: boolean): IncidentTemplate {
   const node = tree.nodes.find(entry => entry.id === HIT_FIXTURE.node)!;
   const model = node.choices.find(choice => choice.id === 'talk_down')!;
   if (withHit) for (const band of BANDS) for (const outcome of model.outcomes[band]) if (outcome.fire) outcome.fire = { ...outcome.fire, mark: HIT_FIXTURE.mark };
+  // Without it, no outcome in the borrowed call may set the mark either, whatever the live call does.
+  if (!withHit) for (const entry of tree.nodes) for (const choice of entry.choices) for (const band of BANDS) for (const outcome of choice.outcomes[band])
+    if (outcome.fire?.mark === HIT_FIXTURE.mark) outcome.fire = { from: outcome.fire.from };
   const treat: TreeChoice = { ...structuredClone(model), id: HIT_FIXTURE.choice, title: 'Get the hit officer to the medic first', team: undefined, onlyIf: { marks: [HIT_FIXTURE.mark] } };
   node.choices.push(treat);
   return { ...base, tree };

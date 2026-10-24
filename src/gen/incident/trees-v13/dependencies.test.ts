@@ -142,7 +142,8 @@ describe('requirement trees', () => {
       .find(entry => ([] as unknown[]).concat(entry.o.if ?? []).some(c => typeof c === 'object' && c !== null && 'fact' in c))!;
     const outcome = leaves(requirementTree(tree, { outcome: [withIf.n.id, withIf.c.id, withIf.band, withIf.i] }));
     expect(outcome).toContainEqual({ kind: 'band', band: withIf.band });
-    expect(JSON.stringify(outcome)).toContain('raised');
+    const fact = ([] as unknown[]).concat(withIf.o.if ?? []).find((c): c is { fact: string } => typeof c === 'object' && c !== null && 'fact' in c)!.fact;
+    expect(JSON.stringify(outcome)).toContain(fact);
   });
 
   it('reaches a turn node only through its turn, and an ending through a drawn result where one routes there', () => {

@@ -117,11 +117,13 @@ describe('a lie is always findable', () => {
 });
 
 describe('Going Live carries its reframe into the after', () => {
-  it('keeps both out_on_camera epilogue variants, each behind the mark that sets it', () => {
+  it('keeps every out_on_camera epilogue variant behind a mark some outcome sets', () => {
+    // Asserts the property, not the authored list, so the calls lane can add or reword variants.
     const s = generateIncident({ type: 'hostage_crisis', familyId: 'market_row', buildingSeed: 7, seed: 3, tier: 2, contentVersion: 13 });
     const variants = s.endings.out_on_camera?.epilogueIf ?? [];
-    expect(variants).toHaveLength(2);
-    expect(variants.map(entry => entry.when.flags)).toEqual([[expect.stringContaining('admitted')], [expect.stringContaining('exposed'), expect.stringContaining('friend_promise')]]);
+    expect(variants.length).toBeGreaterThan(0);
+    const set = new Set([...JSON.stringify(s).matchAll(/"setFlags":\[([^\]]*)\]/g)].flatMap(match => match[1].match(/mark:[a-z_]+/g) ?? []));
+    for (const entry of variants) for (const flag of entry.when.flags ?? []) expect(set.has(flag), flag).toBe(true);
     expect(unbound(variants)).toBeNull();
   });
 });

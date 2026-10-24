@@ -18,8 +18,8 @@ import type { Clock, IncidentTemplate, PersonSpec, Weapon } from './types';
 const STREAM: Clock = { id: 'stream', label: '{rider.first}’s stream', kind: 'crowd', direction: 'fill', owner: 'rider', start: 8, ratePerMin: 1.1, rateSpread: 0.2, rateKnown: false,
   rateFlags: [{ flag: 'mark:phone_wall', ratePerMin: 0.2 }],
   cues: [
-    { at: 22, text: 'A viewer types, “Is that handgun real?”', moves: [{ personId: 'rider', event: 'watched' }] },
-    { at: 48, text: 'Another courier shares the stream to a couriers’ group with a few thousand members. The count doubles in a minute.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 22, text: 'Someone shares the stream to a neighborhood group, and {rider.first} reads out the new names.', moves: [{ personId: 'rider', event: 'watched' }] },
+    { at: 48, text: 'Another courier shares the stream to a couriers’ group with a few thousand members.', moves: [{ personId: 'rider', event: 'watched' }] },
     { at: 76, text: '{outlet} reposts the stream from its own account, and {rider.first} reads the {outlet_short} name out to the viewers.', mark: 'news_on', moves: [{ personId: 'rider', event: 'watched' }] },
   ],
   source: {

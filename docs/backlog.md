@@ -303,6 +303,56 @@ Script), a Codex cold read, `npm run check:strings` clean, the reactions pools i
 `src/content/incidents/hostage.ts` read for tone (viewers are people too: no cheering force), and
 the owner's read of the two situations and the manager's death endings.
 
+### going-live-city-cast: Going Live's people and store persist in the city
+Tags: job=build; journeys=none (persistent city people, no journey measures them yet); probes=none (encounter records, not an odds input); lane=engine
+Needs: start=none (waits for the world redesign on `claude/world-redesign`, not yet a backlog item); integrate=none; ship=going-live-review
+
+Part 2 of sol's review (`docs/calls/notes/going-live-sol-review-2026-10-24.md`). Make Going Live a
+persistent local episode with a stable cast and site, independent of crews, reusing the world and
+people systems. The review's verdicts:
+
+- Accept with controls: the courier as a known city person (stable subject id, `crewId: null`,
+  district, encounter history; known never means previously criminal); the manager and clerk (ids,
+  employment and site membership, the family tie once situation 1 shows it, and an explicit
+  eligibility flag so patrol generation never turns them into offenders); the friend (a stable
+  coworker tie, never redrawn on reload); one encounter-linked case for the armed hold, entering
+  review from the observed result; a missing-order follow-up from a verified clip, an admission or
+  conflicting records (a small non-tactical evidence record, never a disguised armed lead); subject
+  status written at debrief from outcome flags, with `resolved` never meaning both legally resolved
+  and physically outside; officer ties to the courier, manager or clerk through the on-record tie
+  reader, capped at 4 in total and applied only to the person addressed; officer memories from
+  typed moment provenance; at most one factual callback citing a recorded encounter; imprints from
+  actual exposure and participation; bond causes only from a recorded assignment and failure.
+- Accept: the store as a persistent district site (stable site, district and business name with a
+  compatible building family; drop `bar_restaurant_g2` unless the store writing is adapted); the
+  stream app and news outlet keep their shared identities, with this episode's broadcast, clip and
+  report recorded; officer memories through `applyPeopleDebrief` and `recordFact`.
+- Reject: a repeat hostage call with the same courier (mark the episode consumed); the delivery app
+  as a district resident; "the courier did not steal the bag" clearing the hostage case; an
+  automatic warrant; `TreeEnding.world.resolution`'s default (`charged` on completion, `escaped`
+  otherwise) for this call; the knowing officer making the arrest or handling evidence; call-specific
+  trauma or trait locks.
+- Contract: `episodeId`, `districtId`, `siteId` and role-to-person references from card through
+  archive; a reactive encounter reference that needs no lead; authored outcome events
+  (`staff_released`, `statement_given`, `clip_verified`, `deception_used`, `deception_retracted`,
+  `shot_fired`, `clip_sent`) with role and participant ids; idempotent write-back keyed by run and
+  event; tactical facts kept apart from legal conclusions and from the bag finding.
+
+Done: a second play of the same save meets the same four people and the same store, the debrief
+writes each person's state and the case from the events above, and the call still plays unconnected
+on a save without the world.
+
+### exit-doors: A walker can leave by a named exterior door
+Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
+Needs: start=none; integrate=none; ship=none
+
+`TreeChoice.walksVia` builds only `'window'`; `'front'` and `'back'` are a compile error waiting for
+rescue's R-R5 (`src/gen/incident/trees-v13/compile.ts`). Going Live's clerk now starts in the
+stockroom, and on 52 of 60 sampled buildings the shortest way out of it crosses the shop floor, so
+`clerk_out` and `phone_down` promise no door at all (sol's review, item 9). Done: a choice can walk a
+role out by the back or front door where the building has one, the route is checked against the
+scene room's sightline, and Going Live's escort and rear walk-out use it.
+
 ### next-curated-calls: Barricade, armed and rescue as curated calls
 Tags: job=command; journeys=choices-branch, chance-not-script; probes=officer-traits, source-pull; lane=calls
 Needs: start=going-live-review (the first call sets the bar); integrate=none; ship=none

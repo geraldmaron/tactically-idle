@@ -35,7 +35,7 @@ export const NEGOTIATOR = { cert: 'crisis_negotiation', value: 6, label: 'Negoti
 export const SURVEILLANCE = { cert: 'surveillance', value: 6, label: 'Surveillance training' } as const;
 /** A steady officer doesn't speed up for the camera (content/traits.ts). */
 export const STEADY_ON_CAMERA = { trait: 'steady' as const, value: 4, label: 'doesn’t speed up for the camera' };
-export const CALM_ON_CAMERA = { trait: 'calm_voice' as const, value: 3, label: 'sounds the same to two thousand strangers' };
+export const CALM_ON_CAMERA = { trait: 'calm_voice' as const, value: 3, label: 'sounds the same to every viewer' };
 export const OBSERVANT_ON_CHAT = { trait: 'observant' as const, value: 4, label: 'finds the one comment that matters' };
 
 /** An adverse result that provokes the rider. `lead` is said either way, with `extra`. The handgun
@@ -50,7 +50,7 @@ export function turnsOn(opts: { lead: string; threat: string; quiet: string; qui
   ];
 }
 
-/** The clerk goes out with the manager when still inside. */
+/** The clerk comes out of the stockroom and leaves with the manager when still inside. */
 export const clerkToo = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { notSafe: ['clerk'] }, text, safe: ['clerk'], ...extra });
 
 /** The manager goes out ahead of the rider when still inside. */
@@ -70,8 +70,10 @@ export const heldEnd = (lead: TreeOutcome, clerkLine: string, also: TreeIf[] = [
   ];
 };
 export const MANAGER_IN: TreeState = { notSafe: ['manager'] };
-/** The stream running, cut by command, or ended by the rider. */
-export const ON_STREAM: TreeState = { notMarks: ['cut', 'stream_off'] };
+/** The stream running, or down: cut by command (`cut`) or ended by the rider (`stream_off`). Both set
+ * `stream_down`, so a line that only needs "no live picture" reads one mark. */
+export const ON_STREAM: TreeState = { notMarks: ['stream_down'] };
+export const STREAM_DOWN: TreeState = { marks: ['stream_down'] };
 export const STREAM_CUT: TreeState = { marks: ['cut'] };
 export const STREAM_ENDED: TreeState = { marks: ['stream_off'], notMarks: ['cut'] };
 
@@ -81,8 +83,20 @@ export const holdTheNight = (text: string): TreeTimeout => ({ text, next: { endi
   nextIf: [{ when: { notSafe: ['manager', 'clerk'] }, next: { ending: 'held_both' } }, { when: MANAGER_IN, next: { ending: 'held_counter' } }] });
 
 /** The lie (dilemma pattern 15): the team told the rider the clerk backs the rider's story. The clerk
- * has said nothing to anyone, so on any road to the door the rider hears it on the stream, from the
- * clerk's own phone. It is true in no situation. */
+ * has said nothing to anyone, and it is true in no situation. `lied_clerk` is the lie told. It
+ * settles once, by discovery (`lie_found`) or by the team taking it back (`lie_owned`, own_lie), and
+ * both set `lie_settled`. The engine keeps a promise when its person walks out (sim/commitments.ts),
+ * so every outcome that brings the rider out while the lie is open carries this discovery: a lie is
+ * never kept. */
+export const LIE_OPEN: TreeState = { marks: ['lied_clerk'], notMarks: ['lie_settled'] };
 export const foundOut = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome =>
-  ({ when: { marks: ['lied_clerk'] }, breaks: ['clerk_backs'], mark: ['lie_found'], moves: { rider: 'provoked' }, bump: { stream: 12 }, text, ...extra });
+  ({ when: LIE_OPEN, breaks: ['clerk_backs'], mark: ['lie_found', 'lie_settled'], moves: { rider: 'provoked' }, text, ...extra });
 
+/** A walk-out ends `out_cleared` only when the viewers heard where the order went: the matched porch
+ * clip, or the manager naming the clerk on the stream. Otherwise it is `out_on_camera`, whatever the
+ * hidden truth. The text and its effects come first, with no `next`; these rows route it. */
+export const walkOutEnding = (other: string = 'out_on_camera'): TreeOutcome[] => [
+  { when: { marks: ['proof_seen'] }, text: '', next: { ending: 'out_cleared' } },
+  { when: { marks: ['admitted_live'], notMarks: ['proof_seen'] }, text: '', next: { ending: 'out_cleared' } },
+  { when: { notMarks: ['proof_seen', 'admitted_live'] }, text: '', next: { ending: other } },
+];
