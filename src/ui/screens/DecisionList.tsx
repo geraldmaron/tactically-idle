@@ -9,7 +9,7 @@
 import { Fragment, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import type { ActionView, Id, Officer, RatingKey } from '../../sim/types';
-import { Button } from '../components/ui';
+import { Button, Section } from '../components/ui';
 import { Icon, actionIcon } from '../icons';
 import { opMinutes } from '../format';
 import { PeopleText } from '../people/PeopleText';
@@ -64,11 +64,11 @@ function ChoiceTime({ a }: { a: ActionView }) {
 }
 
 /** The lead's face and number: one wrapping row under the card text. */
-function CardMeta({ a, officers, reach = [] }: { a: ActionView; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[] }) {
+function CardMeta({ a, officers, reach = [], face = true }: { a: ActionView; officers?: Readonly<Record<Id, LeadOfficer>>; reach?: GaugeReach[]; face?: boolean }) {
   const lead = a.eligible ? leadLine(a, officers) : null;
   if (!lead && !reach.length) return null;
   return <span className="callbtn-meta">
-    {lead && <span className="callbtn-lead" aria-label={`Leads: ${lead.text}`}><LeadFace officer={lead.officer} /><span>{lead.text}</span></span>}
+    {lead && <span className="callbtn-lead" aria-label={`Leads: ${lead.text}`}>{face && <LeadFace officer={lead.officer} />}<span>{lead.text}</span></span>}
     {reach.map((r) => <span key={`${r.label}:${r.effect}`} className="callbtn-gauge"><Icon name="crowd" size={12} />{gaugeReachTag(r)}</span>)}
   </span>;
 }
@@ -87,12 +87,19 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
   onExpand(): void }): JSX.Element {
   const decisions = visibleDecisions(actions, selectedId, expanded);
   const open = actions.filter((action) => action.eligible).length;
-  return <>
-    {prompt && <p className="operation-stage-prompt"><PeopleText text={prompt} /></p>}
-    <Transcript lines={exchange} label="On the line" />
+  // One panel (canvas "Depth and Framed Sections"): the bar says it is the player's call and how many
+  // choices are open; inside, the moment, what is said on scene, then the choices.
+  return <Section className="call-panel" title="Your call" icon="bullseye" tone="act" count={actions.length > 0 ? `${open} open${actions.length > open ? ` · ${actions.length - open} locked` : ''}` : undefined}>
+    {/* The moment as one box: the prompt at reading size, then who said what (canvas Live). */}
+    {(prompt || !!exchange?.length) && <div className="call-moment">
+      {prompt && <p className="operation-stage-prompt"><PeopleText text={prompt} /></p>}
+      <Transcript lines={exchange} label="On the line" />
+    </div>}
     {team}
     {guidance}
-    {actions.length > 0 && <h3 className="operation-choice-count">Your call<span>{open} open{actions.length > open ? ` · ${actions.length - open} locked` : ''}</span></h3>}
+    {/* On a tall phone the dock pins the choices to the foot of the screen, so the decision is always in
+        reach while the story scrolls above it (live-call.css, "the dock"). */}
+    <div className="call-dock">
     {actions.length === 0 ? (
       <p className="call-empty">No decisions available right now.</p>
     ) : (
@@ -102,6 +109,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
           // Available choices lead as full cards; unavailable ones follow as slim rows that stay reviewable.
           const firstLocked = !a.eligible && (index === 0 || decisions[index - 1].eligible);
           const forecast = `choice-forecast-${a.id}`;
+          const lead = a.eligible ? leadLine(a, officers) : null;
           return (
             <Fragment key={a.id}>
             {firstLocked && <p className="call-locked-label"><Icon name="lock" size={13} />Unavailable now</p>}
@@ -115,7 +123,10 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
               aria-describedby={a.eligible ? forecast : undefined}
               onClick={() => onSelect(a.id)}
             >
-              <Icon name={a.eligible ? actionIcon(a.icon) : 'lock'} size={!a.eligible ? 16 : actions.length > 2 ? 24 : 30} className="callbtn-icon" />
+              {/* The officer who would carry the choice leads the card, with the action's icon on their
+                  corner (canvas pass, 2026-10-23); a choice nobody leads keeps its icon. */}
+              {lead ? <span className="callbtn-who" aria-hidden="true"><LeadFace officer={lead.officer} size={40} /><span className="callbtn-who-icon"><Icon name={actionIcon(a.icon)} size={16} /></span></span>
+                : <Icon name={a.eligible ? actionIcon(a.icon) : 'lock'} size={!a.eligible ? 16 : actions.length > 2 ? 24 : 30} className="callbtn-icon" />}
               <span className="callbtn-text">
                 <span className="callbtn-title"><PeopleText text={a.title} /></span>
                 <span className="callbtn-sum">
@@ -124,8 +135,12 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                       <Icon name="lock" size={11} /> <PeopleText text={a.reason} />
                     </>
                   ) : a.weighing ? (
-                    // A weighed choice reads as its cost; the pull and the full summary are in the sheet.
-                    <span className="callbtn-cost"><PeopleText text={a.weighing.cost} /></span>
+                    // A weighed choice reads as what it gains and what it costs, side by side; the odds and
+                    // the full reading are in the sheet.
+                    <span className="callbtn-trade">
+                      <span className="callbtn-gain"><i aria-hidden="true">+</i><span className="sr-only">Gains: </span><span><PeopleText text={a.weighing.pull} /></span></span>
+                      <span className="callbtn-cost"><i aria-hidden="true">−</i><span className="sr-only">Costs: </span><span><PeopleText text={a.weighing.cost} /></span></span>
+                    </span>
                   ) : (
                     <PeopleText text={a.summary} />
                   )}
@@ -133,8 +148,8 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                 {a.eligible && a.authority?.allowed && <span className="callbtn-command"><Icon name="radio" size={12} />{a.authority.reason}</span>}
                 {a.eligible && a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
                 {/* Who leads and possible harm are never folded away. */}
-                <CardMeta a={a} officers={officers} reach={reach?.[a.id]} />
-                {a.eligible && <Forecast a={a} id={forecast} />}
+                <CardMeta a={a} officers={officers} reach={reach?.[a.id]} face={!lead} />
+                {a.eligible && <Forecast a={a} id={forecast} lead={lead} />}
               </span>
             </button>
             </Fragment>
@@ -143,7 +158,8 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
       </div>
     )}
     {actions.length > 5 && <Button block className="operation-more-choices" onClick={onExpand} aria-expanded={expanded}>{expanded ? 'Show fewer choices' : `Show all ${actions.length} choices`}</Button>}
-  </>;
+    </div>
+  </Section>;
 }
 
 /** A number padded to `width` digits with figure spaces, which are a digit wide in tabular type and
@@ -168,11 +184,15 @@ function CardOdds({ likelihood }: Pick<ActionView, 'likelihood'>) {
 /** The odds, harm and time every available choice shows, once each (docs/ui-ux-audit.md): the bar,
  * then "90% goes well · Harm low · ~4 min". The chance holds a fixed width of tabular digits, so the
  * line never rewraps as the stall moves it. */
-function Forecast({ a, id }: { a: ActionView; id: string }) {
+function Forecast({ a, id, lead }: { a: ActionView; id: string; lead?: { officer: LeadOfficer; text: string } | null }) {
+  // With the lead's face on the card, their number for this choice rides in the forecast, so the
+  // pinned dock (which hides the lead line) still says what the chance turns on.
+  const skill = lead && a.keyRating ? `${RATING_SHORT[a.keyRating]} ${Math.round(lead.officer.ratings[a.keyRating])}` : null;
   return <span className="callbtn-forecast">
     {!a.eventResult && <CardOdds likelihood={a.likelihood} />}
     <span className="callbtn-forecast-text" id={id}>
-      {!a.eventResult && <span>{padDigits(outcomePercentages(a.likelihood).favorable, 2)}% goes well</span>}
+      {!a.eventResult && <span>{padDigits(outcomePercentages(a.likelihood).favorable, 2)}%<span className="callbtn-gw"> goes well</span></span>}
+      {skill && <span className="callbtn-skill" aria-label={`${lead!.officer.surname} leads, ${skill}`}>{skill}</span>}
       <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
       <ChoiceTime a={a} />
     </span>

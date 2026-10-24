@@ -14,7 +14,8 @@ import { Disclosure } from '../components/Disclosure';
 import { UNIT_STATE_META } from '../components/labels';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { gameDays, money, pct, relativeTime } from '../format';
+import { funding, gameDays, pct, relativeTime } from '../format';
+import { Funds } from '../components/Funds';
 
 /** Stock as one segmented bar: ready, unreliable, reserved, in service and expired. */
 export function StockBar({ o }: { o: StoreOption }) {
@@ -120,7 +121,7 @@ function UnitRow({ v, now }: { v: UnitView; now: number }) {
             <div className="row-actions unit-actions">
               {canServiceAtAll && (
                 <Button size="sm" icon="wrench" aria-disabled={!v.canService} className={v.canService ? '' : 'btn-soft-off'} onClick={() => tryOpen('service')}>
-                  Service · {money(v.serviceCost)} · {w.serviceHours}h
+                  Service · <Funds value={v.serviceCost} /> · {w.serviceHours}h
                 </Button>
               )}
               <Button size="sm" variant="ghost" icon="trash" aria-disabled={!v.canScrap} className={v.canScrap ? '' : 'btn-soft-off'} onClick={() => tryOpen('scrap')}>
@@ -131,7 +132,7 @@ function UnitRow({ v, now }: { v: UnitView; now: number }) {
             <div className="confirm unit-confirm">
               <p>
                 {pending === 'service'
-                  ? `Service ${u.serial}? It costs ${money(v.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
+                  ? `Service ${u.serial}? It costs ${funding(v.serviceCost)} and is away for ${w.serviceHours}h, then returns at up to ${w.restoreTo}% condition.`
                   : `Scrap ${u.serial}? It is removed from the department and cannot be recovered.`}
               </p>
               <div className="row-actions">

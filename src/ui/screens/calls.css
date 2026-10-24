@@ -10,8 +10,54 @@
 .cl-board-link { display: inline-flex; align-items: center; min-height: var(--touch); color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); text-decoration: none; }
 .cl-board-note { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); margin: 0; font-size: var(--s14); color: var(--t3); }
 .cl-info { display: inline-grid; place-items: center; width: var(--touch); height: var(--touch); margin: calc(-1 * var(--sp2)) calc(-1 * var(--sp3)) calc(-1 * var(--sp2)) 0; border: 0; background: none; color: var(--t3); cursor: pointer; }
-.cl-board-list { display: flex; flex-direction: column; gap: var(--sp2); }
+.cl-board-list { display: flex; flex-direction: column; gap: 0; overflow: hidden; }
 .cl-board-casebook { scroll-margin-top: var(--sp4); }
+
+/* Canvas pass, 2026-10-23: when the next call lands, as a quiet dashed strip, then a filter by kind,
+   the call closing first as a full card and the rest as rows in one grouped list. */
+.cl-board-status { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); }
+.cl-board-strip .cl-filters { margin: 0; }
+.cl-board-strip-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--act-soft); color: var(--act-text); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--act) 55%, transparent); }
+.cl-board-strip-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
+.cl-board-strip-main b { font: 600 var(--s16)/1.2 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; }
+.cl-board-strip .cl-board-count { font-size: var(--s14); line-height: 1.3; }
+.cl-board-strip .cl-info { margin: 0; }
+.cl-board-strip .cl-board-link { flex: none; padding: 0 var(--sp2); color: var(--act-text); white-space: nowrap; }
+.cl-filters { display: flex; gap: var(--sp2); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); }
+.cl-filters::-webkit-scrollbar { display: none; }
+.cl-filter { display: inline-flex; align-items: center; gap: var(--sp2); flex: none; min-height: 36px; padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-1); color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); white-space: nowrap; cursor: pointer; }
+.cl-filter span { color: var(--t3); font-variant-numeric: tabular-nums; }
+.cl-filter[aria-pressed='true'] { background: var(--t1); border-color: var(--t1); color: var(--ink-0); }
+.cl-filter[aria-pressed='true'] span { color: var(--ink-3); }
+.cl-filter-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ct); }
+.cl-board-sub { display: flex; align-items: baseline; justify-content: space-between; margin: var(--sp2) 0 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.cl-board-sub span { font-size: var(--s14); letter-spacing: 0; text-transform: none; color: var(--t3); font-weight: 500; }
+
+/* The time a call has left, as a bar that drains. */
+.cl-card-time { display: block; height: 4px; background: var(--ink-3); overflow: hidden; }
+.cl-card-time i { display: block; height: 100%; background: var(--good); border-radius: 0 2px 2px 0; }
+.cl-card-time-soon i { background: var(--warn); }
+
+/* A call as a row: the building small, the hook in two lines, the facts on one. */
+.cl-row { position: relative; display: flex; gap: var(--sp3); padding: var(--sp3); }
+.cl-row + .cl-row { border-top: 1px solid var(--hair); }
+.cl-row.cl-card-open:focus-within { outline: 2px solid var(--act); outline-offset: -2px; }
+.cl-row-thumb { position: relative; flex: none; width: 64px; height: 64px; border-radius: var(--r1); border: 1px solid var(--hair); }
+.cl-row-thumb.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 55%, transparent), transparent 60%); }
+.cl-row-thumb .ct-badge { position: absolute; left: var(--sp1); bottom: var(--sp1); }
+.cl-row-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
+.cl-row-head { display: flex; align-items: baseline; gap: var(--sp2); min-width: 0; }
+.cl-row-title { flex: 1 1 auto; min-width: 0; margin: 0; font: 600 var(--s18)/1.15 var(--f-title); color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-row-left { flex: none; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t3); font-variant-numeric: tabular-nums; }
+.cl-row-place { margin: 0; font-size: var(--s14); line-height: 1.3; color: var(--t3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-row-hook { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: var(--sp1) 0 0; font-size: var(--s14); line-height: 1.35; color: var(--t2); }
+.cl-row-meta { display: flex; align-items: center; gap: var(--sp3); margin-top: var(--sp1); min-width: 0; font-size: var(--s14); }
+.cl-row-pay { display: inline-flex; gap: var(--sp2); flex: none; font-variant-numeric: tabular-nums; }
+.cl-row-pay b { color: var(--good-text); font-weight: 700; }
+.cl-row-xp { color: var(--act-text); font-weight: 600; }
+.cl-row .cl-card-ready { font-size: var(--s14); color: var(--t3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cl-row .cl-ready-faces { display: none; }
+.cl-row .cl-card-time { margin-top: var(--sp2); border-radius: 2px; }
 
 .cl-card { position: relative; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
 .cl-card-open:hover { border-color: var(--t3); }
@@ -28,7 +74,7 @@
 .cl-card-type .ct-badge-label { font-size: var(--s14); }
 .cl-card-setting { display: inline-flex; align-items: center; gap: var(--sp1); text-transform: capitalize; }
 .cl-card-left { font-variant-numeric: tabular-nums; }
-.cl-card-newmark { padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--act-text); font-size: var(--s12); font-weight: 700; }
+.cl-card-newmark { padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--act-text); font-size: 13px; font-weight: 700; }
 .cl-card-body { display: flex; flex-direction: column; gap: var(--sp2); padding: var(--sp2) var(--sp3) var(--sp3); }
 .cl-card-title { margin: 0; font: 600 var(--s22)/1.15 var(--f-title); color: var(--t1); overflow-wrap: anywhere; text-shadow: 0 1px 6px var(--ink-deep); }
 .cl-card-button { all: unset; cursor: pointer; }
@@ -76,43 +122,97 @@
 .cl-tone-act { color: var(--act-text); }
 
 /* ------------------------------------------------------------ deploy */
-.cl-section { display: flex; flex-direction: column; gap: var(--sp2); }
-.cl-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); min-height: var(--touch); }
-.cl-section-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
-.cl-section-aside { min-width: 0; font-size: var(--s14); color: var(--t3); text-align: right; }
-.cl-link { min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
-.cl-squads { display: flex; flex-direction: column; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
-.cl-squad { display: flex; align-items: center; gap: var(--sp3); min-height: 64px; padding: var(--sp2) var(--sp3); border: 0; border-bottom: 1px solid var(--hair); background: transparent; color: var(--t1); text-align: left; cursor: pointer; }
-.cl-squad:last-child { border-bottom: 0; }
-.cl-squad:first-child { border-radius: var(--r2) var(--r2) 0 0; }
-.cl-squad:last-child { border-radius: 0 0 var(--r2) var(--r2); }
-.cl-squad:only-child { border-radius: var(--r2); }
-.cl-squad:focus-visible { outline-offset: calc(-1 * var(--sp1)); }
-.cl-squad-on { background: var(--ink-2); box-shadow: inset 3px 0 0 var(--act), inset 0 0 0 1px color-mix(in srgb, var(--act) 55%, transparent); }
-.cl-squad-check { flex: 0 0 auto; color: var(--act-text); }
-.cl-squad-on .squad-badge { background: var(--act); border-color: var(--act); color: var(--act-ink); }
+/* Finish pass, 2026-10-23: the call's place stays in view, each squad is a raised card with the
+   people on it, the kit is a set of slots, and the way in is the building itself. Tokens only. */
+.dp-hero { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp3); min-height: 176px; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); box-shadow: var(--lift-2); }
+.dp-hero.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 90%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 48%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 14%, transparent) 100%); }
+.dp-hero-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); }
+.dp-hero-type, .dp-hero-tier, .dp-hero-pay { display: inline-flex; align-items: center; gap: var(--sp2); padding: var(--sp1) var(--sp2); border: 1px solid color-mix(in srgb, var(--white) 10%, transparent); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); backdrop-filter: blur(6px); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); white-space: nowrap; }
+.dp-hero-type .ct-badge-label { font-size: var(--s14); }
+.dp-hero-id { display: grid; gap: var(--sp1); min-width: 0; }
+.dp-hero-title { margin: 0; font: 600 var(--s28)/1.05 var(--f-title); color: var(--t1); text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 80%, transparent); overflow-wrap: anywhere; }
+.dp-hero-place { display: flex; align-items: center; gap: var(--sp1); margin: 0; font-size: var(--s14); line-height: 1.3; color: var(--t-plate); text-shadow: 0 1px 6px var(--ink-deep); }
+.dp-hero-pay { align-self: flex-start; font-variant-numeric: tabular-nums; }
+.dp-hero-pay .icon { color: var(--good); }
+.dp-hero-pay b { color: var(--cash-hi); font-weight: 700; }
+.dp-hero-pay i { width: 1px; height: 14px; background: var(--hair-2); }
+
+.cl-section { display: flex; flex-direction: column; gap: var(--sp3); }
+.cl-section-head { display: flex; align-items: center; gap: var(--sp3); min-height: var(--touch); }
+.cl-section-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s22)/1.1 var(--f-title); letter-spacing: 0.01em; color: var(--t1); }
+.cl-section-title .icon { flex: none; color: var(--t3); }
+/* A rule runs out from the title to whatever sits at the end of the head. */
+.cl-section-head::after { content: ''; order: 2; flex: 1 1 16px; min-width: 12px; height: 1px; background: linear-gradient(90deg, var(--hair-2), transparent); }
+.cl-section-aside { order: 3; flex: 0 0 auto; min-width: 0; font-size: var(--s14); color: var(--t3); text-align: right; }
+.cl-section-head > .cl-link { order: 3; flex: 0 0 auto; }
+.cl-link { flex: none; white-space: nowrap; min-height: var(--touch); padding: 0 var(--sp1); border: 0; background: none; color: var(--t2); font: 600 var(--s14)/1 var(--f-ui); cursor: pointer; }
+.cl-link.cl-pill { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--surface-1); box-shadow: var(--lift-edge); color: var(--t1); }
+.cl-link.cl-pill::after { content: ''; position: absolute; inset: -4px; }
+.cl-link.cl-pill:active { background: var(--ink-3); }
+
+/* Squads: one raised card each. The chosen card is lit; the rest step back a little. */
+.cl-squads { display: flex; flex-direction: column; gap: var(--sp3); border: 0; background: none; }
+.cl-squad { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "badge main mark" "crew crew ready"; align-items: center; gap: var(--sp3); width: 100%; min-height: 0; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); color: var(--t1); text-align: left; cursor: pointer; transition: transform 120ms ease, box-shadow 180ms ease, border-color 180ms ease, opacity 180ms ease; }
+.cl-squad:active { transform: scale(0.985); }
+.cl-squad:focus-visible { outline-offset: 2px; }
 .cl-squad:disabled { opacity: 0.55; cursor: default; }
-.cl-squad-main { display: flex; flex-direction: column; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
-.cl-squad-main strong { font-size: var(--s16); }
-.cl-squad-fit { display: inline-flex; align-items: center; gap: var(--sp1); margin-left: var(--sp2); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--good-text); vertical-align: middle; }
-.cl-squad-main > span { font-size: var(--s14); color: var(--t2); }
-.cl-squad-main > span.cl-warn { color: var(--warn-text); }
+.cl-squads:has(.cl-squad-on) .cl-squad:not(.cl-squad-on):not(:disabled) { opacity: 0.9; }
+.cl-squad-on { background: var(--surface-2); border-color: color-mix(in srgb, var(--act) 80%, transparent); box-shadow: var(--lift-2), var(--glow-act); }
+.cl-squad .cl-squad-badge { grid-area: badge; width: 48px; height: 48px; border: 1px solid var(--hair-2); border-radius: 10px; background: linear-gradient(180deg, var(--ink-3), var(--ink-1)); box-shadow: var(--lift-edge), 0 2px 4px color-mix(in srgb, var(--black) 45%, transparent); font: 700 var(--s28)/1 var(--f-title); color: var(--t1); }
+.cl-squad-on .cl-squad-badge { background: linear-gradient(180deg, var(--act-hi), var(--act-lo)); border-color: var(--act-hi); color: var(--act-ink); }
+.cl-squad-main { grid-area: main; display: flex; flex-direction: column; gap: var(--sp1); min-width: 0; }
+.cl-squad-main strong { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); font: 600 var(--s22)/1.1 var(--f-title); overflow-wrap: normal; }
+.cl-squad-fit { display: inline-flex; align-items: center; gap: var(--sp1); padding: 2px var(--sp2) 2px var(--sp1); border-radius: 999px; background: color-mix(in srgb, var(--good) 14%, transparent); font: 600 var(--s14)/1.2 var(--f-ui); color: var(--good-text); }
+.cl-squad-note { font-size: var(--s14); line-height: 1.3; color: var(--t2); }
+.cl-squad-note.cl-warn { color: var(--warn-text); }
+.cl-squad-mark { grid-area: mark; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--hair-2); border-radius: 50%; box-shadow: var(--well); color: var(--act-ink); transition: background 160ms ease, border-color 160ms ease; }
+.cl-squad-on .cl-squad-mark { border-color: var(--act); background: var(--act); box-shadow: 0 0 12px color-mix(in srgb, var(--act) 45%, transparent); }
 .cl-faces { display: inline-flex; flex: 0 0 auto; }
-.cl-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
+.cl-faces > * + * { margin-left: calc(-1 * var(--sp3)); }
+.cl-squad-crew { grid-area: crew; padding-left: var(--sp1); filter: drop-shadow(0 3px 5px color-mix(in srgb, var(--black) 45%, transparent)); }
+.cl-squad-ready { grid-area: ready; display: grid; justify-items: end; gap: 2px; font-variant-numeric: tabular-nums; }
+.cl-squad-ready b { font: 600 var(--s22)/1 var(--f-title); color: var(--t1); }
+.cl-squad-ready b small { font-size: var(--s14); color: var(--t3); }
+.cl-squad-ready > small { font-size: var(--s14); line-height: 1; color: var(--t3); }
+.cl-pips { display: inline-flex; gap: var(--sp1); }
+.cl-pips i { width: 14px; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--white) 14%, transparent); box-shadow: inset 0 1px 1px color-mix(in srgb, var(--black) 40%, transparent); }
+.cl-pips i[data-on] { background: var(--good); box-shadow: 0 0 8px color-mix(in srgb, var(--good) 50%, transparent); }
+.cl-squad-ready.cl-warn b { color: var(--warn-text); }
+
+/* Kit: a recessed slot for each thing carried, with the art large enough to read. */
 .cl-basic-kit { margin: 0; font-size: var(--s14); color: var(--t2); }
-.cl-plan-card { padding: 0 var(--sp3); gap: 0; }
-.cl-plan-card .cl-plan-row { padding: var(--sp2) 0; border-bottom: 1px solid var(--hair); }
-.cl-plan-card .cl-plan-row:last-child { border-bottom: 0; }
-.cl-well { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r1); background: var(--ink-2); color: var(--t1); }
-.cl-plan-empty { padding: var(--sp3) 0; }
-.cl-plan-card .cl-kit { padding: var(--sp2) 0; }
+.cl-plan-card { display: flex; flex-direction: column; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.cl-slots-label { display: flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t3); }
+.cl-slots-label ~ .cl-slots-label { padding-top: var(--sp1); border-top: 1px solid var(--hair); margin-top: var(--sp1); }
+.cl-kit.cl-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); }
+.cl-kit.cl-basic-icons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cl-basic-icons .cl-slot-art { height: 48px; }
+.cl-basic-icons .cl-slot-art > * { width: 40px; height: 40px; }
+.cl-slot-empty { margin: 0; display: flex; align-items: center; gap: var(--sp2); padding: var(--sp3); border: 1px dashed var(--hair-2); border-radius: var(--r2); color: var(--t3); font-size: var(--s14); }
+.cl-kit-chip.cl-slot { flex-direction: column; justify-content: flex-start; gap: var(--sp1); min-height: 0; padding: var(--sp2) var(--sp1) var(--sp3); border: 1px solid color-mix(in srgb, var(--hair) 80%, transparent); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); text-align: center; white-space: normal; }
+.cl-slot-art { display: grid; place-items: center; width: 100%; height: 56px; background: radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--ink-3) 85%, transparent), transparent 68%); }
+.cl-slot-art > * { filter: drop-shadow(0 3px 4px color-mix(in srgb, var(--black) 55%, transparent)); }
+.cl-slot-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); }
+.cl-kit-chip.cl-slot-armory { background: var(--surface-2); border-color: var(--hair-2); box-shadow: var(--lift-1); }
+.cl-kit-chip.cl-slot.cl-kit-warn { border-color: var(--warn); color: var(--warn-text); }
+.cl-kit-chip.cl-slot.cl-kit-short { border-style: dashed; background: transparent; box-shadow: none; }
+.cl-kit-chip.cl-slot.cl-kit-short .cl-slot-name { color: var(--t2); font-weight: 500; }
 .cl-muted { margin: 0; font-size: var(--s14); color: var(--t3); }
+.cl-well { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--surface-well); box-shadow: var(--well); color: var(--t1); }
 .cl-kit { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
 .cl-kit-chip { display: inline-flex; align-items: center; gap: var(--sp2); min-height: 36px; padding: var(--sp2) var(--sp3); white-space: nowrap; line-height: 1.3; border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-2); font-size: var(--s14); font-weight: 600; color: var(--t1); }
-.cl-kit-short { background: transparent; color: var(--t2); font-weight: 500; border-style: dashed; }
-.cl-kit-warn { border-color: var(--warn); color: var(--warn-text); }
 .cl-kit-workspace .prepsquad-head { display: flex; flex-wrap: wrap; gap: var(--sp2); }
 .cl-going-workspace { display: flex; flex-direction: column; gap: var(--sp3); }
+
+/* The way in: where each squad enters, then the building with the entries marked. */
+.cl-route-card { overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.cl-route-rows { margin: 0; padding: 0; list-style: none; }
+.cl-route-row { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3); }
+.cl-route-row + .cl-route-row { border-top: 1px solid var(--hair); }
+.cl-route-main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.cl-route-main strong { font: 600 var(--s18)/1.2 var(--f-ui); color: var(--t1); overflow-wrap: anywhere; }
+.cl-route-main span { font-size: var(--s14); line-height: 1.3; color: var(--t2); }
+.cl-route-card .prep-map { height: 292px; border: 0; border-top: 1px solid var(--paper-edge); border-radius: 0; box-shadow: inset 0 14px 18px -14px color-mix(in srgb, var(--black) 55%, transparent); }
 
 /* ------------------------------------------------------------ live call */
 .live-continue-note { margin: 0 0 var(--sp2); font-size: var(--s14); color: var(--t2); }
@@ -126,3 +226,46 @@
 .operation-action-sheet .operation-commit-meta { margin: 0; }
 .cl-squad-main strong { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); overflow-wrap: normal; }
 .cl-squad-main strong .cl-squad-fit { margin-left: 0; }
+
+/* ------------------------------------------------------------ brief and deploy as one screen (canvas pass, 2026-10-23) */
+/* The team block sits inside the brief, so its sections share the brief's rhythm, and each squad is
+   one compact row: letter, name and fit, the crew, readiness, the check. */
+.cl-team { display: grid; gap: var(--sp5); }
+.cl-team .cl-squads { gap: 0; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); overflow: hidden; }
+.cl-team .cl-squad { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "badge main crew mark" "badge main ready mark"; gap: 0 var(--sp3); padding: var(--sp2) var(--sp3); border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.cl-team .cl-squad + .cl-squad { border-top: 1px solid var(--hair); }
+.cl-team .cl-squad-on { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
+.cl-team .cl-squad .cl-squad-badge { width: 40px; height: 40px; font-size: var(--s22); }
+.cl-team .cl-squad-main strong { font-size: var(--s18); }
+.cl-team .cl-squad-crew { justify-self: end; padding-left: 0; }
+.cl-team .cl-faces > * + * { margin-left: calc(-1 * var(--sp2)); }
+.cl-team .cl-squad-ready { grid-template-columns: auto auto; align-items: center; gap: var(--sp2); }
+.cl-team .cl-squad-ready b { font-size: var(--s14); }
+.cl-team .cl-squad-ready > small { display: none; }
+.cl-team .cl-pips i { width: 8px; height: 4px; }
+.cl-team .cl-squad-mark { width: 24px; height: 24px; }
+.cl-team .cl-plan-card { gap: var(--sp2); padding: var(--sp2) var(--sp3) var(--sp3); }
+.cl-team .cl-kit.cl-slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cl-team .cl-slot-art { height: 44px; }
+.cl-team .cl-route-row { padding: var(--sp2) var(--sp3); }
+.cl-actions .action-bar-summary > span:first-child { font-weight: 600; }
+.cl-team .cl-basic-icons .cl-slot-art { height: 32px; }
+.cl-team .cl-basic-icons .cl-kit-chip.cl-slot { padding: var(--sp1) var(--sp1) var(--sp2); }
+/* The board's name leads the strip: icon and title, then when the next call lands. */
+.cl-board-strip .cl-board-title { font-size: var(--s18); }
+.cl-board-strip .cl-board-title .icon { color: var(--act-text); }
+
+/* Framed board (canvas "Depth and Framed Sections", 2026-10-24): the waiting calls sit in the "Also
+   waiting" panel's well, so the compact row's readiness wraps rather than clipping at the well's edge. */
+.cl-board-list .cl-card-ready { white-space: normal; }
+.cl-board-strip .cl-board-count { color: var(--t2); }
+
+/* Framed prepare (canvas "Depth and Framed Sections", 2026-10-24): Who goes, each squad's kit and the
+   way in are Section panels. The squads sit in the panel's well, the kit drops its own card frame,
+   and the bar's Adjust reads as the bar's pill. */
+.cl-team .cl-section { gap: 0; }
+.cl-team .cl-squads.panel-well { border: 0; background: var(--surface-well); box-shadow: var(--well); }
+.cl-team .panel-well .cl-squad + .cl-squad { border-top-color: var(--well-rule); }
+.cl-section .cl-plan-card { padding: 0; border: 0; background: none; box-shadow: none; }
+.cl-route .panel-well .cl-route-row + .cl-route-row { border-top: 0; }
+.cl-team { gap: var(--sp3); }

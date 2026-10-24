@@ -177,7 +177,7 @@ describe('anniversaries and birthdays', () => {
     expect(day6.officers.off_chen.wage).toBe(wage + 1);
     const rep = events(day6, 'anniversary', 'off_chen');
     expect(rep).toHaveLength(1);
-    expect(rep[0].detail).toMatch(/9 years of service.*Wage \+\$1\/h \(now \$49\/h\)/);
+    expect(rep[0].detail).toMatch(/9 years of service.*Wage up 1 funding an hour, now 49 funding an hour/);
     // Later ticks neither repeat the step nor the report.
     const day9 = tick(day6, 9);
     expect(day9.officers.off_chen.wage).toBe(wage + 1);
@@ -260,7 +260,7 @@ describe('retirement by age', () => {
     expect(s.officers.off_okafor.retirement).toBeNull();
     s = tick(s, 586);
     expect(s.officers.off_okafor.retirement).toMatchObject({ reason: 'service', day: 614, extended: false });
-    expect(careerInfo(s, 'off_okafor', at(586))!.retirement).toMatchObject({ canRetain: true, retainCost: '+$7/h' });
+    expect(careerInfo(s, 'off_okafor', at(586))!.retirement).toMatchObject({ canRetain: true, retainCost: '+7 funding an hour' });
     // Retained, she runs on to day 979 and then hits the next draw or the age-60 rule.
     const kept = ok(s, { type: 'offerRetention', officerId: 'off_okafor' }, at(586));
     expect(kept.officers.off_okafor.retirement).toMatchObject({ day: 979, extended: true });
@@ -348,7 +348,7 @@ describe('retention', () => {
     let s = announced();
     const wage = s.officers.off_okafor.wage; // 55 -> +7
     const info = careerInfo(s, 'off_okafor', T0)!;
-    expect(info.retirement).toMatchObject({ canRetain: true, retainCost: '+$7/h', reason: 'Chose to retire after a long career' });
+    expect(info.retirement).toMatchObject({ canRetain: true, retainCost: '+7 funding an hour', reason: 'Chose to retire after a long career' });
     s = ok(s, { type: 'offerRetention', officerId: 'off_okafor' }, T0);
     expect(s.officers.off_okafor.wage).toBe(wage + 7);
     expect(s.officers.off_okafor.retirement).toMatchObject({ day: 20 + DAYS, extended: true, reason: 'service' });

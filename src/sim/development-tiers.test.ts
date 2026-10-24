@@ -114,7 +114,7 @@ describe('development tiers', () => {
     expect(reject(tierOne, 'personnel_academy')).toMatch(/review tier II/);
     expect(reject(tierOne, 'personnel_academy', 1)).toMatch(/review tier II/);
     tierOne.department.funding = 7199;
-    expect(reject(tierOne, 'personnel_academy', 2)).toMatch(/Needs \$7,200/);
+    expect(reject(tierOne, 'personnel_academy', 2)).toMatch(/Needs 7,200 funding/);
     const maxed = buyThrough(funded(), 'personnel_academy', 3);
     expect(reject(maxed, 'personnel_academy', 4)).toMatch(/maximum tier/);
   });

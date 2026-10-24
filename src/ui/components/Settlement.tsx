@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DebriefResult } from '../../sim/types';
 import { levelProgress } from '../../sim/department-level';
-import { Card, Chip, EmptyState, Meter, SubHead } from './ui';
+import { Card, Chip, EmptyState, Meter } from './ui';
 import { assetUrl } from '../art/assetUrl';
-import { liveMoney, moneyFull, signed, signedMoney } from '../format';
+import { funding as fundingText, signed, signedMoney } from '../format';
+import { Funds } from './Funds';
 import { easeToward } from './Finance';
 import { getScenario } from '../../sim/scenario-registry';
 import { reducedMotion } from '../motion';
@@ -61,24 +62,26 @@ export function Settlement({ debrief: d, department, still: quiet = false }: { d
     return () => window.cancelAnimationFrame(frame);
   }, [still]);
   const empty = d.fundingReward === 0 && d.trustDelta === 0 && !service && !promotions;
+  const xp = d.officerCondition.reduce((total, c) => total + c.xpGained, 0);
+  // Three reward tiles (canvas Debrief): funding counts up from nothing to the payout, then the team's
+  // XP and the trust change. Each says its word under the number; a zero still shows, so the row never moves.
+  const tiles = [
+    { key: 'funding', tone: d.fundingReward < 0 ? 'harm' : 'good', value: <Funds value={Math.round(funding - before)} format="signed" />, word: 'Funding', spoken: `Funding ${signedMoney(d.fundingReward)}` },
+    { key: 'xp', tone: 'act', value: signed(xp), word: 'XP', spoken: `${signed(xp)} experience for the team` },
+    { key: 'trust', tone: d.trustDelta < 0 ? 'harm' : 'trust', value: signed(d.trustDelta, 1), word: 'Trust', spoken: `Trust ${signed(d.trustDelta, 1)}` },
+  ] as const;
   return <Card className={`result-department result-settlement${still ? ' result-settlement-still' : ''}`}>
     <section className="result-rewards" aria-label="Rewards">
-      <SubHead icon="cash">Settlement</SubHead>
-      {d.fundingReward !== 0 && <div className="settle-funding">
-        <img className="settle-cash" src={assetUrl('art/plates/tex_cash.webp')} alt="" aria-hidden="true" />
-        <span className="settle-stack">
-          <span className="settle-value" aria-hidden="true">{liveMoney(funding)}</span>
-          <span className={`settle-delta${d.fundingReward < 0 ? ' tone-danger' : ' tone-mint'}`}>{signedMoney(d.fundingReward)} funding</span>
-          {offered !== undefined && offered > d.fundingReward && d.fundingReward > 0 && <span className="settle-offer">{`${moneyFull(d.fundingReward)} of the ${moneyFull(offered)} on offer. The pay follows how the call ended.`}</span>}
-        </span>
-        <span className="sr-only">Funding {signedMoney(d.fundingReward)}</span>
-      </div>}
+      <ul className="settle-tiles">{tiles.map((tile) => <li key={tile.key} className="settle-tile" data-tone={tile.tone}>
+        {tile.key === 'funding' && <img className="settle-cash" src={assetUrl('art/plates/tex_cash.webp')} alt="" aria-hidden="true" />}
+        <b aria-hidden="true">{tile.value}</b><span aria-hidden="true">{tile.word}</span><span className="sr-only">{tile.spoken}</span>
+      </li>)}</ul>
+      {offered !== undefined && offered > d.fundingReward && d.fundingReward > 0 && <p className="settle-offer">{`${fundingText(d.fundingReward)} of the ${fundingText(offered)} on offer. The pay follows how the call ended.`}</p>}
       {service !== 0 && <div className="settle-xp">
         <span className="settle-xp-label"><span>Department XP{from && from.next !== null ? ` · ${Math.max(0, from.next - from.service - service)} to level ${from.level + 1}` : ''}</span><b>{signed(service)}</b></span>
         {from && from.next !== null ? <Meter value={filled ? to : start} tone="mid" label="Service toward the next level" valueText={`${Math.round(to)} percent after this call`} /> : null}
       </div>}
       <div className="chips result-reward-chips">
-        {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
         {promotions > 0 && <Chip tone="amber" icon="medal">{promotions === 1 ? '1 promotion' : `${promotions} promotions`}</Chip>}
         {leveled && <Chip tone="amber" icon="medal">Department level {d.levelReached}</Chip>}
       </div>

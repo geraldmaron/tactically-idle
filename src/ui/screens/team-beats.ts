@@ -5,14 +5,14 @@ import type { BeatSpec } from '../components/beat-controller';
 import type { RankId } from '../../content/ranks';
 import type { Course, Officer } from '../../sim/types';
 import { ROLE_META } from '../components/labels';
-import { duration, perHour } from '../format';
+import { duration, fundingPerHour } from '../format';
 import { promotionLine } from './team-model';
 
 const name = (o: Pick<Officer, 'firstName' | 'surname'>) => `${o.firstName} ${o.surname}`;
 
 /** SIGNED: the officer's face, their role and wage. */
 export function signedBeat(officer: Officer): BeatSpec {
-  return { stamp: 'Signed', face: { officer, name: name(officer) }, line: `${ROLE_META[officer.role].label}, ${perHour(officer.wage)}`, sting: 'hire' };
+  return { stamp: 'Signed', face: { officer, name: name(officer) }, line: `${ROLE_META[officer.role].label}, ${fundingPerHour(officer.wage)}`, sting: 'hire' };
 }
 
 /** ENROLLED: the officer's face, the course and when they are back. */

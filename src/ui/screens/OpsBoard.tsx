@@ -3,12 +3,13 @@ import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { boardShortages } from '../../sim/board-suggestions';
-import { Button, Chip, EmptyState } from '../components/ui';
+import { Button, Chip, EmptyState, Section } from '../components/ui';
 import { Face } from '../components/Face';
 import { officerFaceStatus } from '../components/face-status';
 import { squadReadiness } from '../../sim/department-selectors';
 import { Sheet } from '../components/Sheet';
-import { countdown, useNow } from '../components/incident';
+import { countdown, incidentMeta, useNow } from '../components/incident';
+import { callTypeKind } from '../icons/CallTypeBadge';
 import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, boardPlan, incidentsOf } from './helpers';
@@ -34,11 +35,16 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
   const g = useGame();
   const now = useNow(1000);
   const entries = boardEntries(g, now).filter((e) => e.incident.expiresAt > now);
-  const live = boardPlan(entries);
+  // The call closing first leads; a player with little time looks at the top card only.
+  const live = [...boardPlan(entries)].sort((a, b) => a.incident.expiresAt - b.incident.expiresAt);
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
   const [noteOpen, setNoteOpen] = useState(false);
-  const arrival = note.line ?? (note.nextAt ? `Next ${relativeTime(note.nextAt, now)}` : null);
+  const [kind, setKind] = useState<string | null>(null);
+  const arrival = note.line ?? (note.nextAt ? `Next call ${relativeTime(note.nextAt, now)}` : null);
+  const types = [...new Set(live.map((e) => e.scenario?.incident?.type ?? e.incident.type))];
+  const shown = kind && types.includes(kind) ? live.filter((e) => (e.scenario?.incident?.type ?? e.incident.type) === kind) : live;
+  const [lead, ...rest] = shown;
   // Back from a call's brief returns focus to its card (docs/ui-ux-audit.md, exit table).
   useEffect(() => {
     const id = callFlow.takeOpener();
@@ -47,26 +53,36 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
 
   return (<>
     <div className="page cl-board">
-      <header className="cl-board-top">
-        <h1 className="cl-board-title"><Icon name="calls" size={24} />Calls</h1>
-        <span className="cl-board-aside">
-          <span className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting`}</span>
-          <a className="cl-board-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>
-        </span>
-      </header>
-      {live.length > 0 && <p className="cl-board-note">
-        <span className="cl-board-next"><Icon name="clock" size={16} />{arrival ?? 'Skipping a call'}</span>
-        <button type="button" className="cl-info" aria-label="About skipping a call" onClick={() => setNoteOpen(true)}><Icon name="info" size={20} /></button>
-      </p>}
+      {/* The board's head as a panel (canvas "Depth and Framed Sections"): when the next call lands in
+          the bar, the Casebook as its action, then how many wait and the filters inside. */}
+      <Section className="cl-board-strip" level="h1" title="Calls" icon="calls" tone="act" count={arrival ?? 'Calls arrive while the department works'}
+        action={<a className="section-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>}>
+        <div className="cl-board-status">
+          <span className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting · skipping costs nothing`}</span>
+          <button type="button" className="cl-info" aria-label="About skipping a call" onClick={() => setNoteOpen(true)}><Icon name="info" size={20} /></button>
+        </div>
+        {types.length > 1 && <div className="cl-filters" role="group" aria-label="Show calls of one kind">
+          <button type="button" className="cl-filter" aria-pressed={!kind} onClick={() => setKind(null)}>All <span>{live.length}</span></button>
+          {types.map((t) => {
+            const n = live.filter((e) => (e.scenario?.incident?.type ?? e.incident.type) === t).length;
+            return <button key={t} type="button" className={`cl-filter ct-badge--${callTypeKind(t).kind}`} aria-pressed={kind === t} onClick={() => setKind(kind === t ? null : t)}>
+              <i className="cl-filter-dot" aria-hidden="true" />{incidentMeta(t).label} <span>{n}</span>
+            </button>;
+          })}
+        </div>}
+      </Section>
       <Sheet open={noteOpen} onClose={() => setNoteOpen(false)} title="Skipping a call" maxHeight="short" footer={<Button variant="primary" block onClick={() => setNoteOpen(false)}>Done</Button>}>
         <p>No penalty for skipping a call. One nobody takes goes to another unit.</p>
       </Sheet>
       {live.length === 0 && <EmptyState spot="noCalls" title="No calls right now">A call nobody takes goes to another unit. The next one arrives while the department works.{arrival ? ` ${arrival}.` : ''}</EmptyState>}
-      <div className="cl-board-list" data-ui-list>
-        {live.map((e) => (
-          <BoardCard key={e.card.id} g={g} entry={e} now={now} isNew={fresh.has(e.card.id)} onOpen={onOpen} />
-        ))}
-      </div>
+      {lead && <BoardCard g={g} entry={lead} now={now} isNew={fresh.has(lead.card.id)} onOpen={onOpen} />}
+      {rest.length > 0 && <Section title="Also waiting" icon="list" count={`${rest.length} more ${rest.length === 1 ? 'call' : 'calls'}`}>
+        <div className="cl-board-list panel-well" data-ui-list>
+          {rest.map((e) => (
+            <BoardCard key={e.card.id} g={g} entry={e} now={now} isNew={fresh.has(e.card.id)} onOpen={onOpen} compact />
+          ))}
+        </div>
+      </Section>}
       <div id="casebook" className="cl-board-casebook"><Casebook state={g} /></div>
     </div>
   </>);
@@ -117,21 +133,24 @@ function ThemeLine({ cardId }: { cardId: Id }) {
   return <p className="cl-card-warning" role="note">{CARD_WARNING_TEXT.involves} {joinThemes(descriptors.map((d) => CARD_THEME_WORDS[d]))}.</p>;
 }
 
-function BoardCard({ g, entry, now, isNew, onOpen }: { g: GameState; entry: BoardEntry; now: number; isNew: boolean; onOpen: (id: Id) => void }) {
+function BoardCard({ g, entry, now, isNew, onOpen, compact = false }: { g: GameState; entry: BoardEntry; now: number; isNew: boolean; onOpen: (id: Id) => void; compact?: boolean }) {
   const { card, incident, scenario } = entry;
   const short = boardShortages(g, card.id, now);
   const spec = scenario?.incident;
   const left = incident.expiresAt - now;
   const soon = left < 15 * 60000;
+  const span = incident.expiresAt - incident.arrivedAt;
+  const timeShare = span > 0 ? left / span : undefined;
   // Each card names its own call's people; nobody is deployed yet.
   return (
     <GamePeopleProvider lexicon={scenario ? lexiconFor(scenario, null, []) : null}>
       <CallTile card={card} scenario={scenario} isNew={isNew} familyId={scenario?.locationFamilyId ?? spec?.familyId ?? incident.familyId} type={spec?.type ?? incident.type} tier={spec?.tier ?? incident.tier}
         facts={incident.newKind && <Chip tone="amber" icon="star">New kind of call</Chip>}
-        short={short}
+        short={compact ? [] : short}
+        compact={compact} timeShare={timeShare} soon={soon}
         contentNote={<ThemeLine cardId={incident.id} />}
         warning={card.issues.length > 0 && <p className="cl-card-issue"><Icon name="warning" size={16} />{card.issues[0]}{card.issues.length > 1 ? ` (+${card.issues.length - 1} more)` : ''}</p>}
-        timeLeft={<span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
+        timeLeft={compact ? countdown(left) : <span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
         readiness={<Readiness g={g} card={card} now={now} />}
         onOpen={() => onOpen(card.id)} />
     </GamePeopleProvider>

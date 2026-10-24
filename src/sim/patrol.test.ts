@@ -131,7 +131,7 @@ describe('community grant boost', () => {
     const state = createInitialState(T0);
     expect(PATROL_BOOSTS['community-grant']).toEqual({ factor: 1.5, hours: 4, cost: 2000 });
     expect(patrolBoostQuote(state, 'community-grant')).toMatchObject({ ok: false, incrementalReturn: 1680 });
-    expect(refused(state, { type: 'activatePatrolBoost', boostId: 'community-grant' })).toMatch(/return only \$1,680/);
+    expect(refused(state, { type: 'activatePatrolBoost', boostId: 'community-grant' })).toMatch(/return only 1,680 funding/);
   });
 
   it('boosts gross only, caps the aggregate factor at 2x, and extends the same grant window', () => {
@@ -172,7 +172,7 @@ describe('community grant boost', () => {
     }
     expect(patrolBoostQuote(state, 'community-grant')).toMatchObject({ ok: false, incrementalReturn: 0 });
     const funding = state.department.funding;
-    expect(refused(state, { type: 'activatePatrolBoost', boostId: 'community-grant' })).toMatch(/return only \$0/);
+    expect(refused(state, { type: 'activatePatrolBoost', boostId: 'community-grant' })).toMatch(/return only 0 funding/);
     expect(state.department.funding).toBe(funding);
     expect(state.patrol.boosts[0].expiresAt).toBe(T0 + 24 * HOUR_MS);
   });

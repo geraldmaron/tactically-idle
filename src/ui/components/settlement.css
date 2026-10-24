@@ -11,3 +11,14 @@
 .result-settlement .meter-fill { transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .result-settlement-still .meter-fill { transition: none; }
 .settle-offer { font-size: var(--s14); color: var(--t2); }
+
+/* Reward tiles (canvas Debrief): three equal tiles, the number over its word. */
+.settle-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.settle-tile { position: relative; display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 56px; padding: var(--sp2); border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
+.settle-tile b { font: 700 var(--s18)/1.1 var(--f-ui); font-variant-numeric: tabular-nums; }
+.settle-tile > span { font-size: var(--s14); color: var(--t3); }
+.settle-tile[data-tone="good"] b { color: var(--good-text); }
+.settle-tile[data-tone="act"] b { color: var(--act-text); }
+.settle-tile[data-tone="trust"] b { color: var(--info); }
+.settle-tile[data-tone="harm"] b { color: var(--harm-text); }
+.settle-tile .settle-cash { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.14; object-fit: cover; pointer-events: none; }

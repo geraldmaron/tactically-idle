@@ -7,7 +7,7 @@ import { DEV_NODES } from '../content/dev-tree';
 import { COURSES, COURSE_RATING_CEILING } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { HOUR_MS, isNodeUnlocked, ratesAt } from './economy';
-import { money } from './format';
+import { funding, fundingPerHour } from './format';
 import { simNow } from './calendar';
 import { fullName } from './officer';
 import { createUnit } from './equipment';
@@ -41,7 +41,7 @@ export function describeEffect(e: NodeEffect): string {
     case 'recoveryRate':
       return `Officers recover from stress x${e.mult} faster`;
     case 'income':
-      return `+${money(e.perHour)}/h funding`;
+      return `+${fundingPerHour(e.perHour)}`;
     case 'loadoutPresets':
       return 'Unlocks saved squad loadout presets';
     case 'restockRules':
@@ -114,7 +114,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
   if (trainingCount(state) >= state.department.trainingSlots) return no('No free training slot');
   const fee = courseFee(state, course.cost);
   if (state.department.funding < fee) {
-    return no(`Needs ${money(fee)} (have ${money(state.department.funding)})`);
+    return no(`Needs ${funding(fee)} (have ${funding(state.department.funding)})`);
   }
   if (officer) {
     // Temporary patrol boosts never underwrite a training commitment.
@@ -127,7 +127,7 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
       },
     };
     const net = ratesAt(trial, t, false).net;
-    if (net < 0) return no(`Training would leave the department ${money(-net)}/h short while ${officer.surname} is away`);
+    if (net < 0) return no(`Training would leave the department ${fundingPerHour(-net)} short while ${officer.surname} is away`);
   }
   return { ok: true, reason: null };
 }
@@ -161,7 +161,7 @@ export function itemCheck(state: GameState, item: ItemDefinition, qty: number): 
   }
   const total = item.cost * qty;
   if (state.department.funding < total) {
-    return { ok: false, reason: `Needs ${money(total)} (have ${money(state.department.funding)})` };
+    return { ok: false, reason: `Needs ${funding(total)} (have ${funding(state.department.funding)})` };
   }
   return { ok: true, reason: null };
 }

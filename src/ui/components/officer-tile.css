@@ -1,6 +1,6 @@
 /* One officer as a person first (components/OfficerTile.tsx): a portrait big enough to read, the surname and
-   role over its foot, a status flag only when not ready, a stress bar along the foot, and one personal line
-   under it that turns over every few seconds. Two to a row. */
+   role over its foot, a status flag only when not ready and a stress bar along the foot. Two to a row; the
+   personal lines moved to the sheet (canvas pass, 2026-10-24). */
 .ocard.otile { position: relative; display: flex; flex-direction: column; gap: 0; min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); color: var(--t1); text-align: left; cursor: pointer; }
 .ocard.otile:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
 .ocard.otile:active { transform: scale(.98); }

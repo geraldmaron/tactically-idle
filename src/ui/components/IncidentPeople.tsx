@@ -9,6 +9,8 @@ import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Portrait } from '../portraits/Portrait';
 import { Face, type FaceKind } from './Face';
+import { Section } from './ui';
+
 import { opMinutes, signed } from '../format';
 import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
 import { peopleLabel } from '../people/lexicon';
@@ -49,7 +51,7 @@ const PERSON_TONE: Record<PersonStatus, PersonTone> = {
 };
 
 const PERSON_ICON: Record<PersonStatus, IconName> = {
-  unaccounted: 'question',
+  unaccounted: 'search',
   reported: 'pin',
   needs_help: 'warning',
   injured_needs_care: 'bandage',
@@ -67,7 +69,27 @@ export const STANCE_LABEL: Record<Exclude<Stance, 'unheard'>, string> = {
   breaking: 'Near breaking point',
   yielding: 'Open to talking',
 };
+/** What the stance means for the team right now, said the way the team would say it on the radio. */
+export const STANCE_LINE: Record<Exclude<Stance, 'unheard'>, string> = {
+  calm: 'Calm, still answering',
+  tense: 'Tense, listening to you',
+  volatile: 'Agitated, could act',
+  breaking: 'Near breaking point',
+  yielding: 'Open to talking',
+};
 const STANCE_TONE: Record<Exclude<Stance, 'unheard'>, PersonTone> = { calm: 'ok', yielding: 'ok', tense: 'pending', volatile: 'warn', breaking: 'danger' };
+
+type SceneKind = 'subject' | 'civilian' | 'person';
+const KIND_WORD: Record<SceneKind, string> = { subject: 'Subject', civilian: 'Civilian', person: 'On scene' };
+const KIND_HELP: Record<SceneKind, string> = { subject: 'Subject: the person the call is about, who may be armed', civilian: 'Civilian: someone the team is there to protect', person: 'Person at the scene' };
+
+/** The key for who someone is, said in words and a shape as well as a color: the one place a name
+ * stands alone, so it is the one place the kind is spelled out. */
+export function KindTag({ kind }: { kind: SceneKind }) {
+  return <span className="kind-tag" data-kind={kind} title={KIND_HELP[kind]}><PeopleGlyph kind={kind} />{KIND_WORD[kind]}</span>;
+}
+const isSceneKind = (kind: string | undefined): kind is SceneKind => kind === 'subject' || kind === 'civilian' || kind === 'person';
+const sentence = (text: string | undefined) => text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : undefined;
 
 /** The silhouette a person tile draws: their public kind while it is known, otherwise a plain person. */
 function tileFace(kind: string | undefined, tone: PersonTone): FaceKind {
@@ -77,12 +99,13 @@ function tileFace(kind: string | undefined, tone: PersonTone): FaceKind {
 
 /** `personId` finds the person's public kind while names are colored: a ring around the avatar in
  * the kind's color, and the kind's glyph before the name. */
-function PersonTile({ label, status, tone, icon, avatar, data, personId, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; children?: ReactNode }) {
+function PersonTile({ label, status, tone, icon, avatar, data, personId, kind, children }: { label: string; status: string; tone: PersonTone; icon: IconName; avatar?: ReactNode; data: Record<string, string>; personId?: string; kind?: SceneKind; children?: ReactNode }) {
   const who = usePeopleEntry(personId);
-  return <li className="person-tile" data-tone={tone} {...data}>
+  const tag = kind ?? (isSceneKind(who?.kind) ? who?.kind : undefined);
+  return <li className="person-tile" data-tone={tone} data-kind={tag} {...data}>
     <span className="person-avatar" aria-hidden="true" data-kind={who?.kind} title={who ? peopleLabel(who.kind, who.squadName) : undefined}>{avatar ?? <Face size="sm" kind={tileFace(who?.kind, tone)} seed={personId ?? label} />}</span>
     <div className="person-text">
-      <strong>{who && <PeopleGlyph kind={who.kind} tone />}{label}</strong>
+      <strong>{label}{tag && <KindTag kind={tag} />}</strong>
       <span className="person-status"><Icon name={icon} size={13} />{status}</span>
       {children}
     </div>
@@ -93,7 +116,7 @@ function PersonTile({ label, status, tone, icon, avatar, data, personId, childre
 export function CivilianOutcomeList({ outcomes, values }: { outcomes: CivilianOutcome[]; values?: ReadonlyMap<string, { trust: number; strain: number }> }) {
   return <ul className="incident-people-list" aria-label="Civilian outcomes">{outcomes.map((person) => {
     const paid = values?.get(person.id);
-    return <PersonTile key={person.id} personId={person.id} label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }}>
+    return <PersonTile key={person.id} personId={person.id} kind="civilian" label={person.label} status={CIVILIAN_OUTCOME_LABEL[person.status]} tone={PERSON_TONE[person.status]} icon={PERSON_ICON[person.status]} data={{ 'data-person-status': person.status }}>
       {paid && (paid.trust !== 0 || paid.strain !== 0) && <span className="person-note">{[paid.trust !== 0 ? `${signed(paid.trust, 1)} trust` : '', paid.strain !== 0 ? `${signed(paid.strain, 1)} strain` : ''].filter(Boolean).join(' · ')}</span>}
     </PersonTile>;
   })}</ul>;
@@ -112,29 +135,36 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
 
 /** The one word a person's chip says about them, from the same public outcome the status panel shows. */
 const PERSON_SHORT: Record<PersonStatus, string> = {
-  unaccounted: 'Not located',
-  reported: 'Reported',
-  needs_help: 'Needs help',
-  safe: 'Safe',
-  injured_needs_care: 'Injured',
+  unaccounted: 'Not located yet',
+  reported: 'Reported inside, unconfirmed',
+  needs_help: 'Located, needs help',
+  safe: 'Out and safe',
+  injured_needs_care: 'Hurt, needs care',
   care_accepted: 'In care',
-  accounted_elsewhere: 'Accounted for',
+  accounted_elsewhere: 'Accounted for elsewhere',
   deceased: 'Deceased',
 };
 
-function ScenePerson({ id, name, role, word, tone, fallback }: { id: string; name: string; role?: string; word: string; tone: PersonTone; fallback: FaceKind }) {
+function ScenePerson({ id, name, role, where, word, tone, fallback }: { id: string; name: string; role?: string; where?: string; word: string; tone: PersonTone; fallback: SceneKind }) {
   const who = usePeopleEntry(id);
-  const kind = who?.kind === 'subject' || who?.kind === 'civilian' || who?.kind === 'person' ? who.kind : fallback;
-  return <li className="scene-person" data-tone={tone} data-kind={who?.kind}>
+  const kind: SceneKind = who?.kind === 'person' ? 'person' : fallback;
+  const job = sentence(role);
+  return <li className="scene-person" data-tone={tone} data-kind={kind}>
     <Face size="sm" kind={kind} seed={id} role={role} />
-    <span className="scene-person-text"><b>{name.split(/\s+/)[0]}</b><span>{word}</span></span>
+    <span className="scene-person-text">
+      <span className="scene-person-top"><b>{name.split(/\s+/)[0]}</b><KindTag kind={kind} /></span>
+      <span className="scene-person-line">{where && <span className="scene-person-where">{where} · </span>}<span className="scene-person-word">{word}</span></span>
+      {job && <small className="scene-person-role">{job}</small>}
+    </span>
   </li>;
 }
 
-/** The people the call is about, as faces on the live screen: the civilians the team tracks and the
- * subjects it has heard from, each with one word of how they are. Only what the status panel already
- * shows, so it never says more than the team knows. */
-export function IncidentPeopleStrip({ scenario, run }: { scenario: ScenarioDefinition; run: OperationRun }) {
+/** The people the call is about, as the "People inside" panel on the live screen: the subjects the
+ * team has heard from and the civilians it tracks, one row each in a well, with where they are when
+ * the map has placed them and one line of how they are. Someone reported but not seen has a dashed
+ * ring and says so (never a "?"). Only what the status panel already shows, so it never says more
+ * than the team knows. `whereOf` names the room the map shows a person in. */
+export function IncidentPeopleStrip({ scenario, run, whereOf }: { scenario: ScenarioDefinition; run: OperationRun; whereOf?: (personId: string) => string | undefined }) {
   const civilians = civilianOutcomeViews(scenario, run);
   const roles = new Map((scenario.briefing.people ?? []).map((person) => [person.personId, person.role]));
   const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
@@ -143,10 +173,16 @@ export function IncidentPeopleStrip({ scenario, run }: { scenario: ScenarioDefin
     return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
   });
   if (!civilians.length && !subjects.length) return null;
-  return <ul className="scene-people" aria-label="People at the scene">
-    {subjects.map((subject) => <ScenePerson key={subject.id} id={subject.id} name={subject.label} role={roles.get(subject.id)} word={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} fallback="subject" />)}
-    {civilians.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
-  </ul>;
+  const reported = civilians.filter((person) => person.status === 'reported').length;
+  const missing = civilians.filter((person) => person.status === 'unaccounted').length;
+  const inView = subjects.length + civilians.length - reported - missing;
+  const tally = [inView ? `${inView} in view` : '', reported ? `${reported} reported` : '', missing ? `${missing} not located` : ''].filter(Boolean).join(' · ');
+  return <Section className="scene-people-panel" title="People inside" icon="people" tone="people" count={tally} well>
+    <ul className="scene-people" aria-label="People at the scene">
+      {subjects.map((subject) => <ScenePerson key={subject.id} id={subject.id} name={subject.label} role={roles.get(subject.id)} where={whereOf?.(subject.id)} word={STANCE_LINE[subject.stance]} tone={STANCE_TONE[subject.stance]} fallback="subject" />)}
+      {civilians.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} where={whereOf?.(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
+    </ul>
+  </Section>;
 }
 
 /** Only tracked public outcomes are shown; a global safety score is never a head count. */
@@ -176,7 +212,7 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
     {civilians.length > 0 && <CivilianOutcomeList outcomes={civilians} />}
     <PersonCasualtyList casualties={additionalCasualties} />
     {subjects.length > 0 && <ul className="incident-people-list incident-subject-list" aria-label="Subjects">{subjects.map((subject) =>
-      <PersonTile key={subject.id} personId={subject.id} label={subject.label} status={STANCE_LABEL[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
+      <PersonTile key={subject.id} personId={subject.id} kind="subject" label={subject.label} status={STANCE_LINE[subject.stance]} tone={STANCE_TONE[subject.stance]} icon="ear" data={{ 'data-subject-stance': subject.stance }} />)}</ul>}
     {clocks.length > 0 && <ul className="incident-people-list incident-clock-list" aria-label="Running down">{clocks.map((clock) =>
       <PersonTile key={clock.id} label={clock.label} status={clock.out ? 'Out' : 'Running low'} tone={clock.out ? 'danger' : 'warn'} icon="hourglass" avatar={<Icon name="hourglass" size={18} />} data={{ 'data-clock': clock.id }}>
         <span className="person-note">{clock.latest}</span>

@@ -31,7 +31,8 @@ import { officerStatus } from './squad-model';
 import { Face } from '../components/Face';
 import { officerFaceStatus } from '../components/face-status';
 import { Icon } from '../icons';
-import { money, perHour, rate, relativeTime, signedMoney, yearsText } from '../format';
+import { funding, fundingRate, relativeTime, yearsText } from '../format';
+import { Funds } from '../components/Funds';
 import { officerRates } from '../../sim/economy';
 import { PACE_LABEL } from './Recruit';
 import { lastCallLine, lastCallOf } from './team-model';
@@ -83,9 +84,9 @@ function ProfileBody({ o, tab, setTab }: { o: Officer; tab: ProfileTab; setTab: 
         </div>
       </section>
       <dl className="profile-value" aria-label="Cost and value">
-        <div><dt>Wage</dt><dd>{perHour(o.wage)}</dd></div>
+        <div><dt>Wage</dt><dd><Funds value={o.wage} format="perHour" /></dd></div>
         <div><dt>Learns</dt><dd className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</dd></div>
-        <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : `+${perHour(detail)}`}</dd></div>
+        <div><dt>Teaching</dt><dd className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'No cert' : <>+<Funds value={detail} format="perHour" /></>}</dd></div>
       </dl>
       <ChoiceRail value={tab} kind="tabs" grow label="Profile sections" panelId="profile-panel" onChange={setTab} options={[
         { value: 'overview', label: 'Overview' }, { value: 'career', label: 'Career' }, { value: 'care', label: 'Care' },
@@ -160,8 +161,8 @@ function CareerTab({ o }: { o: Officer }) {
       <div><dt>Calls</dt><dd>{o.career.operations}</dd></div>
       <div><dt>Went well</dt><dd className="tone-mint">{o.career.favorable}</dd></div>
       <div><dt>Went badly</dt><dd className="tone-danger">{o.career.adverse}</dd></div>
-      <div><dt>Brought in</dt><dd>{money(o.career.earned ?? 0)}</dd></div>
-      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(net)}</dd></div>
+      <div><dt>Brought in</dt><dd><Funds value={o.career.earned ?? 0} /></dd></div>
+      <div><dt>Net now</dt><dd className={net < 0 ? 'tone-danger' : 'tone-mint'}><Funds value={net} format="rate" /></dd></div>
     </dl>
     {ret && <div className="note note-warn career-retire"><Icon name="retire" size={16} /><span>Retiring on {ret.date}, {ret.inDays === 1 ? '1 day' : `${ret.inDays} days`} left. {sentence(ret.reason)} They leave the roster and any squad on that day.</span></div>}
     {ret && retainable && !confirm && <Button size="sm" variant="primary" icon="handover" onClick={() => setConfirm(true)}>Offer retention{ret.retainCost ? ` · ${ret.retainCost}` : ''}</Button>}
@@ -203,11 +204,11 @@ function ProfileActions({ o, confirmDismiss, setConfirmDismiss, onClose }: { o: 
       onClick={() => { onClose(); nav.openTraining({ officerId: o.id, courseId: training?.courseId }); }}>{training ? 'View course' : 'Send to training'}</Button>
     <Overflow up label={`More for ${o.surname}`}>
       <Button variant="ghost" icon="book" aria-disabled={!detail.ok} className={detail.ok ? undefined : 'btn-soft-off'}
-        aria-label={detail.ok ? `Send ${o.surname} on a ${detail.hours} hour instructor detail for ${money(detail.fee)}` : `Instructor detail unavailable. ${detail.reason ?? ''}`}
+        aria-label={detail.ok ? `Send ${o.surname} on a ${detail.hours} hour instructor detail for ${funding(detail.fee)}` : `Instructor detail unavailable. ${detail.reason ?? ''}`}
         onClick={() => {
           if (!detail.ok) { notify(detail.reason ?? 'Not available now', { tone: 'error' }); return; }
-          act({ type: 'startDetail', officerId: o.id }, `${o.surname} teaches for ${detail.hours} hours, ${money(detail.fee)} on return`);
-        }}>Teach{detail.ok ? ` for ${money(detail.fee)}` : ''}</Button>
+          act({ type: 'startDetail', officerId: o.id }, `${o.surname} teaches for ${detail.hours} hours, ${funding(detail.fee)} on return`);
+        }}>Teach{detail.ok && <> for <Funds value={detail.fee} /></>}</Button>
       <Button variant="ghost" icon="trash" aria-label={`Dismiss ${o.surname}`} onClick={() => setConfirmDismiss(true)}>Dismiss</Button>
     </Overflow>
   </div>;
@@ -222,7 +223,7 @@ export function DismissConfirm({ officer, onCancel, onDone }: { officer: Officer
   const nextLead = squad?.leaderId === officer.id && left[0] ? g.officers[left[0]] : undefined;
   return (
     <div className="confirm profile-dismiss">
-      <p>Dismiss {officer.firstName} {officer.surname}? Severance {money(p.upfront)}, wages {signedMoney(p.wageDelta)}/h, department {rate(p.netBefore)} becomes {rate(p.netAfter)}.</p>
+      <p>Dismiss {officer.firstName} {officer.surname}? Severance {funding(p.upfront)}, wages {fundingRate(p.wageDelta)}, department net {fundingRate(p.netBefore)} becomes {fundingRate(p.netAfter)}.</p>
       {squad && <p className="dim">{squad.name} drops to {left.length} of 4{nextLead ? ` and ${nextLead.surname} takes the lead` : squad.leaderId === officer.id ? ' with no leader' : ''}. Fill the place from Unassigned or Hire.</p>}
       {!p.ok && p.reason && <p className="note note-warn">{p.reason}</p>}
       <div className="row-actions">

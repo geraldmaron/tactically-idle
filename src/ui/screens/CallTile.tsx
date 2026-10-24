@@ -12,16 +12,23 @@ import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
 import { PlateArt, placeFor, sceneFor } from '../art/Plates';
-import { money } from '../format';
+import { funding, money } from '../format';
+import { Funds } from '../components/Funds';
 
 /** A call on the board (docs/ui-ux-audit.md, "Calls"): the scene with the call type and the time
  * left, the title and place, the three-line hook, one warning line, then who can go and what it
  * pays on one row. The whole card opens the call (`onOpen`), so there is no Prepare button. The
  * board also passes legacy cards, which can lack a scenario, family, type or tier. */
-export function CallTile({ card, scenario, familyId, type, isNew = false, facts, footer, warning, contentNote, short = [], timeLeft, readiness, onOpen }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
+export function CallTile({ card, scenario, familyId, type, isNew = false, facts, footer, warning, contentNote, short = [], timeLeft, timeShare, soon = false, compact = false, readiness, onOpen }: { card: ScenarioCard; scenario: ScenarioDefinition | null; familyId: string | null; type: IncidentType | string | null; tier: number | null;
   isNew?: boolean; facts?: ReactNode; footer?: ReactNode; warning?: ReactNode; contentNote?: ReactNode; short?: BoardShortage[];
   /** "7h 48m left", on the scene. */
   timeLeft?: ReactNode;
+  /** Share of the call's window still open, 0 to 1, drawn as a bar that drains. */
+  timeShare?: number;
+  /** Closing soon: the bar and the time turn to warning. */
+  soon?: boolean;
+  /** A row instead of a card: the building as a thumbnail, the hook in two lines, the facts on one. */
+  compact?: boolean;
   /** Who can go: "Alpha ready · 1 squad", with the letter badge. */
   readiness?: ReactNode;
   onOpen?: () => void }): JSX.Element {
@@ -31,6 +38,34 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
   const floors = scenarioFloorCount(scenario);
   const place = [tags.name, blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
   const pay = scenario?.rewards;
+  const bar = timeShare === undefined ? null
+    : <span className={`cl-card-time${soon ? ' cl-card-time-soon' : ''}`} aria-hidden="true"><i style={{ width: `${Math.round(Math.max(0, Math.min(1, timeShare)) * 100)}%` }} /></span>;
+  if (compact) return (
+    <article className={`cl-row${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}
+      onClick={onOpen ? (e) => { if (!(e.target as HTMLElement).closest('button, a, input, select, textarea, label')) onOpen(); } : undefined}>
+      <span className="cl-row-thumb plate" aria-hidden="true">
+        <PlateArt src={placeFor(familyId) ?? sceneFor(type ?? undefined)} />
+        {type && <CallTypeBadge type={type} size={20} />}
+      </span>
+      <div className="cl-row-main">
+        <div className="cl-row-head">
+          <h3 className="cl-row-title">
+            {onOpen ? <button type="button" className="cl-card-button" data-primary onClick={onOpen} aria-label={`Open ${card.title}${blurb ? `, ${blurb}` : ''}`}>{card.title}</button> : card.title}
+          </h3>
+          {isNew && <span className="cl-card-newmark">New</span>}
+          {timeLeft && <span className={`cl-row-left${soon ? ' cl-warn' : ''}`}>{timeLeft}</span>}
+        </div>
+        {place && <p className="cl-row-place">{place}</p>}
+        <p className="cl-row-hook"><PeopleText text={card.summary} /></p>
+        <div className="cl-row-meta">
+          {pay && <span className="cl-row-pay" aria-label={`Pays up to ${funding(pay.funding)} and ${pay.xp} experience.`}><b><Funds value={pay.funding} /></b><span className="cl-row-xp">{pay.xp} XP</span></span>}
+          <span className="cl-card-ready">{readiness}</span>
+        </div>
+        {warning}
+        {bar}
+      </div>
+    </article>
+  );
   return (
     <article className={`cl-card${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}
       onClick={onOpen ? (e) => { if (!(e.target as HTMLElement).closest('button, a, input, select, textarea, label')) onOpen(); } : undefined}>
@@ -56,6 +91,7 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
           </div>}
         </div>
       </div>
+      {bar}
       <div className="cl-card-body">
         <p className="cl-card-hook"><PeopleText text={card.summary} /></p>
         {contentNote}
@@ -67,7 +103,7 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
         {warning}
         {(readiness || pay || onOpen) && <div className="cl-card-foot">
           <span className="cl-card-ready">{readiness}</span>
-          {pay && <span className="cl-card-pay" aria-label={`Pays up to ${money(pay.funding)} and ${pay.xp} experience. How the call ends sets what it pays.`}>
+          {pay && <span className="cl-card-pay" aria-label={`Pays up to ${funding(pay.funding)} and ${pay.xp} experience. How the call ends sets what it pays.`}>
             <span className="cl-card-pay-top" aria-hidden="true"><Icon name="funds" size={16} /><span className="cl-card-pay-up">Up to</span> <b>{money(pay.funding)}</b></span>
             <span className="cl-card-pay-xp" aria-hidden="true"><Icon name="level" size={16} />{pay.xp} XP</span>
           </span>}

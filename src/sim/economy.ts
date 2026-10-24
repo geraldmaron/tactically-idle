@@ -12,7 +12,7 @@ import { COURSES, courseRatingAfter, courseXpGain } from '../content/courses';
 import { ITEMS } from '../content/items';
 import { STRESS_BANDS } from './officer';
 import { gameDay, simNow } from './calendar';
-import { money } from './format';
+import { funding } from './format';
 import { recoveryDuty } from './squads';
 import type { DutyRates } from './squad-optimizer';
 import { ageRecoveryFactor, applyCareerDue, awardXp, learnedXp, nextCareerEventTime } from './career';
@@ -225,7 +225,7 @@ function runRestock(d: GameState, acc: Acc, t: number): void {
       acc.restock += n * def.cost;
     }
     if (n < need) {
-      const why = byCeiling < need && byCeiling <= byFunds ? `spending ceiling ${money(rule.budgetCeiling)}` : 'not enough funding';
+      const why = byCeiling < need && byCeiling <= byFunds ? `spending ceiling ${funding(rule.budgetCeiling)}` : 'not enough funding';
       acc.shortages.add(`${def.name}: restocked ${n} of ${need} wanted (${why})`);
     }
   }

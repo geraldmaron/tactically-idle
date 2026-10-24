@@ -120,7 +120,8 @@
 .command-room-next span, .command-room-hint { margin: 0; color: var(--t2); font-size: var(--s14); line-height: 1.45; }
 
 /* HQ's command card (CommandSeats): every post as a compact seat, five across. */
-.command-seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--s14) * 4.4), 1fr)); gap: var(--sp2) var(--sp1); }
+.command-seats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp2) var(--sp1); }
+@container game (max-width: 359px) { .command-room-post-compact strong, .command-room-post-compact .command-room-state { font-size: 13px; } }
 .command-room-post-compact { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: var(--sp1); padding: 0; border: 0; border-radius: var(--r1); background: none; text-align: center; }
 .command-room-post-compact > .command-room-portrait { grid-row: auto; }
 .command-room-post-compact strong { font: 500 var(--s14)/1.25 var(--f-ui); }
@@ -138,3 +139,23 @@
 .staff-sheet .staff-hire { gap: var(--sp3); }
 .staff-sheet .staff-log { padding: var(--sp3) 0 0; border-top: 1px solid var(--hair); }
 .staff-log h3 { display: flex; align-items: center; gap: var(--sp2); margin: 0; font-size: var(--s14); }
+
+/* Canvas pass, 2026-10-24: the posts at work as one grouped list under the room. */
+.command-working { margin-top: var(--sp3); }
+.command-working-list { margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.command-working-row { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp2) var(--sp3); }
+
+.command-working-open { display: flex; align-items: center; gap: var(--sp3); flex: 1 1 auto; min-width: 0; min-height: var(--touch); padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.command-working-main { display: grid; gap: var(--sp1); min-width: 0; }
+.command-working-main strong { font-size: var(--s16); color: var(--t1); }
+.command-working-detail, .command-working-said { font-size: var(--s14); color: var(--t3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.command-working-said { color: var(--t2); }
+.command-working-off .command-working-main { opacity: 0.7; }
+/* The command room as the canvas draws it: five compact seats in one strip, then Working and Posts to fill. */
+.command-room-seats { padding: var(--sp3) 0 var(--sp1); }
+.command-room-seats .command-room-post-compact { cursor: pointer; }
+.command-fill { margin-top: var(--sp4); }
+.command-fill-locked .command-working-open .manager-portrait { filter: grayscale(1) brightness(0.6); }
+.command-fill-locked .command-working-main strong { color: var(--t2); }
+.command-fill-action { flex: none; white-space: nowrap; }
+.command-room-seats .command-room-state .funds { justify-content: center; }

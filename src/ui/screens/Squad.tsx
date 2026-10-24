@@ -3,11 +3,10 @@ import { getState, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
 import './officers.css';
-import { Button, Card, Chip, EmptyState, Row, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState, Section } from '../components/ui';
 import { DUTY_META } from '../components/labels';
 import type { SquadDuty } from '../../sim/types';
 import { OfficerTile } from '../components/OfficerTile';
-import { SquadCrest } from '../components/SquadCrest';
 import { CertLegend } from '../components/CertLegend';
 import { TeamScene, type SubView } from './TeamScene';
 import { rosterCounts, rosterLine, squadDetail } from './team-model';
@@ -16,7 +15,7 @@ import { useToast } from '../components/toast';
 import { officerFaceStatus } from '../components/face-status';
 import { Icon } from '../icons';
 import { Sheet } from '../components/Sheet';
-import { perHour } from '../format';
+import { fundingPerHour } from '../format';
 import { SQUAD_IDS } from '../../sim/types';
 import { Recruit } from './Recruit';
 import { officerList, staysHomeLine } from './helpers';
@@ -73,7 +72,7 @@ function SquadsView() {
     <h2 id="squads-h" className="sr-only">Squads</h2>
     {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
     {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
-    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count={`Paid ${perHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, can't deploy`}
+    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count={`Paid ${fundingPerHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, can't deploy`}
       hint="Open one to put them in a squad or swap them for someone.">
       <div className="officer-character-grid">{unassigned.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
     </Section>}
@@ -144,9 +143,17 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   const leader = members.find((o) => o.id === squad.leaderId);
   const [filling, setFilling] = useState(false);
   return (
-    <Card className="squadpanel">
-      <section aria-label={`Squad ${squad.id}, ${squad.name}`} className="squad-block">
-        {renaming ? (
+    <>
+      {/* One framed panel per squad (canvas "Depth and Framed Sections"): the letter badge, the name (tap
+          to rename) and how the squad stands in the bar, with Standby and Rest as its action. */}
+      <Section className="squadpanel squad-block" label={`Squad ${squad.id}, ${squad.name}`} badge={squad.id} tone="act"
+        title={renaming ? squad.name : <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
+          requestedFocus.current = 'input';
+          nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
+        }}>{squad.name}<Icon name="edit" size={16} /></button>}
+        count={squadDetail({ deployed: !!deployed, ready: r.ready, total, members: members.length, leader: leader?.surname ?? null })}
+        action={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <DutyControl squad={squad} />}>
+        {renaming && (
           <form
             className="rename"
             onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); finishRename(); } }}
@@ -161,30 +168,39 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
             </Button>
             <Button size="sm" variant="ghost" onClick={finishRename}>Cancel</Button>
           </form>
-        ) : (
-          <Row className="hq-duty hq-squad-row"
-            lead={<SquadCrest id={squad.id} size={40} />}
-            title={<h2 className="squad-block-name">
-              <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
-                requestedFocus.current = 'input';
-                nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
-              }}>{squad.name}<Icon name="edit" size={16} /></button>
-            </h2>}
-            detail={squadDetail({ deployed: !!deployed, ready: r.ready, total, members: members.length, leader: leader?.surname ?? null })}
-            trail={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <DutyControl squad={squad} />}
-          />
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
+        <SquadCoverage members={members} />
         <div className="officer-character-grid">
           {members.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
           {!deployed && open > 0 && <button type="button" className="open-place" aria-haspopup="dialog" aria-label={`Fill ${open === 1 ? 'the open place' : `${open} open places`} in ${squad.name}`} onClick={() => setFilling(true)}>
             <Icon name="plus" size={20} /><span>{open === 1 ? 'Open place' : `${open} open places`}</span>
           </button>}
         </div>
-      </section>
+      </Section>
       {filling && <FillPlace squad={squad} onClose={() => setFilling(false)} />}
-    </Card>
+    </>
   );
+}
+
+/** The ratings calls lean on most, as the squad's best: who would carry a talk, a coordinated move, a
+ * watch or a casualty. One bar each, on the 0 to 100 scale, so a gap in the squad shows at a glance
+ * (canvas pass, 2026-10-24). */
+const COVERAGE: { key: 'communication' | 'coordination' | 'awareness' | 'medical'; label: string }[] = [
+  { key: 'communication', label: 'Comms' }, { key: 'coordination', label: 'Coord' }, { key: 'awareness', label: 'Awareness' }, { key: 'medical', label: 'Medical' },
+];
+function SquadCoverage({ members }: { members: Officer[] }) {
+  if (members.length === 0) return null;
+  return <dl className="squad-coverage" aria-label="Best in the squad">
+    {COVERAGE.map(({ key, label }) => {
+      const best = members.reduce((top, o) => (o.ratings[key] > top.ratings[key] ? o : top), members[0]);
+      const value = Math.round(best.ratings[key]);
+      return <div key={key} className="squad-coverage-item" data-tone={value >= 75 ? 'good' : value >= 55 ? 'fair' : 'thin'}>
+        <dt>{label}</dt>
+        <dd><span className="squad-coverage-bar" role="img" aria-label={`${label} ${value}, ${best.surname}`}><i style={{ width: `${value}%` }} /></span><b aria-hidden="true">{value}</b></dd>
+      </div>;
+    })}
+  </dl>;
 }
 
 /** Duty as a quiet two-choice control (component contract 6): Standby or Rest, words only, so it never outweighs
@@ -271,9 +287,9 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
           </select>
         </label>
       </div>
-      {shown.length === 0 ? <p className="squad-block-open">No officers here.</p> : <Card className="officer-roster-card"><div className="officer-rows" data-ui-list>
+      {shown.length === 0 ? <EmptyState compact icon="people" title={filter === 'busy' ? 'Nobody is busy' : filter === 'free' ? 'Nobody is free' : 'No officers yet'}>{filter === 'busy' ? 'Every officer is free to take a call.' : filter === 'free' ? 'Everyone is on a call, in training or resting.' : 'Hire an officer to fill the roster.'}</EmptyState> : <div className="officer-rows panel-well" data-ui-list>
         {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
-      </div></Card>}
+      </div>}
       <CertLegend officers={shown} />
     </Section>
   );

@@ -27,14 +27,14 @@ describe('department status explanations', () => {
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
     expect(html).not.toContain('tex_cash.webp');
     expect(html).toContain('data-funding-target');
-    expect(html).toContain('>$12,400</span>');
+    expect(html).toContain('12,400');
     expect(html).toContain(`${rate(budget(state).net)}</span>`);
     expect(html.match(/data-ui-pill/g)).toHaveLength(3);
     expect(html.match(/<svg class="icon res-icon"/g), 'funds, trust and level lead with their kit icons').toHaveLength(3);
     expect(html).toContain(`<span class="res-word">Trust </span><span class="res-value">${Math.round(state.department.trust)}</span>`);
     expect(html).toContain(`<span class="res-word">Level </span><span class="res-value">${state.department.level}</span>`);
     expect(html).not.toContain('/min');
-    expect(html).toContain(`Funding: $12,400, ${budget(state).net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(budget(state).net))} an hour. Show explanation`);
+    expect(html).toContain(`Funding: 12,400 funding, ${budget(state).net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(budget(state).net))} funding an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);
     expect(html).toContain(`Department level: ${state.department.level}. Show explanation`);
     expect(html.match(/<button/g)).toHaveLength(3);
@@ -76,10 +76,10 @@ describe('department status explanations', () => {
     state.department.lastSettledAt = state.department.lastInteractionAt = state.department.clockHighWater;
     state.department.ledger = [{ seq: 1, at: state.department.clockHighWater, amount: -400, before: 126078, after: 125678, kind: 'purchase', label: 'Radio headset' }];
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'funding' }));
-    expect(html).toMatch(/\$125,6\d\d/);
+    expect(html).toMatch(/125,6\d\d/);
     expect(html).toContain('Recent activity');
     expect(html).toContain('<strong>Radio headset</strong>');
-    expect(html).toContain('-$400');
+    expect(html).toContain('-400');
     expect(html).not.toContain('<button');
   });
 
@@ -89,8 +89,8 @@ describe('department status explanations', () => {
     const current = budget(state);
     const html = render(createElement(DepartmentStatHelp, { g: state, topic: 'income' }));
     expect(current.net).toBe(net);
-    expect(html).toContain(`${net > 0 ? '+' : net < 0 ? '-' : ''}$${Math.abs(net)}/h`);
-    expect(html).toContain(`Income ${'$'}${current.gross.toLocaleString('en-US')}/h, costs`);
+    expect(html).toContain(`${net > 0 ? '+' : net < 0 ? '-' : ''}${Math.abs(net)}/h`);
+    expect(html).toContain(`Income ${current.gross.toLocaleString('en-US')} funding an hour, costs`);
     for (const label of ['Base allocation', 'Patrol service', 'SWAT payroll', 'Patrol payroll', 'Patrol operations', 'Facilities', 'Routine supplies']) expect(html).toContain(`<dt>${label}</dt>`);
   });
 

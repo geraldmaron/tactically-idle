@@ -193,7 +193,7 @@ describe('new params', () => {
       sel: { kind: 'band', node: 'offer', choice: 'take_courier', band: 'adverse' }, scope: 'type', style: 'best_odds', runs: 150,
       xray: false, names: false, truth: true, screen: 'debrief', dice: 'force', width: 430, zoom: '1',
       flow: { mode: 'state', color: 'fate', pruned: true, expanded: ['offer', 'talking'] }, vision: 'deutan',
-      tuning: { group: 'harm', advanced: true }, filter: 'Ruth terms', notes: true, frame: 'player', labAlias: false,
+      tuning: { group: 'harm', advanced: true }, filter: 'Ruth terms', notes: true, frame: 'player', labAlias: false, story: false,
     });
     expect(rewritten).toBe(false);
     expect(labUrlToSearch(url)).toBe(search);

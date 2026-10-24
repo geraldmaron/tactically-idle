@@ -29,8 +29,8 @@ describe('course-first Training presentation', () => {
     expect([...html.matchAll(/data-course-id=/g)]).toHaveLength(Object.keys(COURSES).length);
     expect(html).toContain('Choose officer for Communication refresher');
     expect(html).toContain('+3 Communication');
-    expect(html).toContain('Enrol below 85');
-    expect(html).toContain('$600');
+    expect(html).toContain('For ratings under 85');
+    expect(html).toContain('600');
     expect(html).toContain('4h');
     expect(html).toContain('+20 XP');
     expect(html).toContain('0 of 1 training places in use');
@@ -155,7 +155,7 @@ describe('course-first Training presentation', () => {
     const html = markup(actions);
     expect(html).toContain('training-confirm-actions');
     expect(html).toContain('disabled="">Enrolled</button>');
-    expect(html).toContain('$600 funding paid');
+    expect(html).toContain('600 funding paid');
     expect(html).not.toContain('Enrol officer');
   });
 

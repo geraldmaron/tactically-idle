@@ -125,10 +125,11 @@ describe('candidate hire review', () => {
     const view = card(true);
     const projection = projectHire(state, view.c.id);
     for (const text of ['Due at signing', money(projection.upfront), 'Every hour', `-${perHour(projection.wageDelta)}`, rate(projection.netBefore), rate(projection.netAfter), 'Brings', 'Radio headset']) {
-      expect(view.html).toContain(text);
-      expect(view.html.indexOf(text)).toBeLessThan(view.html.indexOf('Confirm hire'));
+      const plain = view.html.replace(/<[^>]+>/g, '');
+      expect(plain).toContain(text);
+      expect(plain.indexOf(text)).toBeLessThan(plain.indexOf('Confirm hire'));
     }
-    if (view.c.issueKit) expect(view.html).toContain(`Includes ${money(view.c.issueKit)} of issue kit`);
+    if (view.c.issueKit) expect(view.html.replace(/<[^>]+>/g, '')).toContain(`Includes ${money(view.c.issueKit)} funding of issue kit`);
   });
 
   it('confirms and charges exactly once even when the same confirmation handler repeats', () => {
@@ -210,7 +211,7 @@ describe('candidate hire review', () => {
     expect(sheet.html).toContain(`aria-label="${original.c.officer.firstName} ${original.c.officer.surname} signed"`);
     expect(sheet.html).not.toContain(`aria-label="Hire ${original.c.officer.firstName}`);
     expect(sheet.html).not.toContain('Confirm hire');
-    expect(receipt.html).toContain(`Signing ${money(projection.upfront)} paid`);
+    expect(receipt.html.replace(/<[^>]+>/g, '')).toContain(`Signing ${money(projection.upfront)} funding paid`);
     expect(receipt.html).toContain('Unassigned');
     expect(receipt.html).toContain('Put them in a squad');
     // The squads are offered right on the card too, with the unassigned wage note until they are placed.
@@ -248,7 +249,7 @@ describe('candidate hire review', () => {
     state.department.funding = 0;
     const view = card(true);
     const confirm = confirmHire(view);
-    expect(view.html).toContain('exceeds funding');
+    expect(view.html).toContain('exceeds the department');
     expect(confirm.props.disabled).toBe(true);
     confirm.props.onClick({ detail: 0 });
     view.contract!.onClose();

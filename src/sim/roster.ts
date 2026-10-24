@@ -19,7 +19,7 @@ import { SQUAD_IDS } from './types';
 import type { Projection } from './department-selectors';
 import { fullNameKey, generateBatch, RECRUIT_TUNING, type RecruitGen } from '../content/recruits';
 import { hashSeed } from './rng';
-import { formatDuration, money } from './format';
+import { formatDuration, funding, fundingPerHour } from './format';
 import { fullName } from './officer';
 import { gameDay, simNow } from './calendar';
 import { PERSONAS } from '../content/personas';
@@ -80,10 +80,10 @@ export function hireCheck(state: GameState, candidateId: Id, netRate: NetRate): 
   const cap = state.department.rosterCap;
   if (rosterSize(state) >= cap) return { ...base, ok: false, reason: `Roster is full (${rosterSize(state)}/${cap})` };
   if (state.department.funding < cand.signingCost) {
-    return { ...base, ok: false, reason: `Signing cost ${money(cand.signingCost)} exceeds funding ${money(state.department.funding)}` };
+    return { ...base, ok: false, reason: `Signing cost ${funding(cand.signingCost)} exceeds the department's ${funding(state.department.funding)}` };
   }
   if (netAfter < 0) {
-    return { ...base, ok: false, reason: `Would leave the department ${money(-netAfter)}/h short once wages are paid` };
+    return { ...base, ok: false, reason: `Would leave the department ${fundingPerHour(-netAfter)} short once wages are paid` };
   }
   return { ...base, ok: true, reason: null };
 }
@@ -118,7 +118,7 @@ export function dismissCheck(state: GameState, officerId: Id, netRate: NetRate):
   const base = { upfront: severanceFor(o), wageDelta: -o.wage, netBefore, netAfter: netRate(after) };
   if (o.assignment?.kind === 'operation') return { ...base, ok: false, reason: `${fullName(o)} is deployed and cannot be dismissed` };
   if (state.department.funding < base.upfront) {
-    return { ...base, ok: false, reason: `Severance ${money(base.upfront)} exceeds funding ${money(state.department.funding)}` };
+    return { ...base, ok: false, reason: `Severance ${funding(base.upfront)} exceeds the department's ${funding(state.department.funding)}` };
   }
   return { ...base, ok: true, reason: null };
 }

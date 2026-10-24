@@ -9,7 +9,8 @@ import { budget } from '../../sim/department-selectors';
 import { ECONOMY_TUNING, HOUR_MS, officerRates } from '../../sim/economy';
 import { fullName } from '../../sim/officer';
 import { Icon, type IconName } from '../icons';
-import { duration, money, moneyFull, perHour, rate, relativeTime, signedMoney } from '../format';
+import { duration, fundingPerHour, fundingRate, relativeTime, signedMoney } from '../format';
+import { Funds } from './Funds';
 import { REDUCED_MOTION_QUERY, reducedMotion } from '../motion';
 import './finance.css';
 import { nextPatrolEventTime } from '../../sim/patrol';
@@ -146,26 +147,26 @@ export function FinanceDetail({ g, now = Date.now() }: { g: GameState; now?: num
   const entries = [...(d.ledger ?? [])].reverse().slice(0, 20);
   return <div className="finance">
     <div className="finance-hero">
-      <p className="finance-balance">{moneyFull(liveFunding(g, now))}</p>
-      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} />{rate(b.net)}</span>
+      <p className="finance-balance"><Funds value={liveFunding(g, now)} format="full" /></p>
+      <span className={`finance-rate ${b.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Icon name="trend" size={14} /><Funds value={b.net} format="rate" /></span>
     </div>
     {left <= 0 ? <p className="note note-warn finance-window"><Icon name="clock" size={14} />Hourly income and costs are paused. They resume with your next order.</p>
       : left < 6 * HOUR_MS && <p className="dim finance-window"><Icon name="clock" size={14} />Hourly income and costs stop in {duration(left)} unless you give an order.</p>}
-    <div className="finance-flow" role="img" aria-label={`Income ${perHour(b.gross)}, costs ${perHour(costs)}, net ${rate(b.net)}`}>
-      <span className="finance-flow-row"><span>Income</span><span className="finance-bar"><i className="finance-bar-in" style={{ width: `${(b.gross / scale) * 100}%` }} /></span><b className="tone-mint">+{perHour(b.gross)}</b></span>
-      <span className="finance-flow-row"><span>Costs</span><span className="finance-bar"><i className="finance-bar-out" style={{ width: `${(costs / scale) * 100}%` }} /></span><b className="tone-danger">-{perHour(costs)}</b></span>
+    <div className="finance-flow" role="img" aria-label={`Income ${fundingPerHour(b.gross)}, costs ${fundingPerHour(costs)}, net ${fundingRate(b.net)}`}>
+      <span className="finance-flow-row"><span>Income</span><span className="finance-bar"><i className="finance-bar-in" style={{ width: `${(b.gross / scale) * 100}%` }} /></span><b className="tone-mint">+<Funds value={b.gross} format="perHour" /></b></span>
+      <span className="finance-flow-row"><span>Costs</span><span className="finance-bar"><i className="finance-bar-out" style={{ width: `${(costs / scale) * 100}%` }} /></span><b className="tone-danger">-<Funds value={costs} format="perHour" /></b></span>
     </div>
     <dl className="finance-lines">
-      <div><dt>Base allocation</dt><dd>+{perHour(b.base)}</dd></div>
-      <div><dt>Patrol service</dt><dd>+{perHour(b.patrolBase)}</dd></div>
-      {b.patrolBoost > 0 && <div><dt>Patrol boost</dt><dd>+{perHour(b.patrolBoost)}</dd></div>}
-      {b.nodeIncome !== 0 && <div><dt>Development income</dt><dd>+{perHour(b.nodeIncome)}</dd></div>}
-      <div><dt>SWAT payroll</dt><dd>-{perHour(b.wages)}</dd></div>
-      <div><dt>Patrol payroll</dt><dd>-{perHour(b.patrolWages)}</dd></div>
-      <div><dt>Patrol operations</dt><dd>-{perHour(b.patrolOperating)}</dd></div>
-      {b.staff > 0 && <div><dt>Command staff</dt><dd>-{perHour(b.staff)}</dd></div>}
-      <div><dt>Facilities</dt><dd>-{perHour(b.operating)}</dd></div>
-      <div><dt>Routine supplies</dt><dd>-{perHour(b.supplies)}</dd></div>
+      <div><dt>Base allocation</dt><dd>+<Funds value={b.base} format="perHour" /></dd></div>
+      <div><dt>Patrol service</dt><dd>+<Funds value={b.patrolBase} format="perHour" /></dd></div>
+      {b.patrolBoost > 0 && <div><dt>Patrol boost</dt><dd>+<Funds value={b.patrolBoost} format="perHour" /></dd></div>}
+      {b.nodeIncome !== 0 && <div><dt>Development income</dt><dd>+<Funds value={b.nodeIncome} format="perHour" /></dd></div>}
+      <div><dt>SWAT payroll</dt><dd>-<Funds value={b.wages} format="perHour" /></dd></div>
+      <div><dt>Patrol payroll</dt><dd>-<Funds value={b.patrolWages} format="perHour" /></dd></div>
+      <div><dt>Patrol operations</dt><dd>-<Funds value={b.patrolOperating} format="perHour" /></dd></div>
+      {b.staff > 0 && <div><dt>Command staff</dt><dd>-<Funds value={b.staff} format="perHour" /></dd></div>}
+      <div><dt>Facilities</dt><dd>-<Funds value={b.operating} format="perHour" /></dd></div>
+      <div><dt>Routine supplies</dt><dd>-<Funds value={b.supplies} format="perHour" /></dd></div>
     </dl>
     <OfficerMoney g={g} />
     <h3 className="finance-head">Recent activity</h3>
@@ -193,8 +194,8 @@ export function OfficerMoney({ g, now = Date.now() }: { g: GameState; now?: numb
   return <section className="finance-officers" aria-label="Money by officer">
     <h3 className="finance-head">By officer</h3>
     <ul className="finance-officer-list">{rows.map(({ o, r }) => <li key={o.id}>
-      <span className="finance-activity-main"><strong>{fullName(o)}</strong><span className="dim">{doing(o, r)} · wage {perHour(r.wage)}{o.career.earned ? ` · brought in ${money(o.career.earned)}` : ''}</span></span>
-      <b className={r.net < 0 ? 'tone-danger' : 'tone-mint'}>{rate(r.net)}</b>
+      <span className="finance-activity-main"><strong>{fullName(o)}</strong><span className="dim">{doing(o, r)} · wage <Funds value={r.wage} format="perHour" />{o.career.earned ? <> · brought in <Funds value={o.career.earned} format="money" /></> : null}</span></span>
+      <b className={r.net < 0 ? 'tone-danger' : 'tone-mint'}><Funds value={r.net} format="rate" /></b>
     </li>)}</ul>
   </section>;
 }
@@ -202,7 +203,7 @@ export function OfficerMoney({ g, now = Date.now() }: { g: GameState; now?: numb
 function ActivityRow({ e, now }: { e: LedgerEntry; now: number }) {
   return <li>
     <span className={`finance-kind finance-kind-${e.amount < 0 ? 'out' : 'in'}`}><Icon name={KIND_ICON[e.kind] ?? 'cash'} size={14} /></span>
-    <span className="finance-activity-main"><strong>{e.label}</strong><span className="dim">{relativeTime(e.at, now)} · balance {money(e.after)}</span></span>
-    <b className={e.amount < 0 ? 'tone-danger' : 'tone-mint'}>{signedMoney(e.amount)}</b>
+    <span className="finance-activity-main"><strong>{e.label}</strong><span className="dim">{relativeTime(e.at, now)} · balance <Funds value={e.after} format="money" /></span></span>
+    <b className={e.amount < 0 ? 'tone-danger' : 'tone-mint'}><Funds value={e.amount} format="signed" /></b>
   </li>;
 }

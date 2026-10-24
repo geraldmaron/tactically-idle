@@ -22,7 +22,8 @@ import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
 import { decisionsOf, isLapse } from '../../../../sim/types';
 import { DepartmentContext } from '../../../../ui/components/department-context';
-import { IncidentPeopleStatus } from '../../../../ui/components/IncidentPeople';
+import { IncidentPeopleStatus, IncidentPeopleStrip } from '../../../../ui/components/IncidentPeople';
+import { scenarioPlaceName } from '../../../../ui/components/incident';
 import { OverlayRootContext, Sheet } from '../../../../ui/components/Sheet';
 import { ToastView } from '../../../../ui/components/ToastView';
 import type { ToastItem, ToastTone } from '../../../../ui/components/ToastView';
@@ -38,7 +39,7 @@ import type { ActionSelection, Override } from '../../../../ui/screens/live-mode
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
 import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
-import { sceneFor } from '../../../../ui/art/Plates';
+import { placeFor, sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
 import { SituationPanel } from '../../../../ui/screens/SituationPanel';
 import { SupportContext } from '../../../../ui/screens/SupportContext';
@@ -462,7 +463,9 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
       onCancel={() => {}}
       onOpenDetails={() => setPanel(panel === 'action' ? 'none' : 'action')}
       feedback={<OperationFeedback officers={state.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
-      scene={sceneFor(scenario?.incident?.type)}
+      scene={placeFor(scenario?.locationFamilyId) ?? sceneFor(scenario?.incident?.type)}
+      placeName={scenarioPlaceName(scenario) ?? undefined}
+      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} />}
       situation={scenario && <SituationPanel scenario={scenario} run={run} />}
       supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={state} />
         <SupportContext scenario={scenario} run={run} actions={model.actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')}

@@ -1,52 +1,71 @@
 // Display formatting helpers. Pure functions; no game state.
 
-/** $620, $2,480, $12.4K. Under 10,000 keeps full precision so costs stay exact. */
+// Funding is the game's own currency and never wears a currency symbol (canvas pass, 2026-10-24):
+// "$" belongs to real-money prices only, which come from the store. These formatters return the bare
+// amount, shown beside the funding glyph (components/Funds.tsx); sentences use the `funding*` forms.
+
+/** 620, 2,480, 12.4K. Under 10,000 keeps full precision so costs stay exact. */
 export function money(n: number): string {
   const v = Math.round(n);
   const sign = v < 0 ? '-' : '';
   const a = Math.abs(v);
   if (a >= 10000) {
     const k = Math.round(a / 100) / 10;
-    return `${sign}$${Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)}K`;
+    return `${sign}${Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)}K`;
   }
-  return `${sign}$${a.toLocaleString('en-US')}`;
+  return `${sign}${a.toLocaleString('en-US')}`;
 }
 
-/** Always-exact dollars: $12,400. */
+/** Always exact: 12,400. */
 export function moneyFull(n: number): string {
   const v = Math.round(n);
-  return `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('en-US')}`;
+  return `${v < 0 ? '-' : ''}${Math.abs(v).toLocaleString('en-US')}`;
 }
 
-/** +$620 / -$40 / $0 */
+/** +620 / -40 / 0 */
 export function signedMoney(n: number): string {
   const v = Math.round(n);
-  if (v === 0) return '$0';
+  if (v === 0) return '0';
   return `${v > 0 ? '+' : '-'}${money(Math.abs(v))}`;
 }
 
-/** An hourly amount as a signed rate per minute: +$25/min, +$2.5/min, -$0.8/min. */
+/** An hourly amount as a signed rate per minute: +25/min, +2.5/min, -0.8/min. */
 export function ratePerMinute(perHourAmount: number): string {
   const m = perHourAmount / 60;
   const a = Math.abs(m);
-  if (a < 0.05) return '$0/min';
-  const body = a >= 10 ? money(a) : `$${a.toFixed(1)}`;
+  if (a < 0.05) return '0/min';
+  const body = a >= 10 ? money(a) : a.toFixed(1);
   return `${m > 0 ? '+' : '-'}${body}/min`;
 }
 
-/** The live balance: whole dollars so accrual is visible every few seconds, compact past a million. */
+/** The live balance: whole units so accrual is visible every few seconds, compact past a million. */
 export function liveMoney(n: number): string {
-  return Math.abs(n) >= 1_000_000 ? `${n < 0 ? '-' : ''}$${(Math.abs(n) / 1_000_000).toFixed(2)}M` : moneyFull(n);
+  return Math.abs(n) >= 1_000_000 ? `${n < 0 ? '-' : ''}${(Math.abs(n) / 1_000_000).toFixed(2)}M` : moneyFull(n);
 }
 
-/** +$620/h */
+/** +620/h */
 export function rate(n: number): string {
   return `${signedMoney(n)}/h`;
 }
 
-/** Plain per-hour amount: $380/h */
+/** Plain per-hour amount: 380/h */
 export function perHour(n: number): string {
   return `${money(n)}/h`;
+}
+
+/** An amount in a sentence or a label read aloud: "1,600 funding". */
+export function funding(n: number): string {
+  return `${moneyFull(n)} funding`;
+}
+
+/** A per-hour amount in a sentence: "40 funding an hour". */
+export function fundingPerHour(n: number): string {
+  return `${money(n)} funding an hour`;
+}
+
+/** A signed rate in a sentence: "+620 funding an hour". */
+export function fundingRate(n: number): string {
+  return `${signedMoney(n)} funding an hour`;
 }
 
 export function signed(n: number, digits = 0): string {

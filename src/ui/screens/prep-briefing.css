@@ -4,18 +4,21 @@
 .pb { display: grid; gap: var(--sp5); }
 .pb-block { display: grid; gap: var(--sp2); }
 .pb-block ul, .pb-block ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp2); }
-.pb-h-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); }
-.pb-h { display: flex; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
+.pb-h-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); }
+.pb-h { display: flex; flex: 1 1 auto; align-items: center; gap: var(--sp2); margin: 0; font: 600 var(--s22)/1.1 var(--f-title); letter-spacing: 0.01em; color: var(--t1); }
+/* A rule runs out from the title, as on every section head. */
+.pb-h::after { content: ''; flex: 1 1 16px; min-width: 12px; height: 1px; margin-left: var(--sp1); background: linear-gradient(90deg, var(--hair-2), transparent); }
 .pb-h .icon { color: var(--t3); }
 .pb-h-sub { font-size: var(--s14); }
 .pb-h-aside { font-size: var(--s14); color: var(--t3); }
 
 /* The Map control in the flow head: a quiet text button with its icon, not a raised outlined button. */
-.flow-head .cl-map-chip { white-space: nowrap; overflow-wrap: normal; min-height: var(--touch); padding: 0 var(--sp2); border-color: transparent; background: none; box-shadow: none; color: var(--act-text); }
+.flow-head .cl-map-chip { white-space: nowrap; overflow-wrap: normal; min-height: 36px; padding: 0 var(--sp3); border-color: var(--hair-2); border-radius: 999px; background: color-mix(in srgb, var(--ink-deep) 40%, var(--ink-2)); box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 35%, transparent); color: var(--t1); }
 .flow-head .cl-map-chip:active:not(:disabled) { transform: none; box-shadow: none; }
 
 /* The scene plate at the shared plate height: the place on the left, the board clock on the right. */
-.pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: var(--plate-h); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); }
+.pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: 148px; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); box-shadow: var(--lift-2); }
+.pb-scene.plate::after { background: linear-gradient(0deg, color-mix(in srgb, var(--ink-deep) 88%, transparent) 0%, color-mix(in srgb, var(--ink-deep) 40%, transparent) 55%, color-mix(in srgb, var(--ink-deep) 8%, transparent) 100%); }
 .pb-scene-place { min-width: 0; max-width: 70%; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); overflow-wrap: break-word; }
 .pb-scene-tags { display: grid; gap: 2px; min-width: 0; }
 .pb-scene-tags b { font-weight: 700; }
@@ -29,7 +32,7 @@
 .pb-pay b { color: var(--t1); font-variant-numeric: tabular-nums; }
 
 /* One card per list: rows split by a hairline, no box inside a box. */
-.pb-card { padding: 0 var(--sp3); gap: 0; background: var(--ink-1); box-shadow: none; }
+.pb-card { padding: 0 var(--sp3); gap: 0; border-color: var(--hair-2); background: var(--surface-1); box-shadow: var(--lift-1); }
 .pb-card .pb-list { display: block; }
 .pb-list > li { border-bottom: 1px solid var(--hair); }
 .pb-list > li:last-child { border-bottom: 0; }
@@ -39,24 +42,21 @@
 /* Orders: a face with the order number on its corner, or the number in a well. */
 .pb-lead { position: relative; display: inline-block; }
 .pb-n { position: absolute; top: calc(-1 * var(--sp1)); left: calc(-1 * var(--sp2)); display: grid; place-items: center; min-width: 24px; min-height: 24px; padding: 0 var(--sp1); border-radius: var(--r1); background: var(--ink-0); border: 1px solid var(--hair-2); color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); }
-.pb-well { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border-radius: var(--r1); background: var(--ink-2); border: 1px solid var(--hair-2); color: var(--t2); font: 600 var(--s16)/1 var(--f-ui); }
+.pb-well { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); border: 1px solid var(--hair); color: var(--t2); font: 600 var(--s16)/1 var(--f-ui); }
 .pb-well-n { color: var(--t1); }
 
 /* What the team faces: the weapon report as an alert row (a harm edge), then what is unknown. */
-.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp3); align-items: start; margin: 0 calc(-1 * var(--sp3)); padding: var(--sp3); border-left: 3px solid var(--harm); }
+.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp3); align-items: start; margin: 0 calc(-1 * var(--sp3)); padding: var(--sp3); border-left: 3px solid var(--harm); background: linear-gradient(90deg, color-mix(in srgb, var(--harm) 14%, transparent), transparent 70%); }
 .pb-threat-icon { margin-top: var(--sp1); color: var(--harm); }
 .pb-threat-claim { margin: 0; font-size: var(--s16); font-weight: 600; line-height: 1.4; color: var(--t1); }
 .pb-threat-where { font-weight: 500; color: var(--t2); }
 .pb-threat-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); margin: var(--sp1) 0 0; font-size: var(--s14); color: var(--t2); }
 
 /* The cold open reads as story in its own frame: a left rule, a reading measure, whole and never clamped. */
-.pb .pb-cold-open { margin: 0; padding: var(--sp3) var(--sp4); gap: var(--sp2); border: 0; border-left: 3px solid var(--hair-2); border-radius: 0 var(--r2) var(--r2) 0; background: var(--ink-1); }
-.pb .pb-cold-open .cold-open-kicker { display: flex; align-items: center; gap: var(--sp2); font: 600 var(--s16)/1.3 var(--f-ui); color: var(--t2); }
-.pb .pb-cold-open .cold-open-kicker .icon { color: var(--t3); }
 .pb .pb-cold-open .cold-open-text { max-width: 36em; font-size: var(--s16); line-height: 1.6; color: var(--t1); }
 
 /* Who is inside. */
-.pb-block ul.pb-people { gap: 0; border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); overflow: hidden; }
+.pb-block ul.pb-people { gap: 0; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); overflow: hidden; }
 .pb-person { display: grid; grid-template-columns: var(--face-md) 1fr; gap: var(--sp3); align-items: start; min-height: 64px; padding: var(--sp3); border-bottom: 1px solid var(--hair); }
 .pb-person:last-child { border-bottom: 0; }
 .pb-person-text { min-width: 0; display: grid; gap: var(--sp1); }
@@ -75,3 +75,10 @@
   .pb-card .pb-row { min-height: 56px; padding: var(--sp1) 0; }
   .pb-stakes { margin-top: calc(-1 * var(--sp2)); }
 }
+
+/* Framed brief (canvas "Depth and Framed Sections", 2026-10-24): each block's list sits in its panel's
+   well, which draws the row lines, so the lists drop their own frames. */
+.panel-well .pb-list > li { border-bottom: 0; }
+.pb-block .panel-well > ul { gap: 0; }
+.pb-block .panel-well > ul.pb-people { border: 0; border-radius: 0; background: none; box-shadow: none; }
+.panel-well .pb-person { border-bottom: 0; }

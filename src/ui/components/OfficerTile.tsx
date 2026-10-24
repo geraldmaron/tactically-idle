@@ -8,7 +8,7 @@ import { agePortraitProps } from '../screens/helpers';
 import { tileStatus } from '../screens/team-model';
 import { turnedLine } from '../people/story-line';
 import { useStoryClock } from '../people/story-clock';
-import { useContext, useEffect, useRef } from 'react';
+import { useContext } from 'react';
 import { DepartmentContext } from './department-context';
 import { CERT_ICON, ROLE_META, STATUS_META } from './labels';
 import { officerGrowth } from './OfficerProgress';
@@ -18,10 +18,10 @@ import { useWidth } from './hooks';
 import type { FaceStatus } from './face-status';
 import './officer-tile.css';
 
-/** One officer as a person first (station rebuild): a portrait big enough to read, the surname and role over
- * its foot, a status flag only when they are not simply ready, and one personal line that turns over every
- * few seconds (a recorded fact: their state, an earned trait, their note, their record) and holds still
- * under reduced motion. Tiles stay two to a row. The whole tile opens the officer's sheet. */
+/** One officer as a person first (station rebuild, compacted on the canvas pass 2026-10-24): a portrait big
+ * enough to read, the rank ring, surname and role over its foot, the stress bar, and a status flag only when
+ * they are not simply ready. Tiles stay two to a row. The whole tile opens the officer's sheet, which keeps
+ * the personal lines. */
 export function OfficerTile({ officer, now, faceStatus, leader, squadId, onClick }: {
   officer: Officer; now: number; faceStatus?: FaceStatus | null; leader?: boolean; squadId?: SquadId | null; onClick?: () => void;
 }) {
@@ -37,13 +37,9 @@ export function OfficerTile({ officer, now, faceStatus, leader, squadId, onClick
   const xp = growth.capped ? 100 : Math.max(0, Math.min(100, growth.progress));
   const growthText = `${RANKS[growth.rank].title}${growth.capped ? '' : `, ${Math.floor(xp)}% to ${RANKS[growth.next!].title}`}`;
   const person = { kind: 'officer', officer, status: faceStatus ?? null } as const;
-  const line = turnedLine(person, clock.now, clock.still);
-  // The spoken name carries the fixed, highest-priority line, so it never changes under a screen reader's cursor.
+  // The tile is compact (canvas Team): the personal line is spoken in the label and shown in the sheet,
+  // not drawn on the tile. The highest-priority line is fixed so it never changes under a screen reader's cursor.
   const spoken = turnedLine(person, clock.now, true);
-  // The line fades in only when it turns over, never on first paint, so a tile is readable the moment it appears.
-  const shown = useRef<string | null>(null);
-  const turned = shown.current !== null && !!line && shown.current !== line.text;
-  useEffect(() => { shown.current = line?.text ?? null; });
   const certs = officer.certs.slice(0, 3);
   const Tag = onClick ? 'button' : 'div';
   const label = `${officer.firstName} ${officer.surname}, ${role.label}, ${status ? STATUS_META[status].label.toLowerCase() : 'ready'}, stress ${stress}, ${growthText}${squadId ? `, squad ${squadId}` : ''}${leader ? ', squad leader' : ''}${officer.certs.length ? `, ${officer.certs.map((cert) => CERT_NAME[cert]).join(', ')}` : ''}${spoken ? `. ${spoken.text}` : ''}`;
@@ -56,6 +52,5 @@ export function OfficerTile({ officer, now, faceStatus, leader, squadId, onClick
       <span className="otile-stress" data-band={faceStatus?.band ?? 'ready'} style={{ ['--stress' as string]: Math.max(0, Math.min(100, officer.stress)) }} />
       <span className="otile-name"><span className="otile-title"><Ring value={xp} size={20} tone="level"><RankInsignia rank={growth.rank} size={12} /></Ring><span className="otile-surname">{officer.surname}</span></span><span className="otile-role"><Icon name={role.icon} size={16} />{role.short}{certs.map((cert) => <Icon key={cert} name={CERT_ICON[cert]} size={16} />)}</span></span>
     </span>
-    <span className="otile-line" aria-hidden="true">{line && <span key={line.text} className={turned ? 'otile-line-text otile-line-turned' : 'otile-line-text'}>{line.text}</span>}</span>
   </Tag>;
 }

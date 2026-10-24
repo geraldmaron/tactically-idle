@@ -8,7 +8,8 @@ import { Button, Chip, KV } from './ui';
 import { useToast } from './toast';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
-import { duration, money, signedMoney } from '../format';
+import { duration } from '../format';
+import { Funds } from './Funds';
 import { PATROL_GRADES, patrolProfile } from '../../sim/patrol';
 
 type Tone = 'mint' | 'amber' | 'warn' | 'danger' | 'blue' | 'neutral';
@@ -55,13 +56,13 @@ export function ShiftReportCard({ report, g, acknowledge = true }: { report: Shi
           <Icon name="cash" size={16} />
           Net funding
         </span>
-        <span className={`report-net-val ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}>{signedMoney(report.net)}</span>
+        <span className={`report-net-val ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Funds value={report.net} format="signed" /></span>
       </div>
-      <KV icon="trend" k="Gross income" v={money(report.gross)} />
-      <KV icon="people" k="Wages" v={`-${money(report.wages)}`} />
-      <KV icon="gear" k="Operating costs" v={`-${money(report.operating)}`} /></>}
-      {report.restockSpend > 0 && <KV icon="box" k="Restocking" v={`-${money(report.restockSpend)}`} />}
-      {(report.maintenanceSpend ?? 0) > 0 && <KV icon="wrench" k="Equipment manager servicing" v={`-${money(report.maintenanceSpend ?? 0)}`} />}
+      <KV icon="trend" k="Gross income" v={<Funds value={report.gross} format="money" />} />
+      <KV icon="people" k="Wages" v={<>-<Funds value={report.wages} format="money" /></>} />
+      <KV icon="gear" k="Operating costs" v={<>-<Funds value={report.operating} format="money" /></>} /></>}
+      {report.restockSpend > 0 && <KV icon="box" k="Restocking" v={<>-<Funds value={report.restockSpend} format="money" /></>} />}
+      {(report.maintenanceSpend ?? 0) > 0 && <KV icon="wrench" k="Equipment manager servicing" v={<>-<Funds value={report.maintenanceSpend ?? 0} format="money" /></>} />}
       {(report.maintenanceStarted?.length ?? 0) > 0 && <p className="dim">Sent for service: {report.maintenanceStarted!.map((id) => g.units[id]?.serial ?? id).join(', ')}.</p>}
       {(report.grants ?? []).map((grant) => <KV key={`${grant.nodeId}:${grant.tier}`} icon="star" k={`Granted at ${grant.milestone}`} v={grantName(grant)} tone="mint" />)}
       {report.capped && (

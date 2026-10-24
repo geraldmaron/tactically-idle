@@ -126,6 +126,54 @@
   --edge-hi: rgba(255, 255, 255, 0.06);
   --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);
 
+  /* Finish: depth and light (owner, 2026-10-23: "flat and boring, a shell never polished"). This
+     replaces the audit's "elevation only for sheets". A surface you read or open sits above the
+     ground, lit from its top edge; a slot that holds something sits below it. Amber stays the
+     player's move, so the one glow below is for the chosen thing and nothing else. */
+  --lift-edge: inset 0 1px 0 color-mix(in srgb, var(--white) 10%, transparent);
+  --lift-1: var(--lift-edge), 0 1px 2px color-mix(in srgb, var(--black) 45%, transparent), 0 6px 14px color-mix(in srgb, var(--black) 32%, transparent);
+  --lift-2: var(--lift-edge), 0 2px 4px color-mix(in srgb, var(--black) 45%, transparent), 0 14px 30px color-mix(in srgb, var(--black) 44%, transparent);
+  /* A well is pressed in: a darker floor, a shadow from its top lip, a faint rim. Lists inside a panel. */
+  --well: inset 0 2px 6px color-mix(in srgb, var(--black) 60%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--white) 4%, transparent);
+  --glow-act: 0 0 0 1px color-mix(in srgb, var(--act) 80%, transparent), 0 0 26px color-mix(in srgb, var(--act) 24%, transparent);
+  --surface-1: linear-gradient(180deg, color-mix(in srgb, var(--ink-3) 58%, var(--ink-2)) 0%, var(--ink-1) 100%);
+  --surface-2: linear-gradient(180deg, var(--ink-3) 0%, color-mix(in srgb, var(--ink-2) 78%, var(--ink-1)) 100%);
+  --surface-well: #081322;
+  --well-rule: color-mix(in srgb, var(--white) 6%, transparent);
+  --ground-glow: radial-gradient(130% 46% at 50% -4%, color-mix(in srgb, var(--ink-3) 70%, transparent), transparent 72%);
+
+  /* Three depths (canvas "Depth and Framed Sections", 2026-10-24). The ground carries the texture,
+     so panels sit on something: a 24px grid at 3%, a cool glow at the top, a dark falloff at the
+     foot. A panel is lit from above (one gradient, one top highlight, one drop shadow) and never
+     carries the grid. Its header bar is a plate a step lighter. A well is pressed into a panel and
+     never casts a shadow. Nothing but the pinned header sits on the bare ground. */
+  --ground-base: #0a1526;
+  --ground-grid: color-mix(in srgb, var(--white) 3%, transparent);
+  --ground-tex:
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--siren-b) 10%, transparent), transparent 60%),
+    radial-gradient(140% 90% at 50% 120%, color-mix(in srgb, var(--black) 55%, transparent), transparent 60%),
+    repeating-linear-gradient(0deg, var(--ground-grid) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, var(--ground-grid) 0 1px, transparent 1px 24px);
+  --panel-edge: #2c4664;
+  --surface-panel: linear-gradient(180deg, #16304d 0%, var(--ink-1) 38%, #0f2034 100%);
+  --shadow-panel: inset 0 1px 0 color-mix(in srgb, var(--white) 8%, transparent), 0 10px 24px color-mix(in srgb, var(--black) 45%, transparent);
+  --surface-bar: linear-gradient(180deg, #1b3656, #142a44);
+  --bar-edge: inset 0 -1px 0 color-mix(in srgb, var(--black) 35%, transparent);
+  --bar-title: #d6e2ef;
+  --bar-btn: color-mix(in srgb, var(--ink-deep) 45%, transparent);
+  /* The bar's mark: amber for a squad's letter, violet for the people a call is about. */
+  --mark-act: #2a2410;
+  --mark-people: #2a1f45;
+  --mark-people-edge: #7a5fc0;
+  --mark-people-text: #d9c8ff;
+  --band-h: 104px;
+  --mark-size: 28px; /* the bar's badge or icon well */
+  --bar-btn-h: 36px; /* the bar's action pill; its button keeps the 44px row */
+  --tag-h: 24px;
+  --s15: 15px; /* panel bar titles only, condensed capitals */
+  --tag-scrim: color-mix(in srgb, var(--ink-deep) 75%, transparent);
+  --tag-harm-scrim: color-mix(in srgb, var(--harm-ink) 80%, transparent);
+
   /* Earlier names, kept so every screen reads the new values. New code uses the names above. */
   --bg: var(--ink-0);
   --navy-900: var(--ink-1);
@@ -155,8 +203,8 @@
   --font-display: var(--f-title);
   --font-mono: var(--f-ui); /* the mono face left the interface; numbers use tabular figures */
   --font-marker: var(--f-marker);
-  --shadow-card: 0 5px 12px rgba(1, 7, 18, .28), inset 0 1px 0 rgba(255, 255, 255, .05);
-  --panel-grad: linear-gradient(145deg, var(--ink-2), var(--ink-1));
+  --shadow-card: var(--lift-1);
+  --panel-grad: var(--surface-1);
   --radius: var(--r1);
 }
 

@@ -295,6 +295,47 @@ the lead recomputes at merge), `visual-floors.test.ts`, the shared files (`theme
 `player-navigation.css`, `components/ui.tsx`, `states.tsx`, `Sheet.tsx`, `icons.tsx`, `ChoiceRail.tsx`, `App.tsx`,
 `store.ts`). Waves 2 (live-debrief, team, hq, store) and 3 (calls, then the lead's integration) are in the plan.
 
+Finish pass (2026-10-23, owner: "boring, a shell never polished"), lead, uncommitted on `claude/feel-lead`:
+the audit's flat-surface rule reversed (docs/ui-ux-audit.md, Surfaces); depth tokens in `theme.css`; shared
+section heads, chips, buttons, flow head and action bar in `skin.css`; Deploy rebuilt (hero plate, raised squad
+cards, gear slots, route card) in `OpsPrepare.tsx` and `calls.css`; the brief's heads and cards in
+`prep-briefing.css`; the live call and debrief in `live-call.css` and `debrief-results.css`. Screenshots only, no
+tests run (owner's visual-only rule). Still to raise: sheets (the review sheet's lead picker), the board's empty states.
+
+Surface pass (2026-10-23, screenshots only, 390x844 and 320x568, uncommitted; before/after pairs in
+`side-session-notes/local_74f265d1-.../ui-finish-surfaces/`). Shared additions sit at the end of `skin.css`
+("finish: the remaining surfaces"); every other change is in the surface's own file.
+- HQ: empty results is a recessed slot that says what fills it; the income clock says "Earning for another 6h" or
+  "Paused until you give an order"; command seats are one row of five at 320 ("Build · $1,600", "Locked", "Vacant").
+- Board and casebook: already raised; New tag lifted to 13px. No other change.
+- Team (squads, roster, hire list): roster empty filters say why ("Nobody is busy. Every officer is free to take a call.");
+  skill labels, progress notes and candidate facts lifted to 14px; squad letter 13px.
+- Hire contract sheet: title-face heads with a rule, raised cards on a darker sheet floor, one-column skills at 320.
+- Training chooser: Start now and Opens later are title-face heads with a rule; "For ratings under 85" replaces "Enrol below 85".
+- Patrol: boost hero scrim darkened so the net and gross read over the photo; crew names 14px.
+- Command room: "Opens for $1,600" and "Not open yet" replace the bare "Open" (it read like the button beside it).
+- Officer sheet: Skills, Qualifications, Squad heads in title face; stat tiles are recessed wells at 14px; rank card text 14px.
+- Build: All upgrades fold is a raised row; room sheet heads (Who it helps, The ladder) in title face over raised cards.
+- Store: category heads in title face with a rule and the owned count at the end; item sheet heads (Your stock, Units,
+  Unlock and qualifications) match; chips 13px, 14px where they carry a decision.
+- Review sheet: each outcome is its own raised card with a tone stripe, the lead picker is a recessed well with the
+  chosen face lit amber (rating, stress and best fit already in its tiles), the footer's harm word is 14px.
+- Settings and first run: the themes list and the note are raised and recessed, the kicker is amber, and Continue sits in a
+  sticky action bar so it is in reach at 320.
+- Welcome-back, toasts, empty and error states: sheets sit on a darker floor with a lit head; toasts are raised with a tone
+  stripe and a title-face head; every `.empty` is a recessed slot (error keeps a red edge).
+- Strings changed (contextual relevance): "For ratings under 85" (`TrainingStore.test.ts` line updated to match), command
+  post state, HQ empty results line, HQ income detail, roster empty filter lines. No test was run.
+- Not captured: the error state (an injected `.empty-error` block shows the style; no real save failure was forced) and a
+  second squad on one call. Live call lines behind the review sheet (13px people names, transcript speaker) are the
+  lead's screens and were not touched.
+
+Live call rebuilt from the sol challenge (2026-10-23): story before scene, choices docked to the foot on phones 740px tall or more, each choice states Gains and Costs from its authored pull and cost, empty radio log is one line. Screenshots only. See `docs/ui-sol-challenge.md` for the rest of the list.
+
+HQ reduced and the return moment built from the sol challenge (2026-10-23): Since you left card, the one move, Needs you, four department tiles, last results; the old long sections sit under Department detail. The welcome sheet ends on the waiting calls. Screenshots only.
+
+Civilian name pool replaced with common US names (2026-10-23, owner): `src/content/call-trees/civilian-names.ts`. Generated casts change, so the v13 compiled fingerprints and `docs/architecture.md` need recapture when testing resumes. The Scenario Lab reads the backstory in Play's centre column (Story | Phone preview switch, `?story=1`), opened from the home card's Read story button; Codex's report is in the session notes and `docs/ui-sol-challenge.md` covers the game.
+
 Parked, kept: the Going Live branches (`going-live-spine-25ad3c`, `spine-pass2-363cdf`, `prose-scene-6a2c7c`,
 `trusting-pasteur-41bc4e`, `happy-wilson-6259de`, `hopeful-pike-69bdac`) and `friendly-leakey-bd79fb`. The
 going-live-teardown session (local_60bddd1a) still refuses to archive with live work attached.

@@ -30,7 +30,7 @@ export function CostTag({ quote, part = 'all' }: { quote: CostQuote; part?: 'all
   return <span className={`cost-quote${part === 'note' ? ' cost-quote-inline' : ''}`} data-state={state}>
     {part !== 'note' && (state === 'owned'
       ? <span className="cost-quote-value"><Icon name="check" size={16} />{done ?? 'Owned'}</span>
-      : <span className="cost-quote-value"><Icon name={state === 'locked' ? 'lock' : 'cash'} size={16} />{price != null ? money(price) : ''}</span>)}
+      : <span className="cost-quote-value"><Icon name={state === 'locked' ? 'lock' : 'funds'} size={16} />{price != null ? money(price) : ''}</span>)}
     {part !== 'note' && pillText && <span className="cost-quote-pill">{pillText}</span>}
     {part !== 'value' && live && blocker && <span className="cost-quote-note" data-kind="blocker">{pill && state === 'locked' && <Icon name="lock" size={16} />}{blocker}</span>}
     {part !== 'value' && freeNote && <span className="cost-quote-note">{freeNote}</span>}

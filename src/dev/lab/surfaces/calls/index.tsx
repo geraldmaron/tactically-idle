@@ -109,7 +109,7 @@ export default function CallsSurface() {
               endings={endingWeights(usuallyTallies[template.type], randomResults(template.type, gate.runs))}
               lint={(lint[template.type] ?? []).filter(f => !feed.some(row => row.muted && row.finding.id === f.id && row.type === template.type))}
               notes={(notes[template.type]?.notes ?? []).filter(n => n.severity !== 'accepted').length}
-              current={url.call?.type === template.type} onOpen={tab => open(template.type, tab)}
+              current={url.call?.type === template.type} onOpen={(tab, extra) => open(template.type, tab, extra)}
               onCheck={() => open(template.type, 'outcomes', { scope: 'type', runs: null, style: 'random' })} />
           ))}
         </div>
@@ -151,7 +151,7 @@ const plainHook = (template: IncidentTemplate) => plainTokens(template.tree.summ
 
 function CallCard({ template, verdicts, progress, usually, endings, lint, notes, current, onOpen, onCheck }: {
   template: IncidentTemplate; verdicts: ReturnType<typeof gateVerdicts>; progress: ReturnType<typeof useGate>['gate']['progress']; usually: Usually | null;
-  endings: Record<string, Record<Weight, number>>; lint: LintFinding[]; notes: number; current: boolean; onOpen(tab: Surface): void; onCheck(check: GateCheck): void;
+  endings: Record<string, Record<Weight, number>>; lint: LintFinding[]; notes: number; current: boolean; onOpen(tab: Surface, extra?: Partial<LabUrl>): void; onCheck(check: GateCheck): void;
 }) {
   const counts = treeCounts(template);
   const summary = useBoundSummary(template.type, 60 + CALL_TEMPLATES.indexOf(template) * 90);
@@ -196,6 +196,7 @@ function CallCard({ template, verdicts, progress, usually, endings, lint, notes,
         </span>
         <span className="lab-calls-actions">
           <button type="button" className="lab-button" onClick={() => onOpen('play')}><Glyph name="play" size={11} />Play</button>
+          <button type="button" className="lab-button" onClick={() => onOpen('play', { story: true })} title="Open this call with its backstory beside the decisions">Read story</button>
           <button type="button" className="lab-button" onClick={() => onOpen('flow')}>Flow</button>
           <button type="button" className="lab-button" onClick={() => onOpen('outcomes')}>Outcomes</button>
         </span>

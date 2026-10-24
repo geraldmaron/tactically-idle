@@ -521,8 +521,8 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     return { ...base, progress: { ...base.progress, threat }, ...patch };
   };
 
-  it('reads in the 4B order: strip, scene with map and faces, moment, on-scene comms, then choices', () => {
-    // docs/ops-experience.md "The decide beat" (owner, 2026-10-21).
+  it('reads in order: strip, moment, on-scene comms, choices, then the scene with map and faces', () => {
+    // Owner challenge, 2026-10-23: the moment and the choices come first on every beat; the scene follows.
     const html = render(createElement(LiveView, props()));
     expect(html).not.toContain('role="tablist"');
     expect(html).not.toContain('role="tabpanel"');
@@ -532,10 +532,10 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     const prompt = html.indexOf('How will you verify the report before committing?'), choice = html.indexOf('aria-label="Review Prepare medical access"');
     expect(strip).toBeGreaterThan(-1);
     expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(strip);
-    expect(html.indexOf('class="threat-pill ')).toBeLessThan(scene);
+    expect(html.indexOf('class="threat-pill ')).toBeLessThan(prompt);
+    expect(choice).toBeLessThan(scene);
     expect(scene).toBeLessThan(map);
     expect(map).toBeLessThan(faces);
-    expect(faces).toBeLessThan(prompt);
     expect(comms).toBeGreaterThan(-1);
     expect(prompt).toBeLessThan(comms);
     expect(comms).toBeLessThan(choice);

@@ -294,7 +294,7 @@ export async function playLiveCalls(page, { baseURL, width = 390, height = 844, 
     assert.equal(await page.locator('nav.bottomnav').count(), 0, `${label}: a flow hides the tabs`);
     assert.equal(await page.locator('.result-rewards').count(), 1, `${label}: the debrief lists its rewards`);
     await overflow(`${label} debrief`);
-    await page.getByRole('button', { name: 'Next call', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to calls', exact: true }).click();
     await casebook.waitFor();
     const after = await state(); assert.equal(after.activeRun, null);
     // Every operation is live: it earns department service and settles its equipment.
@@ -408,7 +408,7 @@ export async function measureTapBudget(page, { baseURL, width = 390, height = 84
     const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
     break;
   }
-  const done = page.getByRole('button', { name: 'Next call', exact: true });
+  const done = page.getByRole('button', { name: 'Back to calls', exact: true });
   await done.waitFor({ timeout: 8000 });
   await reset();
   await done.click();

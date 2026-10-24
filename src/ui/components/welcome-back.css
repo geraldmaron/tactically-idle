@@ -11,3 +11,6 @@
 .welcome-lines [data-tone="warn"] .icon { color: var(--warn); }
 .welcome-quiet { margin: 0; }
 .welcome .report { margin: 0; }
+
+/* The report ends on the next move: the waiting calls first, then staying at HQ. */
+.welcome-foot { display: grid; gap: var(--sp2); }

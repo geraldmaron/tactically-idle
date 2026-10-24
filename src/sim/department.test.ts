@@ -378,7 +378,7 @@ describe('development tree, training and store', () => {
     expect(refused(s, { type: 'unlockNode', nodeId: 'intel_drone' }, T0)).toMatch(/Requires Thermal imaging/);
     expect(refused(s, { type: 'unlockNode', nodeId: 'nope' }, T0)).toMatch(/Unknown/);
     s.department.funding = 500;
-    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_negotiation' }, T0)).toMatch(/Needs \$2,400/);
+    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_negotiation' }, T0)).toMatch(/Needs 2,400 funding/);
   });
 
   it('unlock charges funding once and applies capacity effects', () => {
@@ -388,7 +388,7 @@ describe('development tree, training and store', () => {
     expect(s.department.rosterCap).toBe(14);
     expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_recruiting' }, T0)).toMatch(/already unlocked/);
     s.department.funding = 1000;
-    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_academy' }, T0)).toMatch(/Needs \$4,900/);
+    expect(refused(s, { type: 'unlockNode', nodeId: 'personnel_academy' }, T0)).toMatch(/Needs 4,900 funding/);
     const opt = nodeOptions(s);
     expect(opt.find((o) => o.node.id === 'personnel_recruiting')!.status).toBe('unlocked');
     expect(opt.find((o) => o.node.id === 'intel_drone')!.status).toBe('locked');
@@ -433,7 +433,7 @@ describe('development tree, training and store', () => {
     expect(refused(s, { type: 'startCourse', officerId: 'off_chen', courseId: 'composure_workshop' }, T0)).toMatch(/deployed/);
     s.officers.off_chen.assignment = null;
     s.department.funding = 100;
-    expect(refused(s, { type: 'startCourse', officerId: 'off_chen', courseId: 'composure_workshop' }, T0)).toMatch(/Needs \$600/);
+    expect(refused(s, { type: 'startCourse', officerId: 'off_chen', courseId: 'composure_workshop' }, T0)).toMatch(/Needs 600 funding/);
   });
 
   it('a rating course raises the rating only on completion', () => {

@@ -15,7 +15,7 @@ import { enrolledBeat } from '../screens/team-beats';
 import { picksLine, splitCourses } from './training-picks';
 import { Button, Card, Chip, EmptyState, RatingBars, Row } from '../components/ui';
 import { Sheet } from '../components/Sheet';
-import { duration, moneyFull as money } from '../format';
+import { duration, funding, moneyFull as money } from '../format';
 import { EmblemArt } from '../art/EmblemArt';
 import { getState, useGame } from '../store';
 import { useNav, type TrainingDraft, type TrainingFocus } from '../components/nav';
@@ -173,7 +173,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
             const line = picksLine(picks);
             return <article className={`course-tile training-course${courseId === course.id ? ' training-course-highlight' : ''}${officer && available ? ' course-tile-ready' : ''}`} key={course.id} data-course-id={course.id} tabIndex={courseId === course.id ? -1 : undefined} aria-label={course.name}>
               <Row lead={<CourseEmblem course={course} size={40} />} title={course.name}
-                detail={<span className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="cash" size={16} />{money(fee(course.cost))}</span></span>}
+                detail={<span className="course-tile-meta"><span><Icon name="clock" size={16} />{course.hours}h</span><span><Icon name="funds" size={16} />{money(fee(course.cost))}</span></span>}
                 trail={<Button size="sm" variant="primary" disabled={!officers.length} aria-label={`Choose officer for ${course.name}`} onClick={() => openChooser(course.id)}>Choose officer</Button>} />
               <div className="course-tile-more">
                 <div className="course-tile-gains">
@@ -185,7 +185,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
                   <span className="course-picks-line">{line}</span>
                 </div>}
                 {!line && officers.length > 0 && <p className="course-tile-note">Nobody is free to take this now.</p>}
-                {rating && <p className="course-tile-note">Enrol below {COURSE_RATING_CEILING}</p>}
+                {rating && <p className="course-tile-note">For ratings under {COURSE_RATING_CEILING}</p>}
                 {officer && <div className="training-course-personal"><span className="dim">For {officer.firstName}</span><TrainingGain course={course} officer={officer} compact /></div>}
                 {/* A full department is shown once by the places pips, not repeated on every tile. */}
                 {reason && reason !== 'No free training slot' && reason !== sharedReason && <p className="reason">{reason}</p>}
@@ -217,7 +217,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
                 <div className="course-tile-gains">
                   {cert ? <Chip icon={CERT_ICON[cert]}>Earns {CERT_NAME[cert]}</Chip> : rating ? <Chip icon={ratingMeta?.icon}>+{rating.delta} {ratingMeta?.label ?? rating.key}</Chip> : null}
                   <Chip icon="clock">{course.hours}h</Chip>
-                  <Chip icon="cash">{money(fee(course.cost))}</Chip>
+                  <Chip icon="funds">{money(fee(course.cost))}</Chip>
                 </div>
               </div>
             </article>;
@@ -226,10 +226,10 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
       </>;
     })()}
     {!options.length && <EmptyState spot="nothingInStock" title="No courses match">Clear the course search to see all training.</EmptyState>}
-    <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${money(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
+    <Sheet open={!!selectedCourse} onClose={closeChooser} title={choice?.enrolment ? 'Enrolment confirmed' : reviewing ? 'Review enrolment' : 'Choose officer'} subtitle={selectedCourse ? `${selectedCourse.name} · ${funding(fee(selectedCourse.cost))} · ${selectedCourse.hours}h` : undefined} className="training-chooser" footer={selectedCourse && <div className="training-chooser-footer">
       {choice?.enrolment ? <TrainingEnrolmentActions course={selectedCourse} paid={fee(selectedCourse.cost)} onDone={closeChooser} /> : reviewing ? <>
-        <p className="training-confirm-cost">{money(fee(selectedCourse.cost))} funding · 1 slot · {selectedCourse.hours} real hours</p>
-        <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${money(fee(selectedCourse.cost))}`}>Enrol officer</Button></div>
+        <p className="training-confirm-cost">{funding(fee(selectedCourse.cost))} · 1 slot · {selectedCourse.hours} real hours</p>
+        <div className="training-confirm-actions"><Button onClick={backToCandidates}>Back</Button><Button variant="primary" disabled={!reviewing.option.available} onClick={enrol} aria-label={`Enrol ${fullName(reviewing.officer)} in ${selectedCourse.name} for ${funding(fee(selectedCourse.cost))}`}>Enrol officer</Button></div>
       </> : <Button block onClick={closeChooser}>Cancel</Button>}
     </div>}>
       {selectedCourse && (choice?.enrolment ? <div className="training-review">
@@ -239,7 +239,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
         <h3 ref={reviewHeading} className="training-review-heading" tabIndex={-1}>Confirm {fullName(reviewing.officer)}</h3>
         <TrainingOfficerCard candidate={reviewing} now={game.department.clockHighWater} selected />
         <div className="training-confirm-details">
-          <p className="training-confirm-line"><Icon name="cash" size={16} />{game.department.funding >= fee(selectedCourse.cost) ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - fee(selectedCourse.cost))}</> : `Funding ${money(game.department.funding)} of ${money(fee(selectedCourse.cost))} needed`}</p>
+          <p className="training-confirm-line"><Icon name="funds" size={16} />{game.department.funding >= fee(selectedCourse.cost) ? <>Funding {money(game.department.funding)} <span aria-hidden="true">→</span><span className="sr-only"> to </span> {money(game.department.funding - fee(selectedCourse.cost))}</> : `Funding ${money(game.department.funding)} of ${money(fee(selectedCourse.cost))} needed`}</p>
           <p className="training-confirm-line"><Icon name="mortarboard" size={16} />{freePlaces} training {freePlaces === 1 ? 'place' : 'places'} free <TrainingPlaces used={inTraining} total={game.department.trainingSlots} bare /></p>
           <p className="training-confirm-line"><Icon name="clock" size={16} />Away from squad duties for {selectedCourse.hours} real hours</p>
           <p className="dim">Grants arrive on completion. XP may also improve a rating.</p>
@@ -252,7 +252,7 @@ export function TrainingStore({ requestedCert, requestedOfficer, requestedCourse
             <Chip icon="trend">+{courseXpGain(selectedCourse.hours)} XP</Chip>
             <TrainingPlaces used={inTraining} total={game.department.trainingSlots} />
           </div>
-          <p>{selectedCourse.grants.cert ? 'Bars show current ratings that matter for this work.' : `Bars show the gain on completion. Enrol below ${COURSE_RATING_CEILING}.`}</p>
+          <p>{selectedCourse.grants.cert ? 'Bars show current ratings that matter for this work.' : `Bars show the gain on completion. It helps ratings under ${COURSE_RATING_CEILING}.`}</p>
           <p className="dim" role="status">{eligible} can enrol · {candidates.length - eligible} unavailable</p>
         </div>
         {selectedCourse.requiresNode && !game.department.unlockedNodes.includes(selectedCourse.requiresNode) && <div className="training-program-lock"><p className="reason">Requires {DEV_NODES[selectedCourse.requiresNode]?.name ?? selectedCourse.requiresNode}</p><Button size="sm" onClick={() => openDevelopment(selectedCourse.requiresNode!)}>View development program</Button></div>}
@@ -279,7 +279,7 @@ export function sharedHoldBack(reasons: readonly (string | undefined | null)[], 
 /** Keep the previous Enrol hit area inert so a repeated tap cannot dismiss the sheet. */
 export function TrainingEnrolmentActions({ course, paid = course.cost, onDone }: { course: Course; paid?: number; onDone: () => void }) {
   return <>
-    <p className="training-confirm-cost">{money(paid)} funding paid · {course.hours} real hours</p>
+    <p className="training-confirm-cost">{funding(paid)} paid · {course.hours} real hours</p>
     <div className="training-confirm-actions"><Button variant="primary" onClick={(event) => { if (event.detail <= 1) onDone(); }}>Done</Button><Button disabled>Enrolled</Button></div>
   </>;
 }

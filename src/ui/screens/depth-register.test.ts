@@ -22,7 +22,9 @@ describe('weighed choices (choice-weighing)', () => {
   it('shows the title and the cost, keeps harm in view, and reviews from the one card button', () => {
     const html = render([weighed, ...plain.slice(1)]);
     expect(html).toContain('data-action-id="weighed"');
-    expect(html).toContain('<span class="callbtn-cost">The owner stays alone with him.</span>');
+    // A weighed choice reads as what it gains and what it costs, side by side.
+    expect(html).toMatch(/<span class="callbtn-cost">.*?<span>The owner stays alone with him\.<\/span><\/span>/);
+    expect(html).toMatch(/<span class="callbtn-gain">.*?<span>One person is out in two minutes\.<\/span><\/span>/);
     expect(html).not.toContain('The full summary of the choice.');
     expect(html).not.toContain('The pull:');
     expect(html).not.toContain('callbtn-expand');

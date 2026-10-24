@@ -49,7 +49,7 @@ function nominalGives(o: Officer, rank: RankId): string {
     RANK_TUNING.composureBoost[i] ? `composure +${RANK_TUNING.composureBoost[i]}` : '',
     def.trait ? `earns ${def.trait.replace('_', ' ')}` : '',
     def.drops ? `no longer ${def.drops}` : '',
-    RANK_TUNING.wageStep[i] ? `wage +$${RANK_TUNING.wageStep[i]}/h` : '',
+    RANK_TUNING.wageStep[i] ? `wage +${RANK_TUNING.wageStep[i]} funding an hour` : '',
   ].filter(Boolean);
   return parts.join(', ');
 }

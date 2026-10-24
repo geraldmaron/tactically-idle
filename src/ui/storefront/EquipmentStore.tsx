@@ -6,11 +6,14 @@ import { itemCheck } from '../../sim/develop';
 import { equipmentWearMultiplier } from '../../sim/equipment-manager-policy';
 import type { CertId, Id } from '../../sim/types';
 import { GearArtFrame } from '../art/GearArt';
+import { PlateArt, placeFor, sceneFor } from '../art/Plates';
+import { Face } from '../components/Face';
 import { useNav } from '../components/nav';
 import { Sheet } from '../components/Sheet';
 import { useToast } from '../components/toast';
-import { Button, Chip, EmptyState } from '../components/ui';
-import { moneyFull as money } from '../format';
+import { Button, Chip, EmptyState, Section } from '../components/ui';
+import { funding, moneyFull as money } from '../format';
+import { Funds } from '../components/Funds';
 import { Icon } from '../icons';
 import { GEAR_CATEGORY_ICON } from '../icons/kit';
 import { hasNodeEffect } from '../screens/helpers';
@@ -28,6 +31,11 @@ import { ChoiceRail } from '../components/ChoiceRail';
 import { conditionTone } from '../components/labels';
 import { StockBar, UnitList } from './ItemUnits';
 import { CostTag, Segments, type CostQuote } from '../screens/build-parts';
+import { PriceCapsule, type PriceTone } from '../components/PriceCapsule';
+import { boardItemUses, isShort, type BoardCallUse } from './board-items';
+import { scenarioTitle } from '../screens/helpers';
+import { placeTags, scenarioPlaceName } from '../components/incident';
+import { getScenario } from '../../sim/scenario-registry';
 import './storefront.css';
 
 interface EquipmentReceipt { itemId: Id; quantity: number }
@@ -39,7 +47,7 @@ interface EquipmentStoreProps {
   onTraining?: (cert?: CertId) => void;
 }
 
-export function EquipmentStore({ active, compactControls = false, onDevelopment, onTraining }: EquipmentStoreProps) {
+export function EquipmentStore({ active, onDevelopment, onTraining }: EquipmentStoreProps) {
   const game = useGame();
   const [receipt, setReceipt] = useState<EquipmentReceipt | null>(null);
   const nav = useNav();
@@ -55,11 +63,26 @@ export function EquipmentStore({ active, compactControls = false, onDevelopment,
   const patch = (value: Partial<EquipmentQuery>) => setQuery({ ...query, ...value });
   const grouped = query.sort === 'recommended';
   const ownedTypes = entries.filter((entry) => entry.owned > 0).length;
+  const board = useMemo(() => boardItemUses(game, Date.now()), [game]);
+  // Category chips name only categories the catalog holds (docs/patrol-work.md: no empty categories).
+  const categories = ITEM_CATEGORIES.map((category) => ({ category, count: entries.filter((entry) => entry.item.category === category).length })).filter((c) => c.count > 0);
+  // The canvas order: search, what the board needs, the categories; ownership, availability and sort
+  // stay one tap away under Filter.
   const controls = <>
     <label className="field store-search">
       <span className="field-label sr-only">Search equipment</span>
+      <Icon name="search" size={20} />
       <input type="search" placeholder="Search equipment or what it helps with" value={query.search} onChange={(event) => patch({ search: event.target.value })} />
     </label>
+    <BoardRail entries={entries} board={board} onOpen={(itemId, button) => detail.open(itemId, button)} />
+    <div className="store-cats"><ChoiceRail kind="filter" label="Category" value={query.category} onChange={(category) => patch({ category })} options={[
+      { value: 'all' as const, label: <>All <span className="choice-rail-count">{entries.length}</span></>, accessibleLabel: `All, ${entries.length}` },
+      ...categories.map(({ category, count }) => ({ value: category, label: <>{CATEGORY_SHORT[category]} <span className="choice-rail-count">{count}</span></>, accessibleLabel: `${ITEM_CATEGORY_LABELS[category]}, ${count}` })),
+    ]} />
+    {/* A filter set under Filter stays visible here, with its Clear, so "All" never hides a narrower view (sol challenge). */}
+    {(armoryView(query) !== 'all' || query.sort !== 'recommended' || query.affordable) && <p className="store-filter-on"><Icon name="filter" size={16} />{[VIEW_WORD[armoryView(query)], query.sort !== 'recommended' ? 'sorted' : ''].filter(Boolean).join(' · ') || 'Filtered'}<Button size="sm" variant="ghost" onClick={() => setQuery({ ...DEFAULT_EQUIPMENT_QUERY, search: query.search, category: query.category })}>Clear</Button></p>}
+    </div>
+    <Disclosure name="equipment-controls" summary="Filter" icon="filter" className="equipment-controls" hint={armoryView(query) !== 'all' ? VIEW_WORD[armoryView(query)] : undefined}>
     <ChoiceRail kind="filter" label="Show equipment" grow value={armoryView(query)} onChange={(view) => setQuery(withArmoryView(query, view))} options={[
       { value: 'all', label: <>All <span className="choice-rail-count">{entries.length}</span></>, accessibleLabel: `All, ${entries.length}` },
       { value: 'owned', label: <>Owned <span className="choice-rail-count">{facets.ownership.owned}</span></>, accessibleLabel: `Owned, ${facets.ownership.owned}` },
@@ -77,39 +100,43 @@ export function EquipmentStore({ active, compactControls = false, onDevelopment,
       </label>
       {(activeFilters > 0 || query.sort !== 'recommended') && <Button size="sm" variant="ghost" onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear</Button>}
     </div>
+    </Disclosure>
   </>;
   return <div className="store-equipment" hidden={!active}>
-    {compactControls ? <Disclosure name="equipment-controls" summary="Find equipment" icon="filter" className="equipment-controls">{controls}</Disclosure> : controls}
+    {controls}
     {!shown.length ? <div className="card"><EmptyState spot="nothingInStock" title="No equipment matches these filters">Try a broader search or clear your filters. Locked equipment is included when availability is set to All.</EmptyState><Button block onClick={() => setQuery(DEFAULT_EQUIPMENT_QUERY)}>Clear all filters</Button></div>
       : grouped ? ITEM_CATEGORIES.map((category) => {
         const tiles = shown.filter((entry) => entry.item.category === category);
         if (!tiles.length) return null;
         const set = entries.filter((entry) => entry.item.category === category);
         const have = set.filter((entry) => entry.owned > 0).length;
-        return <section key={category} className="store-group" aria-label={ITEM_CATEGORY_LABELS[category]}>
-          <h3 className="store-group-head">
-            <span><Icon name={GEAR_CATEGORY_ICON[category]} size={16} />{ITEM_CATEGORY_LABELS[category]}</span>
-            <Segments done={have} total={set.length} />
-            <span className="store-group-count" aria-label={`${have} of ${set.length} owned`}>{have}/{set.length}</span>
-          </h3>
-          <div className="inv-grid store-list card" data-ui-list>{tiles.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>
-        </section>;
+        // Each category is a framed panel (canvas "Depth and Framed Sections"): its name and how much of
+        // it is owned in the bar, its items as rows in a well.
+        return <Section key={category} className="store-group" level="h3" title={ITEM_CATEGORY_LABELS[category]} icon={GEAR_CATEGORY_ICON[category]}
+          count={<span className="store-group-count">{have} of {set.length} owned<Segments done={have} total={set.length} /></span>} well>
+          <div className="inv-grid store-list" data-ui-list>{tiles.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} short={isShort(board.get(entry.item.id))} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>
+        </Section>;
       })
-      : <div className="inv-grid store-list card" data-ui-list>{shown.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div>}
-    {selected && active && <EquipmentDetail key={selected.item.id} entry={selected} onPurchase={(quantity) => setReceipt({ itemId: selected.item.id, quantity })} onClose={() => detail.close()} onDevelopment={onDevelopment ?? nav.openDevelopment} onTraining={onTraining ?? ((certId) => nav.openTraining({ certId }))} />}
+      : <Section className="store-group" level="h3" title="All equipment" icon="box" count={`${shown.length} items, ${STORE_SORT_WORD[query.sort]}`} well><div className="inv-grid store-list" data-ui-list>{shown.map((entry) => <EquipmentTile key={entry.item.id} entry={entry} short={isShort(board.get(entry.item.id))} acquired={receipt?.itemId === entry.item.id ? receipt.quantity : undefined} onOpen={(button) => detail.open(entry.item.id, button)} />)}</div></Section>}
+    {selected && active && <EquipmentDetail key={selected.item.id} entry={selected} uses={board.get(selected.item.id) ?? []} onPurchase={(quantity) => setReceipt({ itemId: selected.item.id, quantity })} onClose={() => detail.close()} onDevelopment={onDevelopment ?? nav.openDevelopment} onTraining={onTraining ?? ((certId) => nav.openTraining({ certId }))} />}
   </div>;
 }
+
+/** The sort's words for the unsorted list's bar, as the Filter's select says them. */
+const STORE_SORT_WORD: Record<StoreSort, string> = { recommended: 'by category', cost_asc: 'cheapest first', cost_desc: 'dearest first', name: 'by name', recent: 'recently unlocked' };
 
 type TileState = 'buy' | 'short' | 'locked';
 
 /** Art, stock, price and purchase eligibility stay visible together. Qualifications and use live
  * in the item sheet; an acquired marker is supplied only by a successful command receipt. */
-function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acquired?: number; onOpen: (button: HTMLButtonElement) => void }) {
+function EquipmentTile({ entry, short = false, acquired, onOpen }: { entry: CatalogEntry;
+  /** A call on the board is short of it: the price capsule turns amber. */
+  short?: boolean; acquired?: number; onOpen: (button: HTMLButtonElement) => void }) {
   const { item } = entry;
   const state: TileState = !entry.unlocked ? 'locked' : entry.canBuy ? 'buy' : 'short';
   const condition = entry.meanCondition === null ? null : Math.round(entry.meanCondition);
   const certs = item.requiresCerts?.length ? `. Certification needed to use: ${entry.qualified} certified officer${entry.qualified === 1 ? '' : 's'}` : '';
-  const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${money(item.cost)} funding. ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
+  const label = `${item.name}, ${ITEM_CATEGORY_LABELS[item.category]}. ${funding(item.cost)}.${short ? ' A call on the board is short of it.' : ''} ${entry.unlocked ? 'Purchase unlocked' : `Purchase locked: requires ${entry.unlockName}`}. ${entry.affordable ? 'Affordable' : 'Needs funding'}. ${entry.owned} owned, ${entry.ready} ready${condition === null ? '' : `, condition ${condition}%`}${entry.attention ? `, ${entry.attention}` : ''}${certs}.`;
   const stock = entry.owned > 0 ? `${entry.owned} owned · ${entry.ready} ready` : 'Not owned';
   const quote: CostQuote = { state: state === 'buy' ? 'ready' : state, price: item.cost, pill: true, blocker: state === 'locked' ? `Needs ${entry.unlockName}` : undefined };
   // Row's markup and classes, with the item id and the element the sheet returns focus to, which Row does not carry.
@@ -123,13 +150,51 @@ function EquipmentTile({ entry, acquired, onOpen }: { entry: CatalogEntry; acqui
       <span className="ui-row-detail store-tile-stock">{entry.owned > 0 ? <span className="store-tile-have"><Icon name="check" size={16} />{stock}</span> : stock}{acquired !== undefined && <> · <span className="store-tile-acquired"><Icon name="check" size={16} />+{acquired} acquired</span></>}</span>
       {state === 'locked' && <span className="store-tile-gate"><CostTag part="note" quote={quote} /></span>}
     </span>
-    <span className="ui-row-trail" aria-hidden="true"><CostTag part="value" quote={quote} /></span>
+    <span className="ui-row-trail" aria-hidden="true"><PriceCapsule value={item.cost} tone={priceTone(entry, short)} /></span>
     {condition !== null && <span className={`inv-cond inv-cond-${conditionTone(condition, item.wear)}`} aria-hidden="true"><i style={{ width: `${Math.max(4, condition)}%` }} /></span>}
   </button>;
 }
 
-function EquipmentDetail({ entry, onPurchase, onClose, onDevelopment, onTraining }: {
-  entry: CatalogEntry; onPurchase: (quantity: number) => void; onClose: () => void; onDevelopment: (nodeId: Id) => void; onTraining: (cert?: CertId) => void;
+/** The capsule's tone for a catalog entry: behind a gate, short of funding, wanted by the board, or plain. */
+export function priceTone(entry: CatalogEntry, short: boolean): PriceTone {
+  return !entry.unlocked ? 'locked' : !entry.affordable ? 'short' : short ? 'hot' : 'plain';
+}
+
+/** Short names for the category chips, so the rail stays short; the full name is spoken. */
+const CATEGORY_SHORT: Record<(typeof ITEM_CATEGORIES)[number], string> = { comms: 'Comms', intel: 'Eyes', protection: 'Armor', access: 'Entry', medical: 'Medical', response: 'Response', less_lethal: 'Less-lethal', vehicles: 'Vehicles', supplies: 'Supplies' };
+const RAIL_MAX = 3;
+const VIEW_WORD: Record<ReturnType<typeof armoryView>, string> = { all: '', owned: 'Owned only', attention: 'Needs attention', buy: 'Buy now' };
+
+/** "For calls on your board" (canvas Store): the items live calls are short of, then gear their
+ * briefings can use that the department does not own yet, each with the call it is for. A list, not a
+ * sideways rail: the count varies (docs/game-ux-direction.md, contract 2). Hidden when the board needs nothing. */
+function BoardRail({ entries, board, onOpen }: { entries: CatalogEntry[]; board: Map<Id, BoardCallUse[]>; onOpen: (itemId: Id, button: HTMLButtonElement) => void }) {
+  const game = useGame();
+  const now = Date.now();
+  const picks = entries.filter((entry) => board.has(entry.item.id) && (isShort(board.get(entry.item.id)) || entry.owned === 0))
+    .sort((a, b) => Number(isShort(board.get(b.item.id))) - Number(isShort(board.get(a.item.id))) || Number(b.unlocked) - Number(a.unlocked) || a.item.cost - b.item.cost)
+    .slice(0, RAIL_MAX);
+  if (!picks.length) return null;
+  return <Section title="For calls on your board" icon="calls" count={picks.length}>
+    <div className="card store-board" data-ui-list>{picks.map((entry) => {
+      const uses = board.get(entry.item.id)!;
+      const use = uses.find((u) => u.short) ?? uses[0];
+      const title = scenarioTitle(game, use.scenarioId, now);
+      const line = [title, use.short ? `${use.short.have} of ${use.short.need} ready` : uses.length > 1 ? `and ${uses.length - 1} more` : 'its choices can use it'].join(' · ');
+      return <button key={entry.item.id} type="button" className="ui-row store-board-row" data-item-id={entry.item.id} aria-haspopup="dialog" onClick={(event) => onOpen(entry.item.id, event.currentTarget)}
+        aria-label={`${entry.item.name}, ${funding(entry.item.cost)}. For ${line}.${entry.unlocked ? '' : ` Needs ${entry.unlockName}.`}`}>
+        <span className="ui-row-lead inv-art" aria-hidden="true"><GearArtFrame itemId={entry.item.id} size={32} />{entry.owned > 0 && <span className="store-tile-qty">{entry.owned}</span>}</span>
+        <span className="ui-row-main" aria-hidden="true"><span className="ui-row-title">{entry.item.name}</span><span className="ui-row-detail">{line}</span></span>
+        <span className="ui-row-trail" aria-hidden="true"><PriceCapsule value={entry.item.cost} tone={priceTone(entry, isShort(uses))} /></span>
+      </button>;
+    })}</div>
+  </Section>;
+}
+
+function EquipmentDetail({ entry, uses, onPurchase, onClose, onDevelopment, onTraining }: {
+  entry: CatalogEntry;
+  /** The board's calls this item helps (board-items.ts). */
+  uses: BoardCallUse[]; onPurchase: (quantity: number) => void; onClose: () => void; onDevelopment: (nodeId: Id) => void; onTraining: (cert?: CertId) => void;
 }) {
   const game = useGame();
   const { act } = useToast();
@@ -148,31 +213,46 @@ function EquipmentDetail({ entry, onPurchase, onClose, onDevelopment, onTraining
   const preview = itemCapabilityPreview(game, item.id);
   const wear = equipmentWearMultiplier(game, item);
   const restock = hasNodeEffect(game, 'restockRules');
+  // Who can use it: officers holding every certification it needs.
+  const certified = item.requiresCerts?.length ? Object.values(game.officers).filter((officer) => item.requiresCerts!.every((cert) => officer.certs.includes(cert))) : [];
   return <Sheet open onClose={onClose} title={item.name} className="store-item-sheet" subtitle={<span className="chips"><Chip>{ITEM_CATEGORY_LABELS[item.category]}</Chip><Chip>{entry.owned} owned · {entry.ready} ready</Chip></span>} footer={<div className="store-purchase">
-    <div className="store-purchase-line"><label className="field"><span className="field-label">Quantity</span><input aria-label={`Quantity of ${item.name}`} type="number" inputMode="numeric" min={1} max={max} step={1} value={quantity} disabled={item.supportOnly} onChange={(event) => { setQuantity(event.target.value); setFeedback(null); }} /></label><div><span className="dim">Total funding</span><strong>{quantityValid ? money(item.cost * qty) : '—'}</strong></div></div>
+    {/* The canvas foot: a quantity stepper whose number can also be typed, and Buy with the funding it leaves. */}
+    <div className="store-purchase-line">
+      <span className="qty-step" role="group" aria-label={`Quantity of ${item.name}`}>
+        <button type="button" className="stepper-btn" aria-label="One fewer" disabled={item.supportOnly || !quantityValid || qty <= 1} onClick={() => { setQuantity(String(Math.max(1, qty - 1))); setFeedback(null); }}><Icon name="minus" size={16} /></button>
+        <input aria-label={`Quantity of ${item.name}`} type="number" inputMode="numeric" min={1} max={max} step={1} value={quantity} disabled={item.supportOnly} onChange={(event) => { setQuantity(event.target.value); setFeedback(null); }} />
+        <button type="button" className="stepper-btn" aria-label="One more" disabled={item.supportOnly || (quantityValid && qty >= max)} onClick={() => { setQuantity(String(quantityValid ? Math.min(max, qty + 1) : 1)); setFeedback(null); }}><Icon name="plus" size={16} /></button>
+      </span>
+      <Button variant="primary" className="store-buy" disabled={!check.ok} onClick={() => {
+        const result = act({ type: 'buyItem', itemId: item.id, qty }, `Bought ${qty} × ${item.name}`);
+        setFeedback({ ok: result.ok, text: result.ok ? `${qty} ${qty === 1 ? 'unit added' : 'units added'} to the Armory for ${funding(item.cost * qty)}.` : result.reason });
+        if (result.ok) onPurchase(qty);
+      }}>{!entry.unlocked ? 'Locked' : quantityValid
+        ? <span className="store-buy-text"><span>Buy for <Funds value={item.cost * qty} format="full" /></span>{game.department.funding - item.cost * qty >= 0 && <small><Funds value={game.department.funding - item.cost * qty} format="full" /> left</small>}</span>
+        : 'Enter quantity to buy'}</Button>
+    </div>
     {item.supportOnly && <p className="dim">Vehicles are purchased one at a time. One support asset can be assigned per operation.</p>}
-    <Button block variant="primary" disabled={!check.ok} onClick={() => {
-      const result = act({ type: 'buyItem', itemId: item.id, qty }, `Bought ${qty} × ${item.name}`);
-      setFeedback({ ok: result.ok, text: result.ok ? `${qty} ${qty === 1 ? 'unit added' : 'units added'} to the Armory for ${money(item.cost * qty)} funding.` : result.reason });
-      if (result.ok) onPurchase(qty);
-    }}>{!entry.unlocked ? 'Locked' : quantityValid ? `Buy ${qty} · ${money(item.cost * qty)} funding` : 'Enter quantity to buy'}</Button>
     {failureMessage && entry.unlocked && <p className="reason store-purchase-reason" role="status"><Icon name={entry.unlocked ? 'warning' : 'lock'} size={16} />{failureMessage}</p>}
   </div>}>
-    <div ref={objectRef} className={`store-detail-art${feedback?.ok ? ' store-detail-acquired' : ''}`}><GearArtFrame itemId={item.id} size={128} /><div className="store-detail-hero">
+    <div ref={objectRef} className={`store-detail-art${feedback?.ok ? ' store-detail-acquired' : ''}`}><GearArtFrame itemId={item.id} size={92} /><div className="store-detail-hero">
       {feedback?.ok && <div className="store-purchase-receipt" role="status"><Icon name="check" size={20} /><div><strong>{item.name} acquired</strong><p>{feedback.text}</p></div></div>}
       {!entry.unlocked && <div className="store-gate" role="note"><Icon name="lock" size={20} /><div><strong>Needs {entry.unlockName}</strong><p>Unlock it in Build, then come back to buy.</p></div>{item.requiresNode && <Button size="sm" variant="primary" icon="build" onClick={() => onDevelopment(item.requiresNode!)}>View</Button>}</div>}
       <p>{item.description}</p>
       <span className="chips">
         {entry.owned > 0 && <Chip tone="mint" icon="check">Owned · {entry.owned}</Chip>}
         <Chip tone={entry.unlocked ? 'mint' : 'neutral'} icon={entry.unlocked ? 'unlock' : 'lock'}>{entry.unlocked ? 'Purchase unlocked' : 'Purchase locked'}</Chip>
-        <Chip tone={entry.affordable ? 'mint' : 'warn'} icon="cash">{money(item.cost)}{entry.affordable ? '' : ' · needs funding'}</Chip>
+        <Chip tone={entry.affordable ? 'mint' : 'warn'} icon="funds">{money(item.cost)}{entry.affordable ? '' : ' · needs funding'}</Chip>
         {!!item.requiresCerts?.length && <Chip tone={entry.qualified ? 'blue' : 'warn'} icon="mortarboard">{entry.qualified} certified</Chip>}
       </span>
     </div></div>
-    {entry.owned > 0 && <section className="store-detail-section store-owned" aria-label="Your stock"><h3>Your stock</h3><StockBar o={entry} />{entry.attention && <p className="note note-warn"><Icon name="warning" size={16} />{entry.attention}</p>}</section>}
+    {uses.length > 0 && <BoardUses uses={uses} />}
     {!!item.capabilities?.length && <div className="chips store-capabilities" aria-label="Capabilities">{item.capabilities.map((id) => <Chip key={id} tone="blue" title={CAPABILITIES[id]?.description}>{CAPABILITIES[id]?.name ?? id}</Chip>)}</div>}
-    <DetailSection title="Helps with" lines={item.helpsWith ?? [item.description]} />
-    <DetailSection title="When it won’t help" lines={item.counters ?? []} />
+    <WhatItDoes helps={item.helpsWith ?? [item.description]} counters={item.counters ?? []} />
+    {(entry.owned > 0 || certified.length > 0) && <section className="store-detail-section store-owned" aria-label="Your stock"><h3>Your stock<span>{entry.owned} owned</span></h3>
+      {entry.owned > 0 && <StockBar o={entry} />}
+      {certified.length > 0 && <p className="store-certified"><span className="face-stack" aria-hidden="true">{certified.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} />)}</span>{certified.length} certified{certified.length <= 4 ? `: ${certified.map((officer) => officer.surname).join(', ')}` : ''}</p>}
+      {entry.attention && <p className="note note-warn"><Icon name="warning" size={16} />{entry.attention}</p>}
+    </section>}
     <section className="store-detail-section"><h3>Unlock and qualifications</h3>
       <p>{entry.unlocked ? 'Purchase unlocked.' : `Purchase requires ${entry.unlockName}.`} {entry.affordable ? 'One unit is affordable with current funding.' : 'Current funding is below the unit price.'}</p>
       {item.requiresNode && <Button size="sm" onClick={() => onDevelopment(item.requiresNode!)}>View {entry.unlockName}</Button>}
@@ -186,7 +266,7 @@ function EquipmentDetail({ entry, onPurchase, onClose, onDevelopment, onTraining
     </section>
     <section className="store-detail-section"><h3>Upkeep</h3>
       {item.kind === 'consumable' ? <p>Single-use; cannot be serviced.{item.wear.shelfLifeDays ? ` Shelf life: ${item.wear.shelfLifeDays} game days.` : ''}{item.wear.perDay ? ` Condition also falls ${item.wear.perDay} per game day.` : ''}</p>
-        : <p>Base wear: {Math.round(item.wear.perUse * wear * 100) / 100} per use and {Math.round(item.wear.perDay * wear * 1000) / 1000} per game day, adjusted by each unit’s wear rate. Service takes {item.wear.serviceHours} real hours; base cost {money(item.wear.serviceCost)} funding before any manager discount. No automatic hourly equipment charge.</p>}
+        : <p>Base wear: {Math.round(item.wear.perUse * wear * 100) / 100} per use and {Math.round(item.wear.perDay * wear * 1000) / 1000} per game day, adjusted by each unit’s wear rate. Service takes {item.wear.serviceHours} real hours; base cost {funding(item.wear.serviceCost)} before any manager discount. No automatic hourly equipment charge.</p>}
       <p className="dim">Service or scrap a unit from its row under Units.</p>
     </section>
     <section className="store-detail-section"><h3>Action compatibility</h3><p>{preview.reasons.join(' ')}</p><p className="dim">This store view has no selected action. It does not claim a score bonus or reveal unconfirmed scene information. Check the action preview during an operation.</p></section>
@@ -194,6 +274,26 @@ function EquipmentDetail({ entry, onPurchase, onClose, onDevelopment, onTraining
   </Sheet>;
 }
 
-function DetailSection({ title, lines }: { title: string; lines: string[] }) {
-  return <section className="store-detail-section"><h3>{title}</h3>{lines.length ? <ul className="bullets">{lines.map((line, index) => <li key={index}>{line}</li>)}</ul> : <p>Effect depends on the selected action and current scene.</p>}</section>;
+/** "What it does" (canvas StoreItem): what it helps with, each with a check, then when it will not
+ * help, each with a warning, as one list. */
+function WhatItDoes({ helps, counters }: { helps: string[]; counters: string[] }) {
+  return <section className="store-detail-section"><h3>What it does</h3>
+    <ul className="store-does" data-ui-list>
+      {helps.map((line, index) => <li key={`h${index}`} data-tone="good"><span className="store-does-icon"><Icon name="check" size={16} /></span><span>{line}</span></li>)}
+      {counters.map((line, index) => <li key={`c${index}`} data-tone="warn"><span className="store-does-icon"><Icon name="warning" size={16} /></span><span><span className="sr-only">Won’t help: </span>{line}</span></li>)}
+    </ul>
+  </section>;
+}
+
+/** The board's calls this item helps, each with its building. No odds: no selector gives this item's
+ * effect on a call before a squad and a choice exist, so the row says only what the board says. */
+function BoardUses({ uses }: { uses: BoardCallUse[] }) {
+  const game = useGame();
+  const now = Date.now();
+  return <section className="store-detail-section"><h3>On your board</h3>
+    <div className="store-does" data-ui-list>{uses.map((use) => <div key={use.scenarioId} className="store-board-use">
+      <span className="store-board-thumb plate" aria-hidden="true"><PlateArt src={placeFor(use.familyId) ?? sceneFor(use.type ?? undefined)} /></span>
+      <span className="ui-row-main"><span className="ui-row-title">{scenarioTitle(game, use.scenarioId, now)}</span><span className="ui-row-detail">{[placeTags(use.familyId, scenarioPlaceName(getScenario(use.scenarioId))).name, use.short ? `short, ${use.short.have} of ${use.short.need} ready` : 'its choices can use it'].filter(Boolean).join(' · ')}</span></span>
+    </div>)}</div>
+  </section>;
 }

@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useGame } from '../store';
 import { budget } from '../../sim/department-selectors';
 import type { GameState } from '../../sim/types';
-import { liveMoney, money, moneyFull, rate } from '../format';
+import { funding, fundingPerHour, liveMoney, money, rate } from '../format';
 import { Sheet } from './Sheet';
 import { Meter, Ring } from './ui';
 import { levelProgress } from '../../sim/department-level';
@@ -97,10 +97,10 @@ export function DepartmentStatusBar({ fundingRef, g, topic, onOpen, onClose, onO
     <>
     <header className="topbar resource-bar">
       <ul className="stats" aria-label="Department status">
-        <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', `${moneyFull(d.funding)}, ${b.net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(b.net))} an hour`)}>
+        <li><button ref={fundingRef} data-funding-target className="stat stat-cash" {...helpProps('funding', `${funding(d.funding)}, ${b.net < 0 ? 'minus ' : ''}${fundingPerHour(Math.abs(b.net))}`)}>
           <span className="res-pill" data-ui-pill>
             <span className="res-well res-well-cash"><Icon name={RESOURCE_ICON.funds} size={16} className="res-icon" /></span>
-            {/* The narrowest phones show the balance short ($13.4K) so the hourly rate stays readable. */}
+            {/* The narrowest phones show the balance short (13.4K) so the hourly rate stays readable. */}
             <span className="res-value stat-cash-value">{liveMoney(live.shown)}</span>
             <span className="res-value stat-cash-short" aria-hidden="true">{money(live.shown)}</span>
             <span className={`res-suffix stat-rate${b.net < 0 ? ' stat-neg' : ''}`}>{rate(b.net)}</span>

@@ -9,7 +9,7 @@ import { deployability, fullName } from './officer';
 import { postFunding } from './ledger';
 import { simNow } from './calendar';
 import { tunable } from './tuning';
-import { money } from './format';
+import { fundingPerHour } from './format';
 
 const HOUR_MS = 3_600_000;
 
@@ -62,5 +62,5 @@ export function completeDetails(d: GameState, t: number, ev?: ShiftReport['perso
 /** One line for the player: what a detail would pay this officer. */
 export function detailLine(o: Pick<Officer, 'wage' | 'certs'>): string {
   const rate = detailRate(o);
-  return rate === null ? 'Needs a certification to teach' : `Instructor detail ${money(rate)}/h`;
+  return rate === null ? 'Needs a certification to teach' : `Instructor detail pays ${fundingPerHour(rate)}`;
 }

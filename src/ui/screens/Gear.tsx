@@ -19,7 +19,8 @@ import { useToast } from '../components/toast';
 import { Icon } from '../icons';
 import { Disclosure } from '../components/Disclosure';
 import { GEAR_CATEGORY_ICON, GEAR_SOURCE_ICON } from '../icons/kit';
-import { money } from '../format';
+import { funding, fundingPerHour } from '../format';
+import { Funds } from '../components/Funds';
 import { hasNodeEffect } from './helpers';
 import './gear-visual.css';
 
@@ -33,8 +34,10 @@ export function GearScreen({ compactTools = false }: { compactTools?: boolean })
   const nav = useNav();
   return (
     <div className={`page gear-page${compactTools ? ' gear-page-compact' : ''}`}>
-      {compactTools ? <Disclosure name="armory-tools" summary="Armory tools" icon="gear"><ArmoryHeader onTool={setTool} /></Disclosure> : <ArmoryHeader onTool={setTool} />}
+      {!compactTools && <ArmoryHeader onTool={setTool} />}
       <EquipmentStore active compactControls={compactTools} />
+      {/* In the Store the catalogue leads (canvas Store); the standing tools follow it. */}
+      {compactTools && <Disclosure name="armory-tools" summary="Armory tools" icon="gear"><ArmoryHeader onTool={setTool} /></Disclosure>}
       <Sheet open={tool === 'rules'} onClose={() => setTool(null)} title="Restock rules" subtitle="At each clock hour, held stock is refilled up to each target within its spending ceiling. Rules never take funding below zero and stop after 24 hours without orders.">
         <RestockSection onOpen={(itemId) => { setTool(null); nav.openEquipment({ itemId }); }} onGo={() => setTool(null)} />
       </Sheet>
@@ -115,7 +118,7 @@ function QuartermasterCard() {
   const view = managerView(g, 'quartermaster');
   const benefits = equipmentManagerBenefits(g);
   const budget = maintenanceBudget(g);
-  const line = !view.hired ? view.activity : budget ? `Services up to ${money(budget)}/hour` : 'Automatic service off';
+  const line = !view.hired ? view.activity : budget ? `Services up to ${fundingPerHour(budget)}` : 'Automatic service off';
   return (
     <>
       <Row className={`qm-row qm-row-${view.status}`} onClick={() => setOpen(true)}
@@ -136,9 +139,9 @@ function RuleList({ g, onOpen }: { g: GameState; onOpen: (itemId: Id) => void })
     <ul className="rule-list">
       {rules.map((rule) => (
         <li key={rule.itemId}>
-          <button type="button" onClick={() => onOpen(rule.itemId)} aria-label={`${ITEMS[rule.itemId].name}: keep at least ${rule.target}, spend up to ${money(rule.budgetCeiling)}. Edit`}>
+          <button type="button" onClick={() => onOpen(rule.itemId)} aria-label={`${ITEMS[rule.itemId].name}: keep at least ${rule.target}, spend up to ${funding(rule.budgetCeiling)}. Edit`}>
             <GearArtFrame itemId={rule.itemId} size={26} />
-            <span className="rule-list-main"><strong>{ITEMS[rule.itemId].name}</strong><span className="dim">Keep {rule.target} · up to {money(rule.budgetCeiling)}</span></span>
+            <span className="rule-list-main"><strong>{ITEMS[rule.itemId].name}</strong><span className="dim">Keep {rule.target} · up to <Funds value={rule.budgetCeiling} /></span></span>
             <Icon name="edit" size={15} />
           </button>
         </li>

@@ -84,7 +84,7 @@ describe('a candidate dossier', () => {
   });
 
   it('prints the wage and the signing cost as the terms', () => {
-    expect(hireTerms({ signingCost: 1280, officer: { wage: 48 } })).toBe('$48/h · $1,280 to sign');
+    expect(hireTerms({ signingCost: 1280, officer: { wage: 48 } })).toBe('48 funding an hour · 1,280 funding to sign');
   });
 });
 

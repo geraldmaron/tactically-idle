@@ -1,6 +1,5 @@
 .patrol-page { gap: var(--sp4); }
-.patrol-summary, .patrol-card, .patrol-boost-card { min-width: 0; padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r3); background: linear-gradient(145deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
-.patrol-summary { display: grid; gap: 0; padding: 0; overflow: hidden; }
+.patrol-card, .patrol-boost-card { min-width: 0; padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r3); background: linear-gradient(145deg, var(--ink-2), var(--ink-1)); box-shadow: var(--shadow-card); }
 .patrol-summary-net { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); padding: var(--sp3) var(--sp4); }
 .patrol-summary-net > span { font-size: var(--s14); color: var(--t2); }
 .patrol-summary-net > strong { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -91,7 +90,7 @@
 /* Boosts: the garage plate with the patrol net and what is running, above the grants. */
 .patrol-boost-hero { position: relative; isolation: isolate; display: grid; gap: var(--sp1); min-height: 112px; align-content: end; padding: var(--sp3); overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); }
 .patrol-boost-hero > .plate-art { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; }
-.patrol-boost-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 15%, transparent), color-mix(in srgb, var(--ink-0) 90%, transparent) 80%); }
+.patrol-boost-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, color-mix(in srgb, var(--ink-0) 62%, transparent), color-mix(in srgb, var(--ink-0) 94%, transparent) 70%); }
 .patrol-boost-hero p { margin: 0; text-shadow: 0 2px 5px var(--ink-deep); }
 .patrol-boost-hero-line { color: var(--t-plate); font-size: var(--s14); line-height: 1.35; }
 .patrol-boost-hero[data-boost-state="active"] .patrol-boost-hero-line { color: var(--good-text); }
@@ -106,6 +105,44 @@
 .patrol-boost-crew-faces { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
 .patrol-boost-crew-faces li { position: relative; display: grid; justify-items: center; gap: var(--sp1); min-width: 52px; max-width: 72px; padding: var(--sp1); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-0) 82%, transparent); color: var(--t1); font-size: var(--s12); line-height: 1.2; text-shadow: none; }
 .patrol-boost-crew-faces .manager-portrait { border-radius: var(--r1); }
-.patrol-boost-crew-faces li > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.patrol-boost-crew-faces li > span { font-size: var(--s14); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .patrol-boost-crew-faces li > .icon { position: absolute; top: 4px; right: 4px; color: var(--t1); background: var(--ink-0); border-radius: var(--r1); }
 .patrol-boost-crew-training .manager-portrait { filter: grayscale(.9); opacity: .6; }
+
+/* Canvas pass, 2026-10-24: gross split into what is kept, payroll and operations; an open post offered
+   with its net and payback, under the net it would raise. */
+.patrol-split { display: flex; height: var(--sp2); margin: 0 var(--sp4) var(--sp3); border-radius: var(--sp1); overflow: hidden; background: var(--ink-3); }
+.patrol-split i { display: block; height: 100%; }
+.patrol-split-kept { background: var(--good); }
+.patrol-split-payroll { background: var(--warn); }
+.patrol-split-ops { background: var(--harm); }
+.patrol-hire-offer { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp3) var(--sp4); border-top: 1px solid var(--hair); background: var(--ink-1); }
+.patrol-hire-offer-main { display: grid; gap: var(--sp1); flex: 1 1 auto; min-width: 0; }
+.patrol-hire-offer-main strong { font-size: var(--s16); color: var(--t1); }
+.patrol-hire-offer-main span { font-size: var(--s14); color: var(--t2); }
+
+/* Patrol staff as compact rows (canvas Team Patrol): name, grade and status, a meter, one trail. */
+.patrol-row { padding: 0 var(--sp3); gap: 0; }
+.patrol-row .ui-row-main { min-width: 0; }
+.patrol-row-name { min-height: var(--touch); margin-block: calc((var(--touch) - 1.2em) / -2); padding: 0; border: 0; background: none; color: var(--t1); font: 600 var(--s16)/1.2 var(--f-ui); text-align: left; cursor: pointer; }
+.patrol-row-name:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
+.patrol-row-detail { display: grid; gap: var(--sp1); min-width: 0; }
+.patrol-row-detail > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.patrol-row-training { color: var(--info); }
+.patrol-row-meter { display: block; height: 5px; border-radius: 3px; background: var(--ink-3); overflow: hidden; }
+.patrol-row-meter i { display: block; height: 100%; background: var(--info); }
+.patrol-row-meter[data-tone="act"] i { background: var(--act); }
+.patrol-row-hours { font: 600 var(--s14)/1 var(--f-ui); color: var(--t3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.patrol-row-why { min-height: var(--touch); padding: 0 var(--sp2); border: 1px solid var(--hair-2); border-radius: 16px; background: none; color: var(--warn-text); font: 600 var(--s14)/1 var(--f-ui); white-space: nowrap; cursor: pointer; }
+.patrol-sheet-grade { margin: 0; color: var(--t2); font-size: var(--s14); }
+.patrol-hire-offer .btn { flex: none; white-space: nowrap; }
+
+/* Framed patrol (canvas "Depth and Framed Sections", 2026-10-24): the net and its split are a Section
+   panel with the rate at the bar's right; the staff and history sit in wells; each garage face carries
+   its grade. */
+.patrol-summary .section-body { gap: 0; padding: 0; }
+.patrol-summary-rate { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--sp2); }
+.patrol-roster.panel-well > .patrol-item { border-top: 0; }
+.patrol-scene-post > .patrol-scene-grade { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }
+.patrol-summary .patrol-split { margin-top: var(--sp3); }
+.patrol-boost-crew-faces li > .patrol-scene-grade { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }

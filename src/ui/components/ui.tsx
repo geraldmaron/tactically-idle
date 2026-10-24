@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode, Ref } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
@@ -94,8 +95,11 @@ export function Text({ kind, as: Tag = 'span', className, children }: {
   return <Tag className={`t-${kind}${className ? ` ${className}` : ''}`}>{children}</Tag>;
 }
 
-/** A titled block. The heading is 14px in sentence case, with a quiet count or a link at the right.
- * The `icon` is required, as a Row's `lead` is (docs/visual-kit.md). */
+/** A framed panel, the one section frame on every screen (canvas "Depth and Framed Sections",
+ * 2026-10-24). Its header bar holds the mark (an `icon` in a well, or a `badge` such as a squad's
+ * letter), the title in condensed capitals, the `count` or detail line under it, and one `action` at
+ * the right. `band` is a place's painting under the bar, with its tags on it (SectionBand). `well`
+ * presses the children into a recessed list, rows split by a faint line. */
 export function Section({
   title,
   action,
@@ -104,30 +108,68 @@ export function Section({
   id,
   hint,
   icon,
+  badge,
+  tone,
+  band,
+  well,
+  className,
+  label,
+  level = 'h2',
 }: {
-  title: string;
+  title: ReactNode;
   action?: ReactNode;
+  /** The line under the title: a count, a place, how many are fit. */
   count?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   id?: string;
   hint?: ReactNode;
-  /** Required: the picture its peers carry. */
+  /** The mark's tone: amber for a squad, violet for the people a call is about. */
+  tone?: 'act' | 'people';
+  band?: ReactNode;
+  well?: boolean;
+  className?: string;
+  /** The region's name when the title alone would be unclear to a screen reader. */
+  label?: string;
+  /** The title's heading level: h1 when the panel is the page's own head, h3 inside a sheet section. */
+  level?: 'h1' | 'h2' | 'h3';
+} & ({
+  /** The picture its peers carry, in the bar's mark well. */
   icon: IconName;
-}) {
+  badge?: never;
+} | {
+  icon?: never;
+  /** A mark that is not an icon, such as a squad's letter. */
+  badge: ReactNode;
+})) {
+  const autoId = useId();
+  const headingId = id ?? `section-${autoId}`;
+  const Heading = level;
   return (
-    <section className="section" aria-labelledby={id} data-lead={icon ? undefined : 'none'}>
+    <section className={`section${className ? ` ${className}` : ''}`} aria-labelledby={label ? undefined : headingId} aria-label={label}>
       <div className="section-head">
-        <h2 id={id} className="section-title">
-          {icon && <Icon name={icon} size="md" />}
-          {title}
-        </h2>
-        {count !== undefined && <span className="section-count">{count}</span>}
-        {action}
+        <span className="section-mark" data-tone={tone} aria-hidden="true">{badge ?? (icon && <Icon name={icon} size="md" />)}</span>
+        <div className="section-head-text">
+          <Heading id={headingId} className="section-title">{title}</Heading>
+          {count !== undefined && count !== null && count !== false && <span className="section-count">{count}</span>}
+        </div>
+        {action && <span className="section-action">{action}</span>}
       </div>
-      {hint && <p className="section-hint">{hint}</p>}
-      {children}
+      {band}
+      {(hint || children) && <div className="section-body">
+        {hint && <p className="section-hint">{hint}</p>}
+        {well ? <div className="panel-well">{children}</div> : children}
+      </div>}
     </section>
   );
+}
+
+/** A place's painting as a band under a panel's bar, with short tags set on the art: a door, who is
+ * where. The painting is described by `alt`; the tags are text. */
+export function SectionBand({ src, alt, tags = [] }: { src: string | null; alt: string; tags?: { text: ReactNode; tone?: 'harm' | 'good' }[] }) {
+  return <div className="section-band">
+    {src && <img src={src} alt={alt} />}
+    {tags.length > 0 && <div className="band-tags">{tags.map((tag, i) => <span key={i} className="band-tag" data-tone={tag.tone}>{tag.text}</span>)}</div>}
+  </div>;
 }
 
 /** A thing you open: a flat panel with one hairline. Lists use Row instead. `amber` marks the one

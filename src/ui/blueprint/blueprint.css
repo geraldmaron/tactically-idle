@@ -1152,6 +1152,8 @@
 .bp-chip-box { fill: var(--bp-stroke); stroke: currentColor; stroke-width: .09px; }
 .bp-chip-confirmed { color: var(--marker-mint); }
 .bp-chip-reported { color: var(--marker-amber); }
+/* Reported, not confirmed: a dashed outline, the same mark as an unconfirmed marker's dashed ring. */
+.bp-chip-reported .bp-chip-box { stroke-dasharray: .3px .22px; stroke-width: .12px; }
 .bp-chip-text { font: 600 1.1px var(--font-cond); fill: currentColor; letter-spacing: .02em; }
 .bp-roomlist-person { display: block; grid-column: 1 / -1; font-size: var(--s14); line-height: 1.45; white-space: normal; color: var(--text); }
 .legend-reported-person { border: 1px dashed currentColor; border-radius: 50%; padding: var(--sp1); box-sizing: content-box; }

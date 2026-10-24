@@ -199,8 +199,8 @@ describe('Training Sergeant', () => {
     expect(next.officers.off_chen.assignment).toEqual({ kind: 'training', courseId: 'composure_workshop', startedAt: T0 + HOUR_MS, endsAt: T0 + 5 * HOUR_MS });
     expect(next.department.funding).toBeCloseTo(funding - 2 * 600 + (ratesAt(s, T0).net / 3_600_000), 3);
     expect(commandStaffOf(next).training_sergeant.log.map((e) => e.text)).toEqual([
-      `Enrolled ${fullName(s.officers.off_okafor)} in Composure workshop ($600)`,
-      `Enrolled ${fullName(s.officers.off_chen)} in Composure workshop ($600)`,
+      `Enrolled ${fullName(s.officers.off_okafor)} in Composure workshop (600 funding)`,
+      `Enrolled ${fullName(s.officers.off_chen)} in Composure workshop (600 funding)`,
     ]);
   });
 
@@ -222,7 +222,7 @@ describe('Training Sergeant', () => {
     }
     const waiting = withTrainingSergeant();
     waiting.department.funding = 100;
-    expect(managerView(waiting, 'training_sergeant').activity).toMatch(/^Needs \$600|reserve/);
+    expect(managerView(waiting, 'training_sergeant').activity).toMatch(/^Needs 600 funding|reserve/);
   });
 
   it('matches offline settlement with online ticks, through course completions and refills', () => {
@@ -292,7 +292,7 @@ describe('Quartermaster', () => {
     s = ok(s, { type: 'tick' }, T0 + HOUR_MS);
     const log = commandStaffOf(s).quartermaster.log;
     expect(log[0].at).toBe(T0 + HOUR_MS);
-    expect(log[0].text).toMatch(/^Sent 2 items for service \(\$\d+\): /);
+    expect(log[0].text).toMatch(/^Sent 2 items for service \(\d+ funding\): /);
     s = ok(s, { type: 'setManagerEnabled', managerId: 'quartermaster', enabled: false }, T0 + HOUR_MS);
     expect(maintenanceBudget(s)).toBe(0);
     expect(commandStaffOf(s).quartermaster.resumeBudget).toBe(300);

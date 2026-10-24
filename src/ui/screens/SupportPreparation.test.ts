@@ -71,7 +71,7 @@ describe('operation support preparation', () => {
     const html = renderToStaticMarkup(createElement(SupportPreparation, { state, now: NOW, cmd, built: builtForScenario(cmd.scenarioId), onSelect: () => {} }));
     expect(html).toContain('No support vehicle selected');
     expect(html).toContain('No owned stock');
-    expect(html).toContain('Available funding: $0');
+    expect(html).toMatch(/Available: .*0<span class=\"sr-only\"> funding/);
     expect(html).toContain('more funding');
     expect(html).toContain('officer trained in vehicle operations');
     expect(html).toContain('Exterior staging:');

@@ -6,7 +6,7 @@
    path; every texture has a flat colour under it, so a missing file changes nothing but grain. */
 
 /* ------------------------------------------------------------ ground */
-.app { background: var(--ink-0); }
+.app { background-color: var(--ground-base); }
 .stage { background: var(--ink-deep); }
 
 /* ------------------------------------------------------------ marks */
@@ -84,3 +84,129 @@
 .result-marks i[data-on]:nth-child(2) { animation-delay: .15s; } .result-marks i[data-on]:nth-child(3) { animation-delay: .3s; }
 .result-marks-muted i { background: color-mix(in srgb, var(--t2) 18%, transparent); }
 @keyframes mark-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ------------------------------------------------------------ finish: depth, light, weight */
+/* The shared half of the 2026-10-23 finish pass (tokens in theme.css). Ground gets a top light so
+   screens do not sit on one flat navy; bars and heads sit above it; quiet buttons are objects, not
+   outlines. Every rule reads a token, so the pass can be tuned in one place. */
+.app { background-image: var(--ground-tex); }
+
+.flow-head { background: var(--surface-1); border-bottom-color: color-mix(in srgb, var(--black) 40%, var(--hair)); box-shadow: var(--lift-edge), 0 6px 16px color-mix(in srgb, var(--black) 34%, transparent); position: relative; z-index: 2; }
+.flow-head h1, .flow-head [class*="flow-title"] { font-family: var(--f-title); font-size: var(--s22); letter-spacing: 0.01em; }
+
+.chrome-foot > .action-bar { background: linear-gradient(0deg, var(--ink-1) 0%, color-mix(in srgb, var(--ink-2) 60%, var(--ink-1)) 100%); box-shadow: var(--lift-edge), 0 -10px 24px color-mix(in srgb, var(--black) 40%, transparent); }
+
+.btn-secondary, .btn-quiet { background: var(--surface-1); box-shadow: var(--lift-edge), 0 3px 0 var(--ink-deep); }
+.btn-primary { background-image: linear-gradient(180deg, var(--act-hi) 0%, var(--act) 58%, var(--act-lo) 100%); box-shadow: 0 4px 0 var(--button-base), 0 10px 22px color-mix(in srgb, var(--act) 24%, transparent), inset 0 1px 0 var(--act-text); }
+.btn-primary:active:not(:disabled) { box-shadow: 0 0 0 var(--button-base), inset 0 2px 5px color-mix(in srgb, var(--button-base) 55%, transparent); }
+
+/* Every section head: the title face at a size that reads as a head, then a rule out to the count or action. */
+.chip:is(.chip-neutral, .chip-amber, .chip-blue) { background: var(--surface-1); box-shadow: var(--lift-edge); }
+.prep-support-well { background: var(--surface-well); box-shadow: var(--well); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .cl-flow-body > * { animation: finish-rise .38s cubic-bezier(.2, .7, .2, 1) backwards; }
+  .cl-flow-body > *:nth-child(2) { animation-delay: .05s; }
+  .cl-flow-body > *:nth-child(3) { animation-delay: .1s; }
+  .cl-flow-body > *:nth-child(4) { animation-delay: .15s; }
+  .cl-flow-body > *:nth-child(n+5) { animation-delay: .2s; }
+}
+@keyframes finish-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ------------------------------------------------------------ finish: the remaining surfaces */
+/* Sheets, empty and error states, toasts, and the section heads that were still small eyebrows.
+   Everything reads the same tokens as the first half of the pass. Scoped under .sheet or the
+   component's own class so it wins over the screen files without !important. */
+
+/* A sheet sits above the ground on a darker floor, so the cards on it are raised, not navy on navy. */
+.sheet { background: linear-gradient(180deg, color-mix(in srgb, var(--ink-1) 72%, var(--ink-0)) 0%, var(--ink-0) 100%); }
+.sheet .sheet-head { background: var(--surface-1); box-shadow: var(--lift-edge), 0 6px 14px color-mix(in srgb, var(--black) 30%, transparent); position: relative; z-index: 1; }
+.sheet .sheet-title { font-family: var(--f-title); }
+.sheet .sheet-foot { background: linear-gradient(0deg, var(--ink-0), color-mix(in srgb, var(--ink-1) 70%, var(--ink-0))); box-shadow: var(--lift-edge), 0 -10px 22px color-mix(in srgb, var(--black) 40%, transparent); }
+
+/* Section heads inside sheets, and the course groups: the title face with a rule out to the edge. */
+.sheet :is(.room-label, .contract-label, .profile-head, .picker-label, .units-head, .store-detail-section > h3),
+h3.course-group-label { display: flex; align-items: center; gap: var(--sp2); margin: 0 0 var(--sp1); color: var(--t1); font: 600 var(--s18)/1.15 var(--f-title); letter-spacing: .01em; text-transform: none; }
+.sheet :is(.room-label, .contract-label, .profile-head, .picker-label, .units-head, .store-detail-section > h3)::after,
+h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width: 12px; height: 1px; background: linear-gradient(90deg, var(--hair-2), transparent); }
+.sheet :is(.room-label, .contract-label, .profile-head, .picker-label) .icon { color: var(--act-text); }
+.sheet .picker-label small { order: 0; font: 400 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.course-group-label > span { order: 2; }
+.sheet .units-head { flex-wrap: wrap; }
+.sheet .units-head .dim { order: 3; flex: 1 0 100%; font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.sheet .contract section > .contract-label { margin-bottom: var(--sp1); }
+
+/* Cards on a sheet: raised, lit from the top edge. Stat tiles and wells are recessed. */
+.sheet :is(.card, .contract section, .profile-hero, .profile-person, .profile-care-card, .store-detail-art, .room-who, .room-ladder) { background: var(--surface-1); box-shadow: var(--lift-1); }
+.sheet .contract-sign { box-shadow: var(--lift-1), var(--glow-act); }
+.sheet :is(.profile-value > div, .profile-record > div) { background: var(--surface-well); border-color: var(--hair); box-shadow: var(--well); }
+.sheet :is(.profile-value dt, .profile-record dt) { font: 500 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
+.sheet .profile-traits li, .sheet .profile-traits strong { font-size: var(--s14); }
+.sheet .profile-traits li > span { font-size: var(--s14); }
+
+/* The review sheet: each outcome is its own card with a stripe in its tone, the lead picker is a well. */
+.sheet.operation-action-sheet .outcome-options { gap: var(--sp2); }
+.sheet.operation-action-sheet .outcome-option { padding: var(--sp3); border: 1px solid var(--hair-2); border-left: 3px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.sheet.operation-action-sheet .outcome-favorable { border-left-color: var(--good); }
+.sheet.operation-action-sheet .outcome-mixed { border-left-color: var(--warn); }
+.sheet.operation-action-sheet .outcome-adverse { border-left-color: var(--harm); }
+.sheet.operation-action-sheet .outcome-option p { margin-top: var(--sp2); }
+.sheet.operation-action-sheet .operation-time-range, .sheet.operation-action-sheet .operation-note { font-size: var(--s14); color: var(--t2); }
+.sheet.operation-action-sheet .lead-picker { gap: var(--sp2); padding: var(--sp3); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); }
+.sheet.operation-action-sheet .lead-choice { min-width: 84px; background: var(--surface-1); box-shadow: var(--lift-1); }
+.sheet.operation-action-sheet .lead-choice-on { border-color: var(--act); background: var(--surface-2); box-shadow: var(--glow-act); }
+.sheet.operation-action-sheet .operation-commit-meta { font-size: var(--s14); flex-wrap: wrap; gap: var(--sp1) var(--sp3); }
+.sheet.operation-action-sheet .consequence-level { font-size: var(--s14); }
+.sheet.operation-action-sheet .action-sheet-weigh { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+
+/* Build: the room's ladder rows and the item sheet's stock bar read as parts of a card. */
+.sheet .room-step-fx, .sheet .room-who-note { font-size: var(--s14); }
+.sheet .store-detail-section { border-top: 0; padding-top: 0; }
+
+/* Empty, loading and error: a recessed slot with a title, not a muted paragraph floating on the ground. */
+.empty { gap: var(--sp2); padding: var(--sp5) var(--sp4); border: 1px dashed var(--hair-2); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); color: var(--t2); }
+.empty strong { color: var(--t1); font: 600 var(--s18)/1.2 var(--f-title); letter-spacing: .01em; }
+.empty > .icon { color: var(--act-text); }
+.empty-compact { padding: var(--sp3); }
+.empty-error { border-style: solid; border-color: color-mix(in srgb, var(--harm) 55%, var(--hair-2)); }
+.empty-error > .icon, .empty-error strong { color: var(--harm-text); }
+.card > .empty, .card .empty-compact { border: 0; box-shadow: none; background: none; padding-inline: 0; }
+
+/* Toasts are raised and lit like every other thing you read, with the tone on the left edge. */
+.toast { border-radius: var(--r2); border-color: var(--hair-2); border-left-width: 4px; background: var(--surface-2); box-shadow: var(--lift-2); }
+.toast-body strong { font-family: var(--f-title); font-weight: 600; font-size: var(--s18); letter-spacing: .01em; }
+.toast-line { color: var(--t2); }
+.toast-ok { border-left-color: var(--good); }
+.toast-error { border-left-color: var(--harm); }
+.toast-amber { border-left-color: var(--warn); }
+
+/* Meta text that still carries a decision reads at 14px. */
+.chip:is(.chip-mint, .chip-good, .chip-warn), .sheet .chip, .course-tile .chip, .store-tile .chip { font-size: var(--s14); }
+.sheet .stock-legend { font-size: var(--s14); }
+
+/* A page-level fold (Build's All upgrades) is a raised row like the Store's tool rows, not a bare line. */
+.build-page > .disclosure { border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.build-page > .disclosure > .disclosure-summary { padding-inline: var(--sp3); }
+.build-page > .disclosure > .disclosure-body { padding-inline: var(--sp3); }
+
+/* First run: the advisory is read, then one clear Continue stays in reach. */
+.first-run-kicker { color: var(--act-text); }
+.first-run-themes { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.first-run-themes li::before { background: var(--act); }
+.first-run-note { border-left-color: var(--act); background: var(--surface-well); box-shadow: var(--well); }
+.first-run-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: var(--sp3) var(--gutter) calc(var(--sp3) + env(safe-area-inset-bottom)); background: linear-gradient(0deg, var(--ink-0), color-mix(in srgb, var(--ink-1) 60%, var(--ink-0))); box-shadow: var(--lift-edge), 0 -10px 24px color-mix(in srgb, var(--black) 40%, transparent); }
+
+/* At 320 a two-column skill list has no room for "Communication" beside its number; it reads as one column. */
+@container game (max-width: 359px) { .sheet .rating-bars { grid-template-columns: minmax(0, 1fr); } }
+
+/* ------------------------------------------------------------ header controls: one family (2026-10-23) */
+/* Back, Step out, Map and the HUD buttons share one glass pill: a round well holding the mark, the
+   label beside it. The button around it keeps the 44px touch target; the pill is what you see. */
+.nav-pill { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; max-width: 100%; height: 34px; padding: 0 var(--sp3) 0 3px; border: 1px solid var(--hair-2); border-radius: 999px; background: color-mix(in srgb, var(--ink-deep) 40%, var(--ink-2)); box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 35%, transparent); color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); transition: transform 120ms ease, background 160ms ease; }
+.nav-pill > .icon { flex: none; width: 26px; height: 26px; padding: 4px; border-radius: 50%; background: var(--surface-well); box-shadow: var(--well); color: var(--t1); }
+.nav-pill > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button:active > .nav-pill { transform: scale(0.96); background: var(--ink-3); }
+button:focus-visible > .nav-pill { outline: 2px solid var(--act); outline-offset: 2px; }
+.flow-back { justify-content: flex-start; padding-inline: var(--sp1); }
+.hud-btn { border-color: var(--hair-2); background: color-mix(in srgb, var(--ink-deep) 40%, var(--ink-2)); box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 35%, transparent); font-family: var(--f-ui); font-weight: 600; color: var(--t1); }
+.hud-btn:active { transform: scale(0.96); }

@@ -26,7 +26,7 @@ const decision: DecisionView = {
 describe('scannable debrief results', () => {
   it('keeps objective, safety and real reward losses in the first summary', () => {
     const html = renderToStaticMarkup(createElement(DebriefSummary, { debrief: result }));
-    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+$400', '-2 trust']) expect(html).toContain(label);
+    for (const label of ['75/100', '68/100', 'Largely resolved', 'Safety was strained', '+400', '-2 trust']) expect(html).toContain(label);
     expect(html).not.toContain('<details');
   });
 

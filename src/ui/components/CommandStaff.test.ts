@@ -57,7 +57,7 @@ describe('Command Staff on HQ', () => {
     expect(hired).toContain('aria-label="Stress limit"');
     expect(hired).toContain('aria-label="Watch Commander manages Alpha"');
     expect(hired).toContain('Activity log');
-    expect(hired).toContain('$45/h while on');
+    expect(hired).toMatch(/45\/h<span class=\"sr-only\"> funding<\/span><\/span> while on/);
     expect(hired).toContain('Replace ');
     const locked = renderToStaticMarkup(createElement(ManagerSheet, { id: 'training_sergeant', g: state, now: NOW, onClose: () => {} }));
     expect(locked).toContain('Open the post in Upgrades');

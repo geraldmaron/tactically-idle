@@ -667,14 +667,14 @@ function shortPersonLabel(label: string): string {
 const ARMAMENT_TEXT: Record<string, string> = { none: 'UNARMED', blunt: 'BLUNT', edged: 'EDGED', handgun: 'HANDGUN', long_gun: 'LONG GUN', unknown: 'WEAPON?' };
 
 /**
- * Chip text for a known armament, straight from the data. A reported (unverified) claim carries a '?'
- * so the chip never reads as confirmed. Nothing known, nothing drawn.
+ * Chip text for a known armament, straight from the data. A reported (unverified) claim is told apart by
+ * its chip's dashed outline and amber ink (blueprint.css .bp-chip-reported), never by a '?' (owner,
+ * 2026-10-24). Nothing known, nothing drawn.
  */
-export function armamentText(armament: string | null | undefined, status: 'reported' | 'confirmed' | 'disproved'): string | null {
+export function armamentText(armament: string | null | undefined, _status: 'reported' | 'confirmed' | 'disproved'): string | null {
   const a = (armament ?? '').trim();
   if (!a || a.toLowerCase() === 'unknown') return null;
   let t = ARMAMENT_TEXT[a.toLowerCase()] ?? a.replace(/_/g, ' ').toUpperCase();
-  if (status === 'reported' && !t.endsWith('?')) t += '?';
   return t;
 }
 

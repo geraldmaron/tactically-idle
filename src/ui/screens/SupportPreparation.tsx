@@ -8,6 +8,7 @@ import type { BuiltLocation, GameState, Id, ItemDefinition, ItemUnit } from '../
 import { Button, Card, Chip, Row, Section } from '../components/ui';
 import { unitStateOf } from '../components/labels';
 import { moneyFull } from '../format';
+import { Funds } from '../components/Funds';
 import { Icon } from '../icons';
 import { GearArtFrame } from '../art/GearArt';
 import './preparation-support.css';
@@ -73,7 +74,7 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
       <p className="dim">{stage
         ? `Exterior staging: ${stage.label}, following squad ${leadSquad}’s starting position.${stage.tags.includes('vehicle_inaccessible') ? ' This staging area cannot take a vehicle.' : ''}`
         : 'Choose a squad and an outside starting position the vehicle can reach.'}</p>
-      <p className="dim">Available funding: {moneyFull(state.department.funding)}. Select an owned unit below; purchase vehicles on the Gear tab.</p>
+      <p className="dim">Available: <Funds value={state.department.funding} format="full" />. Select an owned unit below; purchase vehicles on the Gear tab.</p>
     </div>
     <div className="prep-support-list" data-ui-list>
       {options.map((option) => {
@@ -87,7 +88,7 @@ export function SupportPreparation({ state, now, cmd, built, onSelect }: {
           <div className="prep-support-heading"><GearArtFrame itemId={item.id} size={30} /><strong>{item.name}</strong>{selection && <Chip tone="amber" icon="check">Selected</Chip>}</div>
           <p>{item.description}</p>
           {item.counters?.map((counter) => <p key={counter} className="dim">{counter}</p>)}
-          <p className="dim">{option.owned} owned · {ready} ready · {moneyFull(item.cost)} purchase price</p>
+          <p className="dim">{option.owned} owned · {ready} ready · <Funds value={item.cost} format="full" /> purchase price</p>
           {ready === 0 && <p className="note note-amber"><Icon name="box" size={16} />{option.owned === 0 ? 'No owned stock. Purchase on Gear before selecting support.' : 'No ready stock. Check reservations, condition and service on Gear.'}</p>}
           {option.reason && <p className="dim">Purchase: {option.reason}.</p>}
           {state.department.funding < item.cost && <p className="dim">A new purchase needs {moneyFull(item.cost - state.department.funding)} more funding.</p>}

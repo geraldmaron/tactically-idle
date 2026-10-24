@@ -261,7 +261,7 @@ describe('servicing', () => {
     expect(refused(s, { type: 'serviceUnit', unitId: 'nope' }, T0)).toMatch(/No such unit/);
     const hailer = unitsOf(s, 'loud_hailer').sort((a, b) => a.condition - b.condition)[0];
     s.department.funding = 10;
-    expect(refused(s, { type: 'serviceUnit', unitId: hailer.id }, T0)).toMatch(/Needs \$30/);
+    expect(refused(s, { type: 'serviceUnit', unitId: hailer.id }, T0)).toMatch(/Needs 30 funding/);
     s.department.funding = 5000;
     s.units[hailer.id].status = 'reserved';
     expect(refused(s, { type: 'serviceUnit', unitId: hailer.id }, T0)).toMatch(/deployed/);

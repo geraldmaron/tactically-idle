@@ -413,7 +413,7 @@ summary:focus-visible {
   background: transparent;
   font-family: var(--f-ui);
   font-weight: 500;
-  font-size: var(--s12);
+  font-size: 13px;
   line-height: 1.2;
   color: var(--t2);
 }
@@ -470,37 +470,182 @@ summary:focus-visible {
   color: var(--t1);
 }
 
-/* Section heading: 14px, sentence case, a quiet count or link at the right. */
+/* Section: a framed panel (canvas "Depth and Framed Sections", 2026-10-24). The panel is lit from
+   above; its header bar is a plate with a mark well on the left, the title in condensed capitals at
+   15px with its count or detail under it, and one action at the right inside the bar. A place opens
+   with a band of its painting, tags set on the art. A list inside sits in a well, rows split by a
+   faint line. Every label on a screen belongs to a bar, a row, a chip or a button. */
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--sp2);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r2);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-panel);
 }
 .section-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp2);
-  min-height: 24px;
+  gap: var(--sp3);
+  min-height: var(--touch);
+  padding: var(--sp1) var(--sp2) var(--sp1) var(--sp3);
+  border-bottom: 1px solid var(--panel-edge);
+  background: var(--surface-bar);
+  box-shadow: var(--bar-edge);
+}
+.section-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  border: 1px solid var(--hair-2);
+  border-radius: var(--r1);
+  background: var(--surface-well);
+  box-shadow: var(--well);
+  color: var(--t2);
+  font: 700 var(--s16)/1 var(--f-title);
+}
+.section-mark[data-tone="act"] {
+  border-color: var(--act-lo);
+  background: var(--mark-act);
+  box-shadow: none;
+  color: var(--act-hi);
+}
+.section-mark[data-tone="people"] {
+  border-color: var(--mark-people-edge);
+  background: var(--mark-people);
+  box-shadow: none;
+  color: var(--mark-people-text);
+}
+.section-head-text {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--sp1) 0;
 }
 .section-title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp2);
   margin: 0;
+  font: 700 var(--s15)/1.1 var(--f-title);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bar-title);
 }
 .section-count {
-  font-size: var(--s14);
-  font-weight: 500;
+  font: 400 var(--s14)/1.25 var(--f-ui);
   color: var(--t3);
   font-variant-numeric: tabular-nums;
 }
+.section-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+}
+/* The bar's one action reads as a pill inside the plate, whatever button the screen hands it. */
+.section-action :is(.section-link, .hud-btn, .btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+  min-height: var(--bar-btn-h);
+  padding: 0 var(--sp3);
+  border: 1px solid var(--hair-2);
+  border-radius: 999px;
+  background: var(--bar-btn);
+  box-shadow: none;
+  color: var(--t1);
+  font: 600 var(--s14)/1 var(--f-ui);
+  text-decoration: none;
+}
+.section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  min-width: 0;
+  padding: var(--sp3);
+}
 .section-hint {
-  margin: -2px 0 var(--sp1);
+  margin: 0;
   font-size: var(--s14);
   line-height: 1.35;
   color: var(--t3);
+}
+/* A painted band under the bar: the place, darkened, fading into the panel, with tags on it. */
+.section-band {
+  position: relative;
+  height: var(--band-h);
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ink-2), var(--ink-0));
+}
+.section-band > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.75) brightness(0.7);
+}
+.section-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 40%, var(--ink-1) 100%);
+}
+.band-tags {
+  position: absolute;
+  inset: var(--sp2) var(--sp2) auto;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--sp1);
+}
+.band-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+  max-width: 100%;
+  min-height: var(--tag-h);
+  padding: 0 var(--sp2);
+  border-radius: var(--r1);
+  background: var(--tag-scrim);
+  color: var(--act-text);
+  font: 700 var(--s14)/1.2 var(--f-ui);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.band-tag[data-tone="harm"] { background: var(--tag-harm-scrim); color: var(--harm-text); }
+.band-tag[data-tone="good"] { color: var(--good-text); }
+/* A well: a list pressed into the panel, rows split by a faint line. */
+.panel-well {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r2);
+  background: var(--surface-well);
+  box-shadow: var(--well);
+}
+.panel-well > *,
+.panel-well > :is(ul, ol) > li {
+  min-width: 0;
+}
+.panel-well > * + *,
+.panel-well > :is(ul, ol) > li + li {
+  border-top: 1px solid var(--well-rule);
+}
+.panel-well > :is(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.panel-well .ui-row {
+  padding: var(--sp2) var(--sp3);
+  border-bottom: 0;
 }
 .sub-h {
   display: flex;
@@ -620,8 +765,7 @@ button.ui-row:disabled {
 /* ---- Semantic type. Five named styles, one place. 12px is the absolute floor and belongs to meta
    alone; a decision, a name, a requirement, a price or a control reads at 14px or more
    (docs/ui-ux-audit.md, "Scale"). Components in ui.tsx and screens use these names, not sizes. */
-.t-section,
-.section-title {
+.t-section {
   font-family: var(--f-ui);
   font-size: var(--s14);
   font-weight: 600;
@@ -2586,7 +2730,6 @@ button.ocard {
 .icon {
   flex: 0 0 auto;
 }
-.section-title .icon,
 .sub-h .icon {
   color: var(--t3);
 }
@@ -3658,3 +3801,21 @@ button.ocard {
 }
 
 .scene-condition-details { margin-top: var(--sp3); }
+
+/* Funding: the glyph and the bare amount (components/Funds.tsx). The glyph scales with the text and
+   takes its colour, so an amount reads the same in a chip, a button or a sentence. */
+.funds { display: inline-flex; align-items: center; gap: 0.18em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.funds .funds-glyph { flex: none; width: 0.9em; height: 0.9em; }
+
+/* The price capsule (components/PriceCapsule.tsx): one store price pattern for Store, Build and every
+   row that sells something. Amber only when it helps a call on the board. */
+.price-capsule {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp1);
+  min-width: 72px; min-height: 32px; padding: 0 var(--sp3); border-radius: 16px;
+  background: var(--ink-3); color: var(--act-text); border: 1px solid transparent;
+  font: 700 var(--s14)/1 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none;
+}
+.price-capsule[data-tone="hot"] { background: var(--act); color: var(--act-ink); }
+.price-capsule[data-tone="locked"] { background: transparent; border: 1px dashed var(--hair-2); color: var(--t3); }
+.price-capsule[data-tone="short"] { background: transparent; border-color: var(--hair); color: var(--warn-text); }
+.price-capsule[data-tone="owned"] { background: transparent; border-color: var(--hair); color: var(--good-text); }

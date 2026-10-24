@@ -5,10 +5,18 @@ import type { GameState, Id } from '../../../sim/types';
 import { Face } from '../../components/Face';
 import { officerFaceStatus } from '../../components/face-status';
 import { Icon } from '../../icons';
-import { moneyFull } from '../../format';
+import { funding } from '../../format';
 import { turnIndex } from '../../people/story-line';
 import { useStoryClock } from '../../people/story-clock';
-import { CostTag, Segments } from '../build-parts';
+import { Segments, type CostQuote } from '../build-parts';
+import { PriceCapsule, type PriceTone } from '../../components/PriceCapsule';
+
+/** A step's price as the capsule shows it (canvas Build): plain when it can be bought, warning when
+ * funding is short, dashed behind a lock, a tick once everything is built. */
+function CapsuleFor({ quote, next = false }: { quote: CostQuote; next?: boolean }) {
+  const tone: PriceTone = quote.state === 'owned' ? 'owned' : quote.state === 'locked' ? 'locked' : quote.state === 'short' ? 'short' : next ? 'hot' : 'plain';
+  return <PriceCapsule value={quote.price ?? 0} tone={tone} label={quote.state === 'owned' ? quote.done ?? 'Owned' : undefined} />;
+}
 import { RoomArt } from './Station';
 import { nameList, nodeSummary, personById, roomFaces, roomLines, stepQuote, stepHelp, type GarageView, type RoomView } from './room-model';
 
@@ -45,21 +53,17 @@ export function RoomCard({ game, view, now, onOpen }: { game: GameState; view: R
   const label = [
     `${room.name}. ${view.open ? 'Open' : 'Closed'}.`, room.line,
     faces.length ? `Helps ${nameList(game, faces)}.` : '',
-    next ? `Next step ${next.node.name}${quote.price ? `, ${next.quote.ok ? '' : 'not yet affordable, '}${moneyFull(quote.price)}` : ''}.` : 'Every step is built.',
+    next ? `Next step ${next.node.name}${quote.price ? `, ${next.quote.ok ? '' : 'not yet affordable, '}${funding(quote.price)}` : ''}.` : 'Every step is built.',
   ].filter(Boolean).join(' ');
+  // One row (canvas Build): the room's painting, its name, its line and its level pips, the price at the trail.
   return <button type="button" className="room-card" data-room={room.id} data-state={state} data-open={view.open ? 'yes' : undefined} aria-label={label} onClick={onOpen}>
     <RoomArt room={room} open={view.open} />
     <span className="room-main" aria-hidden="true">
       <span className="room-title">{room.name}</span>
       <RoomLine game={game} view={view} now={now} />
-      <FaceStack game={game} ids={faces} now={now} />
-    </span>
-    <span className="room-trail" aria-hidden="true">
-      {/* Not a tick: a tick reads as built. This says only that the next step is within reach. */}
-      {state === 'ready' ? <span className="room-status" data-state="ready"><Icon name="unlock" size={16} />Can afford</span> : !view.open ? <span className="room-status" data-state="closed"><Icon name="lock" size={16} />Closed</span> : null}
-      <CostTag part="value" quote={quote} />
       <Segments done={view.owned} total={view.total} />
     </span>
+    <span className="room-trail" aria-hidden="true"><CapsuleFor quote={quote} /></span>
   </button>;
 }
 
@@ -90,7 +94,7 @@ export function NextCard({ game, view, now, onOpen }: { game: GameState; view: R
   const faces = help.faces.slice(0, 3);
   const quote = stepQuote(step, game.department.funding);
   return <button type="button" className="next-card" data-room={view.room.id}
-    aria-label={`Next for the station: ${step.node.name} in the ${view.room.name}. ${help.effect}. ${faces.length ? `Helps ${nameList(game, faces)}. ` : ''}${quote.price ? moneyFull(quote.price) : ''}. Ready to build.`} onClick={onOpen}>
+    aria-label={`Next for the station: ${step.node.name} in the ${view.room.name}. ${help.effect}. ${faces.length ? `Helps ${nameList(game, faces)}. ` : ''}${quote.price ? funding(quote.price) : ''}. Ready to build.`} onClick={onOpen}>
     <RoomArt room={view.room} open={view.open} />
     <span className="next-main" aria-hidden="true">
       <span className="next-eyebrow">Next for the station</span>
@@ -98,6 +102,6 @@ export function NextCard({ game, view, now, onOpen }: { game: GameState; view: R
       <span className="room-line">{view.room.name}. {nodeSummary(step)}</span>
       <FaceStack game={game} ids={faces} now={now} />
     </span>
-    <span className="room-trail" aria-hidden="true"><CostTag part="value" quote={quote} /></span>
+    <span className="room-trail" aria-hidden="true"><CapsuleFor quote={quote} next /></span>
   </button>;
 }

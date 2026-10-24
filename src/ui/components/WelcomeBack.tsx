@@ -12,11 +12,14 @@ import { useGame } from '../store';
 import { Sheet } from './Sheet';
 import { Button, Card, Row } from './ui';
 import { Disclosure } from './Disclosure';
+import { useNav } from './nav';
+import { hqOverview } from '../../sim/hq-selectors';
 import { useToast } from './toast';
 import { ShiftReportCard, EQUIPMENT_EVENT, PERSONNEL_EVENT, grantName } from './ShiftReport';
 import { PlateArt, plateUrl } from '../art/Plates';
 import { Icon, type IconName } from '../icons';
-import { duration, money, signedMoney } from '../format';
+import { duration } from '../format';
+import { Funds } from './Funds';
 import '../settings/inset-list.css';
 import './welcome-back.css';
 
@@ -27,6 +30,7 @@ const ARM_MS = 4000;
 export function WelcomeBack() {
   const g = useGame();
   const { act } = useToast();
+  const nav = useNav();
   const [shownFor, setShownFor] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const armedUntil = useRef(Date.now() + ARM_MS);
@@ -57,8 +61,13 @@ export function WelcomeBack() {
   if (!report) return null;
   const close = () => setOpen(false);
   const proceed = () => { act({ type: 'acknowledgeReport' }); setOpen(false); };
+  // The next thing to do, offered where the report ends: the calls that arrived while away.
+  const waiting = hqOverview(g, Date.now()).board.count;
+  const toCalls = () => { proceed(); nav.go('ops'); };
   return <Sheet open={open} onClose={close} title="While you were away" className="welcome-sheet"
-    footer={<Button variant="primary" block onClick={proceed}>Continue</Button>}>
+    footer={waiting > 0
+      ? <div className="welcome-foot"><Button variant="primary" block icon="calls" onClick={toCalls}>{waiting === 1 ? '1 call is waiting' : `${waiting} calls are waiting`}</Button><Button variant="quiet" block onClick={proceed}>Stay at HQ</Button></div>
+      : <Button variant="primary" block onClick={proceed}>Continue</Button>}>
     <WelcomeSummary report={report} g={g} />
   </Sheet>;
 }
@@ -101,8 +110,8 @@ function WelcomeSummary({ report, g }: { report: ShiftReport; g: GameState }) {
       <PlateArt src={plateUrl('hub_hq')} />
       <span className="welcome-away"><Icon name="clock" size="sm" />{duration(report.to - report.from)} away</span>
       <span className="welcome-net-label">Net funding</span>
-      <strong className={`welcome-net ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}>{signedMoney(report.net)}</strong>
-      <span className="welcome-flow">{money(report.gross)} earned · {money(expenses)} spent</span>
+      <strong className={`welcome-net ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Funds value={report.net} format="signed" /></strong>
+      <span className="welcome-flow"><Funds value={report.gross} format="money" /> earned · <Funds value={expenses} format="money" /> spent</span>
     </div>
     {lines.length > 0 ? <Card className="inset-list welcome-lines">{lines.map((line) => <Row key={line.key} data={{ 'data-tone': line.tone }}
       lead={<Icon name={line.icon} size="md" />} title={line.text} />)}</Card> : <p className="dim welcome-quiet">A quiet shift. Nothing needs you.</p>}

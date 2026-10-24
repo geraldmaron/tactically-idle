@@ -183,9 +183,9 @@ describe('levers change the loop they name', () => {
     const plain = run([0, 0]);
     const signed = plain.after.commandStaff!.recruiter.log.find((e) => e.text.startsWith('Signed'));
     if (!signed) return; // the seeded pool decides whether anyone is affordable
-    const fee = Number(signed.text.match(/\$([\d,]+)/)![1].replace(/,/g, ''));
+    const fee = Number(signed.text.match(/([\d,]+) funding/)![1].replace(/,/g, ''));
     const cheap = run([0.15, 0]).after.commandStaff!.recruiter.log.find((e) => e.text.startsWith('Signed'))!;
-    expect(Number(cheap.text.match(/\$([\d,]+)/)![1].replace(/,/g, ''))).toBe(Math.round((fee * 0.85) / 10) * 10);
+    expect(Number(cheap.text.match(/([\d,]+) funding/)![1].replace(/,/g, ''))).toBe(Math.round((fee * 0.85) / 10) * 10);
     const picky = run([0, 99 as number]);
     expect(Object.keys(picky.after.officers)).toHaveLength(Object.keys(picky.before.officers).length);
     expect(managerView(picky.after, 'recruiter').activity).toMatch(/rated 99 or better/);

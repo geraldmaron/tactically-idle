@@ -45,8 +45,10 @@ export function OpsDebrief() {
   const g = useGame();
   const { act } = useToast();
   const d = pendingDebrief(g);
-  const done = () => { if (act({ type: 'closeDebrief' }).ok) callFlow.close(); };
-  const footer = <ActionBar className="cl-actions" primary={{ label: 'Next call', onClick: done }} />;
+  // Both settle the call first; Casebook then lands on the board's record of calls taken.
+  const done = () => act({ type: 'closeDebrief' }).ok && (callFlow.close(), true);
+  const toCasebook = () => { if (done()) requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('casebook')?.scrollIntoView({ block: 'start' }))); };
+  const footer = <ActionBar className="cl-actions" quiet={{ label: 'Casebook', icon: 'book', onClick: toCasebook }} primary={{ label: 'Back to calls', onClick: done }} />;
   if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
   </FlowScreen>;

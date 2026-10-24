@@ -93,8 +93,7 @@ export function FlowHead({ title, icon, onBack, backLabel = 'Back', trailing }: 
   return (
     <header className="flow-head">
       {onBack ? <button type="button" className="flow-back" onClick={onBack} aria-label={backLabel === 'Back' ? 'Back' : `Back to ${backLabel}`}>
-        <Icon name="chevronLeft" size={18} />
-        <span>{backLabel}</span>
+        <span className="nav-pill"><Icon name="chevronLeft" size={18} /><span>{backLabel}</span></span>
       </button> : <span className="flow-back flow-back-none" aria-hidden="true" />}
       <h1 className="flow-title" ref={titleRef} tabIndex={-1}>{icon && <span className="flow-title-icon" aria-hidden="true">{icon}</span>}<span className="flow-title-text">{title}</span></h1>
       <span className="flow-trailing">{trailing}</span>

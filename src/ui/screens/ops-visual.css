@@ -163,14 +163,16 @@
 .result-consequences ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; }
 .result-consequences li + li { margin-top: 4px; }
 
-.result-officers .result-officer-list { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
-.result-officers .result-officer { gap: 8px; padding: 8px; border: 1px solid var(--hair); border-radius: 8px; background: rgba(8, 13, 24, 0.4); }
-.result-officers .result-officer:last-child { padding-bottom: 8px; border-bottom: 1px solid var(--hair); }
-.result-officers .result-officer-hurt { border-color: var(--warn); grid-column: 1 / -1; }
+/* Officer changes as one list (canvas Debrief; contract 2, a variable count): face, name and XP, the stress bar and its change. */
+.result-officers .result-officer-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.result-officers .result-officer { gap: var(--sp3); align-items: center; padding: var(--sp2) 0; border: 0; border-top: 1px solid var(--hair); border-radius: 0; background: none; }
+.result-officers .result-officer:first-child { border-top: 0; }
+.result-officers .result-officer:last-child { padding-bottom: var(--sp2); border-bottom: 0; }
+.result-officers .result-officer-hurt { box-shadow: inset 3px 0 0 var(--warn); padding-left: var(--sp2); }
 .result-officers .result-officer-body { gap: 4px; }
-.result-officers .result-officer-heading { flex-wrap: nowrap; align-items: flex-start; gap: 6px; }
-.result-officers .result-officer-heading strong { display: block; font-size: 13.5px; line-height: 1.2; overflow-wrap: anywhere; }
-.result-officers .result-xp { padding: var(--sp1) var(--sp2); border-radius: 999px; background: rgba(63, 208, 142, 0.14); font-size: 12px; white-space: nowrap; }
+.result-officers .result-officer-heading { flex-wrap: nowrap; align-items: center; gap: var(--sp2); }
+.result-officers .result-officer-heading strong { display: block; font-size: var(--s16); line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.result-officers .result-xp { padding: var(--sp1) var(--sp2); border-radius: 999px; background: color-mix(in srgb, var(--good) 14%, transparent); font-size: var(--s14); white-space: nowrap; }
 .result-stress-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 12px; }
 .result-stress-row .stress-mini { font-size: 12px; }
 .result-stress-delta { font-size: 12px; white-space: nowrap; }
@@ -183,7 +185,6 @@
 .result-stress-track b { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--t1); opacity: 0.6; }
 .result-stress-crossing { font-size: var(--s12); font-weight: 600; color: var(--warn); }
 .result-evidence.card { gap: 0; }
-.result-officers .result-officer-heading { flex-direction: column; }
 .result-officers .result-officer-heading strong { overflow-wrap: normal; word-break: normal; hyphens: auto; }
 
 /* live: the last decision record reads tighter so care and support stay close */

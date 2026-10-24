@@ -90,8 +90,8 @@ describe('officer profile', () => {
     const o = state.officers.off_brooks;
     const page = html(o.id);
     expect(page).toContain('aria-label="Cost and value"');
-    expect(page).toContain(`>$${o.wage}/h<`);
-    expect(page).toContain(`+$${detailRate(o)}/h`);
+    expect(page).toContain(`>${o.wage}/h<`);
+    expect(page).toMatch(new RegExp(`\\+<span class="funds"><svg[^]*?</svg>${detailRate(o)}/h`));
     expect(page).toContain('aria-label="Readiness"');
     expect(page).toContain(`Ready · stress ${Math.floor(o.stress)}`);
     expect(page).toContain(rankedName(o));
@@ -114,7 +114,7 @@ describe('officer profile', () => {
     let tree!: ReactElement;
     function Capture() { tree = DismissConfirm({ officer: state.officers.off_reyes, onCancel: () => {}, onDone }); return tree; }
     const confirm = renderToStaticMarkup(createElement(Capture));
-    expect(confirm).toMatch(/Severance \$[\d,]+/);
+    expect(confirm).toMatch(/Severance [\d,]+ funding/);
     press(elements(tree).filter((element) => element.type === Button), /Confirm dismissal/);
     expect(act).toHaveBeenCalledExactlyOnceWith({ type: 'dismiss', officerId: 'off_reyes' }, expect.stringContaining('dismissed'));
     expect(onDone).toHaveBeenCalledOnce();

@@ -126,7 +126,7 @@ export function promotionLine(p: Pick<Promotion, 'ratings' | 'wage' | 'trait' | 
   const parts = (Object.entries(p.ratings) as [RatingKey, number][]).map(([key, by]) => `${ratingLabel(key)} +${by}`);
   if (p.trait) parts.push(`earns ${traitLabel(p.trait)}`);
   if (p.drops) parts.push(`no longer ${traitLabel(p.drops)}`);
-  if (p.wage > 0) parts.push(`wage +$${p.wage}/h`);
+  if (p.wage > 0) parts.push(`wage +${p.wage} funding an hour`);
   return parts.join(', ');
 }
 

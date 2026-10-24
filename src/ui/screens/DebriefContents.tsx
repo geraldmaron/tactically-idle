@@ -13,8 +13,8 @@ import { getBuilt } from '../../sim/resolution';
 import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
 import { armamentLabel } from '../components/incident';
-import { BeforeAfter, Card, Chip, SubHead } from '../components/ui';
-import { DebriefConsequences, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
+import { BeforeAfter, Card, Chip, Section, SubHead } from '../components/ui';
+import { DebriefConsequences, DebriefRings, DebriefScore, DebriefSummary, OfficerResults, WhatDecided, type DebriefOfficers } from '../components/DebriefResults';
 import { ITEMS } from '../../content/items';
 import { Icon, itemIcon } from '../icons';
 import type { IconName } from '../icons';
@@ -66,12 +66,17 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
       {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
       {heroAction}
     </div>
-    <DebriefSupport scenarioId={d.scenarioId} />
-    <DebriefSummary debrief={d} includeRewards={false} />
+    {/* The canvas order: the result as rings, then any harm and loss before what it paid (sol challenge:
+        harm is never under the rewards), what decided it, and the people. The full record (people at the
+        call, scoring and the review) follows, never folded away. */}
+    <DebriefRings debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} decisions={decisions} />
-    <OfficerResults debrief={d} officers={officers} />
     <Settlement debrief={d} department={department} still={death || tone === 'poor'} />
+    <WhatDecided decisions={decisions} officers={officers} />
+    <OfficerResults debrief={d} officers={officers} />
+    <DebriefSupport scenarioId={d.scenarioId} />
+    <DebriefSummary debrief={d} includeRewards={false} />
     <DebriefScore debrief={d} />
     <DebriefEvidence debrief={d} decisions={decisions} officers={officers} scenario={scenario} reality={reality} />
   </>;
@@ -81,15 +86,14 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
 export function DebriefEvidence({ debrief: d, decisions, officers, scenario, reality = true }: { debrief: DebriefResult; decisions: DecisionView[]; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean }) {
   const used = d.resources.filter((row) => row.itemId !== 'battery_pack').reduce((total, row) => total + row.used, 0);
   const worn = (d.unitWear ?? []).filter((row) => row.itemId !== 'battery_pack' && row.after < row.before).length;
-  return <Card className="result-evidence">
-    <SubHead icon="list">Review the operation</SubHead>
+  return <Section className="result-evidence" title="Review the operation" icon="book" count="Causes, the log, what was really there">
     {d.causes.length > 0 && <Disclosure name="debrief-causes" className="result-disclosure" summary="Why this outcome" count={d.causes.length}><ol className="causes">{d.causes.map((cause, index) => <li key={index}><PeopleText text={cause} /></li>)}</ol></Disclosure>}
     <Disclosure name="debrief-decisions" className="result-disclosure" summary="Decision log" count={decisions.length || undefined}>
       {decisions.length ? <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={!!d.disposition} /> : <p className="operation-note">No per-decision log is stored for this operation. The saved result and causes are shown above.</p>}
     </Disclosure>
     <Disclosure name="debrief-reality" className="result-disclosure" summary="Information and reality"><Information d={d} />{reality && <Reality d={d} scenario={scenario} />}</Disclosure>
     <Disclosure name="debrief-supplies" className="result-disclosure" summary="Supplies and equipment" hint={used > 0 || worn > 0 ? `${used} used, ${worn} worn` : 'Unchanged'}><Supplies d={d} /></Disclosure>
-  </Card>;
+  </Section>;
 }
 
 function Row({ icon, title, children }: { icon: IconName; title: string; children: ReactNode }) {
@@ -99,7 +103,7 @@ function Row({ icon, title, children }: { icon: IconName; title: string; childre
 function Information({ d }: { d: DebriefResult }) {
   return <Row icon="intel" title="Information preserved">
     {d.informationPreserved.length === 0 ? <span className="dim">Nothing recorded.</span> : <ul className="offrows">{d.informationPreserved.map((f) => <li key={f.factId}>
-      <strong>{f.label}</strong><span>{f.status === 'confirmed' ? <Chip tone="mint" icon="check">Confirmed</Chip> : f.status === 'disproved' ? <Chip tone="danger" icon="x">Disproved</Chip> : <Chip tone="amber" icon="question">{f.status === 'reported' ? 'Reported' : 'Unknown'}</Chip>}</span>
+      <strong>{f.label}</strong><span>{f.status === 'confirmed' ? <Chip tone="mint" icon="check">Confirmed</Chip> : f.status === 'disproved' ? <Chip tone="danger" icon="x">Disproved</Chip> : <Chip tone="amber" icon="radio">{f.status === 'reported' ? 'Reported' : 'Unknown'}</Chip>}</span>
     </li>)}</ul>}
   </Row>;
 }
@@ -164,8 +168,8 @@ const DISPOSITION_WORD: Record<string, string> = {
 function knew(status: KnowledgeStatus | undefined): { text: string; tone: 'mint' | 'amber' | 'danger' | 'neutral'; icon: IconName } {
   if (status === 'confirmed') return { text: 'You confirmed it', tone: 'mint', icon: 'check' };
   if (status === 'disproved') return { text: 'You ruled it out', tone: 'mint', icon: 'check' };
-  if (status === 'reported') return { text: 'Still only a report', tone: 'amber', icon: 'question' };
-  return { text: 'Never confirmed', tone: 'neutral', icon: 'question' };
+  if (status === 'reported') return { text: 'Still only a report', tone: 'amber', icon: 'radio' };
+  return { text: 'Never confirmed', tone: 'neutral', icon: 'search' };
 }
 
 /**

@@ -236,7 +236,8 @@ const OBLIGATIONS: Obligation[] = [
   } },
   { id: 'identity-calls', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => {
     const page = mount(createElement(OpsBoard, { onOpen: () => {} }));
-    const scenes = byClass(page, 'cl-card-scene');
+    // The call closing first is a full card; the rest are rows whose thumbnail is the same painting.
+    const scenes = [...byClass(page, 'cl-card-scene'), ...byClass(page, 'cl-row-thumb')];
     return [
       ...screenIdentity(page, 'cl-board-title', 'Calls', 'calls'),
       ...(scenes.length >= 4 && scenes.every((scene) => find(scene, (node) => node.tag === 'img' && classes(node).includes('plate-art')).length === 1) ? [] : ['call cards lost their scene art']),
@@ -332,9 +333,15 @@ const OBLIGATIONS: Obligation[] = [
     const heads = byClass(mount(createElement(StoreScreen), { tab: 'store', storeSection: 'equipment' }), 'store-group-head');
     return heads.length < 3 ? [`expected at least 3 category heads, found ${heads.length}`] : heads.flatMap((head) => leadOf(head) === 'visual' ? [] : [`category "${words(head)}" has no icon`]);
   } },
-  { id: 'rows-calls-cards', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => rowsLeadWithVisual(mount(createElement(OpsBoard, { onOpen: () => {} })), 'cl-card', 4) },
+  { id: 'rows-calls-cards', screen: 'OpsBoard', fixture: 'four calls on the board', check: () => {
+    const page = mount(createElement(OpsBoard, { onOpen: () => {} }));
+    const rows = [...byClass(page, 'cl-card'), ...byClass(page, 'cl-row')];
+    if (rows.length < 4) return [`expected at least 4 calls as cards or rows, found ${rows.length}`];
+    return rows.flatMap((row, index) => leadOf(row) === 'visual' ? [] : [`call #${index + 1} (${words(row).slice(0, 40)}) starts with ${leadOf(row)}, not a picture`]);
+  } },
   { id: 'art-calls-scenes', screen: 'OpsBoard', fixture: 'one call of each type on the board', check: () => {
-    const cards = byClass(mount(createElement(OpsBoard, { onOpen: () => {} })), 'cl-card');
+    const board = mount(createElement(OpsBoard, { onOpen: () => {} }));
+    const cards = [...byClass(board, 'cl-card'), ...byClass(board, 'cl-row')];
     const types = ['hostage_crisis', 'barricaded', 'active_armed_incident', 'protected_rescue'];
     const missing = types.filter((type) => !plateUrl(`scene_${type}`) || !cards.some((card) => find(card, (n) => n.tag === 'img' && (n.attrs.src ?? '').includes(`scene_${type}.webp`)).length === 1));
     return cards.length < 4 ? [`expected 4 call cards, found ${cards.length}`] : missing.map((type) => `no scene_${type} painting on its call card`);
@@ -372,7 +379,8 @@ const OBLIGATIONS: Obligation[] = [
   { id: 'head-deploy-title', screen: 'OpsPrepare (deploy)', fixture: 'the hostage call, Alpha chosen', check: () => {
     const page = deployPage();
     const titles = byClass(page, 'flow-title');
-    return titles.length === 1 && byClass(titles[0], 'flow-title-icon').length === 1 && words(titles[0]) === 'Deploy' ? [] : ['the deploy head has no icon'];
+    // Brief and deploy are one screen (2026-10-23): the head names the call and leads with its type badge.
+    return titles.length === 1 && byClass(titles[0], 'flow-title-icon').length === 1 && words(titles[0]) !== '' ? [] : ['the deploy head has no icon'];
   } },
   { id: 'head-deploy-who', screen: 'OpsPrepare (deploy)', fixture: 'the hostage call, Alpha chosen', check: () => headedWithIcon(deployPage(), 'Who goes') },
   { id: 'head-deploy-carries', screen: 'OpsPrepare (deploy)', fixture: 'the hostage call, Alpha chosen', check: () => headedWithIcon(deployPage(), 'Alpha carries') },

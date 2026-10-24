@@ -34,6 +34,8 @@ export interface LabUrl {
   flow: { mode: 'reach' | 'structure' | 'state'; color: 'band' | 'fate'; pruned: boolean; expanded: string[] };
   vision: Vision | null; tuning: { group: string; advanced: boolean }; filter: string;
   notes: boolean; frame: 'player' | null; labAlias: boolean;
+  /** Play's centre column shows the call's backstory (the author's reading view) instead of the phone. */
+  story: boolean;
   /** Instance B of the compare view, or null when it is closed. */
   vs: CompareDraw | null;
 }

@@ -14,10 +14,7 @@
 .store-results-head > [role="status"] { font-size: 14px; font-weight: 600; }
 .store-sort-inline { display: inline-flex; align-items: center; gap: var(--sp1); margin-left: auto; color: var(--t3); }
 .store-sort-inline select { min-height: 44px; max-width: 150px; padding-inline: var(--sp2); border: 1px solid var(--hair-2); border-radius: 10px; background: var(--ink-1); color: var(--text); font: inherit; font-size: 14px; }
-.store-group { display: grid; gap: var(--sp3); min-width: 0; }
-.store-group-head { display: flex; align-items: center; gap: var(--sp3); margin: var(--sp1) 0 0; color: var(--text); font: 700 16px/1.25 var(--f-ui); }
-.store-group-head > span:first-child { display: inline-flex; align-items: center; gap: var(--sp2); }
-.store-group-head .icon { color: var(--amber); }
+.store-group { min-width: 0; }
 .store-group-count { color: var(--t3); font-size: 14px; font-variant-numeric: tabular-nums; }
 
 /* Item sheet. A large object, its stock and its actual purchase receipt. */
@@ -91,9 +88,7 @@
 .store-tile .cost-quote-value { font-weight: 700; }
 .store-tile .inv-cond { top: auto; bottom: 0; height: 3px; }
 .store-tile-acquired { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--good-text, var(--mint)); font-size: var(--s14); font-weight: 700; }
-.store-group-head { margin: 0; }
-.store-group-head .segments { margin-left: var(--sp2); }
-.store-group-count { margin-left: auto; }
+.store-group-count { order: 2; margin-left: 0; }
 .store-results-count { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); }
 .store-results-count > .icon { color: var(--t3); }
 .store-list > .store-tile { flex-wrap: wrap; }
@@ -113,3 +108,45 @@
 .gear-page-compact > .disclosure, .gear-page-compact .equipment-controls { border: 1px solid var(--hair-2); border-radius: 14px; background: var(--ink-1); }
 .gear-page-compact > .disclosure > .disclosure-summary, .gear-page-compact .equipment-controls > .disclosure-summary { padding-inline: var(--sp3); }
 .gear-page-compact > .disclosure > :not(summary), .gear-page-compact .equipment-controls > :not(summary) { padding-inline: var(--sp3); padding-bottom: var(--sp3); }
+
+/* Canvas Store (2026-10-24): search with its icon, the board's list, category chips, a Filter fold. */
+.store-search { position: relative; display: block; }
+.store-search > .icon { position: absolute; left: var(--sp3); top: 50%; transform: translateY(-50%); color: var(--t3); pointer-events: none; }
+.store-search input { padding-left: calc(var(--sp3) + 20px + var(--sp2)); }
+.store-board { display: grid; padding: 0; overflow: hidden; border-color: color-mix(in srgb, var(--act-lo) 60%, var(--hair)); }
+.store-board .store-board-row + .store-board-row { border-top: 1px solid var(--hair); }
+.store-board-row { width: 100%; text-align: left; }
+.store-board-row .inv-art { position: relative; }
+.store-cats { display: grid; gap: var(--sp2); min-width: 0; }
+.store-filter-on { display: flex; align-items: center; gap: var(--sp2); margin: 0; font-size: var(--s14); color: var(--act-text); }
+.store-filter-on .btn { margin-left: auto; }
+/* The item sheet: what it does as checked rows, the board's calls with their buildings, who is certified. */
+.store-detail-section h3 { display: flex; justify-content: space-between; gap: var(--sp2); }
+.store-detail-section h3 > span { font-weight: 500; font-size: var(--s14); color: var(--t3); }
+.store-does { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--hair); border-radius: var(--r2); background: var(--surface-well); }
+.store-does > li, .store-board-use { display: flex; align-items: center; gap: var(--sp3); padding: var(--sp2) var(--sp3); font-size: var(--s14); line-height: 1.35; }
+.store-does > li + li, .store-board-use + .store-board-use { border-top: 1px solid var(--hair); }
+.store-does-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: var(--r1); }
+.store-does [data-tone="good"] .store-does-icon { background: color-mix(in srgb, var(--good) 18%, var(--ink-1)); color: var(--good); }
+.store-does [data-tone="warn"] .store-does-icon { background: color-mix(in srgb, var(--warn) 18%, var(--ink-1)); color: var(--warn-text); }
+.store-board-thumb { position: relative; flex: none; width: 40px; height: 40px; border-radius: var(--r1); overflow: hidden; }
+.store-certified { display: flex; align-items: center; gap: var(--sp2); margin: var(--sp2) 0 0; font-size: var(--s14); color: var(--t2); }
+/* The foot: stepper (typeable) and Buy with the funding it leaves. */
+.store-purchase-line { gap: var(--sp3); }
+.qty-step { display: inline-flex; align-items: center; flex: none; height: 48px; border: 1px solid var(--hair); border-radius: var(--r2); }
+.qty-step .stepper-btn { width: 40px; height: 46px; border: 0; background: none; }
+.store-purchase-line .qty-step input { width: 40px; min-height: 0; height: 46px; padding: 0; border: 0; background: none; text-align: center; font: 700 var(--s16)/1 var(--f-ui); color: var(--t1); -moz-appearance: textfield; }
+.qty-step input::-webkit-inner-spin-button, .qty-step input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.store-buy { flex: 1 1 auto; min-height: 48px; }
+.store-buy-text { display: grid; justify-items: center; gap: 2px; line-height: 1.1; }
+.store-buy-text small { font-size: var(--s14); font-weight: 600; opacity: 0.8; }
+.store-certified .face-stack { display: inline-flex; align-items: center; }
+.store-certified .face-stack > * + * { margin-left: calc(-1 * var(--sp2)); }
+/* The sheet's hero (canvas StoreItem): the art at the left, its words and chips beside it. */
+.store-item-sheet .store-detail-art { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; gap: var(--sp3); padding: var(--sp3); border-radius: var(--r2); }
+@media (max-width: 340px) { .store-item-sheet .store-detail-art { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+
+/* Framed store (canvas "Depth and Framed Sections", 2026-10-24): each category is a Section panel with
+   what is owned in the bar; its rows sit in the well, split by the well's faint line. */
+.store-group .store-group-count { display: inline-flex; align-items: center; gap: var(--sp2); font-size: var(--s14); }
+.panel-well .store-list > .store-tile { padding-inline: var(--sp3); border-bottom-color: var(--well-rule); }

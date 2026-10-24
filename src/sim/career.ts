@@ -16,6 +16,7 @@ import { openReport } from './shift-report';
 import { next, hashSeed } from './rng';
 import { fullName } from './officer';
 import { tunable } from './tuning';
+import { fundingPerHour } from './format';
 
 /** Tunable (sim/tuning.ts). */
 export const CAREER_TUNING = tunable('CAREER_TUNING', {
@@ -285,10 +286,6 @@ interface Scheduled {
   k: number;
 }
 
-function money(n: number): string {
-  return `$${Math.round(n).toLocaleString('en-US')}`;
-}
-
 const yearsWord = (n: number) => `${n} year${n === 1 ? '' : 's'}`;
 
 /** Player-language effect of age on recovery at a given whole age ('Recovers 8% slower'), or null. */
@@ -336,7 +333,7 @@ export function applyCareerDue(d: GameState, prev: number, t: number, ev: Person
       if (o.wage < CAREER_TUNING.wageCap) {
         const raise = Math.min(CAREER_TUNING.wageStep, CAREER_TUNING.wageCap - o.wage);
         o.wage += raise;
-        detail += `. Wage +${money(raise)}/h (now ${money(o.wage)}/h)`;
+        detail += `. Wage up ${fundingPerHour(raise)}, now ${fundingPerHour(o.wage)}`;
       }
       ev.push({ officerId: o.id, event: 'anniversary', detail });
       // At 25+ years the officer may choose to retire; the draw is deterministic per officer and year.
@@ -433,7 +430,7 @@ export function retentionCheck(state: GameState, officerId: Id, now: number, net
     return no(`A year more would pass ${fullName(o)}'s mandatory retirement on ${formatGameDate(mandatoryRetirementDay(o))}`, raise, newDay);
   }
   const netAfter = netBefore - raise;
-  if (netAfter < 0) return no(`A ${money(raise)}/h raise would leave the department ${money(-netAfter)}/h short`, raise, newDay);
+  if (netAfter < 0) return no(`A raise of ${fundingPerHour(raise)} would leave the department ${fundingPerHour(-netAfter)} short`, raise, newDay);
   return { ok: true, reason: null, raise, newDay };
 }
 

@@ -2,3 +2,7 @@
    (docs/game-ux-direction.md, "Component contract"). Menu, Themes, first run, saves and welcome back use it. */
 .inset-list { gap: 0; padding-top: var(--sp1); padding-bottom: var(--sp1); }
 .inset-list > :last-child, .inset-list > .theme-switch:last-child .switch-row { border-bottom: 0; }
+/* Inside a framed panel the grouped list is the panel's well (canvas "Depth and Framed Sections",
+   2026-10-24): pressed in, rows split by the well's faint line. */
+.section .inset-list, .sheet .section .card.inset-list { border-color: transparent; background: var(--surface-well); box-shadow: var(--well); }
+.section .inset-list > * { border-bottom-color: var(--well-rule); }

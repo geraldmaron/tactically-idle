@@ -1,8 +1,19 @@
-// Plain text formatting shared by every system: money and durations.
+// Plain text formatting shared by every system: funding and durations.
+// Funding never wears a currency symbol; "$" is for real store prices only.
 
-export function money(n: number): string {
+function bare(n: number): string {
   const sign = n < 0 ? '-' : '';
-  return `${sign}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
+  return `${sign}${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
+}
+
+/** '1,600 funding'. */
+export function funding(n: number): string {
+  return `${bare(n)} funding`;
+}
+
+/** '40 funding an hour'. */
+export function fundingPerHour(n: number): string {
+  return `${bare(n)} funding an hour`;
 }
 
 /** Rounds up: '~3h', '~40m'. */

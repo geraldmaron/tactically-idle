@@ -303,7 +303,7 @@ export function serviceCheck(state: GameState, unitId: Id, now: number, upkeep: 
   if (u.status !== 'ready') return no(`${u.serial} is ${STATUS_WORD[u.status]}`, cost, hours);
   const cond = projectedCondition(state, u, now, upkeep);
   if (cond >= restoreTo) return no(`${u.serial} is already in better condition than servicing restores (${restoreTo})`, cost, hours);
-  if (state.department.funding < cost) return no(`Needs $${cost.toLocaleString('en-US')} (have $${Math.floor(state.department.funding).toLocaleString('en-US')})`, cost, hours);
+  if (state.department.funding < cost) return no(`Needs ${cost.toLocaleString('en-US')} funding (have ${Math.floor(state.department.funding).toLocaleString('en-US')} funding)`, cost, hours);
   return { ok: true, reason: null, cost, hours };
 }
 

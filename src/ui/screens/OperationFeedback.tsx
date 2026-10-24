@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ActionView, DecisionView, OutcomeBand, RiskBand } from '../../sim/types';
-import { Button, Chip } from '../components/ui';
+import { Button, Chip, Section } from '../components/ui';
 import { FactStatusChip } from '../components/FactStatusChip';
 import { Sheet } from '../components/Sheet';
 import { ResultPortrait, type DebriefOfficers } from '../components/DebriefResults';
@@ -167,14 +167,17 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
   if (!last) return live;
   const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;
   return (
-    <section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} aria-label="Operation feedback">
+    // A framed panel (canvas "Depth and Framed Sections"): what happened in the bar, with the decision
+    // log as its one action.
+    <Section className={`operation-feedback${folded ? ' operation-feedback-folded' : ''}`} label="Operation feedback" title={folded ? 'Last decision' : 'What happened'} icon="radio"
+      count={`${decisions.length} ${decisions.length === 1 ? 'decision' : 'decisions'} so far`}
+      action={<Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log</Button>}>
       {live}
-      <div className="operation-feedback-heading"><h2>{folded ? 'Last decision' : 'What happened'}</h2><Button variant="ghost" size="sm" className="operation-log-trigger" onClick={() => { onOpenLog?.(); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}>Decision log ({decisions.length})</Button></div>
       {folded ? <Disclosure key={last.revision} name="last-decision" className={`last-decision last-decision-${cardKind(last)}`} summary={<><ResultPill decision={last} /> {last.title}</>}>{card}</Disclosure> : card}
       <Sheet open={open} onClose={() => setOpen(false)} title="Decision log" className="operation-log-sheet" footer={<Button block onClick={() => setOpen(false)}>{ended ? 'Return to debrief' : 'Return to operation'}</Button>}>
         <OperationLogContents decisions={decisions} officers={officers} explicitCompletion={explicitCompletion} />
       </Sheet>
-    </section>
+    </Section>
   );
 }
 

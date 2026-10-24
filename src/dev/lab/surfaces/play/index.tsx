@@ -31,6 +31,7 @@ import { Director } from './Director';
 import type { DirectorFocus } from './Director';
 import type { Leads } from './FullNote';
 import { DEVICE, GameFrame } from './GameFrame';
+import { StoryPanel } from './StoryPanel';
 import type { ForcePick, FrameToast } from './GameFrame';
 import { LeaderLine } from './LeaderLine';
 import { PathRail } from './PathRail';
@@ -320,11 +321,15 @@ function Play({ session }: { session: Session }) {
         <PathRail steps={steps} prior={prior} shown={shown} revealed={play ? play.at : Infinity} fresh={fresh} flash={flash} chance={chance} who={who}
           onGo={go} compare={compare} onCompare={runCompare} canCompare={session.squad.kind !== 'game'} directorButton={directorButton}
           onOpenSituation={situationRun => situationRun.call !== null && url.call && navigate({ call: { ...url.call, call: situationRun.call, id: null } })} />
-        <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
+        <div className="lab-play-view" role="group" aria-label="Centre column">
+          <button type="button" className={cx('lab-button', url.story && 'lab-button-on')} aria-pressed={url.story} onClick={() => navigate({ story: true }, 'replace')}>Story</button>
+          <button type="button" className={cx('lab-button', !url.story && 'lab-button-on')} aria-pressed={!url.story} onClick={() => navigate({ story: false }, 'replace')}>Phone preview</button>
+        </div>
+        {url.story ? <StoryPanel state={frame.state} names={url.names} /> : <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
           tabs={tabs} selectedId={url.xray ? selectedId : null} hoverId={hoverId} playing={!!play} reveal={reveal}
           onReview={id => select(id, true)} onConfirm={confirm} onFail={() => move({ kind: 'fail', actionId: 'response_failure' })}
           toast={toast} onToastDone={() => setToast(null)} force={force} onForce={band => force && (band === 'roll' ? roll(force.actionId) : forceBand(force.actionId, band))} onForceCancel={() => setForce(null)}
-          onLapse={threatId => move({ kind: 'lapse', actionId: threatId })} />
+          onLapse={threatId => move({ kind: 'lapse', actionId: threatId })} />}
       </div>
       {url.xray && (
         <aside className="lab-play-rail" aria-label="X-ray" ref={railRef}>
@@ -333,7 +338,7 @@ function Play({ session }: { session: Session }) {
             onNote={() => navigate({ notes: true, ...(selectedId ? { sel: { kind: 'choice', node: rows.find(r => r.actionId === selectedId)!.node, choice: rows.find(r => r.actionId === selectedId)!.choice } } : {}) }, 'replace')} />
         </aside>
       )}
-      {url.xray && !(narrow && dirOpen) && <LeaderLine root={root} selectedId={selectedId} watch={`${frameKey}|${selectedId}|${screen}|${url.width}|${url.zoom}`} reduced={reduced} />}
+      {url.xray && !url.story && !(narrow && dirOpen) && <LeaderLine root={root} selectedId={selectedId} watch={`${frameKey}|${selectedId}|${screen}|${url.width}|${url.zoom}`} reduced={reduced} />}
     </div>
   );
 }

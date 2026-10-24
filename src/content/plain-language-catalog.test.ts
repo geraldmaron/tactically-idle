@@ -109,7 +109,7 @@ describe('plain-language equipment and programs', () => {
       expect(DEV_NODES[id].description, id).toMatch(/must complete|still require|required/);
     }
     expect(DEV_NODES.personnel_academy.description).toContain('2, 3, then 4 officers at once');
-    expect(DEV_NODES.intel_records.description).toContain('$60, $120 and $200 per hour in total');
+    expect(DEV_NODES.intel_records.description).toContain('60, 120 and 200 funding an hour in total');
     expect(DEV_NODES.wellbeing_peer_support.description).toContain('50%, 75% and 100% faster');
     expect(DEV_NODES.logistics_equipment_manager.description).toContain('Choose an hourly repair budget in Gear to turn on automatic repairs');
   });

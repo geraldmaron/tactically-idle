@@ -62,7 +62,7 @@ describe('course-aware officer comparisons', () => {
     expect(trainingCandidates(state, 'composure_workshop').every(({ option }) => option.reason === 'No free training slot')).toBe(true);
     state.department.trainingSlots = 1;
     state.department.funding = 0;
-    expect(trainingCandidates(state, 'composure_workshop').every(({ option }) => option.reason?.includes('Needs $600'))).toBe(true);
+    expect(trainingCandidates(state, 'composure_workshop').every(({ option }) => option.reason?.includes('Needs 600 funding'))).toBe(true);
   });
 
   it('shows current injury/deployment independently without inventing training restrictions', () => {

@@ -9,7 +9,7 @@ describe('CostTag renders the quote, never cash alone', () => {
   it('names the non-cash blocker beside a locked price', () => {
     const out = html(createElement(CostTag, { quote: { state: 'locked', price: 5400, blocker: 'Needs Recruiting office' } }));
     expect(out).toContain('data-state="locked"');
-    expect(out).toContain('$5,400');
+    expect(out).toContain('5,400');
     expect(out).toContain('Needs Recruiting office');
   });
 
@@ -33,10 +33,10 @@ describe('CostTag renders the quote, never cash alone', () => {
     const quote = { state: 'locked' as const, price: 1600, blocker: 'Needs Training academy' };
     const value = html(createElement(CostTag, { quote, part: 'value' }));
     const note = html(createElement(CostTag, { quote, part: 'note' }));
-    expect(value).toContain('$1,600');
+    expect(value).toContain('1,600');
     expect(value).not.toContain('Needs Training academy');
     expect(note).toContain('Needs Training academy');
-    expect(note).not.toContain('$1,600');
+    expect(note).not.toContain('1,600');
   });
 });
 

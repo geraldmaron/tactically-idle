@@ -10,7 +10,7 @@ import { Button } from './ui';
 import { OfficerRow } from './OfficerRow';
 import { officerFaceStatus } from './face-status';
 import { Icon } from '../icons';
-import { perHour } from '../format';
+import { Funds } from './Funds';
 import './squad-placement.css';
 
 export function SquadPlacement({ officer: o }: { officer: Officer }) {
@@ -38,7 +38,7 @@ export function SquadPlacement({ officer: o }: { officer: Officer }) {
 
   return (
     <div className="placement stack-sm">
-      {!from && !onCall && <p className="note placement-bench"><Icon name="user" size={16} />Unassigned. Still paid {perHour(o.wage)} and resting, but can't go on a call until they're in a squad.</p>}
+      {!from && !onCall && <p className="note placement-bench"><Icon name="user" size={16} />Unassigned. Still paid <Funds value={o.wage} format="perHour" /> and resting, but can't go on a call until they're in a squad.</p>}
       {queued && <p className="note squad-queued-note"><Icon name="clock" size={16} />After this call, {queued.squadId ? `joins ${g.squads.find((s) => s.id === queued.squadId)?.name ?? `squad ${queued.squadId}`}` : 'leaves the squad'}</p>}
       {g.squads.length === 0
         ? <span className="dim">Create a squad first under Squads.</span>

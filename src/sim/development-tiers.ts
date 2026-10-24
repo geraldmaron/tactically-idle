@@ -41,7 +41,7 @@ export interface DevelopmentQuote {
   missingPrerequisites: Id[];
 }
 
-const fundingLabel = (amount: number) => `$${Math.round(amount).toLocaleString('en-US')}`;
+const fundingLabel = (amount: number) => `${Math.round(amount).toLocaleString('en-US')} funding`;
 
 /**
  * Omit expectedTier only for a read-only preview. Purchase callers pass their

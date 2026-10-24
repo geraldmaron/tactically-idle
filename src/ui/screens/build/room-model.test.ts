@@ -128,9 +128,9 @@ describe('who a step helps, checked against what the purchase delivers', () => {
     const s = fresh();
     const before = budget(s).nodeIncome;
     const row = stepHelp(s, option(s, 'intel_records')).rows[0];
-    expect(row.from).toBe(`$${before}/h`);
+    expect(row.from).toBe(`${before}/h`);
     buy(s, 'intel_records');
-    expect(row.to).toBe(`$${budget(s).nodeIncome}/h`);
+    expect(row.to).toBe(`${budget(s).nodeIncome}/h`);
   });
 
   it('courses: counts the officers the course check lets enrol, and shows their faces', () => {

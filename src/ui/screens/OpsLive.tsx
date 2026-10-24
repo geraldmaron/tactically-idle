@@ -16,7 +16,8 @@ import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { Blueprint } from '../blueprint/Blueprint';
 import { OperationFeedback } from './OperationFeedback';
-import { sceneFor } from '../art/Plates';
+import { placeFor, sceneFor } from '../art/Plates';
+import { scenarioPlaceName } from '../components/incident';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
 import { IncidentPeopleStatus, IncidentPeopleStrip } from '../components/IncidentPeople';
@@ -216,11 +217,12 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
       onStepOut={onStepOut}
       onOpenDetails={() => { setActionFromSupport(false); setPanel(panel === 'action' ? 'none' : 'action'); }}
       feedback={<OperationFeedback officers={g.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
-      scene={sceneFor(scenario?.incident?.type)}
+      scene={placeFor(scenario?.locationFamilyId) ?? sceneFor(scenario?.incident?.type)}
+      placeName={scenarioPlaceName(scenario) ?? undefined}
       // The briefing sheet holds the reference: the call's briefing and who has been located. The map
       // shows where they are; the story column keeps only what helps the next decision.
       // The people panel reads the subjects as the stall has left them, so it agrees with the strip.
-      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} />}
+      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} />}
       situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={g} /></>}
       supportContext={scenario && <><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);

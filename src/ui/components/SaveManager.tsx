@@ -4,7 +4,7 @@ import { manageSave, useCampaigns, exportCurrentSave, exportSlotSave, exportSave
 import { Sheet } from './Sheet';
 import { Button, Card, Chip, ErrorState, LoadingState, Row, Section } from './ui';
 import { Icon } from '../icons';
-import { money } from '../format';
+import { funding } from '../format';
 import '../settings/inset-list.css';
 import './save-manager.css';
 
@@ -121,7 +121,7 @@ export function SaveManager({ open, onClose }: { open: boolean; onClose: () => v
         <Card className="inset-list slot-list" data-ui-list="">
           {saved.slots.map((slot, i) => slot ? <div className={`slot${saved.activeSlotId === i + 1 ? ' slot-active' : ''}`} key={i}>
             <Row className="slot-row" lead={<span className="slot-number">{String(i + 1).padStart(2, '0')}</span>} title={slot.name}
-              detail={slot.valid ? `Day ${slot.day} · Level ${slot.level} · ${slot.officers} officers · ${money(slot.funding ?? 0)}${slot.operation ? ' · Operation in progress' : ''} · Saved ${timestamp(slot.savedAt)}` : 'Unreadable save · original data retained'}
+              detail={slot.valid ? `Day ${slot.day} · Level ${slot.level} · ${slot.officers} officers · ${funding(slot.funding ?? 0)}${slot.operation ? ' · Operation in progress' : ''} · Saved ${timestamp(slot.savedAt)}` : 'Unreadable save · original data retained'}
               trail={saved.activeSlotId === i + 1 ? <Chip tone="mint">Active</Chip> : undefined} />
             <SlotActions active={saved.activeSlotId === i + 1} filled valid={!!slot.valid} id={i + 1}
               onLoad={() => saved.activeSlotId ? run({ type: 'load', id: i + 1 }, 'Campaign loaded.', true) : begin('load', i + 1)}

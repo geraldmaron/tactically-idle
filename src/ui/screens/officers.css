@@ -42,3 +42,12 @@
 .open-place { display: flex; align-items: center; justify-content: center; gap: var(--sp2); min-height: calc(var(--sp6) * 4); padding: var(--sp2) var(--sp3); border: 1px dashed var(--hair-2); border-radius: var(--r2); background: none; color: var(--t2); font: 600 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
 .open-place:hover { border-color: var(--act); color: var(--t1); }
 .open-place:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+
+/* Framed squads (canvas "Depth and Framed Sections", 2026-10-24): each squad is a Section panel; the
+   name sits in the bar as the rename button, Standby and Rest as the bar's action. */
+.squadpanel .squad-rename { min-height: var(--touch); color: var(--bar-title); font: inherit; letter-spacing: inherit; text-transform: inherit; }
+.squadpanel .section-action .choice-rail { min-height: var(--bar-btn-h); }
+.squadpanel .rename { padding: 0; }
+.squadpanel .officer-character-grid { padding: 0; }
+.officer-rows.panel-well { padding-inline: 0; }
+.officer-rows.panel-well > * { padding-inline: var(--sp3); border-bottom: 0; }

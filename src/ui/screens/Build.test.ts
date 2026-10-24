@@ -74,7 +74,7 @@ describe('the room sheet', () => {
     expect(html).toContain('Who it helps');
     expect(html).toMatch(/<s>3\/h<\/s><b>4\.5\/h<\/b>/);
     expect(html).toContain('The ladder');
-    expect(html).toContain('Build tier I for $2,600');
+    expect(html).toContain('Build tier I for 2,600 funding');
     expect(html).not.toMatch(/You get|>Gives<|Tier ladder/);
   });
 

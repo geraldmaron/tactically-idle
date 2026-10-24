@@ -364,8 +364,18 @@ meets its own floors. Not yet drawn: two squads on one call, and the 200% text l
 - **Colour roles.** Amber is the player's move, once per screen. Mint is a good result, red is
   harm, warn orange is strain and wear. Red and blue sweep only on a live call. Blueprint blue is
   the map. Everything else is slate. Named people keep their role colours.
-- **Surfaces.** Flat panels, rows with hairlines, a card only for a thing you open, elevation only
-  for sheets. Identity comes from portraits, gear art and scene plates, not borders and kickers.
+- **Surfaces.** Changed 2026-10-23 (owner: the app read as "a shell never polished", flat and
+  boring). A card or panel is raised: a gradient surface, a lit top edge and a soft shadow
+  (`--surface-1`, `--lift-1`). A slot that holds something (gear, a person, a map) is recessed
+  (`--surface-well`, `--well`). The one amber glow (`--glow-act`) marks the chosen thing. Section
+  heads use the title face with a rule running out to the count or action. Rows inside a card
+  still use hairlines. Identity still comes from portraits, gear art and scene plates, and every
+  token lives in `theme.css`. The earlier rule, "flat panels, elevation only for sheets", is gone.
+  **People key (2026-10-23).** Who someone is shows as a word and shape (`KindTag`: Subject,
+  Civilian, On scene), a stripe down the row's edge in the kind's color, and the face; how they are
+  right now is the face ring and the status line. Status lines say what it means for the team
+  ("Reported inside, unconfirmed", "Tense, listening to you"), with the person's public job under
+  them. A result that changes the map opens on the map.
 
 ## Decisions this reverses
 

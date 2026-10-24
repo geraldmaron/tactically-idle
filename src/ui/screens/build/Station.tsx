@@ -22,14 +22,17 @@ export function stationRooms(views: readonly RoomView[], garage: GarageView): St
   });
 }
 
-export function Station({ rooms, name, fresh, onOpen }: {
+export function Station({ rooms, name, fresh, next = null, onOpen }: {
   rooms: readonly StationRoom[];
   /** The department's name, for the caption. */
   name: string;
   /** The room that has just opened: its light fades in once. */
   fresh: RoomId | null;
+  /** The room "Next for the station" names: outlined in amber with a Next tag (canvas Build). */
+  next?: RoomId | null;
   onOpen: (id: RoomId) => void;
 }) {
+  const nextRoom = next ? rooms.find((r) => r.room.id === next)?.room : undefined;
   const dark = plateUrl('scene_facilities_plan_dark');
   const lit = plateUrl('scene_facilities_plan');
   const open = rooms.filter((r) => r.open).length;
@@ -44,6 +47,10 @@ export function Station({ rooms, name, fresh, onOpen }: {
       {lit && rooms.map(({ room, open: isOpen }) => <img key={room.id} className="station-light" src={lit} alt="" decoding="async" draggable={false}
         data-room={room.id} data-open={isOpen ? 'yes' : undefined} data-fresh={fresh === room.id ? 'yes' : undefined} style={{ clipPath: clipPolygon(room.region) }} />)}
     </div>
+    {nextRoom && <svg className="station-next" viewBox={`0 0 ${PLATE_W} ${PLATE_H}`} preserveAspectRatio="none" aria-hidden="true">
+      <polygon points={nextRoom.region.map(([x, y]) => `${x},${y}`).join(' ')} />
+    </svg>}
+    {nextRoom && <span className="station-next-tag" aria-hidden="true" style={{ left: `${pctX(nextRoom.at[0])}%`, top: `${pctY(nextRoom.at[1])}%` }}>Next</span>}
     <SceneHotspots plate="none" label="Station rooms" aspect={`${PLATE_W} / ${PLATE_H}`} names={false} hotspots={hotspots} />
     <div className="station-caption">
       <h2 className="station-name">{name}</h2>

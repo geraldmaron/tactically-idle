@@ -20,7 +20,8 @@ import { Portrait } from '../portraits/Portrait';
 import { Face } from '../components/Face';
 import { agePortraitProps } from './helpers';
 import { Icon } from '../icons';
-import { money, perHour, rate, relativeTime, yearsText } from '../format';
+import { fundingPerHour, fundingRate, relativeTime, yearsText } from '../format';
+import { Funds } from '../components/Funds';
 import './recruit.css';
 import './squad-visual.css';
 import { CERT_NAME } from '../../content/certs';
@@ -138,7 +139,7 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
       </div>
       <div className="dossier-terms">
         <span className="dossier-terms-text">
-          {receipt ? <>Signing {money(receipt.upfront)} paid · {placedIn(g, o.id)}</> : <>{hireTerms(c)} · leaves {relativeTime(c.expiresAt, now)}</>}
+          {receipt ? <>Signing <Funds value={receipt.upfront} /> paid · {placedIn(g, o.id)}</> : <>{hireTerms(c)} · leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
         <button
           type="button"
@@ -188,10 +189,10 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
   const career = useCareerSnapshot(o);
   return (
     <Sheet open={open} onClose={onClose} interactionKey={hired ? 'hired' : 'review'} title={hired ? `${o.firstName} ${o.surname} signed` : `Hire ${o.firstName} ${o.surname}`} className="hire-contract"
-      subtitle={`${ROLE_META[o.role].label} · ${perHour(o.wage)}`}
+      subtitle={`${ROLE_META[o.role].label} · ${fundingPerHour(o.wage)}`}
       footer={hired
         ? <><p className="recruit-hire-success" role="status"><Icon name="check" size={16} />{o.firstName} {o.surname} is now on your roster{kit.length ? ', with their kit in the Armory' : ''}.</p><Button variant="primary" block onClick={onClose}>Done</Button></>
-        : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire for {money(proj.upfront)}, leaves {money(after)}</Button>}>
+        : <Button variant="primary" block disabled={!proj.ok} onClick={onConfirm}>Confirm hire for <Funds value={proj.upfront} />, leaves <Funds value={after} /></Button>}>
       <div className="contract">
         {hired && g.officers[o.id] && <section className="contract-place" aria-label="Squad">
           <span className="contract-label">Put them in a squad</span>
@@ -208,21 +209,21 @@ export function HireContract({ c, proj, hired, open, onClose, onConfirm }: { c: 
         </section>
         <section className="contract-sign" aria-label="Due at signing">
           <span className="contract-label"><Icon name="cash" size={16} />Due at signing</span>
-          <strong className="contract-hero">{money(proj.upfront)}</strong>
-          {kitCost > 0 && <span className="dim">Includes {money(kitCost)} of issue kit</span>}
+          <strong className="contract-hero"><Funds value={proj.upfront} /></strong>
+          {kitCost > 0 && <span className="dim">Includes <Funds value={kitCost} /> of issue kit</span>}
         </section>
         <section className="contract-rate" aria-label="Every hour">
           <span className="contract-label"><Icon name="clock" size={16} />Every hour</span>
-          <span className="contract-rate-row"><span>Wages</span><b className="tone-danger">-{perHour(proj.wageDelta)}</b></span>
-          <span className="contract-gauge" role="img" aria-label={`Department net ${rate(proj.netBefore)} now, ${rate(proj.netAfter)} after hiring`}>
-            <span className="contract-gauge-row"><span>Now</span><span className="contract-gauge-bar"><i className={proj.netBefore < 0 ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netBefore) / scale) * 100}%` }} /></span><b className={proj.netBefore < 0 ? 'tone-danger' : 'tone-mint'}>{rate(proj.netBefore)}</b></span>
-            <span className="contract-gauge-row"><span>After</span><span className="contract-gauge-bar"><i className={short ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netAfter) / scale) * 100}%` }} /></span><b className={short ? 'tone-danger' : 'tone-mint'}>{rate(proj.netAfter)}</b></span>
+          <span className="contract-rate-row"><span>Wages</span><b className="tone-danger">-<Funds value={proj.wageDelta} format="perHour" /></b></span>
+          <span className="contract-gauge" role="img" aria-label={`Department net ${fundingRate(proj.netBefore)} now, ${fundingRate(proj.netAfter)} after hiring`}>
+            <span className="contract-gauge-row"><span>Now</span><span className="contract-gauge-bar"><i className={proj.netBefore < 0 ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netBefore) / scale) * 100}%` }} /></span><b className={proj.netBefore < 0 ? 'tone-danger' : 'tone-mint'}><Funds value={proj.netBefore} format="rate" /></b></span>
+            <span className="contract-gauge-row"><span>After</span><span className="contract-gauge-bar"><i className={short ? 'neg' : 'pos'} style={{ width: `${(Math.abs(proj.netAfter) / scale) * 100}%` }} /></span><b className={short ? 'tone-danger' : 'tone-mint'}><Funds value={proj.netAfter} format="rate" /></b></span>
           </span>
         </section>
         <section className="contract-value" aria-label="Value">
           <span className="contract-label"><Icon name="trend" size={16} />Value</span>
           <span className="contract-rate-row"><span>Learns from calls</span><b className={pace === 'fast' ? 'tone-mint' : pace === 'slow' ? 'tone-danger' : undefined}>{PACE_LABEL[pace]}</b></span>
-          <span className="contract-rate-row"><span>Instructor detail</span><b className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'Needs a certification' : `+${perHour(detail)}`}</b></span>
+          <span className="contract-rate-row"><span>Instructor detail</span><b className={detail === null ? 'dim' : 'tone-mint'}>{detail === null ? 'Needs a certification' : <>+<Funds value={detail} format="perHour" /></>}</b></span>
         </section>
         <section className="contract-kit" aria-label="Brings">
           <span className="contract-label"><Icon name="hardcase" size={16} />Brings</span>

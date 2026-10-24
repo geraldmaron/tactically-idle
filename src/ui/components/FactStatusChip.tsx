@@ -4,8 +4,8 @@ import type { KnowledgeStatus } from '../../sim/types';
 import { Chip } from './ui';
 
 const STATUS = {
-  unknown: { tone: 'amber', icon: 'question', word: 'Unknown' },
-  reported: { tone: 'amber', icon: 'question', word: 'Unverified' },
+  unknown: { tone: 'amber', icon: 'search', word: 'Unknown' },
+  reported: { tone: 'amber', icon: 'radio', word: 'Unverified' },
   confirmed: { tone: 'mint', icon: 'check', word: 'Confirmed' },
   disproved: { tone: 'danger', icon: 'x', word: 'Ruled out' },
 } as const;

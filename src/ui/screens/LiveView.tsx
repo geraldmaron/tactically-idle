@@ -21,13 +21,12 @@ import type { StageProgress } from '../../sim/operation-selectors';
 import type { EnvironmentDefinition } from '../../sim/scenario-types';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { Blueprint } from '../blueprint/Blueprint';
-import { PlateArt } from '../art/Plates';
 import { RoomList } from '../blueprint/RoomList';
 import { floorCount } from '../blueprint/floors';
 import { OfficerCard } from '../components/OfficerCard';
 import { Sheet } from '../components/Sheet';
 import { containSheetFocus } from '../components/sheet-focus';
-import { Button, Chip, Ring, SubHead } from '../components/ui';
+import { Button, Chip, Ring, Section, SectionBand, SubHead } from '../components/ui';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { armamentLabel } from '../components/incident';
 import { RATING_META, ROLE_META, ROOM_TYPE_LABEL, STAGE_LABEL, TRAIT_INFO } from '../components/labels';
@@ -106,12 +105,15 @@ export interface LiveViewProps {
   feedback?: ReactNode;
   /** Named external services stay beside the next decision, separate from squad support. */
   supportContext?: ReactNode;
-  /** The people the call is about, as faces under the squad (IncidentPeopleStrip). Left out, none show. */
+  /** The "People inside" panel under the squad's panel (IncidentPeopleStrip). Left out, none show. */
   scenePeople?: ReactNode;
   /** The call's summary and briefing, kept in view under the title for the whole operation. */
   situation?: ReactNode;
-  /** The call type's painted scene (art/Plates sceneFor), behind the pinned title. */
+  /** The building's painting (art/Plates placeFor, else the call type's sceneFor), the band that
+   * opens the squad's panel. */
   scene?: string | null;
+  /** The place's name, said for the painting. */
+  placeName?: string;
   /** A response that can no longer progress is handled outside ordinary story choices. */
   failedResponse?: ReactNode;
   /** Overlay sheets (action detail, room sheet, cancel confirm) rendered by the container. */
@@ -205,10 +207,12 @@ export function LiveView(p: LiveViewProps) {
   const stageOpen = stageMap?.stage === p.progress.stage ? stageMap.open : null;
   const folded = stageNumber >= 2 ? !(stageOpen ?? false) : mapFolded;
   // The result beat leads with the story; its scene stays folded to one line until opened.
-  const [sceneOpen, setSceneOpen] = useState(false);
-  const mapShown = mapFull || (beat === 'result' ? sceneOpen : !folded);
+  const [sceneOpen, setSceneOpen] = useState<boolean | null>(null);
+  // With the scene leading (owner, 2026-10-24), a changed map stays folded on the result beat so what
+  // happened is still in the first screen; the band's "Map changed" tag and Map open it.
+  const mapShown = mapFull || (beat === 'result' ? (sceneOpen ?? false) : !folded);
   const toggleFold = () => {
-    if (beat === 'result') { setSceneOpen(!sceneOpen); return; }
+    if (beat === 'result') { setSceneOpen(!mapShown); return; }
     const next = mapShown;
     if (stageNumber >= 2) setStageMap({ stage: p.progress.stage, open: !next });
     else { setMapFolded(next); writeMapFolded(next); }
@@ -234,6 +238,16 @@ export function LiveView(p: LiveViewProps) {
   const focusTask = focus ? p.squadTasks.find((task) => task.squadId === focus.id) : undefined;
   const focusWhere = p.spaces.find((space) => space.id === focusTask?.positionId)?.label ?? focusTask?.positionId;
   const whereLine = focus ? `${focus.name}${focusWhere ? ` at ${focusWhere}` : ''}` : 'The scene';
+  // How many of the focused squad are still fit for high-risk work, for the panel's bar.
+  const fitCount = p.officers.filter((o) => !casualties[o.id] && highRiskAllowed(o) && (!p.g.activeRun || !incidentOfficerUnavailable(p.g, p.g.activeRun, o.id))).length;
+  // Tags on the building band: where the squad stands, and where a subject the map has placed is.
+  const subjectSpace = p.spaces.find((space) => space.people.some((person) => person.kind === 'subject' && person.status === 'confirmed'));
+  const subjectMark = subjectSpace?.people.find((person) => person.kind === 'subject' && person.status === 'confirmed');
+  const bandTags = [
+    ...(focusWhere ? [{ text: focusWhere }] : []),
+    ...(subjectSpace && subjectMark ? [{ text: `${subjectSpace.label} · ${subjectMark.label.split(/\s+/)[0]}`, tone: 'harm' as const }] : []),
+    ...(changed && beat === 'result' ? [{ text: 'Map changed', tone: 'good' as const }] : []),
+  ];
   const officerShown = officerOpen ? p.officers.find((o) => o.id === officerOpen) ?? null : null;
   // A new beat starts on the story, with the full map closed.
   const beatKey = `${beat}:${p.lastChange?.revision ?? ''}`;
@@ -241,13 +255,13 @@ export function LiveView(p: LiveViewProps) {
   if (beatSeen !== beatKey) {
     setBeatSeen(beatKey);
     if (mapFull) setMapFull(false);
-    if (sceneOpen) setSceneOpen(false);
+    if (sceneOpen !== null) setSceneOpen(null);
   }
 
   // What is said on scene while the player decides, read after the prompt and before the choices.
   const commsLog = <CommsLog lines={comms} landed={landed ? <ThreatLanded text={landed} subjects={subjects} /> : null} />;
 
-  const squadRow = <div className="live-squad" aria-label={focus ? focus.name : 'Your team'}>
+  const squadRow = <div className="live-squad" aria-label={focus ? `${focus.name}, your officers on scene` : 'Your officers on scene'}>
     {multi && <div className="live-squad-rail operation-squad-focus">
       <ChoiceRail value={focus?.id ?? p.deployedSquads[0].id} kind="tabs" label="Squad for next decision" panelId="live-squad-faces" onChange={p.onFocusSquad} options={p.deployedSquads.map((s) => {
         // In the field, readiness means members still fit for high-risk work (not deploy eligibility).
@@ -271,12 +285,13 @@ export function LiveView(p: LiveViewProps) {
             aria-label={`${o.firstName} ${o.surname}${focus?.leaderId === o.id ? ', leads the squad' : ''}, ${casualty ? `injured: ${casualty.label}, out of action` : `stress ${whole(o.stress)}, ${STRESS_LABEL[band].toLowerCase()}`}. Open their card`}>
             {/* The face carries stress as a ring and an injury from this call as a badge (the run's
                 casualty record, not the officer's saved injury), so the row stays one line high. */}
-            <Face size="sm" kind="officer" officer={o} status={{ stress: o.stress, band, surname: o.surname, mark: casualty ? 'injured' : null, until: null, label: casualty ? `${o.surname} is out of action` : `${o.surname}, ${STRESS_LABEL[band].toLowerCase()}` }} />
+            <Face size="md" kind="officer" officer={o} status={{ stress: o.stress, band, surname: o.surname, mark: casualty ? 'injured' : null, until: null, label: casualty ? `${o.surname} is out of action` : `${o.surname}, ${STRESS_LABEL[band].toLowerCase()}` }} />
             <span className="live-squad-text">
-              <span className="live-squad-name">{o.surname}</span>
-              {/* The leader's star sits with the stress line so the surname keeps its full width. */}
-              {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span>
-                : <span className={`live-squad-stress lead-choice-stress stress-${band}`}>{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}{whole(o.stress)}</span>}
+              {/* Stress is the ring on the face, not a number beside it (contract 12, canvas Live); the
+                  button's name still says it. The leader's star sits before the surname. */}
+              <span className="live-squad-name">{focus?.leaderId === o.id && <Icon name="star" size={16} className="live-team-leader" />}{o.surname}</span>
+              {/* Every face carries its role, so a row of portraits says whose they are (canvas rule 6). */}
+              {casualty ? <span className="live-squad-stress stress-recovery">Out of action</span> : <span className="live-squad-role">{ROLE_META[o.role].short}</span>}
             </span>
           </button>
         </li>;
@@ -294,29 +309,31 @@ export function LiveView(p: LiveViewProps) {
           </>)}
         </> : <>
           {p.feedback}
-          <section className="call operation-choices" aria-label="Your call">
+          <div className="call operation-choices">
             {/* 4B (docs/ops-experience.md "The decide beat"): the moment (prompt and transcript), then
                 what is said on scene in its reserved box, then the choices. The stage rail names the stage, and
                 the strip carries the threat and what each source does to the odds, so neither repeats
                 here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
             <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
               guidance={commsLog} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
-          </section>
+          </div>
           {p.failedResponse}
           {p.supportContext}
         </>}
       </div>;
 
+  // The squad's panel (canvas "Depth and Framed Sections"): the bar names the squad by its letter,
+  // where it stands and how many are fit, with Map as its one action; the building's painting opens
+  // it with tags on the art; then the map when open, then the faces. The people follow in their own panel.
+  const mapToggle = !mapFull ? <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map" aria-label={mapShown ? 'Hide the map' : 'Show the map'}>
+    <Icon name="blueprint" size={16} />Map<Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={16} />
+  </button> : null;
   const sceneSection = (
-    <section className="live-scene" aria-label="The scene">
-        <div className="live-scene-head">
-          <span className="live-scene-where">{focus ? <span className="squad-badge" aria-hidden="true">{focus.id}</span> : <Icon name="pin" size={16} />}{whereLine}{changed && beat === 'result' && <Chip tone="amber" icon="blueprint">Map changed</Chip>}</span>
-          <span className="live-scene-actions">
-            {!mapFull && <button type="button" className="hud-btn hud-btn-quiet" onClick={toggleFold} aria-expanded={mapShown} aria-controls="live-map">
-              <Icon name={mapShown ? 'chevronUp' : 'chevronDown'} size={16} />{mapShown ? 'Hide map' : 'Show map'}
-            </button>}
-          </span>
-        </div>
+    <div className="live-scene">
+      <Section className="live-scene-panel" label="The scene" title={focus ? `${focus.name} on scene` : 'On scene'} count={[focusWhere, `${fitCount} fit`].filter(Boolean).join(' · ')}
+        {...(focus ? { badge: focus.id, tone: 'act' as const } : { icon: 'pin' as const })}
+        action={mapToggle}
+        band={<SectionBand src={p.scene ?? null} alt={p.placeName ? `${p.placeName}, the building` : 'The building'} tags={bandTags} />}>
         <div ref={mapElement} tabIndex={mapFull ? -1 : undefined} className={`live-map${mapFull ? ' live-map-full' : ' live-map-compact'}`} id="live-map" hidden={!mapShown} role={mapFull ? 'dialog' : undefined} aria-modal={mapFull || undefined} aria-label={mapFull ? 'Map of the scene' : undefined}>
           {mapFull && <div className="live-map-full-head">
             <span className="live-scene-where"><Icon name="pin" size={16} />{whereLine}</span>
@@ -357,21 +374,21 @@ export function LiveView(p: LiveViewProps) {
             <p>Dashed amber people are reports at approximate positions. Mint people have a confirmed position. Small item symbols stay beside their holder; amber items are still reported, even when the person is confirmed. An absent weapon symbol does not mean unarmed. Tap a room or use Rooms to inspect names, conditions and items.</p>
           </div>
         </Sheet>
-        {(beat === 'decide' || sceneOpen) && squadRow}
-        {p.scenePeople}
-      </section>
+        {squadRow}
+      </Section>
+      {p.scenePeople}
+    </div>
   );
 
   const screen = (
     <div ref={liveRoot} className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
-      <header className={`live-head${p.scene ? ' plate' : ''}`}>
-        <PlateArt src={p.scene ?? null} />
+      <header className="live-head">
         <div className="live-strip-head">
           {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
               comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
-          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><Icon name="chevronLeft" size={20} /><span className="live-stepout-text">Step out</span></button>}
+          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><span className="nav-pill"><Icon name="chevronLeft" size={18} /><span className="live-stepout-text">Step out</span></span></button>}
           <div className="live-title-block">
             <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
               <span className="live-name">{p.title}</span>
@@ -393,28 +410,29 @@ export function LiveView(p: LiveViewProps) {
           </div>
           {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
             const live = event.currentTarget.closest('.live');
-            const firstChoice = live?.querySelector<HTMLElement>('.operation-choices .callbtn') ?? live?.querySelector<HTMLElement>('.operation-choice-count');
+            const firstChoice = live?.querySelector<HTMLElement>('.operation-choices .callbtn') ?? live?.querySelector<HTMLElement>('.call-panel');
             firstChoice?.scrollIntoView({ block: 'center' });
             // Keyboard and screen-reader users land where the jump took the eye.
             if (firstChoice?.matches('.callbtn')) firstChoice.focus({ preventScroll: true });
           }}><Icon name="chevronDown" size={20} /></button>}
           <button type="button" className="hud-btn live-map-access" onClick={() => setMapFull(true)} aria-haspopup="dialog" aria-label="Full map"><Icon name="blueprint" size={20} /></button>
         </div>
+        {/* The threat rides in the pinned header (single-scroll canvas): it decides how fast the player
+            chooses, so it stays in view while the page scrolls. */}
+        {pressure?.kind === 'threat' && <div className="live-head-threat"><ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} /></div>}
       </header>
       <div className="live-bar live-strip">
         {washLevel && <span className={`live-wash live-wash-${washLevel}`} aria-hidden="true"><i /><i /></span>}
         <StagePill progress={p.progress} onOpen={() => setStepsOpen(true)} />
-        {pressure?.kind === 'threat' && <ThreatPill label={pressure.label} minutes={pressure.minutes} dither={p.dither} />}
         {fills.length > 0 && <div className="live-sources">
           {fills.map((view) => view.count || view.reactions ? <SourceTicker key={view.id} view={view} runKey={p.g.activeRun?.id} effect={sourceEffect(p.g, view)} chat={beat === 'decide'} threat={p.progress.threat ?? null} dither={p.dither ?? 0} /> : <FillGauge key={view.id} view={view} />)}
         </div>}
       </div>
 
-      {/* 4B: on the decide beat the scene (where the squad is, the map and its faces) comes before the
-          last decision, the moment and the choices. The result beat leads with the story. */}
-      {beat === 'decide' && sceneSection}
+      {/* Owner, 2026-10-24: who is on scene and who is inside come first on every beat, framed as
+          panels, then the moment and the choices or what happened. */}
+      {sceneSection}
       {story}
-      {beat !== 'decide' && sceneSection}
 
       <Sheet open={stepsOpen} onClose={() => setStepsOpen(false)} title="The call's steps" maxHeight="short">
         <StageSteps progress={p.progress} />
@@ -748,8 +766,8 @@ export function ActionSheet(p: ActionSheetProps) {
           {/* Cost and the three outcomes first (docs/ops-experience.md, Review), then who acts and
               leads, then the map and the rest. Every control stays. */}
           {v.weighing ? <dl className="action-sheet-weigh">
-            <div className="action-sheet-weigh-cost"><dt>The cost.</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
-            <div><dt>The pull.</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+            <div className="action-sheet-weigh-gain"><dt>Gains.</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+            <div className="action-sheet-weigh-cost"><dt>Costs.</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
           </dl> : v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           <OutcomeForecast action={v} />
           {v.timeRange && !v.timeLabel && v.timeRange.min !== v.timeRange.max && <p className="operation-note operation-time-range">Takes {v.timeRange.min}–{opMinutes(v.timeRange.max)} depending on the result.</p>}
@@ -837,7 +855,7 @@ export function ActionSheet(p: ActionSheetProps) {
           </Disclosure>
           {v.uncertainty.length > 0 && (
             <>
-              <SubHead icon="question" tone="amber">Still unknown</SubHead>
+              <SubHead icon="search" tone="amber">Still unknown</SubHead>
               <ul className="bullets">
                 {v.uncertainty.map((u, i) => (
                   <li key={i}>{u}</li>
@@ -1007,7 +1025,7 @@ export function RoomSheet(p: RoomSheetProps) {
         <div className="adetail">
           {s.marker && (
             <p className={`note ${s.marker.tone === 'mint' ? 'note-mint' : 'note-amber'}`}>
-              <Icon name={s.marker.tone === 'mint' ? 'check' : 'question'} size={16} />
+              <Icon name={s.marker.tone === 'mint' ? 'check' : 'radio'} size={16} />
               <span>
                 <b>{s.marker.text}</b>
                 {s.marker.subtext ? ` ${s.marker.subtext}` : ''}
@@ -1155,7 +1173,7 @@ export function PersonRow({ m }: { m: SpaceView['people'][number] }) {
       ) : (
         isSubject && !hasWeapon && (
           <p className="person-arm person-arm-unk">
-            <Icon name="question" size={16} />
+            <Icon name="search" size={16} />
             <span>Armament not known</span>
           </p>
         )
@@ -1172,7 +1190,7 @@ function FactCard({ f, actions, onPick }: { f: FactView; actions: ActionView[]; 
   return (
     <li className={`fact fact-${f.status}`}>
       <div className="fact-top">
-        <Icon name={f.status === 'confirmed' ? 'check' : f.status === 'disproved' ? 'x' : 'question'} size={20} />
+        <Icon name={f.status === 'confirmed' ? 'check' : f.status === 'disproved' ? 'x' : f.status === 'reported' ? 'radio' : 'search'} size={20} />
         <strong>{f.label}</strong>
         <FactStatusChip status={f.status} />
       </div>

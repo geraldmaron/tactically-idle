@@ -28,7 +28,7 @@
 /* Cards: painting, text, price. The room list is one card of buttons split by hairlines. */
 .room-list { padding: 0; overflow: hidden; }
 .room-card, .next-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: var(--sp3); width: 100%; min-height: 64px; padding: var(--sp3); border: 0; background: none; color: var(--t1); font: inherit; text-align: left; cursor: pointer; }
-.room-list > .room-card + .room-card { border-top: 1px solid var(--hair); }
+.room-list > .room-card + .room-card { border-top: 1px solid var(--well-rule); }
 .room-card:focus-visible, .next-card:focus-visible { z-index: 1; outline: 2px solid var(--act); outline-offset: -2px; }
 .room-art { display: block; border-radius: var(--r1); object-fit: cover; background: var(--ink-2); }
 .room-card .room-art, .next-card .room-art { width: 64px; height: 52px; }
@@ -94,3 +94,11 @@
   .room-card .room-art, .next-card .room-art { width: 56px; height: 48px; }
   .room-trail { grid-column: 2; justify-items: start; grid-auto-flow: column; align-items: center; gap: var(--sp3); }
 }
+
+/* Canvas Build (2026-10-24): the next room outlined in amber on the painting, rooms as one-line rows. */
+.station-next { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.station-next polygon { fill: color-mix(in srgb, var(--act) 18%, transparent); stroke: var(--act); stroke-width: 12; stroke-linejoin: round; }
+.station-next-tag { position: absolute; z-index: 3; transform: translate(-50%, calc(-100% - var(--sp4))); padding: 2px var(--sp2); border-radius: var(--r1); background: var(--act); color: var(--act-ink); font: 700 var(--s14)/1.2 var(--f-ui); pointer-events: none; white-space: nowrap; }
+.room-card .room-main > .room-line { min-height: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.room-card .segments { margin-top: 2px; }
+.room-card .room-trail .price-capsule, .next-card .room-trail .price-capsule { min-width: 64px; }

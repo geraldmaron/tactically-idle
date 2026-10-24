@@ -390,7 +390,7 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
   const { adverse, total } = recentAdverse(state, o.id);
   if (adverse >= 2) effects.push(`Strained by recent operations: ${adverse} of the last ${total} went badly`);
   if (o.stress > CAREER_TUNING.burnoutStress) effects.push(`Burnout risk: stress above ${CAREER_TUNING.burnoutStress}`);
-  if (o.wage < CAREER_TUNING.wageCap) effects.push(`Next service anniversary: wage +$${CAREER_TUNING.wageStep}/h`);
+  if (o.wage < CAREER_TUNING.wageCap) effects.push(`Next service anniversary: wage +${CAREER_TUNING.wageStep} funding an hour`);
 
   let retirement: CareerInfo['retirement'] = null;
   if (o.retirement) {
@@ -402,7 +402,7 @@ export function careerInfo(state: GameState, officerId: Id, now: number): Career
       reason: retirementReasonLabel(r.reason),
       canRetain: Boolean(offer?.ok),
       retainReason: r.reason === 'service' ? (offer?.reason ?? null) : r.reason === 'age' ? 'Mandatory retirement cannot be deferred' : 'Burnout retirement cannot be deferred',
-      retainCost: offer && offer.raise > 0 && r.reason === 'service' ? `+$${offer.raise}/h` : null,
+      retainCost: offer && offer.raise > 0 && r.reason === 'service' ? `+${offer.raise} funding an hour` : null,
     };
   }
 

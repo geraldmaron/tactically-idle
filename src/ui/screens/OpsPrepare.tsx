@@ -23,7 +23,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';
-import { ActionBar, Button, Card, Row, Stepper, SubHead } from '../components/ui';
+import { ActionBar, Button, Section, Stepper, SubHead } from '../components/ui';
 import { Face } from '../components/Face';
 import { GearArt } from '../art/GearArt';
 import { useToast } from '../components/toast';
@@ -182,8 +182,9 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     const best = bestFitSquad(g.squads.map((s) => ({ id: s.id, ...squadReadiness(g, s.id, Date.now()) })));
     if (best) setChosen([best]);
   };
+  // Brief and deploy are one screen (canvas pass, 2026-10-23), so the pick is made as the brief opens.
   useEffect(() => {
-    if (step === 'deploy') preselect();
+    preselect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, squadsTouched, chosen.length, range.min, range.max]);
 
@@ -317,14 +318,14 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     return { position, entry, points, nearest, pickedId, title: entry?.label ?? 'No way in listed', detail: label ? `${label.title}${pickedId === nearest?.id ? ', the nearest' : ''}` : null };
   };
 
-  const briefStep = <>
-    <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} aside="Step 1 of 2" openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt} />
-  </>;
-
-  const deployStep = <>
-    <section className="cl-section" aria-labelledby="cl-who-h">
-      <div className="cl-section-head"><h2 id="cl-who-h" className="cl-section-title"><Icon name="people" size={20} />Who goes</h2><span className="cl-section-aside">{takes} · <span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span></span></div>
-      {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads" role="group" aria-label="Squads" data-ui-list>
+  // Brief and deploy as one screen (canvas pass, 2026-10-23): the brief's plate, orders and threats,
+  // then who goes, what they carry and the way in, then the cold open and the people inside. The
+  // building's map lives behind Map in the head and Change on each way in.
+  const teamSections = <>
+    {/* Who goes, what each squad carries and the way in, each as a framed panel (canvas "Depth and
+        Framed Sections"): the title and its facts in the bar, the one action inside it. */}
+    <Section className="cl-section" id="cl-who-h" title="Who goes" icon="people" count={<>{takes} · <span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span></>}>
+      {g.squads.length === 0 ? <p className="dim">Create a squad on the Squad tab first.</p> : <div className="cl-squads panel-well" role="group" aria-label="Squads" data-ui-list>
         {g.squads.map((s) => {
           const r = squadReadiness(g, s.id, now);
           const on = chosen.includes(s.id);
@@ -334,15 +335,20 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
             <button key={s.id} type="button" className={`cl-squad${on ? ' cl-squad-on' : ''}${r.deployable ? '' : ' cl-squad-blocked'}`} aria-pressed={on} data-squad={s.id}
               aria-label={`${s.name}, ${r.ready} of ${r.total} ready${r.deployable ? '' : ', not deployable'}${detail ? `, ${detail}` : ''}`}
               disabled={!on && maxSquads > 1 && chosen.length >= maxSquads} onClick={() => toggleSquad(s.id)}>
-              <span className="squad-badge">{s.id}</span>
+              <span className="squad-badge cl-squad-badge">{s.id}</span>
               <span className="cl-squad-main">
                 <strong>{s.name}{s.id === fitId && <span className="cl-squad-fit"><Icon name="star" size={16} />Best fit</span>}</strong>
-                <span className={r.deployable ? undefined : 'cl-warn'}>{r.ready} of {r.total} ready{detail ? `, ${detail.charAt(0).toLowerCase()}${detail.slice(1)}` : ''}</span>
+                {detail && <span className={r.deployable ? 'cl-squad-note' : 'cl-warn cl-squad-note'}>{detail.charAt(0).toUpperCase()}{detail.slice(1)}</span>}
               </span>
-              <span className="cl-faces" aria-hidden="true">
+              <span className="cl-squad-mark" aria-hidden="true">{on && <Icon name="check" size={20} />}</span>
+              <span className="cl-faces cl-squad-crew" aria-hidden="true">
                 {members.slice(0, 4).map((officer) => <Face key={officer.id} size="sm" kind="officer" officer={officer} name={officer.surname} status={officerFaceStatus(g, officer.id, now)} />)}
               </span>
-              {on && <Icon name="check" size={20} className="cl-squad-check" />}
+              <span className={`cl-squad-ready${r.deployable ? '' : ' cl-warn'}`} aria-hidden="true">
+                <b>{r.ready}<small>/{r.total}</small></b>
+                <span className="cl-pips">{Array.from({ length: r.total }, (_, i) => <i key={i} data-on={i < r.ready ? '' : undefined} />)}</span>
+                <small>ready</small>
+              </span>
             </button>
           );
         })}
@@ -350,36 +356,45 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       {autoWarnings.length > 0 && <div className="autowarn" aria-live="polite">
         {autoWarnings.map((w, i) => <p key={i} className="note note-amber"><Icon name="warning" size={16} />{w}</p>)}
       </div>}
-    </section>
+    </Section>
 
     {chosen.map((sid, index) => {
       const kit = kitOf(sid);
-      const way = goingIn(sid);
-      return <section key={sid} className="cl-section cl-squad-plan" aria-label={`${squadName(sid)} plan`} data-squad={sid}>
-        <div className="cl-section-head">
-          <h2 className="cl-section-title"><Icon name="box" size={20} />{squadName(sid)} carries</h2>
-          <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>
-        </div>
-        <Card className="cl-plan-card">
+      return <div key={sid} className="cl-squad-plan" data-squad={sid}><Section className="cl-section" title={`${squadName(sid)} carries`} badge={sid} tone="act" count={`${kit.length} from the Armory`}
+        action={<button type="button" className="cl-link cl-pill" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>}>
+        <div className="cl-plan-card cl-loadout">
           {index === 0 && <>
-            <Row className="cl-plan-row" lead={<span className="cl-well"><Icon name="basicKit" size={24} /></span>} title="Basic kit" detail={kit.length === 0 ? 'Nothing from the Armory.' : undefined} />
-            <ul className="cl-kit cl-basic-icons" aria-label={BASIC_KIT_LINE}>{BASIC_KIT_ICONS.map(([id, label]) => <li key={id} className="cl-kit-chip"><GearArt itemId={id} size={24} />{label}</li>)}</ul>
+            <p className="cl-slots-label"><Icon name="basicKit" size={16} />Basic kit</p>
+            <ul className="cl-kit cl-slots cl-basic-icons" aria-label={BASIC_KIT_LINE}>{BASIC_KIT_ICONS.map(([id, label]) => <li key={id} className="cl-kit-chip cl-slot"><span className="cl-slot-art"><GearArt itemId={id} size={28} /></span><span className="cl-slot-name">{label}</span></li>)}</ul>
           </>}
-          {kit.length > 0 && <ul className="cl-kit" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-kit-${item.tone}`}><GearArt itemId={item.id} size={24} />{item.text}</li>)}</ul>}
-          {kit.length === 0 && index > 0 && <p className="cl-muted cl-plan-empty">Nothing from the Armory.</p>}
-        </Card>
-        <div className="cl-section-head">
-          <h3 className="cl-section-title"><Icon name="door" size={20} />{chosen.length > 1 ? `${squadName(sid)} goes in` : 'Going in'}</h3>
-          <button type="button" className="cl-link" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
+          {kit.length > 0 && <>
+            <p className="cl-slots-label"><Icon name="box" size={16} />From the Armory</p>
+            <ul className="cl-kit cl-slots" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-slot cl-slot-armory cl-kit-${item.tone}`}><span className="cl-slot-art"><GearArt itemId={item.id} size={44} /></span><span className="cl-slot-name">{item.text}</span></li>)}</ul>
+          </>}
+          {kit.length === 0 && <>
+            <p className="cl-slots-label"><Icon name="box" size={16} />From the Armory</p>
+            <p className="cl-slot-empty"><Icon name="plus" size={16} />Nothing from the Armory yet. Adjust to add gear.</p>
+          </>}
         </div>
-        <Card className="cl-plan-card"><Row className="cl-plan-row cl-going" lead={<span className="cl-well"><Icon name="map" size={24} /></span>} title={way.title} detail={way.detail} /></Card>
-      </section>;
+      </Section></div>;
     })}
 
-    {chosen.length > 0 && brief.entries.length > 0 && <div className="prep-map prep-map-team" aria-label="Where the team goes in">
-      <Blueprint built={built} spaces={spaces} squadTasks={[]} squads={g.squads} selectedSpaceId={null} focusSquadId={null}
-        highlightSpaceIds={chosen.map((sid) => positions[sid] ?? defaultEntry).filter((id): id is Id => !!id)} {...blueprintExtras} />
-    </div>}
+    {chosen.length > 0 && <Section className="cl-section cl-route" title="Going in" icon="door" count={chosen.length > 1 ? `${chosen.length} ways in` : undefined} well>
+        <ul className="cl-route-rows" data-ui-list>
+          {chosen.map((sid) => {
+            const way = goingIn(sid);
+            return <li key={sid} className="cl-route-row" data-squad={sid}>
+              {chosen.length > 1 && <span className="squad-badge cl-route-badge">{sid}</span>}
+              <span className="cl-well cl-route-icon"><Icon name="door" size={24} /></span>
+              <span className="cl-route-main">
+                <strong>{way.title}</strong>
+                {way.detail && <span>{way.detail}</span>}
+              </span>
+              <button type="button" className="cl-link cl-pill" data-squad={sid} onClick={() => setSheet({ kind: 'going', squad: sid })} aria-label={`Change where ${squadName(sid)} goes in`}>Change</button>
+            </li>;
+          })}
+        </ul>
+    </Section>}
 
     <SupportPreparation state={g} now={now} cmd={cmd} built={built} onSelect={setSupportUnitId} />
 
@@ -406,18 +421,21 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
     </div>}
   </>;
 
+  const merged = <PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} openUntil={incidentsOf(g).find((i) => i.id === scenarioId)?.expiresAt}>
+    <div className="cl-team">{teamSections}</div>
+  </PrepBriefing>;
+
   const kitSquad = sheet?.kind === 'kit' && chosen.includes(sheet.squad) ? sheet.squad : null;
   const goingSquad = sheet?.kind === 'going' && chosen.includes(sheet.squad) ? sheet.squad : null;
 
   // A pushed flow (components/chrome.tsx): the shell draws the head and the action bar; the tabs go.
-  const footer = step === 'brief'
-    ? <ActionBar className="cl-actions" primary={{ label: 'Choose team', onClick: () => { preselect(); callFlow.goStep('deploy'); } }} />
-    : <ActionBar className="cl-actions"
-      primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
+  const footer = <ActionBar className="cl-actions"
+    summary={<><span className={`cl-tone-${footStatus.tone}`}>{footStatus.text}</span><span>{takes}</span></>}
+    primary={{ label: chosen.length ? `Deploy ${names}` : 'Deploy', disabled: !check.ok, onClick: deploy }} />;
   const screen = (
-    <FlowScreen title={step === 'brief' ? title : 'Deploy'} icon={step === 'brief' ? <CallTypeBadge type={scenario?.incident?.type} size={24} /> : <Icon name="people" size={20} />} backLabel={step === 'brief' ? 'Calls' : 'Brief'} onBack={back} footer={footer}
-      trailing={step === 'brief' ? <Button size="sm" variant="quiet" icon="map" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button> : undefined}>
-      <div className="page cl-flow-body prepare" data-step={step}>{step === 'brief' ? briefStep : deployStep}</div>
+    <FlowScreen title={title} icon={<CallTypeBadge type={scenario?.incident?.type} size={24} />} backLabel="Calls" onBack={step === 'deploy' && !onCancel ? () => callFlow.goStep('brief') : back} footer={footer}
+      trailing={<Button size="sm" variant="quiet" icon="map" className="cl-map-chip" onClick={() => setSheet({ kind: 'map' })} aria-haspopup="dialog">Map</Button>}>
+      <div className="page cl-flow-body prepare" data-step="brief">{merged}</div>
 
       <Sheet open={sheet?.kind === 'map'} onClose={() => setSheet(null)} title="The building" className="cl-map-sheet">
         <div className="prep-map" aria-label="Location preview">

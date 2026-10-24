@@ -14,7 +14,7 @@ import { STRESS_BANDS } from '../../../sim/officer';
 import { employedPatrol, patrolCapacity } from '../../../sim/patrol';
 import type { GameState, Id, NodeEffect, Officer } from '../../../sim/types';
 import { officerFaceStatus } from '../../components/face-status';
-import { duration, money } from '../../format';
+import { duration, fundingPerHour, money } from '../../format';
 import { rotation } from '../../people/story-line';
 import type { CostQuote } from '../build-parts';
 import { ROOMS, roomOfBranch, type RoomDef, type RoomId } from './rooms';
@@ -42,7 +42,7 @@ function plainEffect(e: NodeEffect): string | null {
     case 'trainingSlots': return `${places(1 + e.delta, 'officer')} can train at once`;
     case 'rosterCap': return `Room for ${places(e.delta, 'more officer')}`;
     case 'candidatePool': return `${places(e.delta, 'more candidate')} to choose from`;
-    case 'income': return `Records fees add ${money(e.perHour)} an hour`;
+    case 'income': return `Records fees add ${fundingPerHour(e.perHour)}`;
     // The step's own name already says which post; the line says what the step does for you.
     case 'commandStaff': return 'Opens a post for you to fill';
     case 'unlockCourse': case 'unlockItem': return null;
@@ -140,6 +140,8 @@ export interface HelpRow {
   to: string;
   /** One extra recorded fact, e.g. "Back to Ready in 5h 20m, not 8h". */
   note?: string;
+  /** `from` and `to` are funding amounts, drawn with the funding glyph. */
+  funds?: true;
   /** The beat's line when this row is the first thing to happen, built from the same facts. */
   reaction: string;
 }
@@ -225,8 +227,8 @@ export function stepHelp(game: GameState, option: NodeOption): StepHelp {
       }
       case 'income': {
         const was = had.find((e): e is Extract<NodeEffect, { kind: 'income' }> => e.kind === 'income')?.perHour ?? 0;
-        add({ key: 'records-fees', officerIds: [], label: 'Records fees', from: `${money(was)}/h`, to: `${money(effect.perHour)}/h`,
-          reaction: `Records fees go from ${money(was)} to ${money(effect.perHour)} an hour.` });
+        add({ key: 'records-fees', officerIds: [], label: 'Records fees', from: `${money(was)}/h`, to: `${money(effect.perHour)}/h`, funds: true,
+          reaction: `Records fees go from ${money(was)} to ${fundingPerHour(effect.perHour)}.` });
         break;
       }
       case 'unlockCourse': {

@@ -3,7 +3,8 @@ import { Portrait } from '../portraits/Portrait';
 import { Silhouette } from '../portraits/Silhouette';
 import { Icon } from '../icons';
 import { opMinutes, signed, signedMoney } from '../format';
-import { Card, Chip, Meter, Ring, SubHead } from './ui';
+import { Chip, Meter, Ring, Row, Section } from './ui';
+import { RESULT_LABEL } from '../screens/OperationFeedback';
 import { STRESS_LABEL, StressDisplay, changeText } from './StressDisplay';
 import { stressBand } from '../../sim/officer';
 import { CivilianOutcomeList, OfficerInjuryResult } from './IncidentPeople';
@@ -11,6 +12,7 @@ import './debrief-results.css';
 import { Disclosure } from './Disclosure';
 import { RankInsignia } from './RankInsignia';
 import { RANKS } from '../../content/ranks';
+import { ROLE_META } from './labels';
 
 /** Only identity is read from the roster. All result values come from the saved debrief. */
 export type DebriefOfficers = Record<string, Pick<Officer, 'surname' | 'firstName'> & Partial<Pick<Officer, 'id' | 'identityId' | 'portrait' | 'role'>>>;
@@ -33,7 +35,7 @@ function personValues(d: DebriefResult): Map<string, { trust: number; strain: nu
 }
 
 export function DebriefSummary({ debrief: d, includeRewards = true }: { debrief: DebriefResult; includeRewards?: boolean }) {
-  return <Card className="result-summary">
+  return <Section className="result-summary" title="Outcome" icon="civilian" count={d.civilianOutcomes?.length ? `${d.civilianOutcomes.length} ${d.civilianOutcomes.length === 1 ? 'person' : 'people'} at the call` : undefined}>
     {d.disposition && <CompletionResult debrief={d} />}
     {d.civilianOutcomes?.length ? <section className="result-civilian-outcomes"><span className="result-score-label"><Icon name="civilian" size={16} />People at the call</span><CivilianOutcomeList outcomes={d.civilianOutcomes} values={personValues(d)} /></section> : <div className={`result-scores${d.disposition ? ' result-scores-explicit' : ''}`}>
       {(d.disposition ? [{ label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const : [{ label: 'Call progress', icon: 'flag', result: d.objective }, { label: 'Civilian safety', icon: 'civilian', result: d.civilianSafety }] as const).map(({ label, icon, result }) => <section className={`result-score result-score-${scoreTone(result.score)}`} key={label} aria-label={`${label} ${Math.round(result.score)}/100`}>
@@ -46,7 +48,7 @@ export function DebriefSummary({ debrief: d, includeRewards = true }: { debrief:
       </section>)}
     </div>}
     {includeRewards && <DebriefRewards debrief={d} />}
-  </Card>;
+  </Section>;
 }
 
 /** Kept separate in the full debrief so people and their condition precede department rewards. */
@@ -55,7 +57,7 @@ export function DebriefRewards({ debrief: d }: { debrief: DebriefResult }) {
   return <section className="result-rewards" aria-label="Rewards">
       <span className="result-score-label"><Icon name="cash" size={16} />Rewards</span>
       <div className="chips result-reward-chips">
-        {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="cash">{signedMoney(d.fundingReward)} funding</Chip>}
+        {d.fundingReward !== 0 && <Chip tone={d.fundingReward < 0 ? 'danger' : 'mint'} icon="funds">{signedMoney(d.fundingReward)} funding</Chip>}
         {d.trustDelta !== 0 && <Chip tone={d.trustDelta < 0 ? 'danger' : 'mint'} icon="shield">{signed(d.trustDelta, 1)} trust</Chip>}
         {promotions > 0 && <Chip tone="amber" icon="medal">{promotions === 1 ? '1 promotion' : `${promotions} promotions`}</Chip>}
         {!!d.serviceEarned && <Chip tone="mint" icon="medal">{signed(d.serviceEarned)} service</Chip>}
@@ -72,9 +74,9 @@ export function DebriefScore({ debrief: d }: { debrief: DebriefResult }) {
   const onTiles = personValues(d);
   const scoreLines = (d.scoreLines ?? []).filter((line) => { const id = /^person:(.+):[^:]+$/.exec(line.key)?.[1]; return !(id && onTiles.has(id)); });
   if (!scoreLines.length && !d.forceLines?.length) return null;
-  return <Card className="result-score-lines">
-    {!!scoreLines.length && <section aria-label="How the call was scored">
-      <SubHead icon="gauge">How the call was scored</SubHead>
+  // Two framed panels: the score lines, then the force used, each with its title in the bar.
+  return <>
+    {!!scoreLines.length && <Section className="result-score-lines" title="How the call was scored" icon="gauge" count={`${scoreLines.length} ${scoreLines.length === 1 ? 'line' : 'lines'}`} well>
       <ul className="score-lines">{scoreLines.map((line) => <li key={line.key} className={`score-line${line.key === 'result' ? ' score-line-result' : ''}`} data-score-line={line.key}>
         <span className="score-line-text">{line.text}</span>
         <span className="score-line-values">
@@ -83,15 +85,14 @@ export function DebriefScore({ debrief: d }: { debrief: DebriefResult }) {
           {line.trust === 0 && line.strain === 0 && <span className="tone-neutral">No change</span>}
         </span>
       </li>)}</ul>
-    </section>}
-    {!!d.forceLines?.length && <section aria-label="Force used">
-      <SubHead icon="shield">Force used</SubHead>
+    </Section>}
+    {!!d.forceLines?.length && <Section className="result-score-lines" title="Force used" icon="shield" count={`${d.forceLines.length} recorded`} well>
       <ul className="force-lines">{d.forceLines.map((line, index) => <li key={index}>
         <span>{line.text}</span>
         {line.reason && <span className="force-line-reason"><span className="force-line-why">Why</span>{line.reason}</span>}
       </li>)}</ul>
-    </section>}
-  </Card>;
+    </Section>}
+  </>;
 }
 
 /** Saved completion evidence wins over numeric progress and later scenario content. */
@@ -132,7 +133,8 @@ function OfficerChange({ condition: c, officers, casualty }: { condition: Condit
     <ResultPortrait officerId={c.officerId} officers={officers} size={44} />
     <div className="result-officer-body">
       <div className="result-officer-heading">
-        <div><strong>{label}</strong>{!officer && <span className="result-officer-id">{c.officerId}</span>}</div>
+        {/* The face's caption: the officer's role, so the row of portraits says whose they are. */}
+        <div><strong>{label}</strong>{officer?.role && <span className="result-officer-role">{ROLE_META[officer.role].short}</span>}{!officer && <span className="result-officer-id">{c.officerId}</span>}</div>
         {c.xpGained !== 0 && <span className={c.xpGained > 0 ? 'result-xp' : 'result-xp tone-danger'}>{signed(c.xpGained, 1)} XP{c.promotions?.length ? <>, <RankInsignia rank={c.promotions[c.promotions.length - 1].rank} size={13} /> {RANKS[c.promotions[c.promotions.length - 1].rank].abbr}</> : null}</span>}
       </div>
       {casualty && <OfficerInjuryResult casualty={casualty} />}
@@ -157,8 +159,7 @@ export function OfficerResults({ debrief: d, officers }: { debrief: DebriefResul
   const unchanged = d.officerCondition.filter((c) => !changed.includes(c));
   const xp = d.officerCondition.reduce((total, c) => total + c.xpGained, 0);
   const promoted = d.officerCondition.flatMap((c) => (c.promotions ?? []).map((p) => ({ ...p, officerId: c.officerId })));
-  return <Card className="result-officers">
-    <div className="result-section-heading"><SubHead icon="people">Officer changes</SubHead>{xp !== 0 && <span className="result-xp">{signed(xp, 1)} XP total</span>}</div>
+  return <Section className="result-officers" title="Officer changes" icon="people" count={xp !== 0 ? `${signed(xp, 1)} XP total` : undefined}>
     {promoted.length > 0 && <ul className="result-promotions" aria-label="Promotions">{promoted.map((p) => {
       const officer = officers[p.officerId];
       return <li key={`${p.officerId}:${p.rank}`} className="result-promotion" data-promotion={p.rank}>
@@ -177,7 +178,7 @@ export function OfficerResults({ debrief: d, officers }: { debrief: DebriefResul
       <ul className="result-officer-list">{unchanged.map((c) => <OfficerChange key={c.officerId} condition={c} officers={officers} casualty={casualties.get(c.officerId)} />)}</ul>
     </Disclosure>}
     {d.officerCondition.length === 0 && extraCasualties.length === 0 && <p className="result-empty dim">No officers deployed.</p>}
-  </Card>;
+  </Section>;
 }
 
 // Saved older records have only prose. Keep consequential evidence visible even when
@@ -205,5 +206,53 @@ export function visibleDebriefConsequences(d: DebriefResult, decisions: Decision
 export function DebriefConsequences({ debrief, decisions }: { debrief: DebriefResult; decisions?: DecisionView[] }) {
   const lines = visibleDebriefConsequences(debrief, decisions);
   if (!lines.length) return null;
-  return <Card className="result-consequences"><SubHead icon="warning">Recorded consequences</SubHead><ul>{lines.map((line, index) => <li key={index}>{line}</li>)}</ul></Card>;
+  return <Section className="result-consequences" title="Recorded consequences" icon="warning" count={`${lines.length} recorded`} well><ul>{lines.map((line, index) => <li key={index}>{line}</li>)}</ul></Section>;
+}
+
+const SAFE_OUT: ReadonlySet<string> = new Set(['safe', 'care_accepted', 'accounted_elsewhere']);
+
+/** The call at a glance as rings (canvas Debrief): how far the call got, the people the team got out,
+ * and the team unhurt. Each ring is a fraction of the saved result; a call without tracked people
+ * rings its civilian safety score instead. */
+export function DebriefRings({ debrief: d }: { debrief: DebriefResult }) {
+  const people = d.civilianOutcomes ?? [];
+  const safe = people.filter((person) => SAFE_OUT.has(person.status)).length;
+  const team = d.officerCondition.length;
+  const hurt = new Set((d.officerCasualties ?? []).map((casualty) => casualty.officerId)).size;
+  const rings = [
+    { key: 'progress', value: d.objective.score, text: `${Math.round(d.objective.score)}`, word: 'Call progress', spoken: `Call progress ${Math.round(d.objective.score)} of 100, ${d.objective.label}` },
+    people.length
+      ? { key: 'people', value: (100 * safe) / people.length, text: `${safe}/${people.length}`, word: 'People safe', spoken: `${safe} of ${people.length} people safe` }
+      : { key: 'people', value: d.civilianSafety.score, text: `${Math.round(d.civilianSafety.score)}`, word: 'Civilian safety', spoken: `Civilian safety ${Math.round(d.civilianSafety.score)} of 100, ${d.civilianSafety.label}` },
+    ...(team > 0 ? [{ key: 'team', value: (100 * (team - hurt)) / team, text: `${team - hurt}/${team}`, word: 'Team unhurt', spoken: `${team - hurt} of ${team} officers unhurt` }] : []),
+  ];
+  // A framed panel (canvas "Depth and Framed Sections"): the outcome in the bar, the rings inside.
+  return <Section className="debrief-rings" title="Result" icon="flag" count={completionLabel(d)}>
+    <ul className="debrief-rings-row" aria-label="Result">{rings.map((ring) => <li key={ring.key} aria-label={ring.spoken}>
+      <Ring value={ring.value} size={56}><strong className="debrief-ring-value">{ring.text}</strong></Ring>
+      <span aria-hidden="true">{ring.word}</span>
+    </li>)}</ul>
+  </Section>;
+}
+
+const DECIDED_TONE = { favorable: 'good', mixed: 'warn', adverse: 'harm' } as const;
+
+/** "What decided it" (canvas Debrief): each committed decision in order, who led it and how it came
+ * out, from the saved record. A lapse says the time ran out. */
+export function WhatDecided({ decisions, officers }: { decisions: DecisionView[]; officers: DebriefOfficers }) {
+  if (!decisions.length) return null;
+  return <Section title="What decided it" icon="list" count={`${decisions.length} ${decisions.length === 1 ? 'decision' : 'decisions'}`}>
+    <div className="debrief-decided panel-well" data-ui-list>{decisions.map((decision, index) => {
+      // Who carried it: the officer behind the strongest rating that counted for this decision.
+      const lead = decision.contributors.filter((c) => c.source === 'rating' && c.ref && officers[c.ref]).sort((a, b) => b.value - a.value)[0];
+      const name = lead?.ref ? officers[lead.ref].surname : null;
+      const tone = decision.band ? DECIDED_TONE[decision.band] : 'warn';
+      const word = decision.band ? RESULT_LABEL[decision.band] : 'Time ran out';
+      return <Row key={`${decision.revision}:${index}`} className="debrief-decided-row"
+        lead={<span className="debrief-step" data-tone={tone} aria-hidden="true">{index + 1}</span>}
+        title={decision.title}
+        detail={[name, decision.resultLabel ?? decision.stageLabel].filter(Boolean).join(' · ')}
+        trail={<Chip tone={tone}>{word}</Chip>} />;
+    })}</div>
+  </Section>;
 }

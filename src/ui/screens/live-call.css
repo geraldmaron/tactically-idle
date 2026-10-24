@@ -5,7 +5,6 @@
 
 /* ---- one pinned strip: the call's name, where it is, and everything that runs down or builds up */
 .live .live-head { padding: var(--sp1) var(--gutter); background: var(--ink-0); }
-.live .live-head.plate > .plate-art { opacity: .5; }
 .live .live-map-access, .live .live-choice-access { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: var(--touch); min-width: var(--touch); padding: 0; }
 /* The jump to the first choice shows only where the choices start below the fold. */
 .live .live-choice-access[hidden] { visibility: hidden; }
@@ -82,14 +81,13 @@
 .live .threat-pill-sep { display: none; }
 .live .threat-pill-min { font-size: 15.5px; }
 
-/* ---- the scene: the map and the squad, between the strip and the story */
-.live-scene { display: grid; gap: 6px; padding: 8px var(--gutter) 0; }
-.live-scene-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-width: 0; }
-.live-scene-where { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; font: 600 13px/1.25 var(--f-title); letter-spacing: 0.04em; color: var(--t2); }
-.live-scene-where .icon { color: var(--t2); }
-.live-scene-changed { padding: 1px 6px; border: 1px solid rgba(63, 208, 142, 0.5); border-radius: 999px; color: var(--good-text); font-size: var(--s12); }
-.live-scene-actions { display: inline-flex; gap: 4px; }
-.live-scene-actions .hud-btn { padding: 0 10px; }
+/* ---- the scene, after the story: the squad's panel (bar, building band, map, faces) and the people's
+   panel, framed by the shared Section (app.css). Nothing here sits on the bare ground. */
+.live-scene { display: grid; gap: var(--sp3); padding: var(--sp3) var(--gutter) var(--sp4); }
+/* The scene leads, so the story's panel follows at the panels' own spacing. */
+.live .live-scene { padding-bottom: 0; }
+.live-scene-panel .section-body { gap: var(--sp3); padding: var(--sp2) var(--sp3) var(--sp3); }
+.live .live-scene-panel .section-action .icon { flex: none; }
 .live .live-map { margin: 0; }
 .live .live-map[hidden] { display: none; }
 /* Compact: the whole building in a short window, with no map controls. Tap a room to open it. */
@@ -100,23 +98,26 @@
 .live .live-map-full { position: fixed; inset: 0; z-index: 40; min-height: 0; margin: 0; border-radius: 0; display: flex; flex-direction: column; background: var(--paper-deep); }
 .live-map-full-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gutter); background: var(--ink-1); border-bottom: 1px solid var(--hair); }
 .live .live-map-full .live-map-inner { flex: 1 1 auto; overflow: auto; }
+.live-map-full-head .live-scene-where { display: inline-flex; align-items: center; gap: var(--sp2); min-width: 0; font: 700 var(--s15)/1.2 var(--f-title); letter-spacing: 0.06em; text-transform: uppercase; color: var(--bar-title); }
 .app .live-map-full .live-map-inner > .bp-root { grid-template-rows: auto minmax(240px, calc(100svh - 220px)) auto auto; }
 .live-map-full-open .live-strip { z-index: 5; }
 
-/* The squad: each face once, with stress; tap one for their card. */
-.live-squad { display: grid; gap: 6px; }
+/* The squad: each face once, with its stress ring, surname and role; tap one for their card. */
+.live-squad { display: grid; gap: var(--sp2); }
 .live-squad .live-squad-rail.operation-squad-focus { padding: 0; margin: 0; }
-.live-squad-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
-.live-squad-face { display: flex; align-items: center; gap: var(--sp1); width: 100%; min-width: 0; min-height: var(--touch); padding: var(--sp1); border: 1px solid var(--hair); border-radius: 8px; background: rgba(8, 13, 24, 0.4); color: var(--t1); text-align: center; cursor: pointer; }
+.live-squad-faces { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.live .live-squad-face { display: flex; flex-direction: column; align-items: center; gap: var(--sp1); width: 100%; min-width: 0; min-height: var(--touch); padding: var(--sp2) 2px; border: 1px solid var(--well-rule); border-radius: var(--r2); background: color-mix(in srgb, var(--white) 3%, transparent); box-shadow: none; color: var(--t1); text-align: center; cursor: pointer; }
 .live-squad-face:focus-visible { outline: 2px solid var(--act); outline-offset: 1px; }
-.live-squad-acting { border-color: var(--t2); }
-.live-squad-text { display: grid; min-width: 0; text-align: left; }
-.live-squad-name { display: inline-flex; align-items: center; gap: var(--sp1); min-width: 0; font: 600 var(--s14)/1.15 var(--f-title); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.live-squad-stress { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s12); line-height: 1.15; }
+.live .live-squad-acting { border-color: color-mix(in srgb, var(--act) 70%, transparent); box-shadow: var(--glow-act); }
+.live-squad-text { display: grid; justify-items: center; gap: 2px; width: 100%; min-width: 0; }
+.live-squad-name { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 var(--s14)/1.2 var(--f-ui); color: var(--t1); }
+.live-squad-name .icon { display: inline-block; vertical-align: -3px; margin-right: 2px; }
+.live-squad-role { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 var(--s14)/1.15 var(--f-ui); letter-spacing: 0.03em; text-transform: uppercase; color: var(--t3); }
+.live-squad-stress { display: inline-flex; align-items: center; gap: var(--sp1); font-size: var(--s14); line-height: 1.15; }
 .live-squad-stress.stress-recovery:not(.lead-choice-stress) { color: var(--harm); }
 .live-squad-out .face { opacity: 0.5; filter: grayscale(1); }
-.live-team-leader { color: var(--t1); }
-@media (max-width: 360px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.live-team-leader { color: var(--act-hi); }
+@media (max-width: 340px) { .live-squad-faces { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- the story: the decision and its choices, or the result */
 .live-story { display: flex; flex: 1 0 auto; flex-direction: column; min-width: 0; padding-bottom: var(--sp4); }
@@ -126,8 +127,11 @@
 /* The decide beat: the stage kicker, then the moment, then the people, then the choices. */
 .live .operation-choices { margin-top: 4px; }
 .live .operation-choices .operation-stage-prompt { margin: 0 0 var(--sp3); padding-left: var(--sp3); font-size: var(--s18); line-height: 1.5; }
-.live .operation-choices .operation-choice-count { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp2); margin: var(--sp4) 0 var(--sp2); font: 700 var(--s18)/1.2 var(--f-title); color: var(--t1); }
-.live .operation-choices .operation-choice-count span { font: 500 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; text-transform: none; color: var(--t2); }
+
+/* The moment (canvas Live): the prompt and the transcript in one well, the transcript as rows inside it. */
+.call-moment { display: grid; gap: var(--sp3); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); background: var(--surface-well); }
+.live .operation-choices .call-moment .operation-stage-prompt { margin: 0; padding: 0; border-left: 0; }
+.call-moment .transcript { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; }
 
 /* Last decision: one row above the stage, opening in place to the full record. */
 .live .operation-feedback-folded { margin: 12px var(--gutter) 4px; }
@@ -366,8 +370,6 @@
 
 .live .live-strip .ring { --ring-w: 3px; }
 
-/* The people the call is about, under the squad's faces. */
-.live .live-scene .scene-people { margin-top: var(--sp2); }
 
 /* The result lands: the card rises into place once and its edge flares in the result's own tone, so a
    confirmed choice has a beat, not a swap. Still under reduced motion. */
@@ -380,3 +382,90 @@
 
 /* Open in lab is a development aid: quiet, at the foot of the call, never competing with the story. */
 .live [data-open-in-lab] { margin: var(--sp2) var(--gutter) var(--sp3); opacity: .55; font-size: var(--s14); }
+
+/* ------------------------------------------------------------ finish (2026-10-23): depth for the live call */
+/* The strip, the squad and the choices are raised objects; the transcript is the recessed well the
+   words sit in; the choice list gets a head with a rule like every other section. Tokens only. */
+.live .stage-pill, .live .source-pill, .live .live-strip .threat-pill { box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 30%, transparent); }
+.live .stage-pill, .live .source-pill { background-image: var(--surface-1); }
+.live .live-map { border-radius: var(--r2); box-shadow: var(--well); overflow: hidden; }
+.live .transcript { border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); }
+.live .comms-log { border-color: var(--hair-2); background: var(--surface-1); box-shadow: var(--lift-1); }
+
+
+.live .callbtn { border-radius: var(--r2); border-color: var(--hair-2); background: var(--surface-1); box-shadow: var(--lift-1); transition: transform 120ms ease, box-shadow 160ms ease, border-color 160ms ease; }
+.live .callbtn:active:not(.callbtn-off) { transform: scale(0.985); }
+.live .callbtn-title { font-size: var(--s18); }
+.live .callbtn-on { background: var(--act); background-image: linear-gradient(180deg, var(--act-hi), var(--act-lo)); box-shadow: var(--lift-2), var(--glow-act); }
+.live .callbtn-off { background: transparent; box-shadow: none; }
+
+.live .operation-feedback .decision-card { background: var(--surface-1); box-shadow: var(--lift-2); }
+.live .operation-feedback-heading { align-items: center; gap: var(--sp3); }
+.live .operation-feedback-heading h2 { flex: 0 1 auto; margin: 0; font: 600 var(--s22)/1.1 var(--f-title); letter-spacing: 0.01em; text-transform: none; color: var(--t1); }
+.live .operation-feedback-heading::after { content: ''; order: 1; flex: 1 1 16px; min-width: 12px; height: 1px; background: linear-gradient(90deg, var(--hair-2), transparent); }
+.live .operation-feedback-heading > .btn { order: 2; flex: none; }
+
+/* ------------------------------------------------------------ the decision, in reach (2026-10-23) */
+/* A choice states what it gains and what it costs, in the call's own words, before the player opens it
+   (the odds and the full reading stay in the review sheet). */
+.live .callbtn-trade { display: grid; gap: 3px; margin-top: 2px; }
+.live .callbtn-gain, .live .callbtn-cost, .live .callbtn-weighed .callbtn-cost { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: var(--sp1); margin: 0; font-size: var(--s14); line-height: 1.3; }
+.live .callbtn-gain > i, .live .callbtn-cost > i { display: grid; place-items: center; width: 16px; height: 16px; margin-top: 1px; border-radius: 50%; font: 700 var(--s14)/1 var(--f-ui); font-style: normal; }
+.live .callbtn-gain { color: var(--t1); }
+.live .callbtn-gain > i { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good-text); }
+.live .callbtn-cost { color: var(--t-plate); }
+.live .callbtn-cost > i { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn-text); }
+.live .callbtn-on .callbtn-gain, .live .callbtn-on .callbtn-cost { color: var(--act-ink); }
+.live .callbtn-on .callbtn-gain > i, .live .callbtn-on .callbtn-cost > i { background: color-mix(in srgb, var(--act-ink) 18%, transparent); color: var(--act-ink); }
+
+/* One scroll (Live Call Single Scroll canvas, 2026-10-24): the choices sit in the page's flow right after
+   the moment, never in a pinned dock with a scroll of its own; only the slim header is pinned. The
+   compact card rules below still apply on a tall phone. */
+@media (min-height: 740px) {
+  .live-beat-decide .call-dock .call-grid { gap: var(--sp2); }
+  .live-beat-decide .call-dock .callbtn { min-height: 0; padding: var(--sp2) var(--sp3); gap: var(--sp2); }
+  .live-beat-decide .call-dock .callbtn-icon { align-self: flex-start; margin-top: 2px; }
+  .live-beat-decide .call-dock .callbtn-title { font-size: var(--s18); }
+  .live-beat-decide .call-dock .callbtn-forecast { margin-top: 0; }
+  .live-beat-decide .call-dock .callbtn-forecast-text { gap: var(--sp1) var(--sp3); color: var(--t3); }
+  .live-beat-decide .call-dock .odds-bar, .live-beat-decide .call-dock .callbtn-meta { display: none; }
+  .live-beat-decide .call-dock .callbtn-gain > span:last-child, .live-beat-decide .call-dock .callbtn-cost > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* An empty radio log is one quiet line, not a box held open for words that may never come. */
+  .live-beat-decide .comms-log:has(.comms-quiet) { display: flex; align-items: center; gap: var(--sp2); padding: var(--sp2) var(--sp3); box-shadow: none; background: transparent; border-style: dashed; }
+  .live-beat-decide .comms-log:has(.comms-quiet) .comms-log-head { margin: 0; }
+  .live-beat-decide .comms-log:has(.comms-quiet) .comms-log-lines { height: auto; overflow: visible; }
+  .live-beat-decide .comms-log:has(.comms-quiet) .comms-quiet { color: var(--t3); }
+}
+.live .live-stepout { margin-left: calc(-1 * var(--sp1)); padding: 0 var(--sp1); }
+.live .live-stepout:hover { color: inherit; }
+@container game (max-width: 359px) { .live .live-stepout .nav-pill { padding-right: 3px; } }
+/* In the live head the pill stacks, mark over words, so the call's name and clock keep their line. */
+.live .live-stepout .nav-pill { flex-direction: column; justify-content: center; height: auto; gap: 1px; padding: 3px var(--sp2) 4px; border-radius: 18px; }
+.live .live-stepout .nav-pill > .icon { width: 24px; height: 24px; padding: 3px; }
+.live .live-stepout .nav-pill > span { font: 600 var(--s14)/1.1 var(--f-ui); }
+@container game (max-width: 359px) { .live .live-stepout .nav-pill { padding: 3px; border-radius: 50%; } }
+
+/* ------------------------------------------------------------ choice cards (canvas pass, 2026-10-23) */
+/* The officer who would carry a choice leads its card, the action's icon on their corner; the chance
+   reads first in the forecast, and harm is a tinted chip so it scans down the list. */
+.callbtn-who { position: relative; flex: 0 0 auto; align-self: flex-start; display: inline-flex; }
+.callbtn-who .lead-face { box-shadow: 0 0 0 2px var(--hair-2); }
+.callbtn-on .callbtn-who .lead-face { box-shadow: 0 0 0 2px var(--act); }
+.callbtn-who-icon { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink-2); box-shadow: 0 0 0 2px var(--surface-1, var(--ink-1)); color: var(--t1); }
+.live .callbtn-forecast-text > span:first-child { font-weight: 700; color: var(--good-text); }
+.live .callbtn-harm { display: inline-flex; align-items: center; height: 24px; padding: 0 var(--sp2); border-radius: 12px; font-size: var(--s14); font-weight: 600; background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good-text); }
+.live .callbtn-harm-moderate { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-text); }
+.live .callbtn-harm-high { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn-text); }
+.live .callbtn-harm-severe { background: color-mix(in srgb, var(--harm) 22%, transparent); color: var(--harm-text); }
+.live .callbtn-forecast-text { align-items: center; }
+.live .callbtn-skill { color: var(--t2); font-size: var(--s14); font-weight: 600; }
+/* The full lead line repeats the face and the skill, so it stays folded once the face leads the card. */
+.live .callbtn:has(.callbtn-who) .callbtn-meta:not(:has(.callbtn-gauge)) { display: none; }
+/* Pinned, the forecast keeps one row at 390: the chance reads as its number, the words stay for screen readers. */
+.live-beat-decide .call-dock .callbtn-gw { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.live-beat-decide .call-dock .callbtn-forecast-text { column-gap: var(--sp2); }
+/* The slim header is the one pinned piece: the call's name, clock, pressure and the threat countdown
+   stay in view while everything else scrolls as one page. */
+.live .live-head { position: sticky; top: 0; z-index: 6; box-shadow: 0 6px 16px color-mix(in srgb, var(--black) 35%, transparent); border-bottom: 1px solid var(--hair-2); }
+.live .live-head-threat { margin-top: var(--sp1); }
+.live .live-head-threat .threat-pill { margin: 0; }

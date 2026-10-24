@@ -123,10 +123,12 @@ describe('squads as blocks with separate rename drafts', () => {
     expect(html).not.toContain('aria-label="Hire,');
   });
 
-  it('gives each squad its crest and callsign, and a quiet two-choice duty control', () => {
+  it('gives each squad its letter badge and callsign, and a quiet two-choice duty control', () => {
     const html = capture(SquadScreen).html;
     for (const squad of state.squads) {
-      expect(html).toContain(squadCrest(squad.id));
+      // Squads wear their letter, never an animal crest (owner, 2026-10-23).
+      expect(html).toContain(`<span class="squad-crest squad-crest-40 squad-crest-badge" data-squad="${squad.id}" aria-hidden="true"><span class="squad-crest-letter">${squad.id}</span></span>`);
+      expect(html).not.toContain(squadCrest(squad.id));
       expect(html).toContain(`aria-label="Duty for ${squad.name}"`);
     }
     expect(html).not.toContain('role="switch"');

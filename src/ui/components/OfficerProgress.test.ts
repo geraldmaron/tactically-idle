@@ -28,7 +28,7 @@ describe('officer rank progress (officer-ranks)', () => {
     expect(html).toContain('Officer');
     expect(html).toContain('250 XP to Corporal');
     expect(html).toContain('50 / 300');
-    expect(html).toContain('Corporal brings communication +3, earns steady, wage +$2/h');
+    expect(html).toContain('Corporal brings communication +3, earns steady, wage +2 funding an hour');
     expect(html).toContain('50 of 300 XP toward Corporal; 250 XP to go');
     expect(o).toEqual(before);
   });

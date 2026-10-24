@@ -439,3 +439,20 @@
 .lab-cmp-why { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 6px; font: var(--lab-type-micro); }
 .lab-cmp-note { margin: var(--lab-s2) var(--lab-s4) 0; font: var(--lab-type-row); }
 .lab-cmp-diverge { display: flex; gap: 6px; align-items: baseline; color: var(--amber); }
+
+/* The centre column's two views: the author's story, or the phone the player sees. */
+.lab-play-view { display: flex; justify-content: center; gap: 4px; padding: var(--lab-s2) 0 0; }
+.lab-play-view .lab-button { min-width: 112px; justify-content: center; }
+.lab-story { width: min(100%, 620px); min-height: 0; margin: var(--lab-s2) auto 0; padding: 0 var(--lab-s3) var(--lab-s4); overflow-y: auto; display: grid; align-content: start; gap: 18px; }
+.lab-story-head h2 { margin: 0 0 4px; font: 600 24px/1.15 var(--font-display); }
+.lab-story-head p { margin: 0; color: var(--text-dim); font: 400 15px/22px var(--font-ui); }
+.lab-story-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.lab-story-jump a { padding: 3px 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text); font: 600 13px/1.4 var(--font-ui); text-decoration: none; }
+.lab-story-jump a:hover { background: var(--panel-2); }
+.lab-story-block { display: grid; gap: 8px; scroll-margin-top: 8px; }
+.lab-story-block > h3 { margin: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--text-dim); font: 700 12px/1.2 var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; }
+.lab-story-scene, .lab-story-people p { margin: 0; max-width: 62ch; color: var(--text); font: 400 16px/25px var(--font-ui); }
+.lab-story-people { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.lab-story-people li { display: grid; gap: 3px; scroll-margin-top: 8px; }
+.lab-story-who { display: flex; align-items: baseline; gap: 10px; font-size: 16px; }
+.lab-play-view .lab-button-on { border-color: var(--amber); background: var(--panel-3); color: var(--text); }

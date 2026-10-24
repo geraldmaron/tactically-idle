@@ -33,7 +33,7 @@ export function RestockRuleEditor({ itemId }: { itemId: Id }) {
           <Stepper label={`${item.name} target`} value={target} max={20} onChange={setTarget} />
         </div>
         <label className="rule-field">
-          <span>Spend up to ($)</span>
+          <span>Spend up to</span>
           <input className="num" inputMode="numeric" type="number" min={0} step={50} value={ceiling} onChange={(event) => setCeiling(Number(event.target.value) || 0)} />
         </label>
       </div>

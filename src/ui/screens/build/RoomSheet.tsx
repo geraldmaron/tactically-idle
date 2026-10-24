@@ -10,7 +10,7 @@ import { Sheet } from '../../components/Sheet';
 import { useNav } from '../../components/nav';
 import { Button } from '../../components/ui';
 import { Icon } from '../../icons';
-import { moneyFull } from '../../format';
+import { funding } from '../../format';
 import { CostTag, Segments } from '../build-parts';
 import { FaceStack } from './RoomCard';
 import { NodeGlyph } from './NodeGlyph';
@@ -71,7 +71,7 @@ export function RoomSheet({ game, view, step, now, pending, onSelect, onOpenRoom
     : <div className="room-buy">
       {state === 'locked'
         ? <Button variant="quiet" icon="lock" block onClick={() => goNeeded(missing[0])}>{`Needs ${missing.map((id) => DEV_NODES[id]?.name ?? id).join(' and ')}`}</Button>
-        : <Button variant="primary" block disabled={!step.quote.ok || pending} onClick={onBuy}>{pending ? 'Building…' : `${tiered ? `Build tier ${tierLabel(step.targetTier!)}` : 'Build'} for ${moneyFull(step.quote.cost!.funding)}`}</Button>}
+        : <Button variant="primary" block disabled={!step.quote.ok || pending} onClick={onBuy}>{pending ? 'Building…' : `${tiered ? `Build tier ${tierLabel(step.targetTier!)}` : 'Build'} for ${funding(step.quote.cost!.funding)}`}</Button>}
       <CostTag part="note" quote={state === 'locked' ? { ...quote, blocker: undefined } : quote} />
     </div>;
 
@@ -89,7 +89,7 @@ export function RoomSheet({ game, view, step, now, pending, onSelect, onOpenRoom
             <span className="room-who-name">{row.officerIds.length ? nameList(game, row.officerIds) : row.label}</span>
             <span className="room-who-note">{row.officerIds.length ? row.label : ''}{row.note ? `${row.officerIds.length ? '. ' : ''}${row.note}` : ''}</span>
           </span>
-          <span className="room-who-delta"><s>{row.from}</s><b>{row.to}</b></span>
+          <span className="room-who-delta">{row.funds && <Icon name="funds" size={16} className="funds-glyph" />}<s>{row.from}</s><b>{row.to}</b>{row.funds && <span className="sr-only"> funding</span>}</span>
         </li>)}</ul></section>}
       <section aria-labelledby="room-ladder"><h3 id="room-ladder" className="room-label">The ladder</h3>
         <ol className="room-ladder card" data-ui-list>{rows.map(({ option: o, depth }) => {

@@ -290,7 +290,7 @@ describe('restock rules', () => {
     const later = ok(s, { type: 'tick' }, T0 + 3 * HOUR_MS);
     expect(ownedCount(later, 'trauma_kit')).toBe(12);
     expect(later.report!.restockSpend).toBe(720);
-    expect(later.report!.shortages.join(' ')).toMatch(/Trauma kit: restocked 2 of 14 wanted \(spending ceiling \$300\)/);
+    expect(later.report!.shortages.join(' ')).toMatch(/Trauma kit: restocked 2 of 14 wanted \(spending ceiling 300 funding\)/);
   });
 
   it('never drives funding below zero and reports a funds shortage', () => {

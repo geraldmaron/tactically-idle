@@ -91,3 +91,33 @@
 .result-xp .rank-insignia { vertical-align: -2px; }
 @keyframes result-promotion-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .result-promotion { animation: none; } }
+
+/* ------------------------------------------------------------ finish (2026-10-23): depth for the debrief */
+.app .debrief-hero.plate { border-color: var(--hair-2); box-shadow: var(--lift-2); }
+.debrief .sub-h { font: 600 var(--s18)/1.2 var(--f-title); letter-spacing: 0.01em; color: var(--t1); }
+.debrief .result-section-heading { align-items: center; }
+.result-marks { gap: var(--sp3); }
+.result-marks i { width: 34px; height: 34px; }
+.result-marks i[data-on] { background: linear-gradient(180deg, var(--act-hi), var(--act-lo)); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--act) 55%, transparent)); }
+.debrief .result-officer, .debrief .realrow { background: var(--surface-2); box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 30%, transparent); }
+.debrief .result-department .result-xp, .debrief .result-rewards { text-shadow: 0 0 18px color-mix(in srgb, var(--good) 30%, transparent); }
+
+/* The result at a glance (canvas Debrief): rings in one row, then "What decided it" as a list. */
+.debrief-rings-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp2); margin: 0; padding: var(--sp3) 0 var(--sp1); list-style: none; }
+.debrief-rings-row li { display: grid; justify-items: center; gap: var(--sp1); text-align: center; font-size: var(--s14); color: var(--t3); }
+.debrief-ring-value { font: 700 var(--s14)/1 var(--f-ui); color: var(--t1); font-variant-numeric: tabular-nums; }
+.debrief-decided { display: grid; overflow: hidden; }
+.debrief-step { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 14px; font: 700 var(--s14)/1 var(--f-ui); background: var(--ink-3); color: var(--t1); }
+.debrief-step[data-tone="good"] { background: color-mix(in srgb, var(--good) 22%, var(--ink-1)); color: var(--good-text); }
+.debrief-step[data-tone="warn"] { background: color-mix(in srgb, var(--warn) 22%, var(--ink-1)); color: var(--warn-text); }
+.debrief-step[data-tone="harm"] { background: color-mix(in srgb, var(--harm) 22%, var(--ink-1)); color: var(--harm-text); }
+
+/* Framed debrief (canvas "Depth and Framed Sections", 2026-10-24): every block is a Section panel; the
+   decisions sit in a well, and each officer's face carries their role. */
+.result-officer-role { display: block; font: 600 var(--s14)/1.2 var(--f-ui); letter-spacing: 0.03em; text-transform: uppercase; color: var(--t3); }
+.debrief-rings .debrief-rings-row { margin: 0; }
+.result-consequences .panel-well > ul { padding: var(--sp2) var(--sp3); }
+.result-score-lines .panel-well > ul { padding: 0 var(--sp3); }
+.result-officers .result-officer-list { margin: 0; padding: 0 var(--sp3); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); }
+.result-officers .result-officer-list > .result-officer { border-top-color: var(--well-rule); }
+.debrief-rings .section-body { padding-block: var(--sp2); }

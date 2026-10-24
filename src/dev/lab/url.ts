@@ -210,6 +210,7 @@ function readUrl(q: URLSearchParams): LabUrl {
     notes: q.get('notes') === '1',
     frame: q.get('frame') === 'player' ? 'player' : null,
     labAlias: q.has('lab'),
+    story: q.get('story') === '1',
     vs: call ? parseVs(q.get('vs')) : null,
   };
 }
@@ -248,6 +249,7 @@ export function labUrlToSearch(u: LabUrl): string {
   put('adv', '1', !u.tuning.advanced);
   put('f', u.filter);
   put('notes', '1', !u.notes);
+  put('story', '1', !u.story);
   put('frame', u.frame);
   if (u.call) put('vs', u.vs && vsText(u.vs));
   const query = readable(new URLSearchParams(out).toString());

@@ -46,8 +46,8 @@ describe('the ops board: tactical call-outs only', () => {
 
   it('still prepares an authored scenario as an ordinary deployment', () => {
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
-    // The brief leads to the deploy step, which deploys; Deploy names the squads once chosen.
-    expect(renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }))).toMatch(/>Choose team<\/button>/);
+    // Brief and deploy are one screen (canvas pass, 2026-10-23): the brief itself ends in Deploy.
+    expect(renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {} }))).toMatch(/>Deploy<\/button>/);
     const html = renderToStaticMarkup(createElement(OpsPrepare, { scenarioId: 'ms_occupancy', onCancel: () => {}, step: 'deploy' }));
     expect(html).toMatch(/>Deploy<\/button>/);
     expect(html).not.toContain('type="checkbox"');

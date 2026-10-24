@@ -15,7 +15,7 @@ export interface RoomListProps {
 }
 
 const STATUS: Record<KnowledgeStatus | 'none', { word: string; glyph: string }> = {
-  unknown: { word: 'Unknown', glyph: '?' },
+  unknown: { word: 'Unknown', glyph: '…' },
   reported: { word: 'Reported', glyph: '!' },
   confirmed: { word: 'Confirmed', glyph: '✓' },
   disproved: { word: 'Disproved', glyph: '×' },

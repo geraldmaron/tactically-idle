@@ -207,7 +207,7 @@ export async function feelWalk({ chromium, executablePath, baseURL, scenarios = 
             const cont = page.locator('.operation-continuations button'); if (await cont.count()) { await cont.first().click(); continue; }
             break;
           }
-          await page.getByRole('button', { name: 'Next call', exact: true }).waitFor({ timeout: 8000 });
+          await page.getByRole('button', { name: 'Back to calls', exact: true }).waitFor({ timeout: 8000 });
           await measure('debrief');
         });
       } catch { /* the failed step is recorded; later screens of this scenario are skipped */ }

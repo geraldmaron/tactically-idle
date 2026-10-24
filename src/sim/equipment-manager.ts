@@ -6,7 +6,7 @@ import { departmentUpkeep, EQUIPMENT_MANAGER, equipmentManagerBenefits, hasEquip
 export function setMaintenanceBudget(state: GameState, perHour: number): HandlerResult {
   if (!hasEquipmentManager(state)) return { ok: false, reason: 'Hire the equipment manager first.' };
   if (!Number.isInteger(perHour) || perHour < 0 || perHour > EQUIPMENT_MANAGER.maxHourlyBudget) {
-    return { ok: false, reason: `Choose an hourly service ceiling from $0 to $${EQUIPMENT_MANAGER.maxHourlyBudget}.` };
+    return { ok: false, reason: `Choose an hourly service ceiling from 0 to ${EQUIPMENT_MANAGER.maxHourlyBudget} funding.` };
   }
   state.department.maintenanceBudgetPerHour = perHour;
   return { ok: true };

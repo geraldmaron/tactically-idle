@@ -10,7 +10,7 @@ import { stressBand } from '../../sim/officer';
 import type { Candidate, CertId, DebriefResult, GameState, Id, Officer, RatingKey, SquadId } from '../../sim/types';
 import { CERT_ICON, RATING_META, ROLE_META, STATUS_META, type StatusKey } from '../components/labels';
 import type { IconName } from '../icons';
-import { money, perHour } from '../format';
+import { funding, fundingPerHour } from '../format';
 import { scenarioTitle } from './helpers';
 import { officerStatus } from './squad-model';
 
@@ -108,7 +108,7 @@ export function standoutLine(officer: Pick<Officer, 'ratings' | 'certs'>): strin
 
 /** Terms in small print: the wage, then what it costs to sign. */
 export function hireTerms(candidate: Pick<Candidate, 'signingCost'> & { officer: Pick<Officer, 'wage'> }): string {
-  return `${perHour(candidate.officer.wage)} · ${money(candidate.signingCost)} to sign`;
+  return `${fundingPerHour(candidate.officer.wage)} · ${funding(candidate.signingCost)} to sign`;
 }
 
 // ---------------------------------------------------------------- last call

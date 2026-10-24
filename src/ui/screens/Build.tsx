@@ -82,10 +82,10 @@ export function BuildScreen() {
 
   return <div className="page build-page" ref={top}>
     <h1 className="sr-only">Build</h1>
-    <Station rooms={rooms} name={game.department.name} fresh={fresh} onOpen={(id) => openRoom(id)} />
+    <Station rooms={rooms} name={game.department.name} fresh={fresh} next={next?.room.id ?? null} onOpen={(id) => openRoom(id)} />
     {next && <NextCard game={game} view={next} now={now} onOpen={() => openRoom(next.room.id, next.next!.node.id)} />}
-    <Section title="Rooms" icon="build" id="build-rooms">
-      <div className="card room-list" data-ui-list>
+    <Section title="Rooms" icon="build" id="build-rooms" count={`${rooms.filter((r) => r.open).length} of ${rooms.length} open`} well>
+      <div className="room-list" data-ui-list>
         {views.map((v) => <RoomCard key={v.room.id} game={game} view={v} now={now} onOpen={() => openRoom(v.room.id)} />)}
         <GarageCard garage={garage} onOpen={() => openRoom('garage')} />
       </div>

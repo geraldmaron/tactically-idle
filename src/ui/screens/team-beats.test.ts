@@ -4,7 +4,7 @@ import { COURSES } from '../../content/courses';
 import { makeState } from '../../sim/test-fixtures';
 import { beatAnnouncement } from '../components/beat-controller';
 import { ROLE_META } from '../components/labels';
-import { perHour } from '../format';
+import { fundingPerHour } from '../format';
 import { enrolledBeat, patrolEnrolledBeat, patrolSignedBeat, promotedBeat, signedBeat, staffSignedBeat } from './team-beats';
 
 const officer = () => Object.values(makeState().officers)[0];
@@ -13,8 +13,8 @@ describe('Team beats', () => {
   it('SIGNED shows the new officer with their role and wage and plays the hire sting', () => {
     const o = officer();
     const beat = signedBeat(o);
-    expect(beat).toMatchObject({ stamp: 'Signed', sting: 'hire', face: { officer: o, name: `${o.firstName} ${o.surname}` }, line: `${ROLE_META[o.role].label}, ${perHour(o.wage)}` });
-    expect(beatAnnouncement(beat)).toBe(`Signed. ${o.firstName} ${o.surname}. ${ROLE_META[o.role].label}, ${perHour(o.wage)}`);
+    expect(beat).toMatchObject({ stamp: 'Signed', sting: 'hire', face: { officer: o, name: `${o.firstName} ${o.surname}` }, line: `${ROLE_META[o.role].label}, ${fundingPerHour(o.wage)}` });
+    expect(beatAnnouncement(beat)).toBe(`Signed. ${o.firstName} ${o.surname}. ${ROLE_META[o.role].label}, ${fundingPerHour(o.wage)}`);
   });
 
   it('ENROLLED names the course and when the officer is back, with the enrol sting', () => {

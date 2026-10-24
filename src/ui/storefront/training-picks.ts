@@ -40,7 +40,7 @@ export interface CoursePick {
 }
 
 /** Reasons the course check gives for the department as a whole, not for one officer. */
-const DEPARTMENT_WIDE = /^(No free training slot|Needs \$)/;
+const DEPARTMENT_WIDE = /^(No free training slot|Needs [\d,.]+K? funding)/;
 
 /** The officers a course would help most, best first. For a rating course that is the largest recorded
  * gain, then the lowest current rating (most room). For a qualification it is the best relevant rating.

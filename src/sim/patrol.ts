@@ -5,7 +5,7 @@ import type { Persona } from '../content/personas';
 import type { GameState, HandlerResult, Id, PatrolEmployee, PatrolGrade, PatrolReceipt, PatrolState, PatrolTrainingCompletion } from './types';
 import { ECONOMY_TUNING, HOUR_MS, ratesAt } from './economy';
 import { postFunding } from './ledger';
-import { money } from './format';
+import { funding } from './format';
 
 export interface PatrolGradeDefinition {
   name: string;
@@ -194,7 +194,7 @@ export function patrolBoostQuote(state: GameState, boostId: Id): PatrolBoostQuot
     incrementalReturn, netBefore: ratesAt(state, at).net, netAfter: ratesAt(state, at).net + netDelta };
   if (rate.baseGross <= 0) return refuse(result, 'No patrol service is currently earning funding');
   if (!held && netDelta <= 0) return refuse(result, 'Patrol funding already has the maximum boost');
-  if (incrementalReturn < definition.cost) return refuse(result, `Current patrol staffing would return only ${money(incrementalReturn)} during this boost`);
+  if (incrementalReturn < definition.cost) return refuse(result, `Current patrol staffing would return only ${funding(incrementalReturn)} during this boost`);
   if (!Number.isFinite(expiresAt)) return refuse(result, 'This patrol boost cannot be extended further');
   return affordability(state, result);
 }
