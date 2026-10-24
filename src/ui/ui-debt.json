@@ -3,7 +3,7 @@
  "static": {
   "R1": {
    "target": 0,
-   "total": 703,
+   "total": 702,
    "counts": {
     "src/ui/app.css": 3,
     "src/ui/components/choice-rail.css": 7,
@@ -32,7 +32,7 @@
     "src/ui/screens/operation-squads.css": 13,
     "src/ui/screens/operations/live-world.css": 2,
     "src/ui/screens/operations/ops-world.css": 44,
-    "src/ui/screens/ops-visual.css": 88,
+    "src/ui/screens/ops-visual.css": 87,
     "src/ui/screens/prep-briefing.css": 1,
     "src/ui/screens/preparation-options.css": 4,
     "src/ui/screens/preparation-support.css": 5,
@@ -134,7 +134,7 @@
   },
   "R3": {
    "target": 0,
-   "total": 226,
+   "total": 225,
    "counts": {
     "src/ui/app.css": 1,
     "src/ui/components/choice-rail.css": 2,
@@ -157,7 +157,7 @@
     "src/ui/screens/operation-feedback.css": 8,
     "src/ui/screens/operation-squads.css": 3,
     "src/ui/screens/operations/ops-world.css": 18,
-    "src/ui/screens/ops-visual.css": 35,
+    "src/ui/screens/ops-visual.css": 34,
     "src/ui/screens/prep-briefing.css": 1,
     "src/ui/screens/recruit.css": 6,
     "src/ui/screens/situation-panel.css": 4,

@@ -494,10 +494,13 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
             <span className="prep-item-art" aria-hidden="true"><GearArt itemId={o.item.id} size={34} />{qty > 0 && <b className="prep-item-qty">×{qty}</b>}</span>
             <span className="prep-item-main">
               <strong>{o.item.name}</strong>
-              <span className="prep-item-sub">{`${free} free${others ? ` · ${others} with other squads` : ''}`}{useful && <span className="prep-item-useful"><Icon name="star" size={16} />Useful</span>}</span>
+              {useful && <span className="prep-item-useful"><Icon name="star" size={16} />Useful</span>}
             </span>
             <span className="prep-item-ctl"><Stepper label={o.item.name} value={qty} max={Math.max(qty, free)} onChange={(n) => setQty(sid, o.item.id, Math.min(n, Math.max(qty, free)))} /></span>
-            {(units.length > 0 || units.length < qty) && <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
+            {/* One line that never changes height (owner, 2026-10-24: the sheet jumped as units were added):
+                what is free while none are taken, then the units going, scrolling sideways when they overflow. */}
+            {qty === 0 ? <span className="prep-item-sub">{`${free} free${others ? ` · ${others} with other squads` : ''}`}</span>
+              : <ul className="lo-units" aria-label={`Units taking ${o.item.name}`}>
               {units.map((u) => {
                 const condition = projectedCondition(g, u, Math.max(now, g.department.clockHighWater), departmentUpkeep(g));
                 const state = unitStateOf(condition, o.item.wear);
@@ -507,7 +510,8 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
                   <span>{Math.round(condition)}%{meta.tone === 'bad' ? ` · ${state} · ${pct(unitEffectiveness({ ...u, condition }, o.item))} effect` : ''}</span>
                 </li>;
               })}
-              {units.length < qty && <li className="lo-unit lo-unit-bad lo-unit-missing"><Icon name="warning" size={16} /><span>{qty - units.length} units missing; only {units.length} of {qty} ready.</span></li>}
+              {units.length < qty && <li className="lo-unit lo-unit-bad lo-unit-missing"><Icon name="warning" size={16} /><span>{qty - units.length} missing</span></li>}
+              {free > qty && <li className="lo-unit-left">{free - qty} more free</li>}
             </ul>}
           </li>;
         })}

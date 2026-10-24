@@ -34,21 +34,24 @@
 .prepare .stageopt-main strong { font-size: 13.5px; overflow-wrap: anywhere; }
 .prepare .stageopt-check { flex-shrink: 0; }
 
-.prepare .prep-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 6px; }
-.prepare .prep-item { display: grid; grid-template-columns: 40px minmax(0, 1fr); grid-template-areas: 'art main' 'ctl ctl' 'units units'; align-items: center; gap: 6px 8px; padding: 7px; border-radius: 9px; border: 1px solid var(--hair); background: radial-gradient(120% 80% at 0% 0%, rgba(31, 85, 184, 0.2), transparent 70%), rgba(14, 22, 36, 0.6); }
-.prepare .prep-item-on { border-color: rgba(63, 208, 142, 0.55); }
-.prepare .prep-item.lo-useful { border-color: rgba(69, 207, 143, 0.55); }
-.prep-item-art { grid-area: art; position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: rgba(8, 13, 24, 0.55); color: var(--chalk-dim); }
+/* Armory rows (the "carries" sheet renders outside .prepare, so nothing here is scoped to it). One column
+   of rows: art, name and the stepper in a fixed right column so every quantity lines up, then one line
+   under the name that holds the free count or the units going and never changes height. */
+.prep-items { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.prep-item.lo { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'art main ctl' 'art units units'; align-items: center; gap: 4px 10px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--hair); background: radial-gradient(120% 80% at 0% 0%, rgba(31, 85, 184, 0.2), transparent 70%), rgba(14, 22, 36, 0.6); }
+.prep-item-on { border-color: rgba(63, 208, 142, 0.55); }
+.prep-item.lo-useful { border-color: rgba(69, 207, 143, 0.55); }
+.prep-item-art { grid-area: art; align-self: start; position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: rgba(8, 13, 24, 0.55); color: var(--chalk-dim); }
 .prep-item-qty { position: absolute; right: -5px; bottom: -5px; padding: 0 4px; border-radius: 999px; background: var(--good); color: var(--good-ink); font-family: var(--f-title); font-size: var(--s12); line-height: 1.45; }
 .prep-item-main { grid-area: main; display: grid; gap: 1px; min-width: 0; }
 .prep-item-main strong { font-size: 13.5px; line-height: 1.15; overflow-wrap: anywhere; }
-.prep-item-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: var(--s12); color: var(--t2); }
-.prep-item-useful { display: inline-flex; align-items: center; gap: 2px; color: var(--good); font-weight: 600; }
+.prep-item-sub { grid-area: units; display: block; height: 24px; font-size: var(--s12); line-height: 24px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prep-item-useful { display: inline-flex; align-items: center; gap: 2px; font-size: var(--s14); color: var(--good); font-weight: 600; }
 .prep-item-ctl { grid-area: ctl; display: flex; justify-content: flex-end; min-width: 0; }
-.prep-item-ctl .stepper { width: 100%; justify-content: space-between; }
-.prepare .prep-item .lo-units { grid-area: units; flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 0; }
-.prepare .prep-item .lo-unit { gap: 3px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--hair); background: rgba(8, 13, 24, 0.45); font-size: var(--s12); }
-.prepare .prep-item .lo-unit-missing { border-radius: 6px; }
+.prep-item .lo-units { grid-area: units; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 4px; min-width: 0; height: 24px; padding: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.prep-item .lo-units::-webkit-scrollbar { display: none; }
+.prep-item .lo-unit { flex: none; flex-wrap: nowrap; gap: 3px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--hair); background: rgba(8, 13, 24, 0.45); font-size: var(--s12); white-space: nowrap; }
+.prep-item .lo-unit-left { flex: none; list-style: none; font-size: var(--s14); color: var(--t2); white-space: nowrap; }
 
 .prepare .prep-support-summary { padding: 8px 10px; }
 .prepare .prep-support-summary p { margin: 6px 0 0; }
@@ -67,9 +70,6 @@
 .prepfoot-status span { min-width: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 359px) {
-  .prepare .prep-items { grid-template-columns: minmax(0, 1fr); }
-  .prepare .prep-item { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: 'art main ctl' 'units units units'; }
-  .prep-item-ctl .stepper { width: auto; }
   .prepare .squadpick { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 }
 
