@@ -4,21 +4,18 @@ import { readSettings, updateSettings, type PlayerSettings } from './prefs';
 import { ADVISORY_THEMES, SETTINGS_TEXT } from './labels';
 import { SettingsControls } from './SettingsControls';
 import { PlateArt, plateUrl } from '../art/Plates';
-import { Face } from '../components/Face';
-import { useGame } from '../store';
+import '../screens/city/city-onboarding.css';
 
 /** The launch advisory, shown once before the department (owner redesign 2026-10-20, after Xbox
  * Accessibility Guideline 123). It names the game's themes and sets the filters, the card warnings
- * and the timer on one screen, then one Continue button. */
+ * and the timer on one screen, then one Continue button. The officers wait for the cold open that
+ * follows (screens/city/ColdOpen.tsx), so the first call is the first time the player meets them. */
 export function FirstRun() {
   const [draft, setDraft] = useState<PlayerSettings>(readSettings);
   const t = SETTINGS_TEXT;
-  const g = useGame();
-  // The people the player is about to command, from the squad the campaign already holds.
-  const team = (g.squads[0]?.officerIds ?? []).map((id) => g.officers[id]).filter((officer) => !!officer);
   return <main className="first-run" aria-labelledby="first-run-title">
     <div className="first-run-art plate" aria-hidden="true"><PlateArt src={plateUrl('banner_hq')} />
-      {team.length > 0 && <span className="first-run-team">{team.map((officer) => <span key={officer.id} className="first-run-member"><Face size="md" kind="officer" officer={officer} /><span>{officer.surname}</span></span>)}</span>}
+      <span className="first-run-brand">Tactically Idle</span>
     </div>
     <header className="first-run-head">
       <p className="first-run-kicker">{t.advisoryKicker}</p>

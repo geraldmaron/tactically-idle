@@ -1,38 +1,44 @@
-// "While you were away" (welcome-back): the shift report as a sheet when the player comes back.
-// Earnings were applied when the time settled, so there is nothing to collect: the sheet shows what
-// changed and Continue acknowledges it. It opens on load and after the page was hidden for at least
-// the settlement's own report threshold, never mid-play when a course finishing adds to the report.
-// Closing it without Continue keeps the report on HQ.
-import { useEffect, useRef, useState } from 'react';
-import type { GameState, ShiftReport } from '../../sim/types';
+// The return moment. Earnings were applied when the time settled, so there is nothing to collect: the report
+// shows what changed, people first (B3, a sheet), or after a week or more away the page that says where the
+// player left it (B4). It opens on load and after the page was hidden for at least the settlement's own report
+// threshold, never mid-play when a course finishing adds to the report. Closing it without the button keeps the
+// report on the City, one tap from opening again.
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ECONOMY_TUNING } from '../../sim/economy';
-import { fullName } from '../../sim/officer';
-import { COURSES } from '../../content/courses';
-import { useGame } from '../store';
+import { useGame, send } from '../store';
 import { Sheet } from './Sheet';
-import { Button, Card, Row } from './ui';
-import { Disclosure } from './Disclosure';
+import { Button } from './ui';
+import { Face } from './Face';
 import { useNav } from './nav';
-import { hqOverview } from '../../sim/hq-selectors';
 import { useToast } from './toast';
-import { ShiftReportCard, EQUIPMENT_EVENT, PERSONNEL_EVENT, grantName } from './ShiftReport';
+import { ShiftReportCard, SignedFunds, welcomeLines } from './ShiftReport';
 import { PlateArt, plateUrl } from '../art/Plates';
-import { Icon, type IconName } from '../icons';
-import { duration } from '../format';
-import { Funds } from './Funds';
-import '../settings/inset-list.css';
-import './welcome-back.css';
+import { LONG_AWAY_MS, reportView, welcomeView, type WelcomeLine } from '../screens/city/report';
+import { useSettings } from '../settings/SettingsControls';
+import { Icon } from '../icons';
+import '../styles/city-report.css';
+
+export { welcomeLines };
 
 /** How long after load or return a report may still arrive and open the sheet. The store settles
  * on load and on return (store.ts), so the report is normally there on the next render. */
 const ARM_MS = 4000;
 
+// Whether the report is open lives outside the component so the City's "While you were off" row can reopen it.
+let reportOpen = false;
+const listeners = new Set<() => void>();
+const setOpen = (open: boolean) => { reportOpen = open; listeners.forEach((l) => l()); };
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
+export const openReport = () => setOpen(true);
+export const useReportOpen = (): boolean => useSyncExternalStore(subscribe, () => reportOpen, () => false);
+
 export function WelcomeBack() {
   const g = useGame();
   const { act } = useToast();
   const nav = useNav();
+  const { personalLives } = useSettings();
+  const open = useReportOpen();
   const [shownFor, setShownFor] = useState<number | null>(null);
-  const [open, setOpen] = useState(false);
   const armedUntil = useRef(Date.now() + ARM_MS);
   const hiddenAt = useRef<number | null>(null);
   const [returns, rearm] = useState(0);
@@ -51,72 +57,61 @@ export function WelcomeBack() {
   const report = g.report;
   useEffect(() => {
     if (!report || open || Date.now() > armedUntil.current) return;
-    // One sheet per return: a report already shown up to this point stays on HQ.
+    // One sheet per return: a report already shown up to this point stays on the City.
     if (shownFor !== null && report.to <= shownFor) return;
     armedUntil.current = 0;
     setShownFor(report.to);
     setOpen(true);
   }, [report, open, shownFor, returns]);
+  // A report that is acknowledged elsewhere closes the sheet with it.
+  useEffect(() => { if (!report && reportOpen) setOpen(false); }, [report]);
 
-  if (!report) return null;
+  const view = useMemo(() => (report ? reportView(g, report, personalLives) : null), [g, report, personalLives]);
+  if (!report || !view) return null;
   const close = () => setOpen(false);
-  const proceed = () => { act({ type: 'acknowledgeReport' }); setOpen(false); };
-  // The next thing to do, offered where the report ends: the calls that arrived while away.
-  const waiting = hqOverview(g, Date.now()).board.count;
-  const toCalls = () => { proceed(); nav.go('ops'); };
-  return <Sheet open={open} onClose={close} title="While you were away" className="welcome-sheet"
-    footer={waiting > 0
-      ? <div className="welcome-foot"><Button variant="primary" block icon="calls" onClick={toCalls}>{waiting === 1 ? '1 call is waiting' : `${waiting} calls are waiting`}</Button><Button variant="quiet" block onClick={proceed}>Stay at HQ</Button></div>
-      : <Button variant="primary" block onClick={proceed}>Continue</Button>}>
-    <WelcomeSummary report={report} g={g} />
+  const proceed = (to?: () => void) => {
+    for (const line of view.people) for (const beatId of line.beatIds) send({ type: 'acknowledgeBeat', beatId });
+    act({ type: 'acknowledgeReport' });
+    setOpen(false);
+    to?.();
+  };
+  const toCity = () => proceed(() => { if (!g.activeRun) nav.go('city'); });
+
+  if (report.to - report.from >= LONG_AWAY_MS) {
+    const welcome = welcomeView(g, report);
+    return <Sheet open={open} onClose={close} title="Where you left it" className="welcome-page"
+      footer={<div className="welcome-foot">
+        {welcome.pickUp && <Button variant="primary" block onClick={() => proceed(() => nav.openOfficer(welcome.pickUp!.officerId))}>{`Pick up with ${welcome.pickUp.surname}`}</Button>}
+        <Button variant={welcome.pickUp ? 'quiet' : 'primary'} block onClick={toCity}>Show me the city</Button>
+      </div>}>
+      <WelcomePage welcome={welcome} g={g} />
+    </Sheet>;
+  }
+  return <Sheet open={open} onClose={close} title="While you were off" className="welcome-sheet"
+    footer={<Button variant="primary" block onClick={toCity}>Back to the city</Button>}>
+    <ShiftReportCard report={report} g={g} />
   </Sheet>;
 }
 
-interface Line { key: string; icon: IconName; text: string; tone?: 'mint' | 'warn' }
-
-/** The few lines worth reading first, in the order a returning commander asks: money, people, kit. */
-export function welcomeLines(report: ShiftReport, g: Pick<GameState, 'officers'>): Line[] {
-  const lines: Line[] = [];
-  const name = (id: string) => (g.officers[id] ? fullName(g.officers[id]) : 'An officer');
-  for (const grant of report.grants ?? []) lines.push({ key: `grant:${grant.nodeId}:${grant.tier}`, icon: 'star', text: `${grantName(grant)} granted at ${grant.milestone.replace(/^Level/, 'level').replace(/^Trust/, 'trust')}`, tone: 'mint' });
-  const promoted = report.personnel.filter((p) => p.event === 'promoted');
-  if (promoted.length === 1) lines.push({ key: 'promoted', icon: 'medal', text: promoted[0].detail.split('. ')[0], tone: 'mint' });
-  else if (promoted.length > 1) lines.push({ key: 'promoted', icon: 'medal', text: `${promoted.length} officers promoted`, tone: 'mint' });
-  if (report.completedCourses.length === 1) {
-    const [c] = report.completedCourses;
-    lines.push({ key: 'courses', icon: 'mortarboard', text: `${name(c.officerId)} finished ${COURSES[c.courseId]?.name ?? 'a course'}`, tone: 'mint' });
-  } else if (report.completedCourses.length > 1) {
-    lines.push({ key: 'courses', icon: 'mortarboard', text: `${report.completedCourses.length} officers finished training`, tone: 'mint' });
-  }
-  if (report.recovered.length === 1) lines.push({ key: 'rec', icon: 'heart', text: `${name(report.recovered[0])} is rested and back on the roster`, tone: 'mint' });
-  else if (report.recovered.length > 1) lines.push({ key: 'rec', icon: 'heart', text: `${report.recovered.length} officers rested and back on the roster`, tone: 'mint' });
-  const kit = (report.equipment ?? []).filter((e) => EQUIPMENT_EVENT[e.event].warn).length;
-  if (kit) lines.push({ key: 'kit', icon: 'wrench', text: `${kit} piece${kit === 1 ? '' : 's'} of kit need${kit === 1 ? 's' : ''} service`, tone: 'warn' });
-  const shortages = report.shortages.filter((line) => !/battery/i.test(line)).length;
-  if (shortages) lines.push({ key: 'short', icon: 'box', text: `${shortages} restock${shortages === 1 ? '' : 's'} could not be bought`, tone: 'warn' });
-  for (const p of report.personnel ?? []) {
-    if (!PERSONNEL_EVENT[p.event].warn) continue;
-    lines.push({ key: `p-${p.officerId}-${p.event}`, icon: PERSONNEL_EVENT[p.event].icon, text: `${name(p.officerId)} ${p.event === 'retired' ? 'has retired' : 'is retiring'}`, tone: 'warn' });
-  }
-  if (report.capped) lines.push({ key: 'cap', icon: 'clock', text: `Pay stopped after a day without orders. ${duration(report.accruedHours * 3600000)} counted.` });
-  return lines;
+function WelcomeRow({ line, g }: { line: WelcomeLine; g: ReturnType<typeof useGame> }) {
+  const officer = line.officerId ? g.officers[line.officerId] : undefined;
+  return <li className="welcome-line" data-kind={line.kind}>
+    {officer ? <Face size="md" kind="officer" officer={officer} />
+      : line.kind === 'funding' ? <span className="welcome-mark welcome-mark-funds" aria-hidden="true"><Icon name="funds" size={20} /></span>
+      : <span className="welcome-mark welcome-mark-crew" aria-hidden="true">{line.crest}</span>}
+    <span>{line.before}{line.amount !== undefined ? <b><SignedFunds value={line.amount} /></b> : line.bold ? <b>{line.bold}</b> : null}{line.after}</span>
+  </li>;
 }
 
-function WelcomeSummary({ report, g }: { report: ShiftReport; g: GameState }) {
-  const lines = welcomeLines(report, g);
-  const expenses = report.wages + report.operating + report.restockSpend + (report.maintenanceSpend ?? 0);
-  return <div className="welcome">
-    <div className="plate plate-grain welcome-hero">
-      <PlateArt src={plateUrl('hub_hq')} />
-      <span className="welcome-away"><Icon name="clock" size="sm" />{duration(report.to - report.from)} away</span>
-      <span className="welcome-net-label">Net funding</span>
-      <strong className={`welcome-net ${report.net < 0 ? 'tone-danger' : 'tone-mint'}`}><Funds value={report.net} format="signed" /></strong>
-      <span className="welcome-flow"><Funds value={report.gross} format="money" /> earned · <Funds value={expenses} format="money" /> spent</span>
+/** B4: the painted garage, how long away, one sentence on what held still, and three lines at most. */
+function WelcomePage({ welcome, g }: { welcome: ReturnType<typeof welcomeView>; g: ReturnType<typeof useGame> }) {
+  return <div className="welcome-body">
+    <div className="welcome-plate plate" aria-hidden="true"><PlateArt src={plateUrl('scene_patrol_garage')} /></div>
+    <div className="welcome-copy">
+      <span className="welcome-kicker">{welcome.days}</span>
+      <h2 className="welcome-title">Where you left it</h2>
+      <p className="welcome-intro">{welcome.intro}</p>
+      <ol className="welcome-lines">{welcome.lines.map((line) => <WelcomeRow key={line.key} line={line} g={g} />)}</ol>
     </div>
-    {lines.length > 0 ? <Card className="inset-list welcome-lines">{lines.map((line) => <Row key={line.key} data={{ 'data-tone': line.tone }}
-      lead={<Icon name={line.icon} size="md" />} title={line.text} />)}</Card> : <p className="dim welcome-quiet">A quiet shift. Nothing needs you.</p>}
-    <Disclosure name="welcome-full-report" summary="Full shift report" icon="list">
-      <ShiftReportCard report={report} g={g} acknowledge={false} />
-    </Disclosure>
   </div>;
 }
