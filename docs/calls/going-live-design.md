@@ -79,7 +79,7 @@ cost the player reads.
 
 ### Stage 1, `going_live` (3)
 
-Threat: **Address posted by {handle}** (11 min = fastest 3 + 8). A comment from {handle} puts the
+Threat: **The address goes out** (11 min = fastest 3 + 8). A comment from {handle} puts the
 street address of {place} under the picture, and the rider reads it out loud; the count jumps and
 patrol starts turning cars away at the corner. Beats count it down: the rider reads out that
 {handle} wants to know where this is (1.2), the manager's line about rent (3.4), radio says the

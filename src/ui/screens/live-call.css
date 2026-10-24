@@ -429,7 +429,8 @@
   .live-beat-decide .call-dock .callbtn-forecast { margin-top: 0; }
   .live-beat-decide .call-dock .callbtn-forecast-text { gap: var(--sp1) var(--sp3); color: var(--t3); }
   .live-beat-decide .call-dock .odds-bar, .live-beat-decide .call-dock .callbtn-meta { display: none; }
-  .live-beat-decide .call-dock .callbtn-gain > span:last-child, .live-beat-decide .call-dock .callbtn-cost > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* What a choice gains and costs is what the player decides from: it wraps in full, never cut short (owner, 2026-10-24). */
+  .live-beat-decide .call-dock .callbtn-gain > span:last-child, .live-beat-decide .call-dock .callbtn-cost > span:last-child { white-space: normal; overflow-wrap: break-word; }
   /* An empty radio log is one quiet line, not a box held open for words that may never come. */
   .live-beat-decide .comms-log:has(.comms-quiet) { display: flex; align-items: center; gap: var(--sp2); padding: var(--sp2) var(--sp3); box-shadow: none; background: transparent; border-style: dashed; }
   .live-beat-decide .comms-log:has(.comms-quiet) .comms-log-head { margin: 0; }

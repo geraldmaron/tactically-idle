@@ -16,7 +16,7 @@ export const APPROACH_NODES: TreeNode[] = [
   { id: 'going_live', stage: 'assess',
     // The address threat: a named commenter posts where the store is. The beats are the comments
     // closing in on it, read out by the rider, so the countdown is the guess getting warmer.
-    threat: { chat: CHAT.going_live, label: 'Address posted by {handle}', minutes: 11, text: 'A comment from {handle} puts the street address of {place} under the picture, and {rider.first} reads it out loud before anyone can say don’t. The shares come fast. At the corner, patrol starts turning cars around.', pressure: 4, bump: { stream: 10 },
+    threat: { chat: CHAT.going_live, label: 'The address goes out', minutes: 11, text: 'A comment from {handle} puts the street address of {place} under the picture, and {rider.first} reads it out loud before anyone can say don’t. The shares come fast. At the corner, patrol starts turning cars around.', pressure: 4, bump: { stream: 10 },
       beats: [
         { id: 'where_is_this', at: 1.2, by: 'rider', line: 'Somebody called {handle} wants to know where this is. Should I tell them?', bump: { stream: 4 } },
         { id: 'manager_low', at: 3.4, by: 'manager', line: 'Those people don’t pay your rent, {rider.first}.', moves: { rider: 'provoked' }, bump: { stream: 5 } },
@@ -83,7 +83,7 @@ export const APPROACH_NODES: TreeNode[] = [
 
   // Stage 1, run out: the address is out, and a stranger came to look.
   { id: 'address_out', stage: 'assess',
-    threat: { chat: CHAT.address_out, label: 'Someone reaches the glass', minutes: 12, text: 'Somebody ducks the tape and presses a phone against the front glass to film inside. Patrol hauls them back to the corner, and the stream shows every second of it.', pressure: 5, moves: { rider: 'provoked' }, bump: { stream: 12 },
+    threat: { chat: CHAT.address_out, label: 'The crowd pushes closer', minutes: 12, text: 'Somebody ducks the tape and presses a phone against the front glass to film inside. Patrol hauls them back to the corner, and the stream shows every second of it.', pressure: 5, moves: { rider: 'provoked' }, bump: { stream: 12 },
       beats: [
         { id: 'past_tape', at: 3.2, by: 'radio', line: 'One on foot past the line. Patrol has them.', bump: { stream: 4 } },
         { id: 'see_store', at: 6.6, by: 'rider', line: 'Somebody out there says they can see the store. Is that true?' },

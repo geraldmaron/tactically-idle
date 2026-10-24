@@ -228,7 +228,7 @@
    height unless the head wraps. */
 .threat-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-height: 26px; padding: 3px 9px 3px 7px; border: 1px solid rgba(255, 107, 87, 0.55); border-radius: 999px; background: rgba(255, 107, 87, 0.12); color: var(--harm-text); font: 600 13px/1.15 var(--f-title); letter-spacing: 0.02em; }
 .threat-pill .icon { flex: 0 0 auto; color: var(--harm); }
-.threat-pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.threat-pill-label { min-width: 0; white-space: normal; overflow-wrap: break-word; }
 .threat-pill-sep { opacity: 0.6; }
 .threat-pill-min { flex: 0 0 auto; color: var(--white); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The stage label gives way first: on a narrow phone the pill keeps its minutes and the label truncates. */
