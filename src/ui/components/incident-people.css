@@ -13,7 +13,7 @@
 .incident-people-meter [data-tone="ok"] { background: var(--mint); }
 .incident-people-meter [data-tone="danger"] { background: var(--danger); }
 .incident-people-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 0; margin: 0; list-style: none; min-width: 0; }
-.person-tile { --tone: var(--muted); display: flex; align-items: center; gap: 9px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 6px; background: rgba(11, 17, 28, 0.55); font-size: 13px; line-height: 1.35; }
+.person-tile { --tone: var(--muted); display: flex; align-items: center; gap: 9px; min-width: 0; padding: 8px; border: 1px solid color-mix(in srgb, var(--tone) 55%, var(--line)); border-radius: 6px; background: rgba(11, 17, 28, 0.55); font-size: 13px; line-height: 1.35; }
 .person-tile[data-tone="pending"] { --tone: var(--warn); }
 .person-tile[data-tone="warn"] { --tone: var(--warn); }
 .person-tile[data-tone="ok"] { --tone: var(--mint); }
@@ -32,7 +32,7 @@
 .person-note { color: var(--text-dim); font-weight: 400; }
 .incident-people-head + .incident-wounded-list { margin-top: 0; }
 .result-civilian-outcomes { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
-.result-officer-injury { display: grid; gap: 5px; padding: 9px; border-left: 2px solid var(--warn); background: var(--bg); font-size: 13px; line-height: 1.4; }
+.result-officer-injury { display: grid; gap: 5px; padding: 9px; border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); border-radius: var(--r1); background: var(--bg); font-size: 13px; line-height: 1.4; }
 .result-officer-injury strong { display: flex; align-items: center; gap: 6px; color: var(--warn); }
 .result-officer-injury strong > .icon { flex-shrink: 0; }
 .result-officer-injury > span { color: var(--text-dim); }

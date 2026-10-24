@@ -41,6 +41,7 @@ import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
 import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
 import { joinNames, squadName } from './operation-squads';
+import { officersWhoKnow } from './operations/knows';
 import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
 import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
@@ -55,6 +56,7 @@ import type { Lexicon } from '../people/lexicon';
 import './operation-squads.css';
 import './ops-visual.css';
 import './live-call.css';
+import './operations/live-world.css';
 import { Disclosure } from '../components/Disclosure';
 import { runRoster } from '../../sim/squads';
 
@@ -314,7 +316,7 @@ export function LiveView(p: LiveViewProps) {
                 what is said on scene in its reserved box, then the choices. The stage rail names the stage, and
                 the strip carries the threat and what each source does to the odds, so neither repeats
                 here. Tapping a card opens its review; tapping the reviewed card again closes it. */}
-            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers}
+            <DecisionList prompt={p.progress.prompt} exchange={p.progress.exchange} actions={available} reach={reach} selectedId={sel?.id ?? null} expanded={expanded} officers={p.g.officers} knows={officersWhoKnow(p.g)}
               guidance={commsLog} onSelect={p.onSelectAction} onExpand={() => setExpandedStage(expanded ? null : p.progress.stage)} />
           </div>
           {p.failedResponse}

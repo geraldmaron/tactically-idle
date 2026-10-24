@@ -234,7 +234,7 @@
 .cl-team .cl-squads { gap: 0; border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); overflow: hidden; }
 .cl-team .cl-squad { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "badge main crew mark" "badge main ready mark"; gap: 0 var(--sp3); padding: var(--sp2) var(--sp3); border: 0; border-radius: 0; box-shadow: none; background: transparent; }
 .cl-team .cl-squad + .cl-squad { border-top: 1px solid var(--hair); }
-.cl-team .cl-squad-on { background: var(--act-soft); box-shadow: inset 3px 0 0 var(--act); }
+.cl-team .cl-squad-on { background: var(--act-soft); box-shadow: inset 0 0 0 1px var(--act); }
 .cl-team .cl-squad .cl-squad-badge { width: 40px; height: 40px; font-size: var(--s22); }
 .cl-team .cl-squad-main strong { font-size: var(--s18); }
 .cl-team .cl-squad-crew { justify-self: end; padding-left: 0; }

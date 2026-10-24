@@ -6,6 +6,8 @@ import { getScenario } from '../../sim/scenario-registry';
 import { ActionBar, Button, Card } from '../components/ui';
 import { FlowScreen } from '../components/chrome';
 import { callFlow } from './call-flow';
+import { opsView } from './operations/view';
+import { DebriefWorld } from './operations/DebriefWorld';
 import { DebriefConsequences, DebriefRewards, DebriefScore, DebriefSummary, OfficerResults, type DebriefOfficers } from '../components/DebriefResults';
 import { useToast } from '../components/toast';
 import { Sheet } from '../components/Sheet';
@@ -47,7 +49,7 @@ export function OpsDebrief() {
   const d = pendingDebrief(g);
   // Both settle the call first; Casebook then lands on the board's record of calls taken.
   const done = () => act({ type: 'closeDebrief' }).ok && (callFlow.close(), true);
-  const toCasebook = () => { if (done()) requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('casebook')?.scrollIntoView({ block: 'start' }))); };
+  const toCasebook = () => { if (done()) opsView.section('archive'); };
   const footer = <ActionBar className="cl-actions" quiet={{ label: 'Casebook', icon: 'book', onClick: toCasebook }} primary={{ label: 'Back to calls', onClick: done }} />;
   if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
@@ -61,7 +63,7 @@ export function OpsDebrief() {
   // A flow with no Back (components/chrome.tsx): the shell draws the head and Done.
   return <GamePeopleProvider lexicon={people}><FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page debrief cl-flow-body">
-      <DebriefContents result={d} officers={g.officers} decisions={decisions} scenario={scenario ?? undefined} department={{ funding: g.department.funding, level: g.department.level, service: g.department.service }} />
+      <DebriefContents result={d} officers={g.officers} world={<DebriefWorld debrief={d} />} decisions={decisions} scenario={scenario ?? undefined} department={{ funding: g.department.funding, level: g.department.level, service: g.department.service }} />
       {import.meta.env.DEV && <OpenInLab getState={() => g} />}
     </div>
   </FlowScreen></GamePeopleProvider>;

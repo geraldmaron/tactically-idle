@@ -1,0 +1,181 @@
+/* Operations in the night-city look (docs/world-redesign.md, C1 to C3). Tokens only: theme.css is the one file
+   that spells a colour. Cards are bordered all the way round; a state is a tint, a word or a picture, never a
+   stripe down one side. */
+.ow-home { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp3); padding: var(--sp3) var(--gutter) 0; }
+.ow-home > * { min-width: 0; }
+.ow-home .page { padding-inline: 0; }
+.ow-mono { font-family: var(--f-mono); font-size: var(--s12); letter-spacing: var(--kicker-track); text-transform: uppercase; }
+.ow-kicker { margin: 0; font-family: var(--f-mono); font-size: var(--s12); font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; }
+.ow-kicker-live { color: var(--live-text); }
+.ow-kicker-people { color: var(--people-text); }
+.ow-note { margin: 0; font-size: var(--s14); line-height: 1.4; color: var(--t3); }
+.ow-warn { color: var(--warn-text); }
+.ow-good { color: var(--good); }
+.ow-intel { color: var(--intel-text); }
+
+/* The segmented control. */
+.ow-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 3px; border-radius: var(--r2); background: var(--ink-1); }
+.ow-seg-tab { position: relative; min-height: var(--touch); border: 0; border-radius: var(--r1); background: transparent; color: var(--t3); font-family: var(--f-ui); font-size: var(--s14); cursor: pointer; }
+.ow-seg-tab[aria-selected="true"] { background: var(--hair); color: var(--t1); font-weight: 600; }
+.ow-seg-dot { position: absolute; top: 10px; right: 14%; width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
+
+.ow-page { display: grid; gap: var(--sp3); align-content: start; }
+.ow-back { display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); width: fit-content; padding: 0; border: 0; background: transparent; color: var(--t3); font-size: 15px; cursor: pointer; }
+
+/* Warrants ready on Now. */
+.ow-ready { display: grid; gap: var(--sp2); }
+.ow-ready-list { display: grid; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.ow-ready-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp3); align-items: center; width: 100%; min-height: 76px; padding: var(--sp3); border: 1px solid var(--intel-edge); border-radius: var(--r1); background: var(--intel-soft); color: var(--t1); text-align: left; cursor: pointer; }
+.ow-ready-photo { display: grid; place-items: end center; width: 48px; height: 58px; overflow: hidden; border: 1px solid var(--dossier-muted); border-radius: var(--r0); background: var(--dossier); color: var(--dossier-muted); }
+.ow-ready-photo svg { width: 44px; height: 44px; }
+.ow-ready-text { display: grid; gap: 2px; min-width: 0; }
+.ow-ready-kicker { color: var(--intel-text); }
+.ow-ready-name { font-size: var(--s16); overflow-wrap: anywhere; }
+.ow-ready-sub { font-size: 13px; color: var(--t3); }
+.ow-ready-trail { display: grid; justify-items: end; gap: var(--sp1); color: var(--t3); }
+.ow-ready-funds { color: var(--good); font-weight: 600; }
+
+/* Crews and the ladder board. */
+.ow-crews { display: flex; gap: var(--sp2); overflow-x: auto; padding-bottom: 2px; }
+.ow-crew-chip { flex: none; min-height: var(--touch); padding: 0 14px; border: 1px solid var(--hair-2); border-radius: 22px; background: transparent; color: var(--t3); font-size: var(--s14); cursor: pointer; }
+.ow-crew-chip[aria-selected="true"] { border-color: var(--live); background: var(--live-soft); color: var(--t1); font-weight: 600; }
+.ow-crew-meta { display: flex; justify-content: space-between; gap: var(--sp3); margin: 0; font-size: 13px; color: var(--t3); }
+.ow-ladder { display: grid; justify-items: center; gap: 0; padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); background-color: var(--ink-0); background-image: radial-gradient(var(--divider) 1px, transparent 1px); background-size: 16px 16px; }
+.ow-tier { display: grid; gap: var(--sp2); width: 100%; }
+.ow-tier-label { margin: 0; font-weight: 500; color: var(--t-meta); }
+.ow-link { width: 0; height: 16px; border-right: 1.5px dashed var(--hair-2); }
+.ow-row { display: grid; gap: var(--sp2); width: 100%; }
+.ow-row-1 { grid-template-columns: minmax(0, 150px); justify-content: center; }
+.ow-row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ow-row-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ow-card { display: grid; align-content: center; gap: 2px; min-height: 88px; padding: var(--sp2) 10px; border: 1px dashed var(--hair-2); border-radius: var(--r1); background: var(--ink-1); color: var(--t1); text-align: left; font-family: var(--f-ui); }
+button.ow-card { cursor: pointer; }
+.ow-card-big { justify-items: center; text-align: center; min-height: 96px; }
+.ow-card-name { font-size: 14px; overflow-wrap: anywhere; }
+.ow-card-sub { font-size: 12px; color: var(--t3); overflow-wrap: anywhere; }
+.ow-card-unknown { color: var(--t3); }
+.ow-card-unknown .ow-card-name { color: var(--t3); }
+.ow-card-intel, .ow-card-known { border-style: solid; border-color: var(--hair-2); background: var(--ink-2); }
+.ow-card-ready { border: 1.5px solid var(--intel); background: var(--intel-soft); }
+.ow-card-board { border: 1.5px solid var(--live); background: var(--live-soft); }
+.ow-card-held, .ow-card-taken { border: 1px solid var(--good-edge); background: var(--good-soft); }
+.ow-tag-ready { color: var(--intel-text); }
+.ow-tag-board { color: var(--live-text); }
+.ow-tag-held { color: var(--good); }
+.ow-tag-known, .ow-tag-intel, .ow-tag-unknown { color: var(--t-meta); }
+.ow-card-tag { font-size: 11px; }
+.ow-bar { display: block; width: 84px; max-width: 100%; height: 4px; margin-top: 2px; border-radius: 2px; background: var(--hair); }
+.ow-bar i { display: block; height: 4px; border-radius: 2px; background: var(--intel); }
+.ow-small { display: grid; place-content: center; justify-items: center; gap: 2px; min-height: 64px; padding: 4px; border: 1px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-2); color: var(--t1); font-family: var(--f-ui); }
+.ow-small-unknown { border-style: dashed; background: transparent; color: var(--t-meta); font-size: 18px; }
+.ow-small-held, .ow-small-taken { border-color: var(--good-edge); background: var(--good-soft); }
+button.ow-small { cursor: pointer; }
+.ow-small-name { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.ow-small-tag { font-size: 10px; letter-spacing: 0.06em; }
+.ow-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; width: 100%; }
+.ow-cell { display: block; height: 22px; border-radius: 3px; background: var(--hair-2); }
+.ow-cell-held { background: var(--good-edge); }
+.ow-cell-known { background: var(--hair-2); }
+.ow-cell-unknown { background: transparent; border: 1px dashed var(--hair-2); }
+.ow-cell-taken { background: transparent; border: 1px solid var(--good-edge); }
+.ow-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font-size: 12px; color: var(--t3); }
+.ow-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ow-legend .ow-cell { width: 10px; height: 10px; border-radius: 2px; }
+.ow-crew-line { margin: 0; font-size: 13px; line-height: 1.45; color: var(--t2); }
+
+/* The dossier: ivory paper on the dark ground. */
+.ow-paper { position: relative; display: grid; gap: 14px; padding: var(--sp4); border-radius: var(--r0); background: var(--dossier); color: var(--dossier-ink); box-shadow: var(--lift-2); }
+.ow-paper-head { display: flex; gap: 14px; align-items: center; }
+.ow-paper-stamped .ow-paper-head { margin-top: 30px; }
+.ow-photo { display: grid; place-items: end center; flex: none; width: 76px; height: 92px; overflow: hidden; border: 1px solid var(--dossier-muted); background: color-mix(in srgb, var(--dossier-muted) 25%, var(--dossier)); color: var(--dossier-muted); }
+.ow-photo svg { width: 70px; height: 70px; }
+.ow-paper-id { display: grid; gap: 3px; min-width: 0; }
+.ow-paper-kicker { color: var(--dossier-muted); }
+.ow-paper-name { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.ow-paper-sub { font-size: 14px; color: var(--dossier-muted); }
+.ow-stamp { position: absolute; top: 12px; right: 12px; transform: rotate(-6deg); padding: 2px 8px; border: 2px solid var(--act-lo); border-radius: 3px; color: var(--act-lo); background: var(--dossier); font-family: var(--f-display); font-weight: 800; font-size: 16px; letter-spacing: 0.1em; }
+.ow-file { display: grid; gap: var(--sp2); }
+.ow-file-list { display: grid; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
+.ow-file-line { display: flex; gap: 10px; margin: 0; font-size: 14px; line-height: 1.35; }
+.ow-file-when { flex: none; width: 52px; padding-top: 2px; font-size: 11px; color: var(--dossier-muted); }
+.ow-paper-rule { height: 1px; background: color-mix(in srgb, var(--dossier-muted) 40%, var(--dossier)); }
+.ow-paper-funds { display: flex; justify-content: space-between; align-items: center; gap: var(--sp3); }
+.ow-paper-funds-text { display: grid; gap: 2px; }
+.ow-paper-note { font-size: 13px; color: var(--dossier-muted); }
+.ow-paper-amount { font-weight: 600; font-size: 22px; color: var(--dossier-ink); }
+.ow-paper-amount .funds-glyph { color: var(--dossier-muted); }
+.ow-knows { display: grid; gap: var(--sp2); }
+.ow-tie { display: flex; gap: var(--sp3); align-items: center; padding: 10px; border: 1px solid var(--people-edge); border-radius: var(--r1); background: var(--people-soft); }
+.ow-tie-text { font-size: 14px; line-height: 1.4; }
+.ow-refusal { display: flex; gap: var(--sp2); align-items: flex-start; margin: 0; padding: 10px var(--sp3); border: 1px solid var(--live-edge); border-radius: var(--r1); background: var(--live-soft); color: var(--live-text); font-size: 14px; line-height: 1.4; }
+.ow-refusal svg { flex: none; margin-top: 2px; }
+.ow-cta { padding-top: var(--sp2); }
+.ow-cta .btn { min-height: 54px; }
+
+/* Warrant prep. */
+.ow-prep { display: grid; align-content: start; }
+.ow-plate { position: relative; margin-inline: calc(-1 * var(--gutter)); margin-top: calc(-1 * var(--sp3)); height: 210px; overflow: hidden; background: var(--ink-1); }
+.ow-plate .plate-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ow-plate-fade { position: absolute; inset: auto 0 0; height: 110px; background: linear-gradient(180deg, transparent, var(--ink-0)); }
+.ow-plate-back { position: absolute; top: var(--sp3); left: var(--sp3); display: grid; place-items: center; width: var(--touch); height: var(--touch); border: 0; border-radius: 50%; background: color-mix(in srgb, var(--ink-0) 75%, transparent); color: var(--t1); cursor: pointer; }
+.ow-prep-body { display: grid; gap: var(--sp3); margin-top: -34px; position: relative; }
+.ow-prep-title { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: 36px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.ow-prep-line { margin: 0; font-size: 14px; line-height: 1.45; color: var(--t3); }
+.ow-squad { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); }
+.ow-squad-faces { display: flex; flex: none; }
+.ow-squad-faces .face, .ow-squad-faces .face-status { margin-left: -8px; }
+.ow-squad-faces > :first-child { margin-left: 0; }
+.ow-squad-text { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.ow-squad-bond { font-size: 12px; color: var(--intel-text); }
+.ow-tie-choice { display: grid; gap: var(--sp2); margin: 0; padding: 0; border: 0; }
+.ow-tie-choice legend { margin-bottom: var(--sp1); padding: 0; }
+.ow-radio { display: flex; gap: 10px; align-items: flex-start; padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); color: var(--t1); text-align: left; font-family: var(--f-ui); cursor: pointer; }
+.ow-radio-on { border-color: var(--live); background: var(--live-soft); }
+.ow-radio-dot { display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin-top: 2px; border: 2px solid var(--hair-2); border-radius: 50%; }
+.ow-radio-dot i { width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.ow-radio-on .ow-radio-dot { border-color: var(--live); }
+.ow-radio-on .ow-radio-dot i { background: var(--live); }
+.ow-radio-text { display: grid; gap: 3px; }
+.ow-radio-text b { font-size: 15px; }
+.ow-radio-text span { font-size: 13px; line-height: 1.4; color: var(--t2); }
+.ow-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); }
+.ow-tile { display: grid; align-content: start; gap: 2px; min-width: 0; padding: var(--sp2) 10px; border-radius: var(--r1); background: var(--ink-1); }
+.ow-tile span { font-size: 12px; color: var(--t3); }
+.ow-tile b { font-size: 15px; overflow-wrap: anywhere; }
+.ow-cta-foot { padding: var(--sp4) 0 var(--sp5); }
+
+.ow-archive-trail { display: grid; justify-items: end; gap: 2px; font-size: 13px; color: var(--good); }
+
+.ow-seg-tab { white-space: nowrap; }
+@media (max-width: 350px) {
+  .ow-seg { grid-template-columns: 1fr 1.45fr 1fr; }
+  .ow-seg-tab { padding-inline: 2px; font-size: 13px; }
+  .ow-tiles { grid-template-columns: 1fr; }
+  .ow-prep-title { font-size: 30px; }
+  .ow-row-5 { gap: 4px; }
+}
+
+/* The debrief (D2): case tiles, then what stays with each officer. */
+.ow-tiles-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ow-tiles-2 .ow-tile { padding: 10px; border: 1px solid var(--hair); }
+.ow-stays { display: grid; gap: var(--sp2); }
+.ow-stay { display: flex; gap: var(--sp3); padding: 10px; border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); }
+.ow-stay-first { border-color: var(--people-edge); background: var(--people-soft); }
+.ow-stay .face { flex: none; border-radius: var(--r1); }
+.ow-stay-text { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.ow-stay-text b { font-size: 15px; }
+.ow-stay-line { font-size: 13px; line-height: 1.4; color: var(--t2); overflow-wrap: anywhere; }
+.ow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ow-chip { padding: 3px 7px; border-radius: 3px; font: 500 11px/1.3 var(--f-mono); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.ow-chip-people { background: var(--people-soft); color: var(--people-text); }
+.ow-chip-intel { background: var(--intel-soft); color: var(--intel-text); }
+.ow-chip-good { background: var(--good-soft); color: var(--good); }
+.ow-chip-warn { background: color-mix(in srgb, var(--warn) 14%, var(--ink-1)); color: var(--warn-text); }
+.ow-pair { display: flex; gap: var(--sp3); align-items: center; padding: 10px; border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); }
+.ow-pair-faces { display: flex; flex: none; }
+.ow-pair-faces .face { margin-left: -8px; }
+.ow-pair-faces .face:first-child { margin-left: 0; }
+
+.ow-stay-faces { display: flex; flex: none; align-items: flex-start; }
+.ow-stay-faces-many { flex-wrap: wrap; width: 76px; gap: 4px; }
+.ow-stay-faces .face { border-radius: var(--r1); }

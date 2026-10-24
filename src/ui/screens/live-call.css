@@ -136,12 +136,12 @@
 /* Last decision: one row above the stage, opening in place to the full record. */
 .live .operation-feedback-folded { margin: 12px var(--gutter) 4px; }
 .live .operation-feedback-folded .operation-feedback-heading { margin-bottom: 0; }
-.last-decision { border: 1px solid var(--hair); border-left: 3px solid var(--hair-2); border-radius: var(--r1); background: rgba(8, 13, 24, 0.35); }
+.last-decision { border: 1px solid var(--hair); border-radius: var(--r1); background: rgba(8, 13, 24, 0.35); }
 .last-decision > .disclosure-summary { padding: 8px 10px; }
 .last-decision > .disclosure-body { padding: 0 6px 6px; }
-.last-decision-favorable { border-left-color: var(--good); }
-.last-decision-mixed { border-left-color: var(--warn); }
-.last-decision-adverse, .last-decision-force { border-left-color: var(--harm); }
+.last-decision-favorable { border-color: var(--good-edge); }
+.last-decision-mixed { border-color: var(--warn); }
+.last-decision-adverse, .last-decision-force { border-color: var(--live-edge); }
 .last-decision .decision-card { border: 0; background: transparent; padding: 4px 4px 0; }
 
 /* The result beat: the record reads at full size, Continue is pinned. */
@@ -270,7 +270,7 @@
 .live .comms-log-lines { height: calc(2 * 1.4em + var(--sp2)); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; font-size: 14px; scrollbar-width: thin; }
 .live .comms-log-lines:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: 4px; }
 .live .comms-quiet { color: var(--t2); font-style: italic; }
-.live .comms-landed { display: grid; gap: 5px; padding: 5px 7px; border-radius: 6px; background: rgba(255, 59, 48, 0.18); box-shadow: inset 3px 0 0 var(--siren-r); opacity: 1 !important; }
+.live .comms-landed { display: grid; gap: 5px; padding: 5px 7px; border-radius: 6px; background: rgba(255, 59, 48, 0.18); border: 1px solid var(--live-edge); opacity: 1 !important; }
 .live .threat-landed { display: grid; gap: 5px; }
 .live .threat-landed-text { display: flex; align-items: flex-start; gap: 5px; margin: 0; font: 600 14px/1.4 var(--f-ui); color: var(--white); }
 .live .threat-landed-text .icon { flex: 0 0 auto; margin-top: 3px; color: var(--harm); }
@@ -396,7 +396,7 @@
 .live .callbtn { border-radius: var(--r2); border-color: var(--hair-2); background: var(--surface-1); box-shadow: var(--lift-1); transition: transform 120ms ease, box-shadow 160ms ease, border-color 160ms ease; }
 .live .callbtn:active:not(.callbtn-off) { transform: scale(0.985); }
 .live .callbtn-title { font-size: var(--s18); }
-.live .callbtn-on { background: var(--act); background-image: linear-gradient(180deg, var(--act-hi), var(--act-lo)); box-shadow: var(--lift-2), var(--glow-act); }
+.live .callbtn-on { border-color: var(--live); background: var(--live-soft); background-image: none; box-shadow: 0 0 0 1px var(--live); }
 .live .callbtn-off { background: transparent; box-shadow: none; }
 
 .live .operation-feedback .decision-card { background: var(--surface-1); box-shadow: var(--lift-2); }
@@ -415,8 +415,8 @@
 .live .callbtn-gain > i { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good-text); }
 .live .callbtn-cost { color: var(--t-plate); }
 .live .callbtn-cost > i { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn-text); }
-.live .callbtn-on .callbtn-gain, .live .callbtn-on .callbtn-cost { color: var(--act-ink); }
-.live .callbtn-on .callbtn-gain > i, .live .callbtn-on .callbtn-cost > i { background: color-mix(in srgb, var(--act-ink) 18%, transparent); color: var(--act-ink); }
+.live .callbtn-on .callbtn-gain, .live .callbtn-on .callbtn-cost { color: var(--t1); }
+.live .callbtn-on .callbtn-gain > i, .live .callbtn-on .callbtn-cost > i { background: color-mix(in srgb, var(--t1) 18%, transparent); color: var(--t1); }
 
 /* One scroll (Live Call Single Scroll canvas, 2026-10-24): the choices sit in the page's flow right after
    the moment, never in a pinned dock with a scroll of its own; only the slim header is pinned. The

@@ -76,15 +76,15 @@
 /* ------------------------------------------------------------ live operation (layout in live-call.css) */
 
 /* What happened: the latest result leads, read as a beat, not a log row. */
-.live .operation-feedback .decision-card { border-left: 3px solid var(--hair-2); }
-.live .operation-feedback .decision-favorable { border-left-color: var(--good); }
-.live .operation-feedback .decision-mixed { border-left-color: var(--warn); }
-.live .operation-feedback .decision-adverse, .live .operation-feedback .decision-force { border-left-color: var(--harm); }
+.live .operation-feedback .decision-card { border: 1px solid var(--hair-2); }
+.live .operation-feedback .decision-favorable { border-color: var(--good-edge); background: var(--good-soft); }
+.live .operation-feedback .decision-mixed { border-color: var(--warn); }
+.live .operation-feedback .decision-adverse, .live .operation-feedback .decision-force { border-color: var(--live-edge); background: var(--live-soft); }
 .live .operation-feedback-heading h2 { font-family: var(--f-title); font-size: 12px; font-weight: 600; color: var(--t2); }
 .live .operation-feedback .decision-narrative { font-size: 15.5px; line-height: 1.5; color: var(--t1); }
 
 /* The moment: the stage prompt is the hero line of the scene. */
-.operation-choices .operation-stage-prompt { margin: 2px 0 10px; padding-left: 12px; border-left: 3px solid var(--hair-2); font-size: 17px; line-height: 1.45; color: var(--t1); }
+.operation-choices .operation-stage-prompt { margin: 2px 0 10px; font-size: 17px; line-height: 1.45; color: var(--t1); }
 .operation-choices .callbtn { min-height: 0; padding: 9px 11px; gap: 10px; }
 .operation-choices .callbtn-title { font-size: 16px; line-height: 1.2; }
 .operation-choices .callbtn:not(.callbtn-off) .callbtn-sum { font-size: var(--s16); line-height: 1.45; }
@@ -139,10 +139,9 @@
 /* ------------------------------------------------------------ debrief: outcome first */
 .page.debrief { gap: var(--sp4); }
 .debrief-hero { position: relative; gap: var(--sp3); padding: var(--sp5) var(--sp4); border: 1px solid var(--hair); border-radius: var(--r1); background: linear-gradient(145deg, var(--ink-3), var(--ink-1)); overflow: hidden; }
-.debrief-hero::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--t3); }
-.debrief-hero-good::before { background: var(--good); }
-.debrief-hero-mixed::before { background: var(--warn); }
-.debrief-hero-poor::before { background: var(--harm); }
+.debrief-kicker { font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: 0.12em; color: var(--good); }
+.debrief-hero-mixed .debrief-kicker { color: var(--warn-text); }
+.debrief-hero-poor .debrief-kicker { color: var(--harm-text); }
 .debrief-hero .kicker { color: var(--t-plate); }
 .debrief-hero .debrief-title { font-size: var(--s28); overflow-wrap: anywhere; }
 .debrief-hero .debrief-narrative { margin: var(--sp2) 0 0; font-size: var(--s18); line-height: 1.5; color: var(--t1); }
@@ -168,7 +167,7 @@
 .result-officers .result-officer { gap: var(--sp3); align-items: center; padding: var(--sp2) 0; border: 0; border-top: 1px solid var(--hair); border-radius: 0; background: none; }
 .result-officers .result-officer:first-child { border-top: 0; }
 .result-officers .result-officer:last-child { padding-bottom: var(--sp2); border-bottom: 0; }
-.result-officers .result-officer-hurt { box-shadow: inset 3px 0 0 var(--warn); padding-left: var(--sp2); }
+.result-officers .result-officer-hurt { padding: var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--warn) 10%, transparent); }
 .result-officers .result-officer-body { gap: 4px; }
 .result-officers .result-officer-heading { flex-wrap: nowrap; align-items: center; gap: var(--sp2); }
 .result-officers .result-officer-heading strong { display: block; font-size: var(--s16); line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -220,9 +219,9 @@
 .callbtn-review { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 2px; padding: 6px 11px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0 0 6px 6px; background: rgba(8, 13, 24, 0.35); color: inherit; font: inherit; cursor: pointer; }
 .callbtn-review-odds { min-width: 0; font-size: 12px; line-height: 1.35; color: var(--t2); }
 .callbtn-review-label { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; flex: 0 0 auto; font: 700 13px/1 var(--f-title); color: var(--t2); }
-.callbtn-on .callbtn-cost, .callbtn-on .callbtn-weigh p, .callbtn-on .callbtn-review-odds { color: var(--act-ink); }
+.callbtn-on .callbtn-cost, .callbtn-on .callbtn-weigh p, .callbtn-on .callbtn-review-odds { color: var(--t1); }
 .callbtn-on .callbtn-review { background: rgba(58, 42, 6, 0.12); }
-.callbtn-on .callbtn-review-label, .callbtn-on .callbtn-weigh-line b { color: var(--act-ink); }
+.callbtn-on .callbtn-review-label, .callbtn-on .callbtn-weigh-line b { color: var(--t1); }
 
 /* Pressure engine: the decision point's threat beside the stage label, each card's lead and threat,
    and the review sheet's lead picker. The pill rides in the head row, so it costs the first choice no
@@ -246,9 +245,9 @@
 .callbtn-time { font-weight: 700; }
 .callbtn-time-slow { color: var(--harm); }
 .callbtn-time-risk { color: var(--warn); }
-.callbtn-on .callbtn-lead { color: var(--act-ink); }
-.callbtn-on .callbtn-time-slow { color: var(--harm-ink); }
-.callbtn-on .callbtn-time-risk { color: var(--act-ink); }
+.callbtn-on .callbtn-lead { color: var(--t1); }
+.callbtn-on .callbtn-time-slow { color: var(--harm-text); }
+.callbtn-on .callbtn-time-risk { color: var(--t1); }
 
 .lead-picker { display: grid; gap: 6px; }
 .lead-picker .picker-label { margin-bottom: 0; }

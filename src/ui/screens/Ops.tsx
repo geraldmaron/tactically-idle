@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { useGame } from '../store';
-import { OpsBoard } from './OpsBoard';
+import { OpsHome } from './operations/OpsHome';
 import { OpsPrepare } from './OpsPrepare';
 import { OpsLive } from './OpsLive';
 import { OpsDebrief } from './OpsDebrief';
@@ -36,5 +36,5 @@ export function OpsScreen() {
   if (run?.status === 'active') return <OpsLive onStepOut={() => nav.go('hq')} />;
   if (run?.status === 'debrief') return <OpsDebrief />;
   if (prep) return <OpsPrepare scenarioId={prep.scenarioId} step={prep.step} />;
-  return <OpsBoard onOpen={(id) => callFlow.openCall(id)} />;
+  return <OpsHome onOpen={(id) => callFlow.openCall(id)} />;
 }
