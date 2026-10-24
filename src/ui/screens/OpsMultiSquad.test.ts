@@ -40,10 +40,19 @@ vi.mock('react', async importOriginal => ({
 }));
 vi.mock('../store', () => ({ useGame: () => hooks.state, getState: () => hooks.state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act: hooks.act, notify: hooks.notify }) }));
+// These tests call the screens as plain functions with hand-made hooks, so the store-subscribed tie choice (a warrant's
+// part for the knowing officer) answers with its default.
+vi.mock('./operations/view', async (importOriginal) => ({ ...(await importOriginal<typeof import('./operations/view')>()), useTieChoice: () => 'talks' as const }));
 
 type Element = ReactElement<Record<string, unknown> & { children?: ReactNode }>;
+/** Every element under a node, including the ones a component takes in a named slot (a Section's `action`, a Row's `trail`). */
 function descendants(node: ReactNode): Element[] {
-  return Children.toArray(node).flatMap(child => isValidElement(child) ? [child as Element, ...descendants((child as Element).props.children)] : []);
+  return Children.toArray(node).flatMap(child => {
+    if (!isValidElement(child)) return [];
+    const props = (child as Element).props;
+    const slots = Object.entries(props).filter(([key, value]) => key !== 'children' && (isValidElement(value) || (Array.isArray(value) && value.length > 0 && value.every((item) => isValidElement(item))))).map(([, value]) => value as ReactNode);
+    return [child as Element, ...descendants(props.children), ...slots.flatMap(descendants)];
+  });
 }
 function live() {
   hooks.cursor = 0;

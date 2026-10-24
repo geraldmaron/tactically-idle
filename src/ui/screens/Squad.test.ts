@@ -10,7 +10,8 @@ import { INITIAL_SQUAD_VIEW, updateSquadView, type SquadViewAction } from '../co
 import { Button } from '../components/ui';
 import { SquadPanel, SquadScreen } from './Squad';
 import { App } from '../App';
-import { certLegend, rosterCounts, rosterLine, squadCrest, tileStatus } from './team-model';
+import { certLegend, rosterCounts, rosterLine, squadCrest } from './team-model';
+import { bandCaption } from './team/team-view';
 
 const NOW = Date.UTC(2026, 9, 5);
 let state = createInitialState(NOW, 120);
@@ -106,49 +107,58 @@ describe('squads as blocks with separate rename drafts', () => {
     const officers = Object.keys(state.officers).length;
     const squads = capture(SquadScreen).html;
     for (const squad of state.squads) expect(squads).toContain(`aria-label="Squad ${squad.id}, ${squad.name}"`);
-    expect(squads.match(/class="ocard ocard-tile/g)).toHaveLength(officers);
+    expect(squads.match(/<button type="button" class="trow[ "]/g)).toHaveLength(officers);
     const roster = capture(SquadScreen, { squadSection: 'roster' }).html;
-    expect(roster.match(/ui-row officer-row/g)).toHaveLength(officers);
+    expect(roster.match(/<button type="button" class="trow[ "]/g)).toHaveLength(officers);
   });
 
   it('opens on the locker-room scene with one line of counts and one segmented row, Hire and Training one tap away', () => {
     const html = capture(SquadScreen).html;
     expect(html).toContain('data-team-scene="swat"');
-    expect(html).toContain('aria-label="Team sections"');
+    expect(html).toContain('aria-label="Team divisions"');
     expect(html).toContain('aria-label="SWAT sections"');
     for (const name of ['Squads', 'Roster', 'Hire', 'Training']) expect(html).toContain(name);
     expect(html).toContain(rosterLine(rosterCounts(Object.values(state.officers), Date.now())));
-    // The counts are visual badges; each segment keeps its plain name.
-    expect(html).toContain(`<span class="team-scene-count" aria-hidden="true">${state.candidates.length}</span>`);
+    // The counts are visual badges; each segment keeps its plain name. Hire counts waiting candidates, Training the free places.
+    const hireBadge = `Hire<span class="team-scene-count" aria-hidden="true">${state.candidates.length}</span>`;
+    if (state.candidates.length > 0) expect(html).toContain(hireBadge);
+    else expect(html).not.toContain('Hire<span class="team-scene-count"');
+    const free = Math.max(0, state.department.trainingSlots - Object.values(state.officers).filter((o) => o.assignment?.kind === 'training').length);
+    if (free > 0) expect(html).toContain(`Training<span class="team-scene-count" aria-hidden="true">${free}</span>`);
     expect(html).not.toContain('aria-label="Hire,');
   });
 
-  it('gives each squad its letter badge and callsign, and a quiet two-choice duty control', () => {
+  it('names each squad by its letter and callsign, with a quiet two-choice duty control', () => {
     const html = capture(SquadScreen).html;
     for (const squad of state.squads) {
       // Squads wear their letter, never an animal crest (owner, 2026-10-23).
-      expect(html).toContain(`<span class="squad-crest squad-crest-40 squad-crest-badge" data-squad="${squad.id}" aria-hidden="true"><span class="squad-crest-letter">${squad.id}</span></span>`);
+      expect(html).toContain(`SQUAD ${squad.id} \u00b7 `);
+      expect(html).toContain(`aria-label="Rename ${squad.name}"`);
       expect(html).not.toContain(squadCrest(squad.id));
-      expect(html).toContain(`aria-label="Duty for ${squad.name}"`);
+      const duty = html.split(`aria-label="Duty for ${squad.name}"`)[1].split('</div>')[0];
+      expect(duty.match(/role="radio"/g)).toHaveLength(2);
     }
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(state.squads.length);
     expect(html).not.toContain('role="switch"');
   });
 
-  it('shows a tile status only when an officer is not ready, and explains the qualification marks', () => {
+  it('shows the stress band on every row, and a mark of being away only on officers who are not simply ready', () => {
     const [first, second] = Object.values(state.officers);
     first.stress = 40;
     second.assignment = { kind: 'training', courseId: 'composure_workshop', startedAt: NOW, endsAt: NOW + 3_600_000 };
     const html = capture(SquadScreen).html;
-    const tiles = new Map([...html.matchAll(/<button[^>]*data-officer-tile="([^"]+)"[\s\S]*?<\/button>/g)].map((m) => [m[1], m[0]]));
-    expect(tiles.size).toBe(Object.keys(state.officers).length);
-    // A flag on exactly the officers who are not simply ready, and never one that says Ready.
+    const rows = new Map([...html.matchAll(/<button[^>]*data-officer="([^"]+)"[\s\S]*?<\/button>/g)].map((m) => [m[1], m[0]]));
+    expect(rows.size).toBe(Object.keys(state.officers).length);
     for (const officer of Object.values(state.officers)) {
-      expect(tiles.get(officer.id)!.includes('otile-flag'), officer.surname).toBe(tileStatus(officer, Date.now()) !== null);
+      const row = rows.get(officer.id)!;
+      // Every row carries its band word with the stress, and says it aloud; a row for someone out on training or a detail is set apart.
+      expect(row, officer.surname).toContain(bandCaption(officer.stress));
+      expect(row.includes('trow-away'), officer.surname).toBe(officer.assignment !== null);
     }
-    expect(tiles.get(first.id)).toContain('otile-flag');
-    expect(tiles.get(second.id)).toContain('otile-flag');
-    expect([...tiles.values()].filter((tile) => tile.includes('kit-mark-label">Ready<'))).toHaveLength(0);
-    // The glyphs are explained: a legend lists each qualification held, and each tile names them aloud.
+    expect(rows.get(first.id)).toContain('STRAINED 40');
+    expect(rows.get(second.id)).toContain('trow-away');
+    expect([...rows.values()].filter((row) => row.includes('>Ready<'))).toHaveLength(0);
+    // The glyphs on the rows are explained: a legend lists each qualification held.
     expect(html).toContain('What the qualification marks mean');
     for (const entry of certLegend(Object.values(state.officers))) expect(html).toContain(entry.name);
   });

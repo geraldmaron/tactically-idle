@@ -235,7 +235,7 @@ describe('reviewing a decision', () => {
 describe('persistent decision results', () => {
   it('keeps actual changes and specific consequences visible after the toast is gone', () => {
     const html = render(createElement(OperationFeedback, { decisions: [decision()] }));
-    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', '1 × Trauma supplies', 'Patient condition', 'Decision log (1)']) expect(html).toContain(expected);
+    for (const expected of ['What happened', 'Had complications', 'The patient received aid, but the route is still unresolved.', '+8 min', 'Call progress', '+12', 'Civilian safety', '-4', 'Pressure', '+5', '1 × Trauma supplies', 'Patient condition', '1 decision so far', 'Decision log']) expect(html).toContain(expected);
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('role="dialog"');
@@ -345,7 +345,7 @@ describe('persistent decision results', () => {
     expect(debrief.endingSummary).toBeTruthy();
     expect(html.replace(/<[^>]*>/g, '')).toContain(debrief.endingSummary);
     expect(html).toContain(`Decision log<span class="disclosure-count">${decisionViews(state).length}</span>`);
-    expect(html).toContain('>Next call<');
+    expect(html).toContain('Back to Operations');
     expect(html).not.toContain('Battery pack');
     const closed = apply(state, { type: 'closeDebrief' });
     expect(closed.result.ok).toBe(true);
@@ -521,8 +521,8 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     return { ...base, progress: { ...base.progress, threat }, ...patch };
   };
 
-  it('reads in order: strip, moment, on-scene comms, choices, then the scene with map and faces', () => {
-    // Owner challenge, 2026-10-23: the moment and the choices come first on every beat; the scene follows.
+  it('reads in order: strip, the scene with map and faces, then the moment, on-scene comms and choices', () => {
+    // Owner, 2026-10-24: who is on scene and who is inside come first on every beat, then the moment and the choices.
     const html = render(createElement(LiveView, props()));
     expect(html).not.toContain('role="tablist"');
     expect(html).not.toContain('role="tabpanel"');
@@ -531,11 +531,15 @@ describe('the live call on one screen, in two beats (docs/call-presentation.md)'
     const faces = html.indexOf('class="live-squad-faces"'), comms = html.indexOf('class="comms-log');
     const prompt = html.indexOf('How will you verify the report before committing?'), choice = html.indexOf('aria-label="Review Prepare medical access"');
     expect(strip).toBeGreaterThan(-1);
-    expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(strip);
+    // The threat rides in the pinned header, above the strip, so it stays in view while the page scrolls.
+    expect(html.indexOf('class="live-head-threat"')).toBeGreaterThan(-1);
+    expect(html.indexOf('class="threat-pill ')).toBeGreaterThan(html.indexOf('class="live-head"'));
+    expect(html.indexOf('class="threat-pill ')).toBeLessThan(strip);
     expect(html.indexOf('class="threat-pill ')).toBeLessThan(prompt);
-    expect(choice).toBeLessThan(scene);
+    expect(strip).toBeLessThan(scene);
     expect(scene).toBeLessThan(map);
     expect(map).toBeLessThan(faces);
+    expect(faces).toBeLessThan(prompt);
     expect(comms).toBeGreaterThan(-1);
     expect(prompt).toBeLessThan(comms);
     expect(comms).toBeLessThan(choice);

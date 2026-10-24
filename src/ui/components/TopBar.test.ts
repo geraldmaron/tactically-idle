@@ -20,8 +20,8 @@ function elements(node: ReactNode): Element[] {
 const render = (node: ReactNode) => renderToStaticMarkup(node);
 
 describe('department status explanations', () => {
-  it('shows whole dollars with the rate as a suffix, trust and level as uniform pills, with three named native help buttons', () => {
-    // Component contract 5 (owner, 2026-10-23): one row of uniform pills, kit icons in wells, no cash photo.
+  it('shows funding with the rate as a suffix in one pill, trust and level as labelled standing lines, with three named native help buttons', () => {
+    // The night-city bar: the department name over a Level and Trust line, and one funds pill with the hourly rate.
     const state = makeState();
     state.department.funding = 12400;
     const html = render(createElement(DepartmentStatusBar, { g: state, topic: null, onOpen: vi.fn(), onClose: vi.fn() }));
@@ -29,10 +29,10 @@ describe('department status explanations', () => {
     expect(html).toContain('data-funding-target');
     expect(html).toContain('12,400');
     expect(html).toContain(`${rate(budget(state).net)}</span>`);
-    expect(html.match(/data-ui-pill/g)).toHaveLength(3);
-    expect(html.match(/<svg class="icon res-icon"/g), 'funds, trust and level lead with their kit icons').toHaveLength(3);
-    expect(html).toContain(`<span class="res-word">Trust </span><span class="res-value">${Math.round(state.department.trust)}</span>`);
-    expect(html).toContain(`<span class="res-word">Level </span><span class="res-value">${state.department.level}</span>`);
+    expect(html.match(/data-ui-pill/g), 'funds is the only pill').toHaveLength(1);
+    expect(html.match(/<svg class="icon res-icon"/g), 'the funds pill leads with its kit icon').toHaveLength(1);
+    expect(html).toContain(`<span class="kicker">Trust <span class="res-value">${Math.round(state.department.trust)}</span></span>`);
+    expect(html).toContain(`<span class="kicker">Level <span class="res-value">${state.department.level}</span></span>`);
     expect(html).not.toContain('/min');
     expect(html).toContain(`Funding: 12,400 funding, ${budget(state).net < 0 ? 'minus ' : ''}${moneyFull(Math.abs(budget(state).net))} funding an hour. Show explanation`);
     expect(html).toContain(`Public trust: ${Math.round(state.department.trust)} out of 100. Show explanation`);
@@ -52,7 +52,7 @@ describe('department status explanations', () => {
     const buttons = elements(tree).filter((element) => element.type === 'button');
     const focus = vi.fn();
     buttons.forEach((button) => button.props.onClick?.({ currentTarget: { focus } } as unknown as MouseEvent<HTMLButtonElement>));
-    expect(onOpen.mock.calls.map(([topic]) => topic)).toEqual(['funding', 'trust', 'level']);
+    expect(onOpen.mock.calls.map(([topic]) => topic)).toEqual(['level', 'trust', 'funding']);
     expect(focus).toHaveBeenCalledTimes(3);
     expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
     const sheets = elements(tree).filter((element) => element.type === Sheet);

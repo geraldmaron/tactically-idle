@@ -5,8 +5,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { personaNote } from '../../content/personas';
 import { createInitialState } from '../../sim/department';
-import { PATROL_GRADES, employedPatrol, patrolCandidates, patrolProfile } from '../../sim/patrol';
-import type { Command, HandlerResult } from '../../sim/types';
+import { PATROL_GRADES, employedPatrol, patrolCandidates, patrolProfile, patrolRates } from '../../sim/patrol';
+import { rotation } from '../people/story-line';
+import type { Command, HandlerResult, PatrolGrade } from '../../sim/types';
 import { DEFAULT_NAV, NavContext } from '../components/nav';
 import { Button } from '../components/ui';
 import { PatrolCommitment, PatrolScreen } from './Patrol';
@@ -25,35 +26,47 @@ type El = ReactElement<{ children?: ReactNode; onClick?: () => void }>;
 const walk = (node: ReactNode): El[] => isValidElement<El['props']>(node) ? [node, ...Children.toArray(node.props.children).flatMap(walk)] : [];
 
 describe('the patrol garage scene', () => {
-  it('opens on the garage with the section switch and says who is covering', () => {
+  it('opens on the garage with the division switch and says how many are covering', () => {
     const html = page();
     const people = employedPatrol(state);
+    const covering = patrolRates(state, state.department.clockHighWater).productive;
     expect(html).toContain('data-team-scene="patrol"');
-    expect(html).toContain('aria-label="Team sections"');
-    expect(html).toContain(`${people.length} of 6 positions`);
-    expect(html).toContain(`Covering: ${people.map((p) => patrolProfile(p.profileId)!.firstName).join(', ')}.`);
-    expect(html).not.toContain('In training:');
+    expect(html).toContain('aria-label="Team divisions"');
+    expect(html).toContain(`${people.length} of 6 positions · ${covering} providing coverage`);
+    for (const person of people) expect(html).toContain(`View ${patrolProfile(person.profileId)!.firstName} ${patrolProfile(person.profileId)!.surname}, providing coverage`);
+    expect(html).toContain('data-patrol-scene-state="covering"');
+    expect(html).not.toContain('in training');
   });
 
   it('shows who is in training, by name, and pauses their coverage', () => {
     const [first] = employedPatrol(state);
+    const before = patrolRates(state, state.department.clockHighWater).productive;
     first.training = { toGrade: 2, startedAt: NOW, endsAt: NOW + 8 * 3_600_000 };
     const html = page();
-    expect(html).toContain(`In training: ${patrolProfile(first.profileId)!.firstName}.`);
+    const person = patrolProfile(first.profileId)!;
+    expect(html).toContain(`View ${person.firstName} ${person.surname}, in training`);
+    expect(html).toContain(`${patrolRates(state, state.department.clockHighWater).productive} providing coverage`);
+    expect(patrolRates(state, state.department.clockHighWater).productive).toBe(before - 1);
     expect(html).toContain('data-patrol-scene-state="training"');
   });
 });
 
 describe('patrol people have a story', () => {
-  it('gives each person their note, or the state they are in, from what the game records', () => {
+  it('shows each person\u2019s state on their row, and their state first in the lines the sheet turns through', () => {
     const [first, second] = employedPatrol(state);
     first.training = { toGrade: 2, startedAt: NOW, endsAt: NOW + 8 * 3_600_000 };
     const html = page();
-    expect(html).toContain(`Training for ${PATROL_GRADES[2].name}.`);
+    const row = (employeeId: string) => html.split(`data-patrol-employee="${employeeId}"`)[1].split('</article>')[0];
+    expect(row(first.id)).toContain('in training');
+    expect(row(second.id)).toContain('covering');
+    // The sheet that opens from the row speaks these lines (people/story-line.ts): the state leads, then the note.
+    const gradeName = (grade: PatrolGrade) => PATROL_GRADES[grade].name;
+    const lines = rotation({ kind: 'patrol', employee: first, gradeName }, state.department.clockHighWater);
+    expect(lines[0].kind).toBe('state');
+    expect(lines[0].text).toContain(`Training for ${PATROL_GRADES[2].name}.`);
     const note = personaNote(second.profileId);
-    if (note) expect(html).toContain(note.replace(/'/g, '&#x27;'));
-    expect(html).toContain('data-story="state"');
-    expect(html).toContain('data-story="persona"');
+    const secondLines = rotation({ kind: 'patrol', employee: second, gradeName }, state.department.clockHighWater);
+    if (note) expect(secondLines.some((line) => line.kind === 'persona' && line.text === note)).toBe(true);
   });
 });
 

@@ -266,7 +266,9 @@ export const testCallId = (name: keyof typeof TEST_CALLS): Id => fixtureIncident
 /** A call for `spec`: generated from the shipping call of its kind, or for a retired kind from its
  * frozen fixture, registered under the generated id so the engine resolves it like any call. */
 export function fixtureIncident(spec: IncidentSpec): ScenarioDefinition {
-  if (templateAt(spec.type)) return generateIncident(spec);
+  // The shipping template hosts the call when it lists the family. `barricaded` ships as the world-only warrant tree on
+  // houses and flats, so the frozen house fixture still hosts the old barricade on its own street (cedar_close).
+  if (templateAt(spec.type)?.tree.families.includes(spec.familyId)) return generateIncident(spec);
   const id = incidentId(spec);
   return SCENARIOS[id] ??= generateIncident(spec, FIXTURE_TEMPLATES[spec.type]);
 }

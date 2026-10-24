@@ -59,7 +59,7 @@ describe('squad arrangement review', () => {
     expect(html).toContain('Preserve current leaders');
     expect(html).toContain('Include unassigned officers');
     expect(html).toContain('Preview arrangement');
-    expect(html).toMatch(/disabled="">Apply arrangement/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Apply arrangement"/);
     expect(html).toContain('Previewing does not change the roster');
     expect(calls.plan).not.toHaveBeenCalled();
     expect(calls.act).not.toHaveBeenCalled();

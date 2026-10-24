@@ -72,7 +72,7 @@ describe('course-first Training presentation', () => {
     state.officers.off_chen.ratings.communication = 84;
     const html = markup(createElement(TrainingStore), { trainingRequest: 3, trainingFocus: { officerId: 'off_chen', courseId: 'communication_refresher' } });
     expect(html).toContain('data-training-officer-id="off_chen"');
-    expect(html).toContain('data-portrait=');
+    expect(html).toContain('data-face="portrait"');
     expect(html).toContain('Highest ratings:');
     expect(html).toContain('Stress');
     expect(html).not.toContain('Readiness');
@@ -108,7 +108,7 @@ describe('course-first Training presentation', () => {
     const candidate = trainingCandidates(state, 'communication_refresher').find(({ officer }) => officer.id === 'off_chen')!;
     const html = markup(createElement(TrainingOfficerCard, { candidate, now: NOW, onSelect: vi.fn() }));
     expect(html).toContain('data-training-candidate="off_chen"');
-    expect(html).toContain('data-portrait=');
+    expect(html).toContain('data-face="portrait"');
     expect(html).toContain('Deployed · Injured: Shoulder strain');
     expect(html).toContain('Current relevant ratings');
     // Relevant ratings are bars; an unavailable officer still sees the projected course gain.

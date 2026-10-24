@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PERSONAS } from '../../content/personas';
 import { makeState, NOW } from '../../sim/test-fixtures';
 import type { Officer } from '../../sim/types';
-import { rotation, STORY_TURN_MS, turnIndex } from '../people/story-line';
+import { rotation, STORY_TURN_MS } from '../people/story-line';
 import { officerFaceStatus } from './face-status';
 import { OfficerTile } from './OfficerTile';
 
@@ -26,31 +26,24 @@ const lineOf = (html: string) => /class="otile-line-text">([^<]*)</.exec(html)?.
 afterEach(() => { reduced = false; vi.useRealTimers(); });
 
 describe('OfficerTile personal line', () => {
-  it('shows the first, highest-priority recorded line and holds it still under reduced motion', () => {
-    reduced = true;
+  // The tile is compact (canvas Team, 2026-10-24): it draws no personal line. The highest-priority recorded line is
+  // spoken in its label and the full set is in the officer's sheet; the turn-over lives in story-line.test.ts.
+  it.each([true, false])('draws no line on the tile and speaks the first recorded line in its label, still over time (reduced motion %s)', (still) => {
+    reduced = still;
     vi.useFakeTimers();
     const { g, officer } = setup();
     const lines = rotation({ kind: 'officer', officer, status: officerFaceStatus(g, officer.id, NOW) }, NOW);
     expect(lines.length).toBeGreaterThan(1);
-    const seen = new Set<string>();
+    const labels = new Set<string>();
     for (let turn = 0; turn < 6; turn++) {
       vi.setSystemTime(NOW + turn * STORY_TURN_MS);
-      seen.add(lineOf(tile(officer, g, Date.now())));
+      const html = tile(officer, g, Date.now());
+      expect(lineOf(html)).toBe('');
+      expect(html).not.toContain('otile-line');
+      labels.add(/aria-label="([^"]*)"/.exec(html)![1]);
     }
-    expect([...seen]).toEqual([lines[0].text.replace(/'/g, '&#x27;')]);
-  });
-
-  it('turns over to the next recorded line as time passes when motion is allowed', () => {
-    vi.useFakeTimers();
-    const { g, officer } = setup();
-    const seen = new Set<string>();
-    for (let turn = 0; turn < 6; turn++) {
-      vi.setSystemTime(NOW + turn * STORY_TURN_MS);
-      seen.add(lineOf(tile(officer, g, Date.now())));
-    }
-    const count = rotation({ kind: 'officer', officer, status: officerFaceStatus(g, officer.id, NOW) }, NOW).length;
-    expect(turnIndex(count, NOW, officer.id)).toBeGreaterThanOrEqual(0);
-    expect(seen.size).toBe(count);
+    expect(labels.size).toBe(1);
+    expect([...labels][0]).toContain(lines[0].text.replace(/'/g, '&#x27;'));
   });
 });
 

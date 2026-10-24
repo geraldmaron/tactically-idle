@@ -15,6 +15,7 @@ import '../../../../ui/screens/ops-visual.css';
 import '../../../../ui/skin.css';
 import { NOW } from '../../../../gen/incident/gates/engine-driver';
 import { briefing, builtForScenario, decisionViews, lastResolution, pendingDebrief } from '../../../../sim/operation-selectors';
+import { callFee } from '../../../../sim/operation';
 import { isHotCall } from '../../../../sim/authorization';
 import { CLOCK_RULES_V1, decisionTextLength, ditherCap, fillViews, openThreat, stalledRun } from '../../../../sim/clocks';
 import { responseFailurePlan } from '../../../../sim/response-failure';
@@ -541,7 +542,7 @@ function BriefScreen({ state }: { state: GameState }) {
   const built = useMemo(() => builtForScenario(run.scenarioId), [run.scenarioId]);
   const intel = useMemo(() => buildIntel(scenario ?? null, built), [scenario, built]);
   const brief = useMemo(() => briefing(run.scenarioId, state, run.squadIds), [run.scenarioId, state, run.squadIds]);
-  return <div className="page"><PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} /></div>;
+  return <div className="page"><PrepBriefing scenario={scenario} built={built} brief={brief} intel={intel} fee={scenario ? callFee(state, { world: state.incidents.find((c) => c.id === scenario.id)?.world }, scenario) : 0} /></div>;
 }
 
 /** The debrief, with "What was really there" as the game shows it. */

@@ -11,7 +11,7 @@ import { money, perHour, rate } from '../format';
 import { CandidateCard, candidatesWithHireReceipt, dismissHireReceipt, HireContract, Recruit, RecruitRefresh, type HireReceipt } from './Recruit';
 import { CERT_NAME } from '../../content/certs';
 import { personaNote } from '../../content/personas';
-import { hireTerms, standoutLine } from './team-model';
+import { standoutLine } from './team-model';
 
 const NOW = Date.UTC(2026, 9, 3, 12);
 let state = createInitialState(NOW);
@@ -79,10 +79,12 @@ describe('ordinary recruitment refresh', () => {
 
   it('shows each candidate as a dossier: their own note, one standout strength and the terms', () => {
     const html = renderToStaticMarkup(createElement(Recruit));
+    const plain = html.replace(/<[^>]*>/g, '').replace(/&#x27;/g, "'");
     for (const c of state.candidates) {
       expect(html).toContain(`data-candidate="${c.id}"`);
-      expect(html).toContain(`Stands out: ${standoutLine(c.officer)}`);
-      expect(html).toContain(hireTerms(c).replace(/'/g, '&#x27;'));
+      expect(html).toContain(`<span class="dossier-stand-label">BEST AT</span> ${standoutLine(c.officer).replace(/'/g, "&#x27;")}`);
+      // The terms are funding amounts in their own markup (glyph and a spoken word), so they read as text, not as one string.
+      expect(plain).toContain(`${c.officer.wage}/h funding \u00b7 ${c.signingCost.toLocaleString('en-US')} funding to sign`);
       const note = personaNote(c.officer.identityId);
       if (note) expect(html).toContain(note.replace(/'/g, '&#x27;'));
     }

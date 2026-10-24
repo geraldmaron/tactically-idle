@@ -68,7 +68,8 @@ describe('individual civilian and officer outcomes', () => {
     expect(html).toContain('<strong>2</strong> of 3 located');
     expect(html).toContain('1 needs help');
     expect(html.match(/<i data-tone="(\w+)"/g)).toEqual(['<i data-tone="ok"', '<i data-tone="warn"', '<i data-tone="pending"']);
-    expect(html).toContain('>SP<');
+    // Each tracked person is drawn with a face in their tile, not with initials.
+    expect(html.match(/<span class="person-avatar"[^>]*><span class="face /g)).toHaveLength(3);
     expect(html).toContain('>Not yet located<');
   });
 

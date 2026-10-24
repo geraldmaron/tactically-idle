@@ -1,7 +1,7 @@
 import type { DependencyList, EffectCallback } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpsScreen } from './Ops';
-import { OpsBoard } from './OpsBoard';
+import { OpsHome } from './operations/OpsHome';
 import { OpsPrepare } from './OpsPrepare';
 import { OpsLive } from './OpsLive';
 import { OpsDebrief } from './OpsDebrief';
@@ -33,7 +33,7 @@ vi.mock('./call-flow', () => ({
   useCallFlow: () => ({ open: hooks.prep ? { scenarioId: hooks.prep, step: 'brief' } : null, drafts: {} }),
   callFlow: { openCall: (id: string) => { hooks.prep = id; }, prune: () => {}, close: () => {} },
 }));
-vi.mock('./OpsBoard', () => ({ OpsBoard: () => null }));
+vi.mock('./operations/OpsHome', () => ({ OpsHome: () => null }));
 vi.mock('./OpsPrepare', () => ({ OpsPrepare: () => null }));
 vi.mock('./OpsLive', () => ({ OpsLive: () => null }));
 vi.mock('./OpsDebrief', () => ({ OpsDebrief: () => null }));
@@ -64,7 +64,7 @@ describe('operation surface scroll transitions', () => {
   it('opens board, preparation, live operation, and results at the top of the shared screen', () => {
     const { screen } = fixture();
     const board = render();
-    expect(board.type).toBe(OpsBoard);
+    expect(board.type).toBe(OpsHome);
     expect(screen.scrollTop).toBe(0);
 
     screen.scrollTop = 1400;
@@ -88,7 +88,7 @@ describe('operation surface scroll transitions', () => {
     screen.scrollTop = 1100;
     hooks.state.activeRun = null;
     // Closing results must return to the library, not the stale preparation.
-    expect(render().type).toBe(OpsBoard);
+    expect(render().type).toBe(OpsHome);
     expect(screen.scrollTop).toBe(0);
   });
 

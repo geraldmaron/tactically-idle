@@ -35,12 +35,17 @@ let state = makeState();
 const act = vi.fn();
 vi.mock('../store', () => ({ useGame: () => state }));
 vi.mock('../components/toast', () => ({ useToast: () => ({ act, notify: vi.fn() }) }));
+// These tests call the screens as plain functions with hand-made hooks, so the store-subscribed tie choice (a warrant's
+// part for the knowing officer) answers with its default.
+vi.mock('./operations/view', async (importOriginal) => ({ ...(await importOriginal<typeof import('./operations/view')>()), useTieChoice: () => 'talks' as const }));
 
 type Element = ReactElement<Record<string, any>>;
+/** Every element under a node, including the ones a component takes in a named slot (a Section's `action`, a Row's `trail`). */
 function nodes(node: ReactNode): Element[] {
   if (Array.isArray(node)) return node.flatMap(nodes);
   if (!isValidElement<Record<string, any>>(node)) return [];
-  return [node, ...nodes(node.props.children)];
+  const slots = Object.entries(node.props).filter(([key, value]) => key !== 'children' && (isValidElement(value) || (Array.isArray(value) && value.length > 0 && value.every((item) => isValidElement(item))))).map(([, value]) => value as ReactNode);
+  return [node, ...nodes(node.props.children), ...slots.flatMap(nodes)];
 }
 const render = () => { hooks.cursor = 0; return OpsPrepare({ scenarioId: 'ms_occupancy', onCancel: () => {}, step: 'deploy' }); };
 const find = (root: ReactNode, test: (element: Element) => boolean) => {

@@ -45,7 +45,7 @@ describe('cold open and who they are (call-depth)', () => {
   it('sets the cold open as unclamped prose, and nothing without one', () => {
     const long = 'The corner store opens at seven. '.repeat(25).trim();
     const html = renderToStaticMarkup(createElement(ColdOpen, { text: long }));
-    expect(html).toContain('aria-label="Before the call"');
+    expect(html).toMatch(/<section[^>]*aria-labelledby="([^"]+)"[\s\S]*id="\1" class="section-title">Before the call<\/h3>/);
     expect(html).toContain(long);
     expect(renderToStaticMarkup(createElement(ColdOpen, { text: undefined }))).toBe('');
   });

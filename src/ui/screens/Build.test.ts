@@ -45,10 +45,13 @@ describe('the Build screen as the station', () => {
     expect(html).not.toContain('Department plan');
   });
 
-  it('marks an affordable step as affordable, never with the tick that means built', () => {
+  it('marks an affordable step with its price, never with the tick that means built', () => {
     const html = page();
-    expect(html).toContain('Can afford');
-    expect(html).not.toMatch(/room-status" data-state="ready"><svg[^]*?<\/svg>Ready</);
+    // A step that can be bought shows its price in a plain or hot capsule (the next step is hot); the tick
+    // and the lock lead only the owned and locked capsules.
+    expect(html).toMatch(/class="price-capsule" data-tone="(?:plain|hot)"><span class="funds">/);
+    expect(html).not.toMatch(/class="price-capsule" data-tone="(?:plain|hot|short)"><svg/);
+    expect(html).toMatch(/class="next-card"[^>]*aria-label="Next for the station:[^"]*Ready to build\./);
   });
 
   it('labels an unbuilt, affordable room as ready to build for assistive technology', () => {

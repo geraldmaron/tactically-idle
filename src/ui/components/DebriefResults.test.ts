@@ -30,7 +30,7 @@ describe('scannable debrief results', () => {
     expect(html).not.toContain('<details');
   });
 
-  it('places the ending, recorded harm and officer condition ahead of rewards in current and saved debriefs', () => {
+  it('places the ending, recorded harm and the team\u2019s condition ahead of rewards in current and saved debriefs', () => {
     const debrief = { ...result, decisions: [decision] };
     const current = renderToStaticMarkup(createElement(DebriefContents, { result: debrief, officers: state.officers }));
     const saved = renderToStaticMarkup(createElement(SavedDebriefContents, { debrief, officers: state.officers }));
@@ -38,7 +38,9 @@ describe('scannable debrief results', () => {
       const rewards = html.indexOf('aria-label="Rewards"');
       expect(html.indexOf(result.endingSummary!)).toBeLessThan(rewards);
       expect(html.indexOf('A resident was injured during the delay.')).toBeLessThan(rewards);
-      expect(html.indexOf('data-officer-result="off_chen"')).toBeLessThan(rewards);
+      // The team's condition leads as the third ring of the result (canvas order); each officer's row follows the payout.
+      expect(html.indexOf('1 of 1 officers unhurt')).toBeLessThan(rewards);
+      expect(html.match(/data-officer-result="off_chen"/g)).toHaveLength(1);
       expect(html.match(/aria-label="Rewards"/g)).toHaveLength(1);
     }
   });

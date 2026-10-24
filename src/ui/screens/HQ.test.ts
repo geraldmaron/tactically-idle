@@ -1,6 +1,5 @@
-// HQ's "your move" Open lands on the named call's brief (backlog `ui-leftovers`), not the whole board,
-// and HQ shows every block a department needs: the move, notices, squads with every member, patrol and
-// the department net, trust and level, command staff and results.
+// The City's "your move" Open lands on the named call's brief (backlog `ui-leftovers`), not the whole board,
+// and the City shows the blocks a department needs on one screen: the move, the radio, the districts and the results.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -38,67 +37,41 @@ describe('HQ "your move" Open', () => {
   });
 });
 
-describe('HQ surfaces', () => {
+// The old HQ home is the City tab (HQ.tsx only re-exports it). Squads with their faces, the command posts and the patrol
+// card moved to the Team tab, and are tested with it (Squad.test.ts, CommandStaff.test.ts, Patrol.test.ts).
+describe('City surfaces (the old HQ home)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
     state = withCallOnBoard(makeState(), testCallId('hostage'));
+    state.world.onboarding.stage = 'done';
     seedPatrol(state, NOW);
   });
   afterEach(() => vi.useRealTimers());
   const html = () => renderToStaticMarkup(createElement(HQ));
 
-  it('shows the move, the clocks, squads, patrol with its own net, command staff and results', () => {
+  it('shows the move, the radio, the districts as a list and the results', () => {
     const page = html();
-    for (const part of ['aria-label="Your move"', 'On the clock', 'SWAT readiness', 'Patrol and funding', 'Patrol net', 'hq-patrol-rate', 'Command staff', 'No results yet'])
-      expect(page, part).toContain(part);
+    // The move is the next call, one button that opens it; the radio and the district list sit beside the map.
+    expect(page).toMatch(/<button[^>]*class="city-now city-now-call"[^>]*aria-label="[^"]*\. Open"/);
+    for (const part of ['aria-label="Radio"', 'Districts', 'data-district="pike"', 'No results yet']) expect(page, part).toContain(part);
   });
 
   it('leaves funding, trust and level to the resource bar', () => {
     const page = html();
-    for (const part of ['Department net', 'hq-vital', 'Recent results']) expect(page, part).not.toContain(part);
+    for (const part of ['Department net', 'hq-vital']) expect(page, part).not.toContain(part);
   });
 
-  it('rings every squad face with its stress and badges whoever is not simply ready', () => {
-    const [first] = state.squads;
-    const officer = state.officers[first.officerIds[0]];
-    state = { ...state, officers: { ...state.officers, [officer.id]: { ...officer, injury: { label: 'Sprained wrist', until: NOW + 3 * HOUR_MS } } } };
+  it('opens the first district and keeps the others for the level that opens them', () => {
     const page = html();
-    expect(page.match(/class="face-status face-status-sm/g)?.length).toBeGreaterThanOrEqual(state.squads.reduce((n, s) => n + s.officerIds.length, 0));
-    expect(page).toContain('face-mark-injured');
-    expect(page).toContain(`${officer.surname} is back`);
-  });
-
-  it('lists every squad as one row with every member in its face stack', () => {
-    const page = html();
-    expect(page).toContain('data-ui-list');
-    const rows = page.split('class="hq-faces hq-faces-stack"').slice(1);
-    expect(rows).toHaveLength(state.squads.length);
-    rows.forEach((row, i) => expect(row.split('hq-row-link')[0].match(/class="face face-sm/g)).toHaveLength(state.squads[i].officerIds.length));
-  });
-
-  it('shows every command post as a seat, and opens a closed post as a Build upgrade, not a hire', () => {
-    const page = html();
-    expect(page.match(/command-room-post-compact/g)).toHaveLength(5);
-    expect(page).toContain('Next post · ');
-  });
-
-  it('sends the patrol card to the patrol team', () => {
-    expect(html()).toContain('Open the patrol team');
-  });
-
-  it('keeps the income window on the clock, warning as it closes and when it has', () => {
-    expect(html()).not.toContain('hq-clock-warn');
-    vi.setSystemTime(NOW + 20 * HOUR_MS);
-    expect(html()).toContain('hq-clock hq-clock-warn');
-    vi.setSystemTime(NOW + 25 * HOUR_MS);
-    const page = html();
-    expect(page).toContain('hq-clock hq-clock-harm');
-    expect(page).toContain('Any order resumes it');
+    expect(page.match(/data-state="open"/g)).toHaveLength(1);
+    expect(page).toContain('Opens at department level');
   });
 
   it('offers a waiting shift report', () => {
     state = { ...state, report: { from: NOW - HOUR_MS, to: NOW, accruedHours: 1, gross: 900, wages: 200, operating: 100, restockSpend: 0, net: 600, completedCourses: [], recovered: [], shortages: [], capped: false, personnel: [], equipment: [] } as unknown as GameState['report'] };
-    expect(html()).toContain('Shift report');
+    const page = html();
+    expect(page).toContain('While you were off');
+    expect(page).toContain('Open the report');
   });
 });

@@ -12,6 +12,7 @@ import { createInitialState } from '../../sim/department';
 import { dispatch } from '../../sim/game';
 import { cardFits, type ContentExclusion } from '../../sim/incidents';
 import { ThreatPill } from '../screens/LiveView';
+import { blockedAlone } from './avoidable';
 import { CardWarning, cardDescriptors } from './CardWarning';
 import { CARD_THEME_WORDS, CARD_WARNING_TEXT, THEME_ORDER, joinThemes } from './labels';
 import { DebriefSupport, debriefNeedsSupport } from './DebriefSupport';
@@ -52,11 +53,29 @@ describe('avoided themes reach the board', () => {
     expect(next.incidents.every((card) => cardFits(card, AVOID_SELF_HARM))).toBe(true);
   });
 
-  it('later arrivals never carry an avoided theme', () => {
-    let state = createInitialState(NOW, 7, { avoid: [...THEMES] });
+  it('later arrivals never carry an avoided theme, and the board still fills', () => {
+    const avoid = THEMES.filter((theme) => !blockedAlone(theme));
+    expect(avoid.length).toBeGreaterThan(0);
+    let state = createInitialState(NOW, 7, { avoid });
+    let seen = state.incidents.length;
     for (let hour = 1; hour <= 24 * 6; hour++) {
-      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid: [...THEMES] } }).state;
-      for (const card of state.incidents) for (const theme of THEMES) expect(descriptorsOf(card.id)).not.toContain(theme);
+      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid } }).state;
+      seen += state.incidents.length;
+      for (const card of state.incidents) for (const theme of avoid) expect(descriptorsOf(card.id)).not.toContain(theme);
+    }
+    expect(seen, 'the exclusion left calls to draw, so the board has them').toBeGreaterThan(0);
+  });
+
+  it('an exclusion that leaves the board nothing to draw leaves it empty and never throws', () => {
+    // Warrants come only from the world, so they cannot keep a board alive: with a theme off that every
+    // board call carries, nothing is drawn (the PRNG does not move) instead of drawing a call the board never offers.
+    const avoid = [...THEMES];
+    expect(avoid.some((theme) => blockedAlone(theme))).toBe(true);
+    let state = createInitialState(NOW, 7, { avoid });
+    expect(state.incidents).toEqual([]);
+    for (let hour = 1; hour <= 24 * 6; hour++) {
+      state = dispatch(state, { type: 'tick' }, { now: NOW + hour * 3_600_000, exclusion: { avoid } }).state;
+      expect(state.incidents).toEqual([]);
     }
   });
 
