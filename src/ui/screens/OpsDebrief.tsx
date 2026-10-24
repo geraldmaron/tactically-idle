@@ -50,7 +50,7 @@ export function OpsDebrief() {
   // Both settle the call first; Casebook then lands on the board's record of calls taken.
   const done = () => act({ type: 'closeDebrief' }).ok && (callFlow.close(), true);
   const toCasebook = () => { if (done()) opsView.section('archive'); };
-  const footer = <ActionBar className="cl-actions" quiet={{ label: 'Casebook', icon: 'book', onClick: toCasebook }} primary={{ label: 'Back to calls', onClick: done }} />;
+  const footer = <ActionBar className="cl-actions" quiet={{ label: 'Casebook', icon: 'book', onClick: toCasebook }} primary={{ label: 'Back to Operations', onClick: done }} />;
   if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
   </FlowScreen>;

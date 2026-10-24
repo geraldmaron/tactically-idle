@@ -31,7 +31,8 @@ export function validWorldState(value: unknown, at: number): value is WorldState
     if (!obj(state) || state.id !== id || typeof state.open !== 'boolean' || !finite(state.crime) || state.crime < 0 || state.crime > 100 || !Number.isInteger(state.patrolUnits) || state.patrolUnits < 0) return false;
     if (state.open ? !finite(state.openedAt) : state.openedAt !== null) return false;
   }
-  if (!w.districts.pike.open) return false;
+  // At least one district is open: Pike Street before founding, the chosen starting district after it.
+  if (!DISTRICT_IDS.some((id) => w.districts[id].open)) return false;
 
   const crews = new Map<string, WorldState['crews'][number]>();
   for (const crew of w.crews) {
