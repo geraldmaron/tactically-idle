@@ -157,7 +157,9 @@ export function closeCase(d: GameState, w: WorldState, c: WorldCase, acc?: World
   if (crew && crew.status === 'active') {
     if (c.resolution === 'charged') refreshStrength(w, crew);
     if (c.resolution === 'charged' && c.tier === 4) collapseCrew(w, crew, at);
-    else if (c.tier <= 2) addIntel(d, w, crew, 3, ARCHETYPES[crew.archetype].intelPerCase[c.tier as 1 | 2], at, acc);
+    // A repeat investigation of someone already worked teaches the team nothing new about the crew, so the
+    // ladder climbs with new people, not the same corner hand met again (lead tuning, 2026-10-24).
+    else if (c.tier <= 2 && !c.repeat) addIntel(d, w, crew, 3, ARCHETYPES[crew.archetype].intelPerCase[c.tier as 1 | 2], at, acc);
     else if (c.tier === 3) addIntel(d, w, crew, 4, ARCHETYPES[crew.archetype].intelPerCase[3], at, acc);
   }
   if (w.onboarding.stage === 'first_shift' && w.onboarding.firstCaseId === c.id) w.onboarding.stage = 'first_return';

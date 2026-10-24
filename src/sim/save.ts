@@ -1,3 +1,4 @@
+import { validWorldState } from './world/validate';
 import { DISTRICT_IDS } from './world/types';
 import { parseRecipeKey } from './casebook';
 import { validCommandStaff } from './command-staff';
@@ -386,6 +387,7 @@ function validState(s: unknown): s is GameState {
   if (!validIncidents(s)) return false;
   if (!validCasebook(s.casebook)) return false;
   if (!validWorld(s.world) || !validPeople(s.people)) return false;
+  if (!validWorldState(s.world, (s.department as { clockHighWater: number }).clockHighWater)) return false;
   if (!validCommandStaff(s.commandStaff)) return false;
   const patrol = s.patrol as GameState['patrol'];
   const reserved = new Set<string>((s.personnel as GameState['personnel'])?.employedIdentityIds ?? []);

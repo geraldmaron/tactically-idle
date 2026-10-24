@@ -193,12 +193,12 @@ describe('crews', () => {
     let s = open();
     const w = s.world;
     const crew = w.crews[0];
-    const hands = Object.values(w.subjects).filter((x) => x.crewId === crew.id && x.tier === 1).slice(0, 3);
+    const hands = Object.values(w.subjects).filter((x) => x.crewId === crew.id && x.tier === 1).slice(0, 6);
     for (const hand of hands) openCase(s, w, { subject: hand, tier: 1, source: 'patrol', at: T0, status: 'review' });
     s = tick(s, T0 + 2 * H);
     const lieutenants = Object.values(s.world.subjects).filter((x) => x.crewId === crew.id && x.tier === 3);
     const intel = lieutenants.map((l) => s.world.crews[0].intel[l.id] ?? 0);
-    expect(Math.max(...intel)).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...intel)).toBeGreaterThanOrEqual(6);
     const lead = s.world.leads.find((l) => l.source === 'intel');
     expect(lead).toBeDefined();
     expect(s.world.cases.find((c) => c.id === lead!.caseId)!.status).toBe('open');
