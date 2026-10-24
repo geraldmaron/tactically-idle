@@ -23,7 +23,7 @@ import type { TopTab } from './components/nav';
 import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
-import { HQ } from './screens/HQ';
+import { CityScreen } from './screens/city/CityScreen';
 import { TeamScreen } from './screens/Team';
 import { OpsScreen } from './screens/Ops';
 import { HeadquartersTab } from './shell/HeadquartersTab';
@@ -90,8 +90,7 @@ function GameShell() {
                 <SaveWarning onOpen={() => setSavesOpen(true)} />
                 <main className={`screen screen-${current}`} key={current} ref={screen} onScroll={(event) => { scrolls.current[current] = event.currentTarget.scrollTop; }}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
-                  {/* The City shows the old HQ screen until the city lane replaces it. */}
-                  {current === 'city' && <HQ />}
+                  {current === 'city' && <CityScreen />}
                   {current === 'ops' && <OpsScreen />}
                   {current === 'squad' && <TeamScreen />}
                   {current === 'headquarters' && <HeadquartersTab />}
