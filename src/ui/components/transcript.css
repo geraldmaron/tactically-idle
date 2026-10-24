@@ -2,11 +2,12 @@
    the negotiator, radio and dispatch speak in the condensed face, set back a step, so a player
    scanning the log hears the subject first. */
 .transcript { display: grid; gap: 6px; margin: 10px 0 12px; padding: 10px 12px; list-style: none; border-radius: 8px; background: rgba(7, 12, 22, .55); border: 1px solid rgba(255, 255, 255, .06); }
-.transcript-row { display: grid; grid-template-columns: minmax(64px, 26%) 1fr; gap: 10px; align-items: baseline; }
-.transcript-speaker { font: 600 12px/1.3 var(--font-cond); color: var(--t2); overflow-wrap: anywhere; }
+.transcript-row { display: grid; grid-template-columns: minmax(64px, 26%) 1fr; gap: 10px; align-items: start; padding-left: 8px; border-left: 3px solid var(--voice, var(--t2)); }
+.transcript-speaker { display: inline-flex; align-items: center; gap: 4px; font: 700 13px/1.45 var(--font-cond); letter-spacing: .02em; color: var(--voice, var(--t1)); overflow-wrap: anywhere; }
 .transcript-line { font-size: 15px; line-height: 1.45; color: var(--t1); }
-.transcript-negotiator .transcript-speaker { color: var(--info); }
-.transcript-radio .transcript-speaker { color: var(--text-dim); }
+.transcript-person { --voice: var(--t1); }
+.transcript-negotiator { --voice: var(--info); }
+.transcript-radio { --voice: var(--text-dim); }
 .transcript-negotiator .transcript-line,
 .transcript-radio .transcript-line { font-family: var(--font-cond); font-size: 15.5px; letter-spacing: .01em; color: var(--t-plate); }
 .transcript-repeat { margin-top: -2px; }
