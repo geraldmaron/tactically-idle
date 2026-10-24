@@ -1,6 +1,7 @@
 import { callTreeAt } from '../../content/call-trees';
 import { scenarioRecipe } from '../../content/scenario-recipes';
 import { parseIncidentId } from '../../gen/incident';
+import { Icon } from '../icons';
 import { SUPPORT_TEXT } from './labels';
 import './settings.css';
 
@@ -16,5 +17,5 @@ export function debriefNeedsSupport(scenarioId: string): boolean {
  * outcome, so it reads the same after every ending, and it is never clamped. */
 export function DebriefSupport({ scenarioId }: { scenarioId: string }) {
   if (!debriefNeedsSupport(scenarioId)) return null;
-  return <p className="debrief-support" role="note">{SUPPORT_TEXT.debrief}</p>;
+  return <p className="debrief-support" role="note"><Icon name="heart" size="md" />{SUPPORT_TEXT.debrief}</p>;
 }

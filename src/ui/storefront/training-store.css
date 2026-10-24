@@ -35,7 +35,7 @@
 .course-tile-meta span:last-child { color: var(--amber); font: 700 23px/1.2 var(--font-display); }
 .course-tile-note, .course-tile .reason, .training-eligible { margin: 0; font-size: 14px; line-height: 1.4; }
 .training-eligible { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--mint); }
-.training-course-personal { padding: var(--sp2) var(--sp3); border-left: 3px solid var(--mint); border-radius: 0 10px 10px 0; background: var(--ink-0); }
+.training-course-personal { padding: var(--sp2) var(--sp3); border: 1px solid var(--good-edge); border-radius: var(--r2); background: var(--ink-0); }
 .training-course-personal > .dim { font-size: 14px; }
 .training-course-personal .training-gain { margin-top: var(--sp1); }
 .course-tile-foot { display: flex; gap: var(--sp2); margin-top: auto; padding-top: var(--sp1); }
