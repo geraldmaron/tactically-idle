@@ -1,3 +1,4 @@
+import { useTieChoice } from './operations/view';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useGame } from '../store';
@@ -61,6 +62,8 @@ const BASIC_KIT_ICONS: [string, string][] = [['radio_kit', 'Radio headset'], ['s
 
 export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioId: Id; step?: FlowStep; onCancel?: () => void }) {
   const g = useGame();
+  const worldLead = g.incidents.find((c) => c.id === scenarioId)?.world?.leadId ?? null;
+  const tieChoice = useTieChoice(worldLead ?? '');
   const now = Date.now();
   const { act, notify } = useToast();
   const card = cardFor(g, scenarioId, now);
@@ -168,8 +171,10 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       ...(Object.keys(units).length > 0 ? { units } : {}),
       ...(Object.keys(stage).length > 0 ? { staging: stage } : {}),
       ...(supportUnitId ? { supportUnitIds: [supportUnitId] } : {}),
+      // Warrant prep's choice for the officer who knows the subject (operations/view.ts).
+      ...(worldLead ? { tieRole: tieChoice === 'holds' ? 'door' as const : 'talk' as const } : {}),
     };
-  }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built]);
+  }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built, worldLead, tieChoice]);
   const check = prepCheck(g, now, cmd, timerSetting());
 
   // A call that takes exactly one squad opens its deploy step with the best-fit ready squad chosen:

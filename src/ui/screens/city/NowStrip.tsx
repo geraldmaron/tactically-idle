@@ -1,3 +1,4 @@
+import { callFee } from '../../../sim/operation';
 import { useState } from 'react';
 import { getState } from '../../store';
 import { getScenario } from '../../../sim/scenario-registry';
@@ -90,7 +91,7 @@ export function NowStrip({ g, at }: { g: GameState; at: number }) {
   if (item.kind === 'call') {
     const def = getScenario(item.card.id);
     const place = placeTags(def?.locationFamilyId ?? item.card.familyId, scenarioPlaceName(def)).name ?? 'Call on the board';
-    const pay = def?.rewards?.funding ?? 0;
+    const pay = def ? callFee(g, { world: item.card.world }, def) : 0;
     const world = !!item.card.world;
     const soon = !world && item.left < 3_600_000;
     return <button type="button" className="city-now city-now-call" onClick={() => openCallBrief(nav, item.card.id)} aria-label={`${item.title}. ${world ? '' : `${duration(item.left)} left. `}Open`}>

@@ -1,3 +1,5 @@
+import { useGame } from '../store';
+import { callFee } from '../../sim/operation';
 // The prepare screen's briefing (rebuilt 2026-10-23 from the owner's "it is weak"): what a player
 // needs before choosing a team, in the order they need it. The place and the clock on the plate, what
 // the call pays and asks, the orders with the faces of the people they name, what the team faces
@@ -44,6 +46,8 @@ export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, 
   // text. It does not depend on the color preference, which only decides whether prose is tinted.
   const lexicon = useMemo(() => scenario ? lexiconFor(scenario, null, []) : null, [scenario]);
   const range = scenario?.squadRange;
+  const g = useGame();
+  const fee = scenario ? callFee(g, { world: g.incidents.find((c) => c.id === scenario.id)?.world }, scenario) : 0;
   const place = placeTags(scenario?.locationFamilyId, built?.location?.name);
   // The call's tier, never called difficulty or risk: tiers do not compare across call types. Authored calls have none.
   const tier = scenario ? callTier(scenario.id) : null;
@@ -58,7 +62,7 @@ export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil, 
       </div>
       {/* The stakes under the plate: what it pays, how hard it reads, how many squads it takes. */}
       {(scenario?.rewards || tier !== null || range) && <ul className="pb-stakes" aria-label="What the call pays and asks">
-        {scenario?.rewards && <li><Chip tone="amber" icon="funds" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(scenario.rewards.funding)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
+        {scenario?.rewards && <li><Chip tone="amber" icon="funds" title="What the call pays at best"><span className="pb-pay"><span className="pb-pay-up">Up to</span> <b>{money(fee)}</b> · {scenario.rewards.xp} XP</span></Chip></li>}
         {tier !== null && <li><Chip title="The call's tier"><TierChevrons tier={tier} />Tier {tier}</Chip></li>}
         {range && <li><Chip icon="people">{`Takes ${range.min === range.max ? range.min : `${range.min} to ${range.max}`} ${range.max > 1 ? 'squads' : 'squad'}`}</Chip></li>}
       </ul>}

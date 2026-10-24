@@ -1,3 +1,5 @@
+import { callFee } from '../../sim/operation';
+import type { Department } from '../../sim/types';
 import { useEffect, useRef, useState } from 'react';
 import type { DebriefResult } from '../../sim/types';
 import { levelProgress } from '../../sim/department-level';
@@ -48,7 +50,8 @@ export function Settlement({ debrief: d, department, still: quiet = false }: { d
   const funding = useSettle(before, before + d.fundingReward, still);
   // The board offers the call's full pay; the payout scales with the result (sim/operation.ts), so a
   // short payout says what it was measured against.
-  const offered = getScenario(d.scenarioId)?.rewards?.funding;
+  const offeredScenario = getScenario(d.scenarioId);
+  const offered = offeredScenario && department ? callFee({ department: department as Pick<Department, 'level'> as Department }, {}, offeredScenario) : undefined;
   const promotions = d.officerCondition.reduce((total, c) => total + (c.promotions?.length ?? 0), 0);
   const service = d.serviceEarned ?? 0;
   const from = department?.service !== undefined ? levelProgress({ level: department.level, service: department.service }) : null;
