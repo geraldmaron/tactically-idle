@@ -32,12 +32,14 @@ export function PlateArt({ src }: { src: string | null }) {
   return <img className="plate-art" src={src} alt="" aria-hidden="true" decoding="async" draggable={false} onError={() => setFailed(true)} />;
 }
 
-/** The painted room at the top of a tab, with its title and a one-line status. */
-export function ScreenBanner({ id, kicker, title, line, children }: { id: BannerId; kicker: string; title: string; line?: ReactNode; children?: ReactNode }) {
+/** The painted room at the top of a tab, with its title and a one-line status. `level` h1 when the
+ * banner is the page's own head; `titleId` when the page is labelled by it. */
+export function ScreenBanner({ id, kicker, title, line, children, level = 'h2', titleId }: { id: BannerId; kicker: string; title: string; line?: ReactNode; children?: ReactNode; level?: 'h1' | 'h2'; titleId?: string }) {
+  const Title = level;
   return <header className="plate plate-grain screen-banner">
     <PlateArt src={plateUrl(`banner_${id}`)} />
     <span className="screen-banner-kicker">{kicker}</span>
-    <h2 className="screen-banner-title">{title}</h2>
+    <Title id={titleId} className="screen-banner-title">{title}</Title>
     {line && <p className="screen-banner-line">{line}</p>}
     {children}
   </header>;
