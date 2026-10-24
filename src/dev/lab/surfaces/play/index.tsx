@@ -35,6 +35,7 @@ import { StoryPanel } from './StoryPanel';
 import type { ForcePick, FrameToast } from './GameFrame';
 import { LeaderLine } from './LeaderLine';
 import { PathRail } from './PathRail';
+import { ScreenOrder } from './ScreenOrder';
 import { XrayRail } from './XrayRail';
 import './play.css';
 
@@ -297,7 +298,8 @@ function Play({ session }: { session: Session }) {
   // ------------------------------------------------ layout
   const run = frame.state.activeRun;
   const ended = !!run && (run.status !== 'active' || run.stage === 'debrief');
-  const screen = url.screen ?? (ended ? 'debrief' : 'live');
+  // A call opens on its board card, then the briefing with the backstory, then the first decision, as a player meets it.
+  const screen = url.screen ?? (ended ? 'debrief' : steps.length === 0 ? 'card' : 'live');
   const directorButton = narrow ? (
     <button type="button" className={cx('lab-button', 'lab-play-dirbutton', dirOpen && 'lab-play-dirbutton-on')} aria-expanded={dirOpen} onClick={() => setDirOpen(open => !open)}>
       <Glyph name="plan" />Director
@@ -325,11 +327,12 @@ function Play({ session }: { session: Session }) {
           <button type="button" className={cx('lab-button', url.story && 'lab-button-on')} aria-pressed={url.story} onClick={() => navigate({ story: true }, 'replace')}>Story</button>
           <button type="button" className={cx('lab-button', !url.story && 'lab-button-on')} aria-pressed={!url.story} onClick={() => navigate({ story: false }, 'replace')}>Phone preview</button>
         </div>
-        {url.story ? <StoryPanel state={frame.state} names={url.names} /> : <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
+        {url.story ? <StoryPanel state={frame.state} names={url.names} /> : <><ScreenOrder screen={screen} pinned={!!url.screen} onPick={next => navigate({ screen: next }, 'replace')} onFollow={() => navigate({ screen: null }, 'replace')} />
+        <GameFrame state={frame.state} screen={screen} width={url.width} zoom={url.zoom} names={url.names} truth={url.truth}
           tabs={tabs} selectedId={url.xray ? selectedId : null} hoverId={hoverId} playing={!!play} reveal={reveal}
           onReview={id => select(id, true)} onConfirm={confirm} onFail={() => move({ kind: 'fail', actionId: 'response_failure' })}
           toast={toast} onToastDone={() => setToast(null)} force={force} onForce={band => force && (band === 'roll' ? roll(force.actionId) : forceBand(force.actionId, band))} onForceCancel={() => setForce(null)}
-          onLapse={threatId => move({ kind: 'lapse', actionId: threatId })} />}
+          onLapse={threatId => move({ kind: 'lapse', actionId: threatId })} /></>}
       </div>
       {url.xray && (
         <aside className="lab-play-rail" aria-label="X-ray" ref={railRef}>

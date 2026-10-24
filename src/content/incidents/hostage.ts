@@ -76,7 +76,6 @@ const RIDER: Partial<PersonSpec> = {
     presence: { status: 'confirmed', source: 'The stream' },
     weapons: { status: 'reported', source: 'Responding patrol', value: 'handgun', learnedBy: 'f_handgun' },
     demands: { status: 'reported', source: 'The 911 call', value: 'the manager saying it on camera', learnedBy: 'f_rider_clear' },
-    disposition: { status: 'unknown', source: 'Nobody yet', learnedBy: 'f_raised' },
   },
 };
 
@@ -113,10 +112,12 @@ export const HOSTAGE_TEMPLATE: IncidentTemplate = {
   ],
   conditions: { timeOfDay: 'night', power: 'on', weather: 'clear', crowd: 2 },
   situations: [
-    // The clerk took the bag; a refusal leaves the rider pacing.
+    // The clerk took the bag, and the manager covered for the clerk.
     { index: 0, people: { rider: { ...RIDER, volatility: { pick: [['steady', 45], ['shifting', 55]] } } }, clocks: [STREAM] },
-    // The rider took it; a refusal on camera turns the handgun on the manager.
+    // The rider took it. A rider who is right about the red light and wrong about the rest is the harder one to hold.
     { index: 1, people: { rider: { ...RIDER, volatility: 'volatile', threat: { disposition: 'hostile', intent: 'barricade', awareness: 'aware', readiness: 'brandished' } } }, clocks: [STREAM] },
+    // Nobody took it: the bag went to the wrong porch, and a viewer has the clip.
+    { index: 2, people: { rider: { ...RIDER, volatility: { pick: [['shifting', 60], ['volatile', 40]] } } }, clocks: [STREAM] },
   ],
   complications: [],
 };
