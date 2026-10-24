@@ -67,6 +67,9 @@ export interface Imprint {
   /** The player has seen the telegraph on the jacket or the report (a fork waits for this). */
   seen: boolean;
   fork?: { offeredAt: number; choice?: AftercareChoice; partnerId?: string; decidedAt?: number };
+  /** Why a fork is due: the note repeated inside its window, or the first trigger was severe. The fork opens
+   * only once `seen` is true; until then this is all the record keeps. */
+  forkDue?: 'repeat' | 'severe';
   /** Set when it settles or clears. */
   outcome?: 'cleared' | 'settled_positive' | 'settled_strain';
 }

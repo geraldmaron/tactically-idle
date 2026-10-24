@@ -5,15 +5,6 @@ import type { PeopleBeat, PeopleBeatKind, PeopleState, PersonRecord } from './ty
 import { PEOPLE_TUNING } from './tuning';
 import { hashSeed } from '../rng';
 
-// The lead's Imprint record has no place to remember that a fork is due but the telegraph has not been
-// seen. This optional field carries it until types.ts adds it (reported to the lead).
-declare module './types' {
-  interface Imprint {
-    /** Why a fork is due: the note repeated inside its window, or the first trigger was severe. The fork opens
-     * only once `seen` is true; until then this is all the record keeps. */
-    forkDue?: 'repeat' | 'severe';
-  }
-}
 
 /** A namespaced id from the people counter: `fact_3`, `imp_4`, `tie_5`, `beat_6`, `set_7`. */
 export function nextPeopleId(people: PeopleState, prefix: 'fact' | 'imp' | 'tie' | 'beat' | 'set'): Id {

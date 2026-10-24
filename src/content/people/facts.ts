@@ -1,3 +1,4 @@
+import { DISTRICTS } from '../city/districts';
 // Memory facts: the detail shapes, and the short words the people selectors use (docs/world-redesign.md,
 // "Memory"; swat-officer-stories references/ledger-and-callbacks.md, chapter 2).
 //
@@ -91,13 +92,9 @@ export const CASE_END: Readonly<Record<string, string>> = {
 
 /** District names for places on facts from the world. The world lane's district definitions own the
  * display names; this table keeps the people layer self-contained until they are merged. */
-export const DISTRICT_PLACE: Readonly<Record<DistrictId, string>> = {
-  pike: 'Pike Street',
-  larkin: 'Larkin',
-  harbor: 'the harbor district',
-  eastgate: 'Eastgate',
-  oldmill: 'Old Mill',
-};
+export const DISTRICT_PLACE: Readonly<Record<DistrictId, string>> = Object.fromEntries(
+  Object.values(DISTRICTS).map((district) => [district.id, district.name]),
+) as Record<DistrictId, string>;
 
 export const BOND_STATE_LABEL: Readonly<Record<BondState, string>> = {
   acquainted: 'Acquainted',

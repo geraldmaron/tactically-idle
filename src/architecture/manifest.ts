@@ -218,5 +218,8 @@ export const SYSTEM_EDGE_REASONS: Readonly<Record<string, string>> = {
   'metric -> subject': 'chain',
   // An officer arrives with issue kit and the signing pays for it (starter-kit, owner decision 2026-10-19).
   'officer -> item': 'issue kit: a hire brings items into the pool, priced into the signing',
+  // Officers remember calls (src/sim/people/call-read.ts): memory facts read the call's actions and the building's name.
+  'officer -> scenario': 'memory: a debrief writes what the officer did on the call and where',
+  'officer -> blueprint': 'memory: a fact names the building the call happened in',
 };
 export const SYSTEM_EDGES: readonly string[] = Object.keys(SYSTEM_EDGE_REASONS);
