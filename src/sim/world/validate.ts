@@ -33,6 +33,8 @@ export function validWorldState(value: unknown, at: number): value is WorldState
   }
   // At least one district is open: Pike Street before founding, the chosen starting district after it.
   if (!DISTRICT_IDS.some((id) => w.districts[id].open)) return false;
+  // The saved home district, when there is one, is a real district and is open.
+  if (w.home !== undefined && (!DISTRICT_IDS.includes(w.home) || !w.districts[w.home].open)) return false;
 
   const crews = new Map<string, WorldState['crews'][number]>();
   for (const crew of w.crews) {
@@ -61,6 +63,7 @@ export function validWorldState(value: unknown, at: number): value is WorldState
   for (const c of w.cases) {
     if (!obj(c) || !idOk(c.id, 'c') || !w.subjects[c.subjectId] || !TIERS.includes(c.tier) || !DISTRICT_IDS.includes(c.districtId)) return false;
     if (c.crewId !== null && !crews.has(c.crewId)) return false;
+    if (c.feePaidRunId !== undefined && (typeof c.feePaidRunId !== 'string' || !c.feePaidRunId)) return false;
     if (!['patrol', 'proactive', 'call', 'warrant'].includes(c.source) || !['charged', 'diverted', 'care', 'released', 'cleared'].includes(c.resolution)) return false;
     if (!finite(c.openedAt) || c.openedAt > at + 1 || !finite(c.award) || c.award < 0 || c.award > MAX_AWARD || typeof c.repeat !== 'boolean' || !Array.isArray(c.officerIds)) return false;
     if (c.status === 'open' && (c.closesAt !== null || c.paidEventId !== undefined || c.tier < 3)) return false;
@@ -103,6 +106,8 @@ export function validWorldState(value: unknown, at: number): value is WorldState
     if (!Number.isInteger(s.contacts) || s.contacts < 0 || !Array.isArray(s.caseIds) || !Array.isArray(s.leadIds)) return false;
     if (s.caseIds.some((id) => !cases.has(id)) || s.leadIds.some((id) => !w.leads.some((l) => l.id === id))) return false;
     if ((s.stoppedAt === undefined) !== (s.stopReason === undefined)) return false;
+    if (s.officerIds !== undefined && (!Array.isArray(s.officerIds) || s.officerIds.length > 4 || s.officerIds.some((id) => typeof id !== 'string') || new Set(s.officerIds).size !== s.officerIds.length)) return false;
+    if (s.strainAt !== undefined && (!finite(s.strainAt) || s.strainAt <= s.startedAt || s.strainAt > s.endsAt)) return false;
     if (s.stoppedAt === undefined) {
       if (activeSquads.has(s.squadId)) return false;
       activeSquads.add(s.squadId);

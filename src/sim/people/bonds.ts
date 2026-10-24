@@ -188,10 +188,12 @@ export function applyCallBonds(d: GameState, read: CallRead, collect?: Id[]): vo
 
 /** A proactive shift stopped: the officers who rode it drift together when it went well, apart when it
  * stopped for strain. */
-export function applyShiftBonds(d: GameState, officerIds: Id[], stopReason: 'ended' | 'recalled' | 'strain' | undefined, place: string, now: number, collect?: Id[]): void {
+export function applyShiftBonds(d: GameState, officerIds: Id[], stopReason: 'ended' | 'recalled' | 'strain' | undefined, place: string, now: number, collect?: Id[], scale = 1): void {
   const ids = [...new Set(officerIds)].filter((id) => isEmployed(d, id)).sort();
   const T = PEOPLE_TUNING.bond;
-  const delta = stopReason === 'strain' ? T.shiftStrain : T.gain.shift;
+  // `scale` is the share of a full shift actually served, 0 to 1.
+  if (!(scale > 0)) return;
+  const delta = (stopReason === 'strain' ? T.shiftStrain : T.gain.shift) * Math.min(1, scale);
   const cause: Cause = { kind: 'shared_shift', place, at: now };
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {

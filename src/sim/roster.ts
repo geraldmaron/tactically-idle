@@ -309,9 +309,17 @@ function renameSquad(d: GameState, squadId: SquadId, rawName: string): HandlerRe
   return OK;
 }
 
+/** An officer on a proactive shift stays in the squad they started it with: the shift's roster, its memories and
+ * its bonds belong to those people. Null when the officer is free to move. */
+function shiftHold(o: Officer): string | null {
+  return o.assignment?.kind === 'proactive' ? `${fullName(o)} is on a proactive shift. Recall the squad first` : null;
+}
+
 function assignToSquad(d: GameState, officerId: Id, squadId: SquadId | null): HandlerResult {
   const o = d.officers[officerId];
   if (!o) return refusal('No such officer');
+  const held = shiftHold(o);
+  if (held) return refusal(held);
   if (o.assignment?.kind === 'operation') return queueSquadMove(d, o, squadId);
   const from = o.squadId ? squadOf(d, o.squadId) : undefined;
 
@@ -346,6 +354,7 @@ export function swapCheck(state: GameState, officerId: Id, withId: Id): { ok: tr
   if (!to) return { ok: false, reason: `${fullName(b)} is not in a squad` };
   if (a.squadId === b.squadId) return { ok: false, reason: `${fullName(a)} and ${fullName(b)} are both in ${to.name}` };
   for (const o of [a, b]) if (o.assignment?.kind === 'operation') return { ok: false, reason: `${fullName(o)} is on a call. Swap them once it ends` };
+  for (const o of [a, b]) { const held = shiftHold(o); if (held) return { ok: false, reason: held }; }
   return { ok: true, reason: null };
 }
 

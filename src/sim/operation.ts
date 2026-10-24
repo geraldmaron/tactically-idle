@@ -56,7 +56,7 @@ import { addService, departmentService, levelForService, serviceEarned } from '.
 import { ITEMS } from '../content/items';
 import { hashSeed, next } from './rng';
 import { fullName } from './officer';
-import { deployRoster, runRoster } from './squads';
+import { deployRoster, runRoster, squadShift } from './squads';
 import { flushSquadMoves } from './roster';
 import { squadName } from './squad-names';
 import { crewFlags, leadFlags } from './crew';
@@ -282,6 +282,8 @@ export function checkStart(state: GameState, now: number, cmd: StartCmd, timer: 
       continue;
     }
     if (squad.officerIds.length === 0) issues.push(`${squadLabel(sid)} has no officers`);
+    // A squad on a proactive shift is out in a district: recall it first (squads.ts squadBusyReason).
+    if (squadShift(state, sid)) issues.push(`${squadLabel(sid)} is on a proactive shift. Recall it first`);
     for (const oid of squad.officerIds) {
       const o = state.officers[oid];
       if (!o) {
@@ -929,9 +931,14 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
 export const CALL_FEE: Readonly<Record<1 | 2 | 3 | 4, number>> = { 1: 800, 2: 1600, 3: 3200, 4: 6400 };
 
 /** The fee for a call before the outcome factor: the table by the investigation's tier for a world call and
- * by the call's own tier otherwise (clamped to the table), times the funding scale. */
-export function callFee(state: Pick<GameState, 'department'>, run: Pick<OperationRun, 'world'>, scenario: Pick<ScenarioDefinition, 'incident'>): number {
+ * by the call's own tier otherwise (clamped to the table), times the funding scale. A world call pays its
+ * fee once per investigation (`WorldCase.feePaidRunId`): a warrant reopened after an escape, or a lead held
+ * open, plays for the case but pays nothing more, so repeating it cannot farm fees. Pass the run's id when
+ * pricing a run that may be the one that paid. */
+export function callFee(state: Pick<GameState, 'department'> & Partial<Pick<GameState, 'world'>>, run: Pick<OperationRun, 'world'> & { id?: Id }, scenario: Pick<ScenarioDefinition, 'incident'>): number {
   const tier = Math.min(4, Math.max(1, Math.round(run.world?.caseTier ?? scenario.incident?.tier ?? 1))) as 1 | 2 | 3 | 4;
+  const paid = run.world ? state.world?.cases.find((c) => c.id === run.world!.caseId)?.feePaidRunId : undefined;
+  if (paid !== undefined && paid !== run.id) return 0;
   return CALL_FEE[tier] * fundingScale(state.department.level);
 }
 
@@ -1374,6 +1381,11 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     const factor = scenario!.incidentPeople?.length && !run.responseFailure ? scoreCall(scenario!, run, { officers: draft.officers, steps: traceRun(scenario!, run).steps }).factor : outcomeFactor(run);
     const verdict: 'favorable' | 'adverse' | null = factor >= CAREER_TUNING.favorableAt && (result.completionAchieved) ? 'favorable' : factor < CAREER_TUNING.adverseBelow ? 'adverse' : null;
     postFunding(draft.department, result.fundingReward, 'payout', `Call payout, ${scenario?.title ?? result.endingTitle}`, draft.department.clockHighWater);
+    // The investigation's one fee is paid: a later call on the same case pays none (callFee).
+    if (run.world && result.fundingReward > 0) {
+      const worldCase = draft.world?.cases.find((c) => c.id === run.world!.caseId);
+      if (worldCase && worldCase.feePaidRunId === undefined) worldCase.feePaidRunId = run.id;
+    }
     draft.department.trust = clamp(draft.department.trust + result.trustDelta, 0, 100);
     if (result.serviceEarned !== undefined) addService(draft.department, result.serviceEarned);
     if (!run.responseFailure && (result.completionAchieved ?? factor >= CAREER_TUNING.favorableAt)) draft.department.callsResolved = (draft.department.callsResolved ?? 0) + 1;

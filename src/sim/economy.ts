@@ -388,6 +388,10 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     // The world and the people settle on the same walk: one clock, one accrual window.
     if (worldAcc) settleWorld(d, t, e, worldW, worldAcc);
     if (d.people) settlePeople(d, t, e, peopleBeats);
+    // A shift or an aftercare shift that just ended released its officers at e. A retirement that was waiting on
+    // them happens now, in the same boundary, not at the next event or the next tick (which would make a long
+    // settlement and many short ones pay and recover differently).
+    if (d.world || d.people) applyCareerDue(d, e, e, acc.personnel);
     t = e;
   }
   if (worldAcc) finishFirstReturn(d, L, T);

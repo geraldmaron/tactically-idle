@@ -5,18 +5,18 @@ import { employedPatrol } from '../patrol';
 import { seedTiesForSubject } from '../people';
 import type { GameState, HandlerResult } from '../types';
 import { openCase } from './cases';
-import { draw, hourOf, pushEvent } from './core';
+import { draw, homeDistrict, hourOf, patrolDistrict, pushEvent } from './core';
 import { activeCrews, idNumber, membersOf, reachable, seedDistrictCrews } from './population';
 import type { DistrictId } from './types';
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
 const unitNumber = (id: string): number => Number(id.replace(/\D/g, '')) || 0;
 
-/** The count each district's `patrolUnits` shows: employed staff assigned there (absent means Pike). */
+/** The count each district's `patrolUnits` shows: employed staff assigned there (absent means home). */
 export function syncPatrolUnits(d: GameState): void {
   const staff = employedPatrol(d);
   for (const district of Object.values(d.world.districts)) {
-    district.patrolUnits = staff.filter((p) => (p.districtId ?? 'pike') === district.id).length;
+    district.patrolUnits = staff.filter((p) => patrolDistrict(d.world, p) === district.id).length;
   }
 }
 
@@ -58,7 +58,9 @@ export function foundDepartment(d: GameState, name: string, districtId: District
   d.department.name = clean;
   // The chosen district is the department's only open district at founding, and patrol starts there.
   for (const other of Object.values(w.districts)) if (other.id !== districtId && other.open) { other.open = false; other.openedAt = null; }
-  for (const p of employedPatrol(d)) p.districtId = districtId;
+  // Home is saved: new hires start there and coverage taken off other districts comes back to it.
+  w.home = districtId;
+  for (const p of employedPatrol(d)) delete p.districtId;
   openDistrictState(d, districtId, now);
   // Everyone the city started with can now be known by an officer from their streets.
   for (const id of Object.keys(w.subjects)) seedTiesForSubject(d, id);
@@ -74,7 +76,7 @@ export function foundDepartment(d: GameState, name: string, districtId: District
     w.onboarding = { stage: 'first_return', firstShiftAt: now };
     return { ok: true };
   }
-  const unit = employedPatrol(d).filter((p) => (p.districtId ?? 'pike') === districtId).map((p) => unitNumber(p.id)).sort((a, b) => a - b)[0];
+  const unit = employedPatrol(d).filter((p) => patrolDistrict(w, p) === districtId).map((p) => unitNumber(p.id)).sort((a, b) => a - b)[0];
   subject.known = true;
   subject.history.push({ at: now, kind: 'stopped' });
   pushEvent(w, { at: now, kind: 'contact', districtId, subjectId: subject.id, crewId: crew.id, tier: 1, unit });
@@ -83,30 +85,43 @@ export function foundDepartment(d: GameState, name: string, districtId: District
   return { ok: true };
 }
 
+/** Why patrol coverage in a district cannot go to `units`, or null. The home district is the one place
+ * staff return to, so its count only falls when another district takes them: the sheet reads this to
+ * disable a step the command would refuse. */
+export function coverageRefusal(d: GameState, districtId: DistrictId, units: number): string | null {
+  const w = d.world;
+  if (!DISTRICTS[districtId]) return 'No such district';
+  if (!w.districts[districtId].open) return `${DISTRICTS[districtId].name} is not open yet`;
+  const staff = employedPatrol(d);
+  if (!Number.isInteger(units) || units < 0) return 'Units are a whole number';
+  if (units > staff.length) return `Only ${staff.length} patrol staff are employed`;
+  const here = staff.filter((p) => patrolDistrict(w, p) === districtId).length;
+  if (units < here && districtId === homeDistrict(w)) return 'Assign them to the district that needs them instead';
+  return null;
+}
+
 /** Move named patrol staff between districts. The total never changes: people leave the home district or come
- * back to it, and the lowest ids move first. */
+ * back to it, and the lowest ids move first. Staff are never sent to a district that is not open. */
 export function setDistrictCoverage(d: GameState, districtId: DistrictId, units: number): HandlerResult {
   const w = d.world;
-  if (!DISTRICTS[districtId]) return fail('No such district');
-  if (!w.districts[districtId].open) return fail(`${DISTRICTS[districtId].name} is not open yet`);
+  const refused = coverageRefusal(d, districtId, units);
+  if (refused) return fail(refused);
+  const home = homeDistrict(w);
   const staff = employedPatrol(d).sort((a, b) => unitNumber(a.id) - unitNumber(b.id));
-  if (!Number.isInteger(units) || units < 0) return fail('Units are a whole number');
-  if (units > staff.length) return fail(`Only ${staff.length} patrol staff are employed`);
-  const here = staff.filter((p) => (p.districtId ?? 'pike') === districtId);
+  const here = staff.filter((p) => patrolDistrict(w, p) === districtId);
   const delta = units - here.length;
   const place = (p: (typeof staff)[number], to: DistrictId) => {
-    if (to === 'pike') delete p.districtId;
+    if (to === home) delete p.districtId;
     else p.districtId = to;
   };
   if (delta > 0) {
     // Home staff first, then whoever works the district with the most units.
-    const others = staff.filter((p) => (p.districtId ?? 'pike') !== districtId);
-    const rank = (p: (typeof staff)[number]) => ((p.districtId ?? 'pike') === 'pike' ? 0 : 1);
-    others.sort((a, b) => (districtId === 'pike' ? rank(b) - rank(a) : rank(a) - rank(b)));
+    const others = staff.filter((p) => patrolDistrict(w, p) !== districtId);
+    const rank = (p: (typeof staff)[number]) => (patrolDistrict(w, p) === home ? 0 : 1);
+    others.sort((a, b) => (districtId === home ? rank(b) - rank(a) : rank(a) - rank(b)));
     for (const p of others.slice(0, delta)) place(p, districtId);
   } else if (delta < 0) {
-    if (districtId === 'pike') return fail('Assign them to the district that needs them instead');
-    for (const p of [...here].reverse().slice(0, -delta)) place(p, 'pike');
+    for (const p of [...here].reverse().slice(0, -delta)) place(p, home);
   }
   syncPatrolUnits(d);
   return { ok: true };

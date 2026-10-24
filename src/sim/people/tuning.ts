@@ -8,6 +8,10 @@ export const PEOPLE_TUNING = {
   rehireCooldownMs: 7 * HOUR_MS,
   /** Page 2 of a jacket opens after this many operations worked beside the same colleague. */
   page2After: 4,
+  /** A shift that served less than this leaves no memory and moves no bond (a recall at once). */
+  shiftMinServedMs: 15 * 60_000,
+  /** Service at which a shift counts in full for bonds (the shortest shift): less scales down in proportion. */
+  shiftFullServedMs: 2 * HOUR_MS,
   /** Newest facts kept per officer; older ones fall off. */
   factsPerOfficer: 40,
   /** Beats kept: every unacknowledged one, and this many newest acknowledged ones. */

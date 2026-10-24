@@ -66,6 +66,17 @@ export function fundingScale(level: number): number {
   return level >= 7 ? 3 : level >= 4 ? 2 : 1;
 }
 
+/** The district the department was founded in: the default for patrol staff with no assignment and where
+ * coverage taken off another district returns. Pike Street until the department is founded elsewhere. */
+export function homeDistrict(w: Pick<WorldState, 'home'> | undefined): DistrictId {
+  return w?.home ?? 'pike';
+}
+
+/** The district a patrol employee works: the one they were assigned, else home. */
+export function patrolDistrict(w: Pick<WorldState, 'home'> | undefined, p: { districtId?: DistrictId }): DistrictId {
+  return p.districtId ?? homeDistrict(w);
+}
+
 export function openDistrictIds(w: Pick<WorldState, 'districts'>): DistrictId[] {
   return DISTRICT_IDS.filter((id) => w.districts[id].open);
 }

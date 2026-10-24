@@ -15,8 +15,8 @@ import { foundDepartment, openDistrict, setDistrictCoverage, syncPatrolUnits } f
 import { rollHour } from './contacts';
 import { hourOf, type WorldAcc } from './core';
 import { seedDistrictCrews } from './population';
-import { activeShifts, recallShift, startShift, stopShift, strained, strainStopAt } from './shifts';
-import type { DistrictId, DistrictState, WorldState } from './types';
+import { activeShifts, recallShift, startShift, stopShift } from './shifts';
+import type { DistrictId, DistrictState, ProactiveShift, WorldState } from './types';
 import { DISTRICT_IDS } from './types';
 import { applyWorldDebrief as settleDebrief, openWarrant, reconcileLeads, respondToContact } from './warrants';
 
@@ -75,23 +75,25 @@ export function nextWorldEventTime(d: GameState, t: number): number | null {
     if (boundary <= opportunityUntil(d)) consider(boundary);
   }
   for (const c of w.cases) if (c.status === 'review') consider(c.closesAt);
-  for (const s of activeShifts(w)) {
-    consider(s.endsAt);
-    consider(strainStopAt(d, s, t));
-  }
+  for (const s of activeShifts(w)) consider(shiftStopAt(s));
   return e;
 }
 
-/** Everything due at or before `t`, in time order: shift ends, then case closes. */
-function settleDue(d: GameState, t: number, acc: WorldAcc, atEnd: boolean): void {
+/** When an active shift stops by itself: its stored strain deadline if that comes first or at its end, else its
+ * end. One fixed time per shift, however the span is settled. */
+const shiftStopAt = (s: ProactiveShift): number => (s.strainAt !== undefined && s.strainAt <= s.endsAt ? s.strainAt : s.endsAt);
+
+/** Everything due at or before `t`, in time order: shift stops, then case closes. */
+function settleDue(d: GameState, t: number, acc: WorldAcc): void {
   const w = d.world;
   const due: { at: number; order: number; run: () => void }[] = [];
-  for (const s of activeShifts(w)) if (s.endsAt <= t) due.push({ at: s.endsAt, order: 0, run: () => stopShift(d, s, s.endsAt, 'ended') });
+  for (const s of activeShifts(w)) {
+    const at = shiftStopAt(s);
+    if (at <= t) due.push({ at, order: 0, run: () => stopShift(d, s, at, at === s.strainAt && s.strainAt <= s.endsAt ? 'strain' : 'ended') });
+  }
   for (const c of w.cases) if (c.status === 'review' && c.closesAt !== null && c.closesAt <= t) due.push({ at: c.closesAt, order: 1, run: () => closeCase(d, w, c, acc) });
   due.sort((a, b) => a.at - b.at || a.order - b.order);
   for (const item of due) item.run();
-  // The strain line is read from the officers as they stand now, which is the end of the interval.
-  if (atEnd) for (const s of activeShifts(w)) if (strained(d, s)) stopShift(d, s, t, 'strain');
 }
 
 /** Advance the world over [from, to]. economy.settle calls this once per walk interval, after the other
@@ -103,7 +105,7 @@ export function settleWorld(d: GameState, from: number, to: number, opportunityL
   if (!w || to <= from) return;
   if (rolling(w)) {
     for (let b = (Math.floor(from / HOUR) + 1) * HOUR; b <= to && b <= opportunityLimit; b += HOUR) {
-      settleDue(d, b, acc, false);
+      settleDue(d, b, acc);
       const h = b / HOUR - 1;
       if (h > w.rolledThroughHour) {
         rollHour(d, b, acc);
@@ -111,7 +113,7 @@ export function settleWorld(d: GameState, from: number, to: number, opportunityL
       }
     }
   }
-  settleDue(d, to, acc, true);
+  settleDue(d, to, acc);
   reconcileLeads(d);
   syncPatrolUnits(d);
 }
