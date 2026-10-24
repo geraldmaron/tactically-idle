@@ -64,6 +64,12 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
   const g = useGame();
   const worldLead = g.incidents.find((c) => c.id === scenarioId)?.world?.leadId ?? null;
   const tieChoice = useTieChoice(worldLead ?? '');
+  // Holding the door recuses the officers who know the subject; when nobody else goes, someone must still talk.
+  const worldSubject = g.incidents.find((c) => c.id === scenarioId)?.world?.subjectId ?? null;
+  const allTied = (squadIds: readonly SquadId[]) => {
+    const ids = g.squads.filter((sq) => squadIds.includes(sq.id)).flatMap((sq) => sq.officerIds);
+    return ids.length > 0 && ids.every((id) => g.people.ties.some((t) => t.officerId === id && t.subjectId === worldSubject && t.onRecord));
+  };
   const now = Date.now();
   const { act, notify } = useToast();
   const card = cardFor(g, scenarioId, now);
@@ -172,7 +178,7 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       ...(Object.keys(stage).length > 0 ? { staging: stage } : {}),
       ...(supportUnitId ? { supportUnitIds: [supportUnitId] } : {}),
       // Warrant prep's choice for the officer who knows the subject (operations/view.ts).
-      ...(worldLead ? { tieRole: tieChoice === 'holds' ? 'door' as const : 'talk' as const } : {}),
+      ...(worldLead ? { tieRole: tieChoice === 'holds' && !allTied(chosen) ? 'door' as const : 'talk' as const } : {}),
     };
   }, [chosen, positions, loadouts, picks, staging, supportUnitId, scenarioId, defaultEntry, built, worldLead, tieChoice]);
   const check = prepCheck(g, now, cmd, timerSetting());
