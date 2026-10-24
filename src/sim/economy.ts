@@ -27,7 +27,9 @@ import { RECRUIT_TUNING } from '../content/recruits';
 import { postFunding } from './ledger';
 import { completeDetails } from './detail';
 import { accruePatrolService, applyPatrolDue, nextPatrolEventTime, patrolRates } from './patrol';
-import { newWorldAcc, nextWorldEventTime, settleWorld, worldReport } from './world';
+import { allocationRate, finishFirstReturn, newWorldAcc, nextWorldEventTime, settleWorld, worldReport } from './world';
+import { activeShifts, shiftGrantPerHour } from './world/shifts';
+import { ALLOCATION } from '../content/city/tuning';
 import { nextPeopleEventTime, settlePeople } from './people';
 
 export const HOUR_MS = 3_600_000;
@@ -111,7 +113,10 @@ export function recoveryRate(state: GameState, o: Officer, t: number = simNow(st
 // ---------------------------------------------------------------- rates
 
 export interface Rates {
+  /** City allocation: the base per open district, scaled by how calm the city is (world/core.ts). */
   base: number;
+  /** Grants from squads on a proactive shift at this time. Zero when pricing a permanent commitment. */
+  proactive: number;
   patrol: number;
   patrolBase: number;
   patrolBoost: number;
@@ -127,25 +132,32 @@ export interface Rates {
   net: number;
 }
 
-/** Hourly rates implied by the state at time t. Pure. */
+/**
+ * Hourly rates implied by the state at time t. Pure. `boosted` false is the sustainable view every permanent
+ * commitment is checked against: allocation at its floor, patrol without temporary boosts, no shift grants
+ * (docs/world-redesign.md, "Earnings"). The Department Charter is a lifetime entitlement and counts in both.
+ */
 export function ratesAt(state: GameState, t: number, boosted = true): Rates {
   const workforce = patrolRates(state, t, boosted);
+  const charter = state.department.entitlements?.charter ? ALLOCATION.charterFactor : 1;
   let nodeIncome = 0;
   for (const e of unlockedEffects(state)) if (e.kind === 'income') nodeIncome += e.perHour;
   let wages = 0;
   for (const o of Object.values(state.officers)) wages += o.wage;
 
-  const base = ECONOMY_TUNING.baseAllocation;
-  const patrol = workforce.gross;
-  const gross = base + patrol + nodeIncome;
+  const base = allocationRate(state.world, ECONOMY_TUNING.baseAllocation, !boosted);
+  const patrol = workforce.gross * charter;
+  const grant = state.world && boosted ? shiftGrantPerHour(state.department.level) * activeShifts(state.world).filter((shift) => shift.startedAt <= t && t < shift.endsAt).length : 0;
+  const gross = base + grant + patrol + nodeIncome;
   const operating = ECONOMY_TUNING.facilities;
   const staff = commandStaffSalaries(state);
   const supplies = ECONOMY_TUNING.supplies;
   return {
     base,
+    proactive: grant,
     patrol,
     patrolBase: workforce.baseGross,
-    patrolBoost: workforce.boostAmount,
+    patrolBoost: patrol - workforce.baseGross,
     patrolWages: workforce.wages,
     patrolOperating: workforce.operating,
     nodeIncome,
@@ -378,6 +390,7 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
     if (d.people) settlePeople(d, t, e, peopleBeats);
     t = e;
   }
+  if (worldAcc) finishFirstReturn(d, L, T);
 
   // Unshortlisted candidates who have waited too long leave the pool.
   d.candidates = d.candidates.filter((c) => c.shortlisted || c.expiresAt > T);
