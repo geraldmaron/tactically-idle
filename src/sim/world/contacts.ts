@@ -8,7 +8,7 @@ import { employedPatrol } from '../patrol';
 import { seedTiesForSubject } from '../people';
 import type { GameState, PatrolEmployee } from '../types';
 import { addLead, openCase, openInvestigation } from './cases';
-import { clamp, draw, pushEvent, round1, weighted, type WorldAcc } from './core';
+import { clamp, draw, patrolDistrict, pushEvent, round1, weighted, type WorldAcc } from './core';
 import {
   activeCrews, addHistory, formSuccessor, idNumber, makeSubject, membersOf, reachable, recruitHour, refreshStrength, successorDue,
 } from './population';
@@ -18,9 +18,9 @@ import type { Crew, DistrictId, ProactiveShift, Subject, Tier, WorldState } from
 const patrolNumber = (id: string): number => Number(id.replace(/\D/g, '')) || 0;
 
 /** Productive patrol employees on a district's streets. Unassigned staff cover the home district. */
-export function productiveUnits(d: Pick<GameState, 'patrol'>, districtId: DistrictId): PatrolEmployee[] {
+export function productiveUnits(d: Pick<GameState, 'patrol' | 'world'>, districtId: DistrictId): PatrolEmployee[] {
   return employedPatrol(d)
-    .filter((p) => !p.training && (p.districtId ?? 'pike') === districtId)
+    .filter((p) => !p.training && patrolDistrict(d.world, p) === districtId)
     .sort((a, b) => patrolNumber(a.id) - patrolNumber(b.id));
 }
 
@@ -94,7 +94,7 @@ function contact(d: GameState, ctx: ContactCtx, acc: WorldAcc): void {
   pushContact(w, ctx, subject, tier, crew);
 
   if (tier <= 2) {
-    const chance = swat ? swatCaseChance(squadSkill(d, squadId!)) : CONTACT.npcCaseChance;
+    const chance = swat ? swatCaseChance(squadSkill(d, squadId!, ctx.shift!.officerIds)) : CONTACT.npcCaseChance;
     if (draw(w.seed, 'o', ctx.h, ctx.key, 0) >= chance) return;
     const c = openCase(d, w, { subject, tier, source: swat ? 'proactive' : 'patrol', at: ctx.b, status: 'review', officerIds, unit: ctx.unit, squadId }, acc);
     ctx.shift?.caseIds.push(c.id);
@@ -132,7 +132,7 @@ export function rollHour(d: GameState, b: number, acc: WorldAcc): void {
     if (!district.open) continue;
     const target = crimeTarget(w, districtId, coverageAt(d, districtId, b));
     district.crime = round1(clamp(district.crime + (target - district.crime) * CRIME.driftPerHour, 0, 100));
-    district.patrolUnits = employedPatrol(d).filter((p) => (p.districtId ?? 'pike') === districtId).length;
+    district.patrolUnits = employedPatrol(d).filter((p) => patrolDistrict(w, p) === districtId).length;
   }
 }
 

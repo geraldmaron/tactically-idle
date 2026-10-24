@@ -14,6 +14,7 @@ import { activeShifts, shiftGrantPerHour, shiftRefusal, squadSkill } from './shi
 import type { Crew, DistrictId, Lead, ProactiveShift, Tier, WorldCase, WorldEvent } from './types';
 
 export { fundingScale } from './core';
+export { coverageRefusal } from './commands';
 
 export interface CrewBrief {
   id: string;

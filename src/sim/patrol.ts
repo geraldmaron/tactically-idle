@@ -117,14 +117,24 @@ function quote(state: GameState, upfront: number, grossDelta = 0, wageDelta = 0,
   const netDelta = grossDelta - wageDelta - operatingDelta;
   return { ok: true, reason: null, upfront, grossDelta, wageDelta, operatingDelta, netBefore, netAfter: netBefore + netDelta, netDelta, paybackHours: netDelta > 0 ? upfront / netDelta : null };
 }
+/** The change a commitment makes to the books: the department's rates with and without it, patrol only. The
+ * Department Charter scales patrol gross inside ratesAt, so reading both rates keeps every quote and check
+ * on the figures settlement will actually pay. */
+function patrolDelta(state: GameState, trial: GameState, at: number, boosted = false): { gross: number; wage: number; operating: number; net: number } {
+  const before = ratesAt(state, at, boosted), after = ratesAt(trial, at, boosted);
+  return { gross: after.patrol - before.patrol, wage: after.patrolWages - before.patrolWages, operating: after.patrolOperating - before.patrolOperating, net: after.net - before.net };
+}
+const withPatrol = (state: GameState, personnel: PatrolEmployee[], boosts = state.patrol.boosts): GameState => ({ ...state, patrol: { ...state.patrol, personnel, boosts } });
 function refuse<T extends PatrolQuote>(value: T, reason: string): T { return { ...value, ok: false, reason }; }
 function affordability<T extends PatrolQuote>(state: GameState, value: T): T {
   return state.department.funding < value.upfront ? refuse(value, `Needs ${value.upfront} funding`) : value;
 }
 
 export function patrolHireQuote(state: GameState, profileId: Id): PatrolQuote {
-  const grade = PATROL_GRADES[1];
-  const value = quote(state, PATROL_HIRE_COST, grade.gross, grade.wage, grade.operating);
+  const at = state.department.clockHighWater;
+  const hired: PatrolEmployee = { id: 'patrol_quote', profileId, grade: 1, serviceHours: 0, hiredAt: at, dismissedAt: null, training: null };
+  const delta = patrolDelta(state, withPatrol(state, [...state.patrol.personnel, hired]), at);
+  const value = quote(state, PATROL_HIRE_COST, delta.gross, delta.wage, delta.operating);
   if (!patrolCandidates(state).some((person) => person.id === profileId)) return refuse(value, 'That patrol candidate is no longer available');
   if (employedPatrol(state).length >= patrolCapacity(state)) return refuse(value, 'Every authorized patrol position is filled');
   // A profitable hire is also a recovery route from a deficit; it cannot increase that deficit.
@@ -139,7 +149,10 @@ export function patrolDismissQuote(state: GameState, employeeId: Id): PatrolDism
   if (!person) return refuse({ ...quote(state, 0), severance: 0 }, 'No such employed patrol officer');
   const grade = PATROL_GRADES[person.grade];
   const severance = grade.wage * PATROL_SEVERANCE_HOURS;
-  return { ...quote(state, Math.min(severance, Math.max(0, state.department.funding)), person.training ? 0 : -grade.gross, -grade.wage, -grade.operating), severance };
+  const at = state.department.clockHighWater;
+  const gone = withPatrol(state, state.patrol.personnel.map((entry) => entry.id === employeeId ? { ...entry, dismissedAt: at, training: null } : entry));
+  const delta = patrolDelta(state, gone, at);
+  return { ...quote(state, Math.min(severance, Math.max(0, state.department.funding)), delta.gross, delta.wage, delta.operating), severance };
 }
 
 export interface PatrolTrainingQuote extends PatrolQuote { toGrade: PatrolGrade | null; endsAt: number | null; trainingNet: number }
@@ -150,11 +163,18 @@ export function patrolTrainingQuote(state: GameState, employeeId: Id): PatrolTra
   if (person.training) return refuse(value, 'This patrol officer is already training');
   if (person.grade === 3) return refuse(value, 'This patrol officer holds the highest grade');
   const toGrade = (person.grade + 1) as PatrolGrade;
-  const next = PATROL_GRADES[toGrade], previous = PATROL_GRADES[person.grade];
-  const base = quote(state, next.trainingCost, next.gross - previous.gross, next.wage - previous.wage, next.operating - previous.operating);
-  const trainingNet = base.netBefore - previous.gross;
-  const result: PatrolTrainingQuote = { ...base, toGrade, endsAt: state.department.clockHighWater + next.trainingHours * HOUR_MS, trainingNet,
-    paybackHours: base.netDelta > 0 ? (base.upfront + previous.gross * next.trainingHours) / base.netDelta : null };
+  const next = PATROL_GRADES[toGrade];
+  const at = state.department.clockHighWater;
+  const endsAt = at + next.trainingHours * HOUR_MS;
+  const training = withPatrol(state, state.patrol.personnel.map((entry) => entry.id === employeeId ? { ...entry, training: { toGrade, startedAt: at, endsAt } } : entry));
+  // The step up, read when it lands; and the downtime, read now with this person off the street.
+  const lift = patrolDelta(state, training, endsAt);
+  const away = patrolDelta(state, training, at);
+  const base = quote(state, next.trainingCost, lift.gross, lift.wage, lift.operating);
+  const trainingNet = base.netBefore + away.net;
+  const downtimeGross = -away.gross;
+  const result: PatrolTrainingQuote = { ...base, toGrade, endsAt, trainingNet,
+    paybackHours: base.netDelta > 0 ? (base.upfront + downtimeGross * next.trainingHours) / base.netDelta : null };
   if (state.department.level < next.departmentLevel) return refuse(result, `Requires department level ${next.departmentLevel}`);
   if (person.serviceHours + 1e-9 < next.serviceHours) return refuse(result, `Requires ${next.serviceHours} eligible patrol service hours`);
   if (employedPatrol(state).filter((entry) => entry.training).length >= PATROL_TRAINING_SLOTS) return refuse(result, 'The patrol training place is occupied');
@@ -176,7 +196,7 @@ function boostReturn(state: GameState, boostId: Id, at: number, from: number, ex
   let total = 0;
   for (let i = 0; i < boundaries.length - 1; i++) {
     const t = boundaries[i];
-    total += (patrolRates(trial, t).gross - patrolRates(state, t).gross) * (boundaries[i + 1] - t) / HOUR_MS;
+    total += (ratesAt(trial, t).patrol - ratesAt(state, t).patrol) * (boundaries[i + 1] - t) / HOUR_MS;
   }
   return total;
 }
@@ -189,7 +209,9 @@ export function patrolBoostQuote(state: GameState, boostId: Id): PatrolBoostQuot
   const held = state.patrol.boosts.find((entry) => entry.id === boostId && entry.expiresAt > at);
   const expiresAt = Math.max(at, held?.expiresAt ?? at) + definition.hours * HOUR_MS;
   const nextFactor = held ? rate.factor : Math.min(MAX_PATROL_BOOST_FACTOR, rate.factor + definition.factor - 1);
-  const netDelta = rate.baseGross * (nextFactor - rate.factor);
+  // What the boost adds per hour once it runs, Charter included: the rates with and without it, now.
+  const boosted = withPatrol(state, state.patrol.personnel, [...state.patrol.boosts.filter((boost) => boost.id !== boostId), { id: boostId, factor: definition.factor, grantedAt: at, expiresAt }]);
+  const netDelta = held ? 0 : patrolDelta(state, boosted, at, true).net;
   const incrementalReturn = boostReturn(state, boostId, at, held?.expiresAt ?? at, expiresAt);
   const result: PatrolBoostQuote = { ...base, expiresAt, factor: nextFactor, grossDelta: netDelta, netDelta,
     incrementalReturn, netBefore: ratesAt(state, at).net, netAfter: ratesAt(state, at).net + netDelta };

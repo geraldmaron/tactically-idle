@@ -238,6 +238,36 @@ describe('the tie contributor', () => {
   });
 });
 
+describe('recusal binds', () => {
+  it('offers no contact with the subject when everyone who could take part knows them and holds the door', () => {
+    const { s, subject, cardId } = worldState();
+    // A one-officer squad, and that officer knows the subject.
+    s.squads[0].officerIds = ['off_chen'];
+    s.squads[0].leaderId = 'off_chen';
+    tie(s, 'off_chen', subject.id);
+    const run = startWorldRun(s, cardId, 'door');
+    const scenario = getScenario(cardId)!;
+    const contact = new Set(Object.values(scenario.stages).flatMap((st) => st.actions).filter((a) => a.check.kind === 'contact').map((a) => a.id));
+    const views = actionViews(run, NOW, 'A').filter((v) => contact.has(v.id) && /name_at_door|gym_talk|call_gym|walk_beside|sit_on_stairs/.test(v.id));
+    expect(views.length).toBeGreaterThan(0);
+    for (const view of views) {
+      expect(view.eligible, view.id).toBe(false);
+      expect(view.reason ?? '').toMatch(/holds the street door/);
+    }
+    // Said the other way round, the officer talks when the player does not ask them to hold the door.
+    const talk = actionViews(startWorldRun(worldTied().s, worldTied().cardId, 'talk'), NOW, 'A').filter((v) => contact.has(v.id) && v.eligible);
+    expect(talk.length).toBeGreaterThan(0);
+  });
+
+  it('still seats the others when someone else can take part', () => {
+    const { s, subject, cardId } = worldState();
+    tie(s, 'off_chen', subject.id);
+    const views = contactViews(startWorldRun(s, cardId, 'door'));
+    expect(views.length).toBeGreaterThan(0);
+    for (const view of views) expect(view.officerIds).not.toContain('off_chen');
+  });
+});
+
 function worldTied() {
   const x = worldState();
   tie(x.s, 'off_chen', x.subject.id);
@@ -293,6 +323,43 @@ describe('the call fee', () => {
     expect(kase.paidAt).toBeUndefined();
     expect(kase.paidEventId).toBeUndefined();
     expect(before).toBeGreaterThan(0);
+  });
+
+  it('is paid once per investigation: a warrant reopened after an escape pays nothing more', () => {
+    const { s, cardId, leadId } = worldState();
+    // Play the call to a debrief that lets the subject get away, and close it.
+    const escape = (state: GameState): GameState => {
+      const forced = structuredClone(startWorldRun(state, cardId));
+      forced.activeRun!.status = 'debrief';
+      forced.activeRun!.endingId = 'escaped';
+      const closed = apply(forced, { type: 'closeDebrief' });
+      expect(closed.result.ok).toBe(true);
+      return closed.state;
+    };
+    const caseOf = (state: GameState) => state.world.cases.find((c) => c.id === state.world.leads.find((l) => l.id === leadId)!.caseId)!;
+    const scenario = getScenario(cardId)!;
+
+    const first = escape(s);
+    expect(first.debriefs[0].fundingReward).toBeGreaterThan(0);
+    expect(first.world.leads.find((l) => l.id === leadId)!.status).toBe('open');
+    expect(caseOf(first).feePaidRunId).toBe(first.debriefs[0].runId);
+
+    // The same lead opens again. The board no longer promises a fee, and a second and third escape pay none.
+    expect(openWarrant(first, leadId).ok).toBe(true);
+    const card = first.incidents.find((c) => c.world?.leadId === leadId)!;
+    expect(callFee(first, { world: card.world }, scenario)).toBe(0);
+    expect(callFee(s, { world: card.world }, scenario)).toBeGreaterThan(0);
+    const second = escape(first);
+    expect(second.debriefs[0].fundingReward).toBe(0);
+    expect(openWarrant(second, leadId).ok).toBe(true);
+    expect(escape(second).debriefs[0].fundingReward).toBe(0);
+    expect(caseOf(second).feePaidRunId).toBe(first.debriefs[0].runId);
+  });
+
+  it('is unchanged for a call that is not a world call', () => {
+    const state = makeState();
+    expect(callFee(state, {}, { incident: { tier: 2 } as IncidentSpec })).toBe(1600);
+    expect(callFee(state, { world: undefined }, { incident: { tier: 2 } as IncidentSpec })).toBe(1600);
   });
 });
 

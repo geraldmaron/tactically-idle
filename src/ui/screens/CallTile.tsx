@@ -37,7 +37,10 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
   const tier = scenario ? callTier(scenario.id) : null;
   const floors = scenarioFloorCount(scenario);
   const place = [tags.name, blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
-  const pay = scenario?.rewards;
+  // What the engine will pay at most (callFee, carried on the card by scenarioCards): the tier table times the
+  // funding scale for the card's own investigation. The authored reward is only a fallback for a card built
+  // without a state (the Lab's frame).
+  const pay = scenario?.rewards ? { ...scenario.rewards, funding: card.fee ?? scenario.rewards.funding } : undefined;
   const bar = timeShare === undefined ? null
     : <span className={`cl-card-time${soon ? ' cl-card-time-soon' : ''}`} aria-hidden="true"><i style={{ width: `${Math.round(Math.max(0, Math.min(1, timeShare)) * 100)}%` }} /></span>;
   if (compact) return (

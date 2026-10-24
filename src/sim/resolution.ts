@@ -726,10 +726,11 @@ export function evaluateAction(input: EvalInput): Evaluation {
 
   // ---- seat order: cert holders lead, then by effective aptitude
   // The player may have the officer who knows the subject hold the street door instead of talking (recusal):
-  // they sit out the contact checks with that person, unless no one else is left to take part.
+  // they sit out the contact checks with that person. Recusal binds: when everyone who could take part knows
+  // the subject, the contact is not available (the reason names who holds the door), never quietly restored.
   const knowing = knowingOfficers(state, run, input.scenario, action);
   const recused = knowing?.role === 'door' ? pool.filter((o) => knowing.ids.has(o.id)) : [];
-  const seated = recused.length && recused.length < pool.length ? pool.filter((o) => !knowing!.ids.has(o.id)) : pool;
+  const seated = recused.length ? pool.filter((o) => !knowing!.ids.has(o.id)) : pool;
   if (seated !== pool) for (const o of recused) {
     excluded.push({ officerId: o.id, reason: `${o.surname} holds the street door` });
     contributors.push({ label: `${o.surname}: holds the street door, off the talk`, value: 0, source: 'familiarity', ref: o.id });

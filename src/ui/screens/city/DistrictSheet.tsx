@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CRIME, DISTRICT_ORDER } from '../../../content/city/tuning';
 import { employedPatrol } from '../../../sim/patrol';
 import { BAND_LABEL, stressBand } from '../../../sim/officer';
-import { crewLadder, districtView, shiftPreview, type DistrictView } from '../../../sim/world/selectors';
+import { coverageRefusal, crewLadder, districtView, shiftPreview, type DistrictView } from '../../../sim/world/selectors';
 import type { DistrictId } from '../../../sim/world/types';
 import type { GameState, Officer, SquadId } from '../../../sim/types';
 import { useGame } from '../../store';
@@ -42,6 +42,9 @@ function OpenBody({ g, view, choice, update, onClose }: { g: GameState; view: Di
   const nav = useNav();
   const { act } = useToast();
   const total = employedPatrol(g).length;
+  // The home district only loses staff when another district takes them, so its step down is off: the engine
+  // would refuse it (world/commands.ts coverageRefusal), and a button that always fails is worse than none.
+  const floor = coverageRefusal(g, view.id, view.assigned - 1) ? view.assigned : 0;
   const projection = projectCrime(view);
   const end = projection[projection.length - 1];
   const index = DISTRICT_ORDER.indexOf(view.id) + 1;
@@ -68,7 +71,7 @@ function OpenBody({ g, view, choice, update, onClose }: { g: GameState; view: Di
       <section className="district-card district-patrol" aria-label="Patrol coverage">
         <span className="district-card-text"><b>Patrol units</b><span>Each pulls crime down about {CRIME.perUnit} and meets more people.</span></span>
         <span className="district-patrol-step">
-          <Stepper label="patrol units here" value={view.assigned} max={total} onChange={(units) => act({ type: 'setDistrictCoverage', districtId: view.id, units })} />
+          <Stepper label="patrol units here" value={view.assigned} min={floor} max={total} onChange={(units) => act({ type: 'setDistrictCoverage', districtId: view.id, units })} />
           <span className="district-kicker">OF {total}</span>
         </span>
       </section>

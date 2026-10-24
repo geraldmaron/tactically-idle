@@ -33,15 +33,19 @@ export function shiftCoversBoundary(s: ProactiveShift, b: number): boolean {
   return s.stoppedAt === undefined ? s.endsAt >= b : s.stoppedAt >= b;
 }
 
-/** Officers currently on this shift (their assignment names it). */
-export function shiftMembers(d: GameState, shift: ProactiveShift): Officer[] {
-  return Object.values(d.officers).filter((o) => o.assignment?.kind === 'proactive' && o.assignment.shiftId === shift.id);
+/** The officers who rode this shift, from the roster recorded when it started: still true at the boundary
+ * where the shift stops, after the assignments are cleared, and unaffected by squad changes since. Officers
+ * who have left the department are not in it. */
+export function shiftMembers(d: Pick<GameState, 'officers' | 'squads'>, shift: ProactiveShift): Officer[] {
+  const ids = shift.officerIds ?? d.squads.find((s) => s.id === shift.squadId)?.officerIds ?? [];
+  return ids.map((id) => d.officers[id]).filter((o): o is Officer => !!o);
 }
 
-/** Mean of awareness and communication over a squad, 0..100: how many contacts open casework. */
-export function squadSkill(d: Pick<GameState, 'squads' | 'officers'>, squadId: SquadId): number {
+/** Mean of awareness and communication over the people on a shift (or a squad), 0..100: how many contacts open
+ * casework. */
+export function squadSkill(d: Pick<GameState, 'squads' | 'officers'>, squadId: SquadId, only?: readonly string[]): number {
   const squad = d.squads.find((s) => s.id === squadId);
-  const people = (squad?.officerIds ?? []).map((id) => d.officers[id]).filter((o): o is Officer => !!o);
+  const people = (only ?? squad?.officerIds ?? []).map((id) => d.officers[id]).filter((o): o is Officer => !!o);
   if (!people.length) return 50;
   return people.reduce((sum, o) => sum + (o.ratings.awareness + o.ratings.communication) / 2, 0) / people.length;
 }
@@ -88,13 +92,13 @@ export function startShift(d: GameState, squadId: SquadId, districtId: DistrictI
   const why = shiftRefusal(d, squadId, districtId, hours, now);
   if (why) return fail(why);
   const w = d.world;
-  const shift: ProactiveShift = { id: newId(w, 'p'), squadId, districtId, startedAt: now, endsAt: now + hours * HOUR, contacts: 0, caseIds: [], leadIds: [] };
-  w.shifts.push(shift);
   const squad = d.squads.find((s) => s.id === squadId)!;
-  for (const id of squad.officerIds) {
-    const o = d.officers[id];
-    if (o) o.assignment = { kind: 'proactive', shiftId: shift.id, startedAt: shift.startedAt, endsAt: shift.endsAt };
-  }
+  const members = squad.officerIds.map((id) => d.officers[id]).filter((o): o is Officer => !!o);
+  const shift: ProactiveShift = { id: newId(w, 'p'), squadId, districtId, startedAt: now, endsAt: now + hours * HOUR, officerIds: members.map((o) => o.id), contacts: 0, caseIds: [], leadIds: [] };
+  const strainAt = strainDeadline(shift.startedAt, Math.max(...members.map((o) => o.stress)));
+  if (strainAt !== null && strainAt <= shift.endsAt) shift.strainAt = strainAt;
+  w.shifts.push(shift);
+  for (const o of members) o.assignment = { kind: 'proactive', shiftId: shift.id, startedAt: shift.startedAt, endsAt: shift.endsAt };
   pushEvent(w, { at: now, kind: 'shift_started', districtId, squadId });
   return { ok: true };
 }
@@ -107,7 +111,7 @@ export function stopShift(d: GameState, shift: ProactiveShift, at: number, reaso
   if (shift.stoppedAt !== undefined) return;
   shift.stoppedAt = at;
   shift.stopReason = reason;
-  for (const o of shiftMembers(d, shift)) o.assignment = null;
+  for (const o of Object.values(d.officers)) if (o.assignment?.kind === 'proactive' && o.assignment.shiftId === shift.id) o.assignment = null;
   pushEvent(w, { at, kind: 'shift_ended', districtId: shift.districtId, squadId: shift.squadId, amount: shift.contacts });
   recordShiftFact(d, shift.id);
   pruneShifts(w, at);
@@ -127,20 +131,15 @@ export function recallShift(d: GameState, squadId: SquadId): HandlerResult {
   return { ok: true };
 }
 
-/** A member has reached the line where one more hour of shift would take them to 60. */
-export function strained(d: GameState, shift: ProactiveShift): boolean {
-  return shiftMembers(d, shift).some((o) => o.stress >= SHIFT.stopAt - 1e-4);
-}
-
-/** When the strain stop will land if nothing else changes, on the minute grid so every way of settling the
- * same span agrees on it. null when the shift adds no strain. */
-export function strainStopAt(d: GameState, shift: ProactiveShift, t: number): number | null {
-  const members = shiftMembers(d, shift);
+/** The one time a shift stops for strain: when its most strained member would reach the stop line at the flat
+ * proactive rate, rounded up to the minute grid, from their stress when the shift started. A fixed time, not a
+ * reading of stress at whatever moment the clock happens to be sampled, so one long settlement and many short
+ * ticks stop the shift together. null when the shift adds no strain. */
+export function strainDeadline(startedAt: number, worstStress: number): number | null {
   const rate = ECONOMY_TUNING.proactiveStrainPerHour;
-  if (!members.length || rate <= 0) return null;
-  const worst = Math.max(...members.map((o) => o.stress));
-  const crossing = t + ((SHIFT.stopAt - worst) / rate) * HOUR;
+  if (!Number.isFinite(worstStress) || rate <= 0) return null;
+  const crossing = startedAt + ((SHIFT.stopAt - worstStress) / rate) * HOUR;
   let at = Math.ceil((crossing - 1) / SHIFT.strainGridMs) * SHIFT.strainGridMs;
-  if (at <= t) at = (Math.floor(t / SHIFT.strainGridMs) + 1) * SHIFT.strainGridMs;
+  if (at <= startedAt) at = (Math.floor(startedAt / SHIFT.strainGridMs) + 1) * SHIFT.strainGridMs;
   return at;
 }

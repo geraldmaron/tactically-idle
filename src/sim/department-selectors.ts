@@ -21,7 +21,7 @@ import { courseCheck, describeEffect, itemCheck, nodeCheck } from './develop';
 import { quoteDevelopment, type DevelopmentQuote } from './development-tiers';
 import { ECONOMY_TUNING, HOUR_MS, isInjured, netRate, ratesAt, recoveryMultiplier, recoveryRate } from './economy';
 import { formatDuration } from './format';
-import { deployRoster, recoveryDuty, squadDeployed } from './squads';
+import { deployRoster, recoveryDuty, squadDeployed, squadShift } from './squads';
 import { ROSTER_TUNING, dismissCheck, hireCheck, retentionOffer } from './roster';
 import { formatGameDate, gameDay, serviceYears } from './calendar';
 import { RANKS } from '../content/ranks';
@@ -277,9 +277,11 @@ export function squadReadiness(state: GameState, squadId: SquadId, now: number):
   if (total > 0 && total < size) issues.push(`Short ${size - total} officer${size - total === 1 ? '' : 's'} of ${size}`);
   const deployed = squadDeployed(state, squadId);
   if (deployed) issues.unshift('Squad is on an operation');
+  const onShift = squadShift(state, squadId) !== null;
+  if (onShift) issues.unshift('Squad is on a proactive shift');
   // Deploy's own rule (deployRoster): who goes, and who stays home and why.
   const roster = deployRoster(state, squadId, now);
-  return { squadId, ready: roster.goes.length, total, deployable: roster.goes.length >= 1 && !deployed, issues, staysHome: roster.staysHome };
+  return { squadId, ready: roster.goes.length, total, deployable: roster.goes.length >= 1 && !deployed && !onShift, issues, staysHome: roster.staysHome };
 }
 
 export function sortedCandidates(state: GameState): Candidate[] {

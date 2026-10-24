@@ -28,14 +28,14 @@ import { decisionsOf, isLapse } from './types';
 import type { ActionDefinition, FactDefinition, NodeThreat, ScenarioDefinition } from './scenario-types';
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
-import { deployRoster, runRoster } from './squads';
+import { deployRoster, runRoster, squadShift } from './squads';
 import { getScenario } from './scenario-registry';
 import { parseIncidentId } from '../gen/incident';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, tagNames, type Evaluation } from './resolution';
 import { ditherCap, stalledRun, teamMinutes } from './clocks';
 import { conditionHolds, liveThreat } from './conditions';
-import { checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
+import { callFee, checkStart, computeDebrief, defaultSupport, evaluateDefault, decisionViewsFor, matchedEffects, matchedOutcomeIndices } from './operation';
 import { drawnDistribution, type DrawnDistribution } from './drawn-effects';
 import { approxPoint, spaceLabel } from './spatial-factors';
 import { actionEventResult } from './action-result';
@@ -59,6 +59,9 @@ export interface ScenarioCard {
   eligibleSquadIds: SquadId[];
   /** Why the scenario cannot be deployed right now. */
   issues: string[];
+  /** The most the call pays in funding (callFee: tier table times the funding scale; 0 once its investigation
+   * has paid a fee). Optional so fixtures can omit it; screens fall back to the authored reward. */
+  fee?: number;
 }
 
 export interface Briefing {
@@ -110,6 +113,10 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
         why.push(`${squad.name} has no officers`);
         continue;
       }
+      if (squadShift(state, squad.id)) {
+        why.push(`${squad.name} is on a proactive shift`);
+        continue;
+      }
       // A squad deploys with whoever is ready; the rest stay home (short-squad-deploys).
       const roster = deployRoster(state, squad.id, now);
       const blocker = roster.goes.length ? null : `nobody is ready (${roster.staysHome.map(entry => entry.reason).join('; ')})`;
@@ -139,6 +146,9 @@ export function scenarioCards(state: GameState, now: number): ScenarioCard[] {
       pressureLabel: s.pressureLabel,
       eligibleSquadIds: eligible,
       issues,
+      // What the call pays before its outcome: the same figure settlement uses (operation.callFee), by the
+      // investigation's tier when the card is a world card, so the board never promises what the engine won't pay.
+      fee: callFee(state, { world: state.incidents?.find((c) => c.id === s.id)?.world }, s),
     };
   });
 }
