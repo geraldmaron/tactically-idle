@@ -105,3 +105,37 @@ diff. Then the broad run: `npm run verify`, e2e, UI gates; update tests that pin
   the existing `settle` interval walk, one call per interval, with hour indices stored.
 - **Test fallout.** Markup changes will break many UI tests at wave 3. Accepted: the owner deferred testing.
 - **Content cost.** Jackets for 100 personas are not written here; 8 authored, the rest from templates.
+
+## Contract revisions after sol's challenge (2026-10-24)
+
+Sol (`gpt-6.1-sol`) rejected waves 0 to 2 as first written: 7 fatal and 17 serious findings, full text in
+the session scratchpad and summarized here. Its best alternative, finishing the one-district slice on frozen
+settlement, identity and availability contracts before parallel screen work, is adopted. Changes:
+
+| Finding | Contract now |
+| --- | --- |
+| Hour cursors alone are not deterministic | Rolls run exactly at each hour boundary inside the settle walk, after that boundary's due events; draws keyed per patrol employee id and shift id, never the department rng; ids namespaced (`world/types.ts` header) |
+| Settlement ordering and new boundaries | World and people deadlines join `nextEventTime`; rates are left-boundary; crime and allocation change only at boundaries |
+| W and entitlements on first load | Entitlements persist on the department (`syncEntitlements`), so the constructor's first settle sees the last sync; funding window `fundingCapMs` 72 h or 7 days; purchase effective from sync time |
+| Night Watch would sell leads | Separate `worldCapMs` (72 h) for contacts, crime and recruitment, never extended; reviews already open still close and pay |
+| Coverage counts lack identity | `PatrolEmployee.districtId`; coverage commands move named employees deterministically and conserve the total |
+| Shifts and aftercare outside availability | `proactive`, `standdown`, `peer_support` assignments; `deployability`, courses and dismissal refuse them; recovery runs negative on a shift and at the rest rate on a stand-down |
+| Canonical people vs officer copies | Live officer is the authority while employed; `PersonRecord.snapshot` stored on every departure; rehire restores it, never `personnel.builds` |
+| Investigation identity and award idempotency | `WorldCase` is the investigation (open, review, closed) with `paidEventId`; `Lead.caseId`; `IncidentWorldRef.caseId`; one posting owner each (case award: world at close; call fee: closeDebrief) |
+| Debrief result is not a disposition | `TreeEnding.world.resolution` maps each warrant ending to charged, diverted, care, released, cleared or escaped |
+| World casting cannot be reconstructed | `IncidentSpec.cast` (name pool indices and pronouns) carried in the incident id; generation binds it into the subject role before placement, so board, prepare, run, reload and the Lab regenerate the same person |
+| No compatible warrant call | The warrant tree lane is on the critical path (running) |
+| World cards strand leads | World cards never expire or count toward board capacity; opening is idempotent; cancel or removal returns the lead to open |
+| Tie contributor owner and cap | world-calls owns `resolution.ts` wiring, one total cap of 4, a positive probe plus negative controls via the lead in `wiring.ts` |
+| Save validation | Each engine lane validates its records relationally (references, paid state, capacity); the lead adds cross-record checks |
+| Onboarding is a browser setting | `WorldState.onboarding` stage machine per campaign; proactive shifts open at `done` |
+| Lane table misses bridge files | Ownership extended below; App.tsx and nav.tsx route changes go through the lead in wave 2 |
+| CSS cascade collisions | look-and-shell inventories screen rules in `app.css` and `skin.css`; the lead moves them into screen files before wave 2 |
+| Navigation is more than renaming | Destination semantics frozen: equipment and training open HQ; leaving a call returns to City; tabs keep scroll; one Resume entry |
+| Final gates | Wave 3 order: integrate, typecheck, Codex diff review, update intended assertions and capture registries, inspect fingerprints, content gates and a separate writing review, then verify and the full journey; plus campaign simulations across crime and entitlements |
+
+Ownership additions: world-engine also owns `src/sim/economy.ts` (rates, recovery, settle internals with
+the hooks unchanged), `src/sim/patrol.ts`, `src/sim/squads.ts`, `src/sim/detail.ts`, `src/sim/develop.ts`
+(availability lines). people-engine also owns `src/sim/roster.ts`, `src/sim/career.ts` (departures),
+`src/sim/personnel.ts`. world-calls also owns `src/sim/resolution.ts` (tie and bond contributors),
+`src/gen/incident/instance.ts` (cast binding), `src/sim/scenario-registry.ts` if needed.

@@ -255,7 +255,9 @@ function validOfficer(o: unknown, key: string): boolean {
     const training = isObj(a) && a.kind === 'training' && isStr(a.courseId) && Object.hasOwn(COURSES, a.courseId) && isNum(a.startedAt) && isNum(a.endsAt);
     const detail = isObj(a) && a.kind === 'detail' && isNum(a.startedAt) && isNum(a.endsAt) && isNum(a.fee) && a.fee >= 0;
     const op = isObj(a) && a.kind === 'operation' && isStr(a.runId);
-    if (!training && !detail && !op) return false;
+    const proactive = isObj(a) && a.kind === 'proactive' && isStr(a.shiftId) && isNum(a.startedAt) && isNum(a.endsAt);
+    const care = isObj(a) && (a.kind === 'standdown' || a.kind === 'peer_support') && isStr(a.imprintId) && isNum(a.startedAt) && isNum(a.endsAt);
+    if (!training && !detail && !op && !proactive && !care) return false;
   }
   if (!validPromotions(o.promotions) || (o.xp as number) < 0) return false;
   if ((o.highStressSince !== undefined && o.highStressSince !== null && !isNum(o.highStressSince))
@@ -362,7 +364,7 @@ function validCasebook(c: unknown): boolean {
 
 /** The city (save v19). The world-engine lane deepens this; wave 0 checks the shape the code reads. */
 function validWorld(w: unknown): boolean {
-  if (!isObj(w) || !isNum(w.seed) || !isObj(w.districts) || !isObj(w.subjects) || !isNum(w.rolledThroughHour) || !isNum(w.nextId) || !isBool(w.firstContactDone)) return false;
+  if (!isObj(w) || !isNum(w.seed) || !isObj(w.districts) || !isObj(w.subjects) || !isNum(w.rolledThroughHour) || !isNum(w.nextId) || !isObj(w.onboarding) || !isStr(w.onboarding.stage)) return false;
   if (!Array.isArray(w.crews) || !Array.isArray(w.cases) || !Array.isArray(w.leads) || !Array.isArray(w.shifts) || !Array.isArray(w.events)) return false;
   return DISTRICT_IDS.every((id) => { const d = (w.districts as Record<string, unknown>)[id]; return isObj(d) && d.id === id && isBool(d.open) && isNum(d.crime) && isNum(d.patrolUnits); });
 }

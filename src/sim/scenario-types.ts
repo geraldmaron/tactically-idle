@@ -695,6 +695,9 @@ export interface IncidentSpec {
   /** 1..5 */
   tier: number;
   contentVersion: number;
+  /** A world subject cast into the call's one `kind: 'subject'` role (save v19): civilian name pool
+   * indices and pronouns, carried in the incident id so every regeneration binds the same person. */
+  cast?: { first: number; last: number; pronouns: 'he' | 'she' | 'they' };
 }
 
 export type Armament = 'none' | 'blunt' | 'edged' | 'handgun' | 'long_gun' | 'unknown';

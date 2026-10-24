@@ -117,6 +117,7 @@ export function dismissCheck(state: GameState, officerId: Id, netRate: NetRate):
   };
   const base = { upfront: severanceFor(o), wageDelta: -o.wage, netBefore, netAfter: netRate(after) };
   if (o.assignment?.kind === 'operation') return { ...base, ok: false, reason: `${fullName(o)} is deployed and cannot be dismissed` };
+  if (o.assignment?.kind === 'proactive') return { ...base, ok: false, reason: `${fullName(o)} is on a proactive shift. Recall the squad first` };
   if (state.department.funding < base.upfront) {
     return { ...base, ok: false, reason: `Severance ${funding(base.upfront)} exceeds the department's ${funding(state.department.funding)}` };
   }

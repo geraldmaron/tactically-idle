@@ -34,8 +34,14 @@ export const HOUR_MS = 3_600_000;
 
 /** Tunable (sim/tuning.ts). */
 export const ECONOMY_TUNING = tunable('ECONOMY_TUNING', {
-  /** Income and recurring costs accrue only this long after the last player command. */
-  capMs: 24 * HOUR_MS,
+  /** Income and recurring costs accrue only this long after the last player command (72 hours free;
+   * Night Watch Office extends funding, never the world's opportunities: see worldCapMs). */
+  capMs: 72 * HOUR_MS,
+  nightWatchCapMs: 7 * 24 * HOUR_MS,
+  /** Contacts, crime drift and recruitment stop this long after the last command, whatever is owned. */
+  worldCapMs: 72 * HOUR_MS,
+  /** Stress a proactive shift adds per hour to each officer on it. */
+  proactiveStrainPerHour: 2,
   /** Department allocation per hour (funding). */
   baseAllocation: 600,
   /** Facilities, per hour. */
@@ -95,7 +101,10 @@ function restBonus(state: GameState, o: Officer): number {
 
 export function recoveryRate(state: GameState, o: Officer, t: number = simNow(state)): number {
   if (o.assignment?.kind === 'operation') return 0;
-  const base = ECONOMY_TUNING.recoveryPerHour[recoveryDuty(state, o)] * recoveryMultiplier(state) * restBonus(state, o);
+  // A proactive shift strains instead of resting; a stand-down rests at the rest rate (save v19).
+  if (o.assignment?.kind === 'proactive') return -ECONOMY_TUNING.proactiveStrainPerHour;
+  const duty = o.assignment?.kind === 'standdown' ? 'rest' : recoveryDuty(state, o);
+  const base = ECONOMY_TUNING.recoveryPerHour[duty] * recoveryMultiplier(state) * restBonus(state, o);
   return Number.isFinite(o.bornDay) ? base * ageRecoveryFactor(o, gameDay(state, t)) : base;
 }
 
@@ -295,7 +304,13 @@ function recover(d: GameState, hours: number, t: number): void {
   for (const o of Object.values(d.officers)) {
     const rate = recoveryRate(d, o, t);
     if (rate > 0) o.stress = Math.max(0, o.stress - rate * hours);
+    else if (rate < 0) o.stress = Math.min(100, o.stress - rate * hours);
   }
+}
+
+/** The funding accrual window: 72 hours, or 7 days with Night Watch Office (synced entitlements). */
+export function fundingCapMs(d: Pick<GameState, 'department'>): number {
+  return d.department.entitlements?.nightWatch ? ECONOMY_TUNING.nightWatchCapMs : ECONOMY_TUNING.capMs;
 }
 
 /**
@@ -309,7 +324,8 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
   dep.clockHighWater = T;
   if (T <= L) return;
 
-  const W = dep.lastInteractionAt + ECONOMY_TUNING.capMs;
+  const W = dep.lastInteractionAt + fundingCapMs(d);
+  const worldW = dep.lastInteractionAt + ECONOMY_TUNING.worldCapMs;
   const fundingBefore = dep.funding;
   const acc: Acc = {
     gross: 0,
@@ -358,7 +374,7 @@ export function settle(d: GameState, now: number, exclusion?: ContentExclusion):
 
     applyDue(d, t, e, acc, restockActive && e % I === 0 && e <= W, exclusion);
     // The world and the people settle on the same walk: one clock, one accrual window.
-    if (worldAcc) settleWorld(d, t, e, W, worldAcc);
+    if (worldAcc) settleWorld(d, t, e, worldW, worldAcc);
     if (d.people) settlePeople(d, t, e, peopleBeats);
     t = e;
   }
@@ -426,5 +442,5 @@ function mergeWorld(a: ShiftReport['world'], b: ShiftReport['world']): ShiftRepo
   if (!a || !b) return a ?? b;
   const crime: NonNullable<ShiftReport['world']>['crime'] = { ...b.crime };
   for (const [id, pair] of Object.entries(a.crime)) if (pair) crime[id as keyof typeof crime] = [pair[0], b.crime[id as keyof typeof crime]?.[1] ?? pair[1]];
-  return { contacts: a.contacts + b.contacts, casesOpened: a.casesOpened + b.casesOpened, casesClosed: a.casesClosed + b.casesClosed, awards: a.awards + b.awards, leads: [...a.leads, ...b.leads], crime };
+  return { contacts: a.contacts + b.contacts, casesOpened: a.casesOpened + b.casesOpened, casesClosed: a.casesClosed + b.casesClosed, awardsPaid: a.awardsPaid + b.awardsPaid, awardFunding: a.awardFunding + b.awardFunding, leads: [...new Set([...a.leads, ...b.leads])], crime };
 }

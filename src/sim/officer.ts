@@ -69,6 +69,15 @@ export function deployability(o: Officer, now: number): { ok: true } | { ok: fal
   return { ok: true };
 }
 
+/** Why a world or aftercare assignment keeps an officer off other work (save v19), or null. Training,
+ * details and operations keep their own checks; these kinds share one answer everywhere. */
+export function worldBusyReason(o: Officer): string | null {
+  if (o.assignment?.kind === 'proactive') return `${o.surname} is on a proactive shift`;
+  if (o.assignment?.kind === 'standdown') return `${o.surname} is stood down to rest`;
+  if (o.assignment?.kind === 'peer_support') return `${o.surname} is on peer support`;
+  return null;
+}
+
 /** Overloaded officers are restricted from high-risk actions. */
 export function highRiskAllowed(o: Officer): boolean {
   return o.stress < STRESS_BANDS.overloaded;

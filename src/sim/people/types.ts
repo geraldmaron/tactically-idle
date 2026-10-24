@@ -2,6 +2,13 @@
 // Authored jacket text is content in src/content/people/; rules are in src/sim/people/. Stress stays the
 // only number on a roll: nothing here carries a modifier except the tie contributor, which the call
 // engine reads through a capped, visible reader.
+//
+// Authority (sol challenge, 2026-10-24): while employed, the live Officer in GameState.officers is the
+// authority for condition, ratings, certifications, traits, career and assignment. On every departure path
+// (dismissal, retirement, any removal) the people layer stores `snapshot` first; a rehire restores the
+// snapshot, never PersonnelState.builds. Imprint and aftercare durations are real milliseconds. A fork opens
+// only after `seen`; a pending decision never expires or settles while unseen.
+import type { Officer } from '../types';
 
 export type PersonStatus = 'employed' | 'dismissed' | 'retired';
 
@@ -20,6 +27,8 @@ export interface PersonRecord {
   shared: Record<string, number>;
   /** Off-screen personal life the officer allows in play (authored per persona, never inferred). */
   openToRelationship: boolean;
+  /** The officer as they left (dismissal or retirement): restored on rehire. */
+  snapshot?: Officer;
 }
 
 export type FactKind =

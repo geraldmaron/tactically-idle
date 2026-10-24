@@ -537,6 +537,8 @@ export interface PatrolEmployee {
   /** Departed identities stay in history and cannot be hired again. */
   dismissedAt: number | null;
   training: { toGrade: PatrolGrade; startedAt: number; endsAt: number } | null;
+  /** The district this employee patrols (save v19). Absent means Pike Street, the home district. */
+  districtId?: DistrictId;
 }
 
 export interface PatrolBoost {
@@ -648,8 +650,9 @@ export interface ShiftReportWorld {
   contacts: number;
   casesOpened: number;
   casesClosed: number;
-  /** Case awards paid in this window. */
-  awards: number;
+  /** Case awards paid in this window: how many, and the funding they brought. */
+  awardsPaid: number;
+  awardFunding: number;
   leads: Id[];
   /** Crime per open district at the start and end of the window. */
   crime: Partial<Record<DistrictId, [before: number, after: number]>>;
@@ -817,6 +820,9 @@ export interface OperationRun {
   sourceIncident?: IncidentCard;
   /** Copied from the card at dispatch (save v19): the world subject and lead this call serves. */
   world?: IncidentWorldRef;
+  /** The one character callback this call carries, chosen at dispatch in tie, pair, imprint order and kept
+   * for replays (docs/world-redesign.md, "How calls plug in"). */
+  callback?: { kind: 'tie' | 'pair' | 'imprint'; officerIds: Id[]; refId: Id };
   locationFamilyId: Id;
   locationSeed: number;
   contentVersion: number;
@@ -1161,6 +1167,8 @@ export interface IncidentCard {
 
 export interface IncidentWorldRef {
   kind: 'warrant' | 'armed_contact';
+  /** The investigation this call serves; its award is paid by the world, once, at close. */
+  caseId: Id;
   leadId: Id;
   subjectId: Id;
   caseTier: Tier;

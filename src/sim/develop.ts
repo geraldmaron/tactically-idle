@@ -1,3 +1,4 @@
+import { worldBusyReason } from './officer';
 // Development tree, courses, and the store. Unlocking a node never qualifies an
 // officer: certifications and rating gains are granted only when a course finishes
 // (economy.settle), so completion is time-ordered.
@@ -103,6 +104,8 @@ export function courseCheck(state: GameState, course: Course, officer: Officer |
     if (officer.assignment?.kind === 'operation') return no(`${fullName(officer)} is deployed`);
     if (officer.assignment?.kind === 'training') return no(`${fullName(officer)} is already in training`);
     if (officer.assignment?.kind === 'detail') return no(`${fullName(officer)} is on an instructor detail`);
+    const busy = worldBusyReason(officer);
+    if (busy) return no(busy);
     const missing = (course.requiresCerts ?? []).filter((cert) => !officer.certs.includes(cert));
     if (missing.length) return no(`Requires prior qualification: ${missing.map((cert) => cert.replaceAll('_', ' ')).join(', ')}`);
     const { cert, rating } = course.grants;

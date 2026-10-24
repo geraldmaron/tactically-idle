@@ -477,6 +477,9 @@ export interface TreeBeat {
 export interface TreeEnding {
   title: string;
   summary: string;
+  /** For a call the world sends (a warrant): how this ending resolves the investigation of the cast
+   * subject. A lawful resolution closes it and pays its award; `escaped` leaves the lead open (save v19). */
+  world?: { resolution: 'charged' | 'diverted' | 'care' | 'released' | 'cleared' | 'escaped' };
   /** The author's intent; the debrief scores disposition, trust and strain from people's end
    * states (sim/outcome-score.ts), and a gate checks they agree. */
   disposition: CompletionDisposition;

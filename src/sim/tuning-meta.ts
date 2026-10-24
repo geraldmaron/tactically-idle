@@ -362,7 +362,10 @@ export const TUNING_META: readonly FieldMeta[] = [
     'stance.tenseAgitation': { label: 'Tense at agitation', help: 'A moved subject sounds tense at this agitation or more; below it, calm.', min: 0, max: 100, step: 1, unit: 'agitation' },
   }),
   ...table('ECONOMY_TUNING', { group: 'economy', mode: 'department' }, {
-    capMs: { label: 'Accrual stops after', help: 'Income and costs stop accruing this long after the player\'s last command.', min: 3_600_000, max: 172_800_000, step: 3_600_000, unit: 'ms' },
+    capMs: { label: 'Accrual stops after', help: 'Income and costs stop accruing this long after the player\'s last command.', min: 3_600_000, max: 604_800_000, step: 3_600_000, unit: 'ms' },
+    nightWatchCapMs: { label: 'Night Watch accrual', help: 'The funding window with the Night Watch Office purchase.', min: 3_600_000, max: 1_209_600_000, step: 3_600_000, unit: 'ms' },
+    worldCapMs: { label: 'World stops after', help: 'Contacts, crime drift and recruitment stop this long after the player\'s last command, whatever is owned.', min: 3_600_000, max: 604_800_000, step: 3_600_000, unit: 'ms' },
+    proactiveStrainPerHour: { label: 'Proactive strain', help: 'Stress a proactive shift adds per hour to each officer on it.', group: 'strain', min: 0, max: 10, step: 0.5, unit: 'per hour' },
     baseAllocation: { label: 'Allocation', help: 'Funding the department gets per hour.', min: 0, max: 2000, step: 10, unit: 'per hour' },
     facilities: { label: 'Facilities cost', help: 'Funding spent on facilities per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
     supplies: { label: 'Supplies cost', help: 'Funding spent on routine supplies per hour.', min: 0, max: 500, step: 5, unit: 'per hour' },
