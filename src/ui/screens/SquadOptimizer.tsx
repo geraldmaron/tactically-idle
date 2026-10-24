@@ -99,8 +99,8 @@ function SquadOptimizerSession({ open, onClose, campaignId, session }: { open: b
   return <Sheet open={open} onClose={close} title="Arrange squads" subtitle="Nothing moves until you apply" className="squad-optimizer" footer={
     <div className="arrangement-actions">
       <Button variant="ghost" onClick={close}>Cancel</Button>
-      <Button onClick={makePreview} disabled={selectedIds.length === 0}>{preview ? 'Preview again' : 'Preview arrangement'}</Button>
-      <Button variant="primary" onClick={apply} disabled={!preview?.proposal || stale}>Apply arrangement</Button>
+      <Button onClick={makePreview} disabled={selectedIds.length === 0} aria-label={preview ? 'Preview the arrangement again' : 'Preview arrangement'}>{preview ? 'Preview again' : 'Preview'}</Button>
+      <Button variant="primary" onClick={apply} disabled={!preview?.proposal || stale} aria-label="Apply arrangement">Apply</Button>
     </div>
   }>
     <div className="arrangement-intro">

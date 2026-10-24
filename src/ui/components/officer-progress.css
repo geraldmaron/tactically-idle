@@ -4,9 +4,9 @@
   gap: 10px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid rgba(90, 207, 166, .32);
+  border: 1px solid var(--good-edge);
   border-radius: var(--radius);
-  background: linear-gradient(125deg, rgba(90, 207, 166, .09), var(--panel));
+  background: var(--good-soft);
   overflow-wrap: anywhere;
 }
 .officer-progress-heading,
@@ -34,14 +34,14 @@
 /* Rank ladder (officer-ranks): five rows, lowest first, the current rank lit and the next one amber. */
 .rank-ladder { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .rank-ladder > li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-.rank-ladder-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(8, 13, 24, 0.6); border: 1px solid var(--line-strong); }
+.rank-ladder-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in srgb, var(--ink-deep) 60%, transparent); border: 1px solid var(--line-strong); }
 .rank-ladder-main { display: grid; gap: 1px; min-width: 0; }
 .rank-ladder-main strong { font: 700 14px/1.2 var(--font-cond); letter-spacing: 0.02em; }
 .rank-ladder-note { font-size: var(--s14); line-height: 1.3; color: var(--text-dim); }
 .rank-ladder-xp { font: 600 var(--s14)/1 var(--font-cond); color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rank-ladder > li[data-state="reached"] .rank-ladder-mark { border-color: var(--mint); }
-.rank-ladder > li[data-state="current"] { border-color: var(--mint); background: rgba(90, 207, 166, 0.08); }
-.rank-ladder > li[data-state="current"] .rank-ladder-mark { border-color: var(--mint); box-shadow: 0 0 0 2px rgba(90, 207, 166, 0.25); }
+.rank-ladder > li[data-state="current"] { border-color: var(--mint); background: var(--good-soft); }
+.rank-ladder > li[data-state="current"] .rank-ladder-mark { border-color: var(--mint); box-shadow: 0 0 0 2px color-mix(in srgb, var(--good) 25%, transparent); }
 .rank-ladder > li[data-state="current"] .rank-ladder-xp { color: var(--mint); }
 .rank-ladder > li[data-state="next"] { border-color: var(--t1); }
 .rank-ladder > li[data-state="next"] .rank-ladder-xp { color: var(--t1); }

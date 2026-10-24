@@ -33,7 +33,7 @@
 .squadpanel .officer-character-grid { padding: var(--sp2) 0 var(--sp3); gap: var(--sp2); }
 .officer-roster-card { padding: 0; overflow: hidden; }
 .squadpanel .squad-block, .officer-rows { padding-inline: var(--sp3); }
-.officer-rows .officer-row-role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.officer-rows .officer-row-role { overflow-wrap: anywhere; }
 .officer-rows .officer-row-role .icon { display: inline-block; vertical-align: -2px; margin-right: var(--sp1); }
 .roster-bar .squad-sort { display: inline-flex; align-items: center; gap: var(--sp1); color: var(--t2); cursor: pointer; }
 .roster-bar .squad-sort select { font: 600 var(--s14)/1.2 var(--f-ui); letter-spacing: 0; color: var(--t2); cursor: pointer; }

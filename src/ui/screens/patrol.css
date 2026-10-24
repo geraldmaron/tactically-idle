@@ -8,8 +8,8 @@
 .patrol-scene-posts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: stretch; gap: var(--sp1); }
 .patrol-scene-post { position: relative; display: grid; justify-items: center; align-content: start; gap: var(--sp1); min-width: 44px; min-height: 72px; padding: var(--sp1) 0; border: 0; border-radius: var(--r1); background: color-mix(in srgb, var(--ink-0) 82%, transparent); color: var(--t1); font: 500 var(--s14)/1.2 var(--f-ui); cursor: pointer; }
 .patrol-scene-post .manager-portrait { border-radius: var(--r1); }
-/* A name fits or is cut at its end with an ellipsis; it never breaks inside a word. The button's label has the full name. */
-.patrol-scene-post > span:last-of-type { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A long name wraps rather than being cut; the button's label has the full name. */
+.patrol-scene-post > span:last-of-type { min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
 .patrol-scene-post > .icon { position: absolute; top: 29px; right: 1px; color: var(--t1); background: var(--ink-0); border-radius: var(--r1); }
 .patrol-scene-post-training .manager-portrait { filter: grayscale(.9); opacity: .6; }
 .patrol-scene-post-open { color: var(--t2); }
@@ -80,7 +80,6 @@
 @container game (max-width: 359px) { .patrol-confirm-actions { grid-template-columns: minmax(0, 1fr); } .patrol-confirm-actions > :first-child { order: 1; } }
 @container game (max-width: 359px) { .patrol-scene-posts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
-.patrol-scene-who { margin: 0; color: var(--t-plate); font-size: var(--s14); line-height: 1.35; text-shadow: 0 2px 5px var(--ink-deep); }
 .patrol-item-story { margin: 0; min-height: calc(var(--s14) * 1.4 * 2); color: var(--t2); font-size: var(--s14); line-height: 1.4; }
 .patrol-item-story-turned { animation: patrol-story-in 400ms ease-out; }
 @keyframes patrol-story-in { from { opacity: 0; } to { opacity: 1; } }
@@ -105,7 +104,7 @@
 .patrol-boost-crew-faces { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
 .patrol-boost-crew-faces li { position: relative; display: grid; justify-items: center; gap: var(--sp1); min-width: 52px; max-width: 72px; padding: var(--sp1); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-0) 82%, transparent); color: var(--t1); font-size: var(--s12); line-height: 1.2; text-shadow: none; }
 .patrol-boost-crew-faces .manager-portrait { border-radius: var(--r1); }
-.patrol-boost-crew-faces li > span { font-size: var(--s14); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.patrol-boost-crew-faces li > span { font-size: var(--s14); max-width: 100%; overflow-wrap: anywhere; text-align: center; }
 .patrol-boost-crew-faces li > .icon { position: absolute; top: 4px; right: 4px; color: var(--t1); background: var(--ink-0); border-radius: var(--r1); }
 .patrol-boost-crew-training .manager-portrait { filter: grayscale(.9); opacity: .6; }
 
@@ -127,7 +126,7 @@
 .patrol-row-name { min-height: var(--touch); margin-block: calc((var(--touch) - 1.2em) / -2); padding: 0; border: 0; background: none; color: var(--t1); font: 600 var(--s16)/1.2 var(--f-ui); text-align: left; cursor: pointer; }
 .patrol-row-name:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; border-radius: var(--r1); }
 .patrol-row-detail { display: grid; gap: var(--sp1); min-width: 0; }
-.patrol-row-detail > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.patrol-row-detail > span:first-child { overflow-wrap: anywhere; }
 .patrol-row-training { color: var(--info); }
 .patrol-row-meter { display: block; height: 5px; border-radius: 3px; background: var(--ink-3); overflow: hidden; }
 .patrol-row-meter i { display: block; height: 100%; background: var(--info); }
@@ -143,6 +142,11 @@
 .patrol-summary .section-body { gap: 0; padding: 0; }
 .patrol-summary-rate { color: var(--mint); font: 700 var(--s22)/1.1 var(--f-title); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--sp2); }
 .patrol-roster.panel-well > .patrol-item { border-top: 0; }
-.patrol-scene-post > .patrol-scene-grade { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }
+.patrol-scene-post > .patrol-scene-grade { min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: center; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }
 .patrol-summary .patrol-split { margin-top: var(--sp3); }
-.patrol-boost-crew-faces li > .patrol-scene-grade { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }
+.patrol-boost-crew-faces li > .patrol-scene-grade { max-width: 100%; overflow-wrap: anywhere; text-align: center; font: 500 var(--s14)/1.1 var(--f-ui); color: var(--t3); }
+
+/* A grant is a title, what it nets, and its action beneath, so the title never wraps in a narrow column. */
+.patrol-boosts .ui-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--sp2) var(--sp3); }
+.patrol-boosts .ui-row-trail { grid-column: 1 / -1; }
+.patrol-boosts .ui-row-trail .btn { width: 100%; }

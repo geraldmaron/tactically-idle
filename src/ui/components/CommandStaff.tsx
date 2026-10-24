@@ -138,7 +138,7 @@ function PostsToFill({ views, g, onOpen, onBuild }: { views: ManagerView[]; g: G
           <ManagerPortrait person={null} size={44} emptyIcon={LOOP_ICON[view.profile.id]} />
           <span className="command-working-main">
             <strong>{view.profile.title}</strong>
-            <span className="command-working-detail">{postState(view)}</span>
+            {view.open && <span className="command-working-detail">{postState(view)}</span>}
             <span className="command-working-said">{seatPreview(g, view.profile.id, view.profile.duty)}</span>
           </span>
         </button>

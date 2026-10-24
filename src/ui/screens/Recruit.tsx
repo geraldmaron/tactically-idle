@@ -12,7 +12,7 @@ import { GEAR_SOURCE_ICON } from '../icons/kit';
 import { RankChip } from '../components/RankInsignia';
 import { useToast } from '../components/toast';
 import { useBeat } from '../components/Beat';
-import { hireTerms, standoutLine } from './team-model';
+import { standoutLine } from './team-model';
 import { signedBeat } from './team-beats';
 import { CERT_ICON, ROLE_META, TRAIT_INFO } from '../components/labels';
 import { RetirementChip, useCareerSnapshot } from '../components/Career';
@@ -133,13 +133,13 @@ export function CandidateCard({ c, now, open, onToggle, onHired, receipt, onDone
       <span className="dossier-portrait"><Portrait officer={o} size={96} {...agePortraitProps(g, o, now)} /></span>
       <div className="dossier-body">
         <h3 className="dossier-name">{o.firstName} {o.surname}</h3>
-        <p className="dossier-role"><Icon name={ROLE_META[o.role].icon} size={16} /><span className="dossier-role-name">{ROLE_META[o.role].label}</span><span className="dossier-age">Age {career.age}</span></p>
+        <p className="dossier-role"><Icon name={ROLE_META[o.role].icon} size={16} /><span className="dossier-role-name">{ROLE_META[o.role].short.toUpperCase()}</span><span className="dossier-age">AGE {career.age}</span></p>
         {note && <p className="dossier-note">{note}</p>}
-        <p className="dossier-stand">Stands out: {standoutLine(o)}</p>
+        <p className="dossier-stand"><span className="dossier-stand-label">BEST AT</span> {standoutLine(o)}</p>
       </div>
       <div className="dossier-terms">
         <span className="dossier-terms-text">
-          {receipt ? <>Signing <Funds value={receipt.upfront} /> paid · {placedIn(g, o.id)}</> : <>{hireTerms(c)} · leaves {relativeTime(c.expiresAt, now)}</>}
+          {receipt ? <>Signing <Funds value={receipt.upfront} /> paid · {placedIn(g, o.id)}</> : <><Funds value={o.wage} format="perHour" /> · <Funds value={c.signingCost} format="full" /> to sign · leaves {relativeTime(c.expiresAt, now)}</>}
         </span>
         <button
           type="button"

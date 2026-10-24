@@ -3,13 +3,12 @@ import { getState, useGame } from '../store';
 import { squadReadiness } from '../../sim/department-selectors';
 import type { Id, Officer, Squad, SquadId } from '../../sim/types';
 import './officers.css';
-import { Button, Card, Chip, EmptyState, Section } from '../components/ui';
+import { Button, Card, Chip, EmptyState } from '../components/ui';
 import { DUTY_META } from '../components/labels';
 import type { SquadDuty } from '../../sim/types';
-import { OfficerTile } from '../components/OfficerTile';
 import { CertLegend } from '../components/CertLegend';
 import { TeamScene, type SubView } from './TeamScene';
-import { rosterCounts, rosterLine, squadDetail } from './team-model';
+import { rosterCounts, rosterLine } from './team-model';
 import { OfficerRow } from '../components/OfficerRow';
 import { useToast } from '../components/toast';
 import { officerFaceStatus } from '../components/face-status';
@@ -25,13 +24,16 @@ import { SquadOptimizer } from './SquadOptimizer';
 import { ChoiceRail } from '../components/ChoiceRail';
 import { squadName as squadNameOf } from '../../sim/squad-names';
 import { ROSTER_FILTER_LABEL, ROSTER_SORT_LABEL, filterRoster, sortRoster, type RosterFilter, type RosterSort } from './squad-model';
+import { OfficerLine } from './team/OfficerLine';
+import { officerRowView, squadHeader } from './team/team-view';
 import './squad-visual.css';
+import './team/team-room.css';
 
 const DEFAULT_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
 
-/** The SWAT section: the locker-room scene with its one segmented row (Squads, Roster, Hire, Training), then
- * the view. Each officer shows once per view. Tapping an officer opens their sheet, the one place an officer
- * is moved between squads or made leader; Arrange proposes a whole arrangement. */
+/** The SWAT section: the Team header with its quiet row of views (Squads, Roster, Hire, Training), then the view.
+ * Each officer shows once per view. Tapping an officer opens their jacket, the one place an officer is moved
+ * between squads or made leader; Arrange proposes a whole arrangement. */
 export function SquadScreen() {
   const g = useGame();
   const nav = useNav();
@@ -72,10 +74,13 @@ function SquadsView() {
     <h2 id="squads-h" className="sr-only">Squads</h2>
     {g.squads.length === 0 && <EmptyState spot="openSlot" title="No squads yet">Create up to four squads, then open an officer to put them in one.</EmptyState>}
     {g.squads.length > 0 && <div className="squad-list" data-ui-list>{g.squads.map((squad) => <SquadPanel key={squad.id} squad={squad} onOpen={nav.openOfficer} />)}</div>}
-    {unassigned.length > 0 && <Section id="squad-bench-h" title="Unassigned" icon="user" count={`Paid ${fundingPerHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, can't deploy`}
-      hint="Open one to put them in a squad or swap them for someone.">
-      <div className="officer-character-grid">{unassigned.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} onClick={() => nav.openOfficer(o.id)} />)}</div>
-    </Section>}
+    {unassigned.length > 0 && <section className="squad-room" aria-labelledby="squad-bench-h">
+      <header className="squad-room-head">
+        <div className="squad-room-kicker"><span id="squad-bench-h" data-tone="muted">UNASSIGNED</span><span>{`PAID ${fundingPerHour(unassigned.reduce((sum, o) => sum + o.wage, 0))}, CAN'T DEPLOY`}</span></div>
+      </header>
+      <div className="squad-room-rows">{unassigned.map((o) => <OfficerLine key={o.id} officer={o} view={officerRowView(g, o, now)} onOpen={() => nav.openOfficer(o.id)} />)}</div>
+      <p className="squad-room-hint">Open one to put them in a squad or swap them for someone.</p>
+    </section>}
     {creating ? <CreateSquad count={g.squads.length} onDone={() => setCreating(false)} />
       : !full && <Button variant="quiet" icon="plus" onClick={() => setCreating(true)}>New squad</Button>}
     <CertLegend officers={officerList(g)} />
@@ -111,8 +116,8 @@ function CreateSquad({ count, onDone }: { count: number; onDone: (id?: SquadId) 
   );
 }
 
-/** One squad as a block of rows: the letter, the name (renamed in place), duty and readiness on
- * the heading, what keeps it from deploying under it, then its officers with the leader starred. */
+/** One squad as a block of rows (canvas E1): a mono kicker with how the squad stands, its name (tap to rename)
+ * with Standby and Rest, what keeps it from deploying, then its officers with the leader starred. */
 export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) => void }) {
   const g = useGame();
   const nav = useNav();
@@ -136,23 +141,23 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
   };
   const members = squad.officerIds.map((id) => g.officers[id]).filter((o): o is Officer => !!o);
   const deployed = g.activeRun?.squadIds.includes(squad.id) && g.activeRun.status !== 'closed';
-  const total = r.total || members.length;
   const open = Math.max(0, 4 - members.length);
   const problems = deployed ? [] : [...(r.deployable ? [] : r.issues.slice(0, 2)), ...(r.deployable && r.staysHome.length > 0 ? [staysHomeLine(g, r.staysHome)] : [])];
-
-  const leader = members.find((o) => o.id === squad.leaderId);
   const [filling, setFilling] = useState(false);
+  const header = squadHeader(g, squad, now);
   return (
     <>
-      {/* One framed panel per squad (canvas "Depth and Framed Sections"): the letter badge, the name (tap
-          to rename) and how the squad stands in the bar, with Standby and Rest as its action. */}
-      <Section className="squadpanel squad-block" label={`Squad ${squad.id}, ${squad.name}`} badge={squad.id} tone="act"
-        title={renaming ? squad.name : <button ref={renameButton} type="button" className="squad-rename" aria-label={`Rename ${squad.name}`} onClick={() => {
-          requestedFocus.current = 'input';
-          nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
-        }}>{squad.name}<Icon name="edit" size={16} /></button>}
-        count={squadDetail({ deployed: !!deployed, ready: r.ready, total, members: members.length, leader: leader?.surname ?? null })}
-        action={deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <DutyControl squad={squad} />}>
+      <section className="squad-room" aria-label={`Squad ${squad.id}, ${squad.name}`}>
+        <header className="squad-room-head">
+          <div className="squad-room-kicker"><span data-tone={header.tone}>{header.left}</span><span>{header.right}</span></div>
+          <div className="squad-room-tools">
+            {renaming ? <span className="squad-room-name">{squad.name}</span> : <button ref={renameButton} type="button" className="squad-rename squad-room-name" aria-label={`Rename ${squad.name}`} onClick={() => {
+              requestedFocus.current = 'input';
+              nav.updateSquadView({ type: 'rename', squadId: squad.id, name: squad.name });
+            }}>{squad.name}<Icon name="edit" size={16} /></button>}
+            {deployed ? <Chip tone="neutral" icon="deployed">On a call</Chip> : <DutyControl squad={squad} />}
+          </div>
+        </header>
         {renaming && (
           <form
             className="rename"
@@ -171,23 +176,22 @@ export function SquadPanel({ squad, onOpen }: { squad: Squad; onOpen: (id: Id) =
         )}
         {problems.length > 0 && <p className="squad-block-issue"><Icon name="warning" size={16} />{problems.join('. ')}</p>}
         <SquadCoverage members={members} />
-        <div className="officer-character-grid">
-          {members.map((o) => <OfficerTile key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} leader={o.id === squad.leaderId} onClick={() => onOpen(o.id)} />)}
-          {!deployed && open > 0 && <button type="button" className="open-place" aria-haspopup="dialog" aria-label={`Fill ${open === 1 ? 'the open place' : `${open} open places`} in ${squad.name}`} onClick={() => setFilling(true)}>
-            <Icon name="plus" size={20} /><span>{open === 1 ? 'Open place' : `${open} open places`}</span>
+        <div className="squad-room-rows">
+          {members.map((o) => <OfficerLine key={o.id} officer={o} view={officerRowView(g, o, now, squad.leaderId)} onOpen={() => onOpen(o.id)} />)}
+          {!deployed && open > 0 && <button type="button" className="trow trow-open" aria-haspopup="dialog" aria-label={`Fill ${open === 1 ? 'the open place' : `${open} open places`} in ${squad.name}`} onClick={() => setFilling(true)}>
+            <span className="trow-open-mark" aria-hidden="true"><Icon name="plus" size={20} /></span><span className="trow-open-text">{open === 1 ? 'Open place' : `${open} open places`}</span>
           </button>}
         </div>
-      </Section>
+      </section>
       {filling && <FillPlace squad={squad} onClose={() => setFilling(false)} />}
     </>
   );
 }
 
-/** The ratings calls lean on most, as the squad's best: who would carry a talk, a coordinated move, a
- * watch or a casualty. One bar each, on the 0 to 100 scale, so a gap in the squad shows at a glance
- * (canvas pass, 2026-10-24). */
+/** The ratings calls lean on most, as the squad's best: who would carry a talk, a coordinated move, a watch or
+ * a casualty. One quiet mono line, so a gap in the squad shows without a bar chart on every block. */
 const COVERAGE: { key: 'communication' | 'coordination' | 'awareness' | 'medical'; label: string }[] = [
-  { key: 'communication', label: 'Comms' }, { key: 'coordination', label: 'Coord' }, { key: 'awareness', label: 'Awareness' }, { key: 'medical', label: 'Medical' },
+  { key: 'communication', label: 'Comms' }, { key: 'coordination', label: 'Coord' }, { key: 'awareness', label: 'Aware' }, { key: 'medical', label: 'Medical' },
 ];
 function SquadCoverage({ members }: { members: Officer[] }) {
   if (members.length === 0) return null;
@@ -239,8 +243,8 @@ function QueuedMoves() {
   if (!moves.length) return null;
   const squadName = (id: SquadId | null) => id ? squadNameOf(g.squads, id) : 'Unassigned';
   return (
-    <section className="card squad-queue" aria-labelledby="squad-queue-h">
-      <h2 id="squad-queue-h" className="squad-block-title"><Icon name="clock" size={16} />After the call <span className="squad-block-count">{moves.length}</span></h2>
+    <section className="squad-room squad-queue" aria-labelledby="squad-queue-h">
+      <header className="squad-room-head"><div className="squad-room-kicker"><span id="squad-queue-h" data-tone="live">AFTER THE CALL</span><span>{moves.length === 1 ? '1 MOVE' : `${moves.length} MOVES`}</span></div></header>
       <ul className="squad-queue-list">
         {moves.map((m) => {
           const o = g.officers[m.officerId];
@@ -250,7 +254,7 @@ function QueuedMoves() {
               <span className="squad-queue-move">
                 <strong>{who}</strong>
                 <span>{o?.squadId ? squadName(o.squadId) : 'Unassigned'}<span aria-hidden="true"> → </span>{squadName(m.squadId)}</span>
-                {m.dropped && <span className="squad-queue-reason"><Icon name="warning" size={12} />Not moved. {m.dropped}</span>}
+                {m.dropped && <span className="squad-queue-reason"><Icon name="warning" size={14} />Not moved. {m.dropped}</span>}
               </span>
               <Button size="sm" variant="ghost" aria-label={`${m.dropped ? 'Clear' : 'Cancel'} the move for ${who}`} onClick={() => act({ type: 'cancelPendingSquadMove', officerId: m.officerId }, m.dropped ? undefined : 'Move cancelled')}>
                 {m.dropped ? 'Clear' : 'Cancel'}
@@ -274,7 +278,8 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
   const leaders = new Set(g.squads.map((squad) => squad.leaderId).filter(Boolean));
   const count = (value: RosterFilter) => filterRoster(officers, value, now).length;
   return (
-    <Section id="squad-roster-h" title="Roster" icon="people" count={`${officers.length} of ${g.department.rosterCap} officers`}>
+    <section className="squad-room" aria-labelledby="squad-roster-h">
+      <header className="squad-room-head"><div className="squad-room-kicker"><span id="squad-roster-h" data-tone="intel">ROSTER</span><span>{`${officers.length} OF ${g.department.rosterCap} OFFICERS`}</span></div></header>
       <div className="roster-bar">
         <ChoiceRail size="sm" value={filter} label="Show officers" onChange={setFilter} options={(Object.keys(ROSTER_FILTER_LABEL) as RosterFilter[]).map((value) => ({
           value, accessibleLabel: `${ROSTER_FILTER_LABEL[value]}, ${count(value)}`, label: <>{ROSTER_FILTER_LABEL[value]}<span className="choice-rail-count">{count(value)}</span></>,
@@ -287,10 +292,10 @@ function RosterList({ onOpen }: { onOpen: (id: Id) => void }) {
           </select>
         </label>
       </div>
-      {shown.length === 0 ? <EmptyState compact icon="people" title={filter === 'busy' ? 'Nobody is busy' : filter === 'free' ? 'Nobody is free' : 'No officers yet'}>{filter === 'busy' ? 'Every officer is free to take a call.' : filter === 'free' ? 'Everyone is on a call, in training or resting.' : 'Hire an officer to fill the roster.'}</EmptyState> : <div className="officer-rows panel-well" data-ui-list>
-        {shown.map((o) => <OfficerRow key={o.id} officer={o} now={now} faceStatus={officerFaceStatus(g, o.id, g.department.clockHighWater)} squadId={o.squadId} leader={leaders.has(o.id)} onClick={() => onOpen(o.id)} />)}
+      {shown.length === 0 ? <EmptyState compact icon="people" title={filter === 'busy' ? 'Nobody is busy' : filter === 'free' ? 'Nobody is free' : 'No officers yet'}>{filter === 'busy' ? 'Every officer is free to take a call.' : filter === 'free' ? 'Everyone is on a call, in training or resting.' : 'Hire an officer to fill the roster.'}</EmptyState> : <div className="squad-room-rows">
+        {shown.map((o) => <OfficerLine key={o.id} officer={o} squadId={o.squadId} view={officerRowView(g, o, now, leaders.has(o.id) ? o.id : null)} onOpen={() => onOpen(o.id)} />)}
       </div>}
       <CertLegend officers={shown} />
-    </Section>
+    </section>
   );
 }

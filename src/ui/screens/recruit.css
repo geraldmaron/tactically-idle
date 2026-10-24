@@ -43,16 +43,17 @@
 /* Candidates as dossiers (station rebuild, people first): a tall portrait, the person's own note, the one thing
    they stand out for, the terms in small print, and once signed the squads right on the card. */
 .cand-list { display: flex; flex-direction: column; gap: var(--sp3); }
-.cand.cand-dossier { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp3); padding: var(--sp3); overflow: hidden; border: 1px solid var(--hair-2); border-radius: var(--r2); background: linear-gradient(180deg, var(--ink-2), var(--ink-1)); }
+.cand.cand-dossier { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp3); padding: var(--sp3); overflow: hidden; border: 1px solid var(--hair); border-radius: var(--r1); background: var(--ink-1); }
 .cand.cand-dossier.cand-hired { border-color: var(--mint); }
 .dossier-portrait { display: block; border-radius: var(--r1); overflow: hidden; }
 .dossier-body { display: grid; align-content: start; gap: var(--sp1); min-width: 0; }
 .dossier-name { margin: 0; font: 700 var(--s22)/1.1 var(--f-title); overflow-wrap: anywhere; }
-.dossier-role { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp1); margin: 0; color: var(--t2); font-size: var(--s14); }
+.dossier-role { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp2); margin: 0; color: var(--t2); font: 500 var(--s12)/1.4 var(--f-mono); letter-spacing: var(--kicker-track); }
 .dossier-role-name { white-space: nowrap; }
 .dossier-age { margin-left: var(--sp2); color: var(--t3); }
-.dossier-note { margin: 0; color: var(--t1); font: italic 400 var(--s16)/1.35 var(--f-ui); }
+.dossier-note { margin: 0; color: var(--t1); font: italic 400 var(--s16)/1.4 var(--f-serif); }
 .dossier-stand { margin: 0; color: var(--good-text); font-size: var(--s14); line-height: 1.35; }
+.dossier-stand-label { color: var(--t3); font: 500 var(--s12)/1 var(--f-mono); letter-spacing: var(--kicker-track); }
 .dossier-terms { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp2); padding-top: var(--sp2); border-top: 1px dashed var(--hair-2); }
 .dossier-terms-text { flex: 1 1 auto; min-width: 0; color: var(--t3); font-size: var(--s14); line-height: 1.35; }
 .cand.cand-dossier.cand-hired .dossier-terms-text { color: var(--good-text); }
@@ -70,3 +71,7 @@
 .contract-face { flex: none; }
 .contract-kit li { padding: var(--sp1) 0; border-top: 1px solid var(--hair); }
 .contract-kit li:first-child { border-top: 0; }
+
+/* The confirm line reads as one sentence: text and amounts flow inline instead of sitting a flex gap apart. */
+.hire-contract .sheet-foot > .btn-block { display: block; text-align: center; }
+.hire-contract .sheet-foot > .btn-block .funds { display: inline-flex; vertical-align: baseline; }
