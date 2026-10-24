@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { DISTRICT_ORDER } from '../../../content/city/tuning';
+import { DISTRICTS } from '../../../content/city/districts';
 import { cityView, type DistrictView } from '../../../sim/world/selectors';
 import type { DistrictId } from '../../../sim/world/types';
 import { useGame } from '../../store';
@@ -14,7 +15,8 @@ import './city-onboarding.css';
 
 const DEFAULT_NAME = 'Night Unit';
 /** The starting choices the canvas shows: the first three districts. */
-const CHOICES = DISTRICT_ORDER.slice(0, 3);
+// The districts a new department may start in (content/city/districts.ts `startable`), as the engine allows.
+const CHOICES = DISTRICT_ORDER.filter((id) => DISTRICTS[id].startable);
 
 /** A2, take command: the call's result in a line, the faces, a name for the unit and a starting district. The
  * districts above the department's level show as locked: `foundDepartment` only opens what the level allows. */
@@ -61,7 +63,8 @@ export function Founding() {
 }
 
 function DistrictCard({ d, checked, onPick }: { d: DistrictView; checked: boolean; onPick: () => void }) {
-  const locked = !d.open && !d.canOpen;
+  // Every starting district can be chosen at founding, whatever its later opening level.
+  const locked = !DISTRICTS[d.id].startable;
   return <label className="found-card" data-checked={checked || undefined} data-locked={locked || undefined}>
     <input type="radio" name="district" value={d.id} checked={checked} disabled={locked} onChange={onPick} />
     <span className="found-card-main">
