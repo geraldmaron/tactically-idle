@@ -488,6 +488,40 @@ players notice.
 Done: armor converts harm only for the officer hit, with tests for a handgun and a long-gun hit;
 the outcome-score ranking gate holds; `npm run verify` passes.
 
+### named-carriers: Every packed item has a named carrier and every use a named operator
+Tags: job=build; journeys=hire-and-equip, answer-a-call, debrief-explains; probes=none (carrier data never moves a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Owner, 2026-10-24: the mission inventory is disorganized, nothing says the basic kit is per officer,
+and nobody can tell which officer has which item. Design in `docs/loadout-by-officer.md`, challenged
+by sol (slots, carrier-gated actions and carrier-as-lead rejected). Work: `carrierOfficerId` on
+`LoadoutReservation`, assigned after selection from the deploying roster by the fixed order in the
+doc; reassignment inside the squad when a carrier drops out; operator recorded per used unit at
+decision commit; prepare-screen rows with the basic kit shown once as issued to every officer; the
+operator on the decision sheet; carried, worked, spent and returned in the debrief; validators
+extended; the stale radio-reservation line in `docs/auto-equip.md` corrected.
+
+Done: every deployed unit names a carrier or sits in shared supplies; a seeded run with carriers
+assigned has the same eligibility, odds, routes and force profiles as one without (a test compares
+them); a hurt carrier's unit stays usable through a same-squad handover; the prepare screen at 390
+and 320 px shows the basic-kit scope in visible words with a short squad and long names; `npm run
+verify` passes.
+
+### auto-equip-force: Auto-equip weighs the force a call can draw
+Tags: job=build; journeys=hire-and-equip; probes=none (changes which items are packed, not a chance input); lane=engine
+Needs: start=none; integrate=none; ship=none
+
+Sol, 2026-10-24: on six sampled tier-three calls from the shipping trees, with every optional item
+owned and every officer certified, auto-equip packed only a hailer and a shield and warned of nothing,
+though each call had three actions with drawn team-force outcomes. Less-lethal tools and their
+supplies were never recommended, so the drawn-force path falls to hands or firearms more than a
+prepared team would. The planner ranks only declared bonuses and requirements
+(`src/sim/auto-equip.ts`); drawn force precedence lives in `src/sim/drawn-effects.ts`.
+
+Done: on calls whose actions can draw team force, auto-equip packs a usable less-lethal option and
+its supply when owned and someone deploying is qualified, or says why not; a test covers the sampled
+calls; manual quantities and explicit zeroes still win.
+
 ### progression-pacing: Measure rank and milestone pacing, and read the promotion lines
 Tags: job=build; journeys=officer-promotes, milestone-grants; probes=none (pacing, not a chance input); lane=engine
 Needs: start=none; integrate=none; ship=none
