@@ -152,8 +152,15 @@ function validDecisionView(d: unknown): boolean {
     && isList(d.contributors, (x) => isObj(x) && isStr(x.label) && isNum(x.value) && oneOf(x.source, CONTRIBUTOR_SOURCES) && (x.ref === undefined || isStr(x.ref)));
 }
 
+/** The world reference a card or a run carries (IncidentWorldRef). */
+function validWorldRef(w: unknown): boolean {
+  return isObj(w) && oneOf(w.kind, ['warrant', 'armed_contact']) && strings(w, ['caseId', 'leadId', 'subjectId', 'districtId'])
+    && isNum(w.caseTier) && Number.isInteger(w.caseTier) && w.caseTier >= 1 && w.caseTier <= 4 && (w.tieRole === undefined || oneOf(w.tieRole, ['talk', 'door']));
+}
+
 function validIncident(c: unknown): c is Record<string, unknown> {
   if (!isObj(c) || !strings(c, ['id', 'type', 'familyId']) || !numbers(c, ['tier', 'arrivedAt', 'expiresAt']) || !isBool(c.seen)) return false;
+  if (c.world !== undefined && !validWorldRef(c.world)) return false;
   if (c.newKind !== undefined && !isBool(c.newKind)) return false;
   if (c.eased !== undefined && c.eased !== true) return false;
   // A generated call, or one the registry holds (an authored call, or a test's own).
@@ -187,6 +194,8 @@ function validRun(r: unknown): boolean {
   if (r.decisionPausedAt !== undefined && !isNum(r.decisionPausedAt)) return false;
   if (r.sourceStart !== undefined && (!isObj(r.sourceStart) || !Object.values(r.sourceStart).every(within))) return false;
   if (r.crew !== undefined && !isStrings(r.crew)) return false;
+  if (r.world !== undefined && !validWorldRef(r.world)) return false;
+  if (r.callback !== undefined && !(isObj(r.callback) && oneOf(r.callback.kind, ['tie', 'pair', 'imprint']) && isStrings(r.callback.officerIds) && isStr(r.callback.refId))) return false;
   if (r.commitments !== undefined && (!isObj(r.commitments) || !Object.values(r.commitments).every((c) => isObj(c) && strings(c, ['personId', 'kind'])
     && numbers(c, ['madeAt', 'revision']) && oneOf(c.status, ['open', 'kept', 'broken'])))) return false;
   if (r.supportUnitIds !== undefined && (!isStrings(r.supportUnitIds) || r.supportUnitIds.length > 1)) return false;

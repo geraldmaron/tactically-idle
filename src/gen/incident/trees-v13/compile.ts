@@ -46,6 +46,19 @@ export interface CastIdentity { firstName: string; surname: string; pronouns: 'h
 /** Drawn identity per role (instance.ts): pronouns and, where the text names it, age. */
 export type CastDraw = Record<string, { pronouns: 'he' | 'she' | 'they'; age?: number }>;
 
+/** The identity a world cast gives the tree's single subject role, or null when the spec has no cast or the
+ * tree has no one subject role to give it to. A subject's `nameKey` indexes the civilian pools exactly as
+ * the spec's cast does (src/sim/world/types.ts Subject.nameKey). */
+export function worldSubject(tree: CallTree, spec: IncidentSpec): { roleId: string; surnameGroup: string | undefined; identity: CastIdentity } | null {
+  if (!spec.cast) return null;
+  const subjects = tree.roles.filter(role => role.kind === 'subject');
+  if (subjects.length !== 1) return null;
+  const { first, last, pronouns } = spec.cast;
+  const firstName = CIVILIAN_FIRST_NAMES[pronouns][first], surname = CIVILIAN_SURNAMES[last];
+  if (firstName === undefined || surname === undefined) return null;
+  return { roleId: subjects[0].id, surnameGroup: subjects[0].surnameGroup, identity: { firstName, surname, pronouns } };
+}
+
 /** One identity per role, then per group member (`members`, in order), from a cosmetic stream keyed
  * by the call: never a mechanics draw. The civilian pool shares no name with the officer catalog, so
  * nobody inside shares a name with the squad. */
@@ -53,8 +66,18 @@ export function drawTreeCast(tree: CallTree, spec: IncidentSpec, draws: CastDraw
   const key = `${spec.type}:${spec.familyId}:${spec.buildingSeed}:${spec.seed}:cast-v13`;
   const usedFirst = new Set<string>(), usedSurname = new Map<string, string>(), taken = new Set<string>();
   const cast: Record<string, CastIdentity> = {};
+  // A world subject (IncidentSpec.cast) takes the call's one subject role, by name; everyone else is
+  // drawn as ever, clear of the subject's first name and surname.
+  const world = worldSubject(tree, spec);
+  if (world) {
+    usedFirst.add(world.identity.firstName);
+    taken.add(world.identity.surname);
+    if (world.surnameGroup) usedSurname.set(world.surnameGroup, world.identity.surname);
+    cast[world.roleId] = { ...world.identity, ...(draws[world.roleId]?.age !== undefined ? { age: draws[world.roleId].age } : {}) };
+  }
   // A member has no tree role of their own: their pronouns are always drawn (instance.ts).
   for (const role of [...tree.roles, ...members.map(id => ({ id, pronouns: 'they' as const, surnameGroup: undefined }))]) {
+    if (world && role.id === world.roleId) continue;
     const pronouns = draws[role.id]?.pronouns ?? role.pronouns;
     const names = CIVILIAN_FIRST_NAMES[pronouns].filter(name => !usedFirst.has(name));
     const firstName = names[hashIndex(hashSeed(`${key}:${role.id}:first`), names.length)];
@@ -1327,6 +1350,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
     // A v13 debrief scores trust and strain from people's end states (sim/outcome-score.ts).
     id, title: ending.title, summary: ending.summary, trustAdjust: 0, strain: 0, disposition: ending.disposition,
     ...(['resolved', 'care_accepted', 'followup_agreed'].includes(ending.disposition) ? { completion: { flags: [endFlag(id)] } } : {}),
+    ...(ending.world ? { world: { ...ending.world } } : {}),
     ...(ending.remainingTasks ? { remainingTasks: [...ending.remainingTasks] } : {}),
     ...(ending.epilogue ? { epilogue: ending.epilogue } : {}),
     ...(ending.epilogueIf?.length ? { epilogueIf: ending.epilogueIf.filter(entry => possible(entry.when)).map(entry => ({ when: stateCondition(trim(entry.when), groups), epilogue: entry.epilogue })) } : {}),

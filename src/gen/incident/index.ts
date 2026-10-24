@@ -1,4 +1,5 @@
 import { CALL_TREE_CONTENT_VERSION as INCIDENT_CONTENT_VERSION } from '../../content/call-trees';
+import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../content/call-trees/civilian-names';
 import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { templateAt } from '../../content/incidents';
 import type { IncidentTemplate } from '../../content/incidents/types';
@@ -20,23 +21,38 @@ export interface IncidentTypeInfo {
 export { CALL_TREE_CONTENT_VERSION as INCIDENT_CONTENT_VERSION } from '../../content/call-trees';
 export const INCIDENT_TYPES = SCENARIO_TYPES;
 
-/** The saved ID carries the entire deterministic seed tuple. */
+/** A world cast travels as an optional last segment: `:c<first>-<last>-<h|s|t>` (name pool indices, then
+ * pronouns). Ids without it are exactly the ids they always were. */
+const ID_PATTERN = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)(?::c(\d+)-(\d+)-([hst]))?$/;
+const PRONOUN_CODE = { he: 'h', she: 's', they: 't' } as const;
+const CODE_PRONOUN = { h: 'he', s: 'she', t: 'they' } as const;
+
+/** The saved ID carries the entire deterministic seed tuple, and the world cast when there is one. */
 export function incidentId(spec: IncidentSpec): string {
-  return `gen:${spec.type}:${spec.familyId}:${spec.buildingSeed}:${spec.seed}:${spec.tier}:${spec.contentVersion}`;
+  const base = `gen:${spec.type}:${spec.familyId}:${spec.buildingSeed}:${spec.seed}:${spec.tier}:${spec.contentVersion}`;
+  return spec.cast ? `${base}:c${spec.cast.first}-${spec.cast.last}-${PRONOUN_CODE[spec.cast.pronouns]}` : base;
 }
 /** The ID's shape and version only, for a test's own template (generateIncident's `template`). */
 function parsesAs(id: string): boolean {
-  const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
-  return !!m && Number(m[6]) === INCIDENT_CONTENT_VERSION && Number(m[5]) >= 1 && Number(m[5]) <= 5;
+  const m = ID_PATTERN.exec(id);
+  return !!m && Number(m[6]) === INCIDENT_CONTENT_VERSION && Number(m[5]) >= 1 && Number(m[5]) <= 5 && castFits(m);
+}
+/** A cast's indices must name real entries in the civilian pools. */
+function castFits(m: RegExpExecArray): boolean {
+  if (m[9] === undefined) return true;
+  const pool = CIVILIAN_FIRST_NAMES[CODE_PRONOUN[m[9] as 'h' | 's' | 't']];
+  return Number(m[7]) < pool.length && Number(m[8]) < CIVILIAN_SURNAMES.length;
 }
 
 export function parseIncidentId(id: string): IncidentSpec | null {
-  const m = /^gen:([a-z_]+):([a-z0-9_]+):(\d+):(\d+):(\d+):(\d+)$/.exec(id);
+  const m = ID_PATTERN.exec(id);
   if (!m) return null;
   const [buildingSeed, seed, tier, contentVersion] = m.slice(3).map(Number);
   if (![buildingSeed, seed, tier, contentVersion].every(Number.isSafeInteger) || tier < 1 || tier > 5 || contentVersion !== INCIDENT_CONTENT_VERSION) return null;
   if (!SCENARIO_TYPES.some(info => info.type === m[1] && info.families.includes(m[2]))) return null;
-  return { type: m[1] as IncidentType, familyId: m[2], buildingSeed, seed, tier, contentVersion };
+  if (!castFits(m)) return null;
+  const cast = m[9] === undefined ? undefined : { first: Number(m[7]), last: Number(m[8]), pronouns: CODE_PRONOUN[m[9] as 'h' | 's' | 't'] };
+  return { type: m[1] as IncidentType, familyId: m[2], buildingSeed, seed, tier, contentVersion, ...(cast ? { cast } : {}) };
 }
 
 /** Generated buildings vary in rooms, routes and floors, so not every building seed can
@@ -102,11 +118,14 @@ export function drawIncidentSpec(
      * drawableSituations). Given, a kind with none is out of the draw with no fallback, and a seed
      * whose situation is out is re-keyed to the next one that is in, without drawing more from the
      * stream. Absent, nothing is filtered and the draw is the same as before it existed. */
-    situations?: Partial<Record<IncidentType, readonly (0 | 1 | 2)[]>> },
+    situations?: Partial<Record<IncidentType, readonly (0 | 1 | 2)[]>>;
+    /** Gates and the Lab only: draw the calls only the world sends (a warrant) too. The board never sets it,
+     * so a world-only call never comes up at random. */
+    includeWorldOnly?: boolean },
 ): { spec: IncidentSpec; state: number } {
   let pool = SCENARIO_TYPES.flatMap(info => Array.from({ length: info.type === 'barricaded' ? 4 : 3 }, () => info));
   // A call only the world sends (a warrant) never comes onto the board at random (save v19).
-  pool = pool.filter(info => !templateAt(info.type)?.worldOnly);
+  if (!ctx.includeWorldOnly) pool = pool.filter(info => !templateAt(info.type)?.worldOnly);
   if (ctx.unlockedTypes) {
     const open = pool.filter(info => ctx.unlockedTypes!.includes(info.type));
     if (open.length) pool = open;

@@ -45,6 +45,26 @@ export const INCIDENT_TUNING = tunable('INCIDENT_TUNING', {
   : next.minLifetimeMs <= 0 || next.minLifetimeMs > next.maxLifetimeMs ? 'Card lifetimes need 0 < minLifetimeMs ≤ maxLifetimeMs.' : null });
 
 
+// ---------------------------------------------------------------- world cards
+
+/** A card the world put on the board (a warrant or an armed contact the player chose to answer). Such a card
+ * never expires, never counts toward the board's capacity, never blocks a random draw of its kind, and is
+ * never cleared by the content filter: the player chose it, and the lead behind it never expires either. */
+export const isWorldCard = (card: IncidentCard): boolean => card.world !== undefined;
+
+/** A card that is not the world's: the ones capacity, the one-per-kind rule and expiry apply to. */
+const boardCards = (cards: readonly IncidentCard[]): IncidentCard[] => cards.filter((card) => !isWorldCard(card));
+
+/** Put a world card on the board. Opening is idempotent: a lead has at most one card, so a second open
+ * returns the card already there. */
+export function addWorldCard(d: GameState, card: IncidentCard): IncidentCard {
+  const cards = board(d);
+  const same = card.world ? cards.find((c) => c.id === card.id || c.world?.leadId === card.world!.leadId) : cards.find((c) => c.id === card.id);
+  if (same) return same;
+  cards.unshift(card);
+  return card;
+}
+
 // ---------------------------------------------------------------- content filter
 
 /** What the player keeps off the board (docs/content-rating.md): any set of descriptors. A situation
@@ -84,11 +104,15 @@ export function cardFits(card: IncidentCard, exclusion: ContentExclusion): boole
   return drawableSituations(exclusion)[spec.type].includes(scenarioRecipe(spec).variant as SituationIndex);
 }
 
+/** A world card the player's content settings would have kept off the board. It stays (the player chose to
+ * open it), and the card says so. */
+export const worldCardFiltered = (card: IncidentCard, exclusion: ContentExclusion): boolean => isWorldCard(card) && !cardFits(card, exclusion);
+
 /** Clear the cards the player's content settings no longer allow. A call in progress is not on
- * the board and finishes. */
+ * the board and finishes. A world card stays, filtered or not (worldCardFiltered says which). */
 export function dropExcludedCards(d: GameState, exclusion: ContentExclusion): void {
   if (!exclusion.avoid.length) return;
-  const kept = board(d).filter(card => cardFits(card, exclusion));
+  const kept = board(d).filter(card => isWorldCard(card) || cardFits(card, exclusion));
   if (kept.length !== board(d).length) d.incidents = kept;
 }
 
@@ -144,7 +168,7 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
   const situations = exclusion ? drawableSituations(exclusion) : undefined;
   const run = d.activeRun;
   const activeStory = run ? parseIncidentId(run.scenarioId) : null;
-  const avoidTypes = [...board(d).flatMap(card => { const spec = parseIncidentId(card.id); return spec ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])];
+  const avoidTypes = [...boardCards(board(d)).flatMap(card => { const spec = parseIncidentId(card.id); return spec ? [spec.type] : []; }), ...(activeStory ? [activeStory.type] : [])];
   const recentTypes = d.debriefs.slice(0, 2).flatMap(report => { const spec = parseIncidentId(report.scenarioId); return spec ? [spec.type] : []; });
   const arc = playerArcContext(d);
   if (situations) {
@@ -152,7 +176,7 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
     const open = SCENARIO_TYPES.map((info) => info.type).filter((type) => arc.unlockedTypes.includes(type));
     if (!(open.length ? open : SCENARIO_TYPES.map((info) => info.type)).some((type) => situations[type].length)) return null;
   }
-  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...board(d).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc, ...(situations ? { situations } : {}) });
+  const drawn = drawIncidentSpec(d.rngState, { level: dep.level, trust: dep.trust, avoidFamilies: [...boardCards(board(d)).map((c) => c.familyId), ...(run ? [activeStory?.familyId ?? run.locationFamilyId] : [])], ...(avoidTypes ? { avoidTypes } : {}), ...(recentTypes ? { recentTypes } : {}), ...arc, ...(situations ? { situations } : {}) });
   // After a run of bad results the next call comes in a tier lower, and its card says why
   // (sim/player-profile.ts comebackTier).
   const comeback = comebackTier(playerProfile(d), Math.min(5, Math.max(1, Math.round(drawn.spec.tier))));
@@ -167,7 +191,7 @@ function drawCard(d: GameState, at: number, exclusion?: ContentExclusion): Incid
   // catalog has fewer kinds than the board's opening cards (owner 2026-10-21, `one-card-board`), a
   // kind may hold more than one card, each on another building (avoidFamilies), so the board fills.
   const oneEach = SCENARIO_TYPES.length >= INCIDENT_TUNING.initialCount;
-  if (oneEach && (cards.some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
+  if (oneEach && (boardCards(cards).some((c) => c.type === spec.type) || activeStory?.type === spec.type)) return null;
   const card: IncidentCard = {
     id,
     type: spec.type,
@@ -203,9 +227,9 @@ function scheduleAfter(d: GameState, from: number): void {
  * (rngState, level, trust, now). `exclusion`: the player's content settings (drawCard).
  */
 export function seedIncidentBoard(d: GameState, now: number, count: number = INCIDENT_TUNING.initialCount, exclusion?: ContentExclusion): void {
-  board(d).length = 0;
+  d.incidents = board(d).filter(isWorldCard);
   let attempts = 0;
-  while (board(d).length < count && attempts < count * 8) {
+  while (boardCards(board(d)).length < count && attempts < count * 8) {
     attempts++;
     drawCard(d, now, exclusion);
   }
@@ -230,13 +254,13 @@ export function applyIncidentsDue(d: GameState, _prev: number, t: number, exclus
   let at = nextIncidentAt(d)!;
   while (at <= t) {
     // Slots freed by expiry before this arrival count before it.
-    d.incidents = board(d).filter((c) => c.expiresAt > at);
-    if (board(d).length < INCIDENT_TUNING.boardMax) drawCard(d, at, exclusion);
+    d.incidents = board(d).filter((c) => isWorldCard(c) || c.expiresAt > at);
+    if (boardCards(board(d)).length < INCIDENT_TUNING.boardMax) drawCard(d, at, exclusion);
     scheduleAfter(d, at);
     at = nextIncidentAt(d)!;
   }
   const run = d.activeRun;
-  d.incidents = board(d).filter((c) => c.expiresAt > t && !(run && c.id === run.scenarioId));
+  d.incidents = board(d).filter((c) => (isWorldCard(c) || c.expiresAt > t) && !(run && c.id === run.scenarioId));
 }
 
 /** Earliest future board event after `t` (an arrival or an expiry), or null. */
@@ -246,7 +270,7 @@ export function nextIncidentEventTime(d: GameState, t: number): number | null {
     if (x !== null && x > t && (e === null || x < e)) e = x;
   };
   consider(nextIncidentAt(d));
-  for (const c of board(d)) consider(c.expiresAt);
+  for (const c of boardCards(board(d))) consider(c.expiresAt);
   return e;
 }
 
@@ -275,15 +299,21 @@ export interface BoardSummary {
   expiringSoon: number;
   /** Most cards the board holds (INCIDENT_TUNING.boardMax). */
   max: number;
+  /** Cards the world put on the board (warrants, armed contacts): never counted in `count` or `max`. Present
+   * only when there are any. */
+  worldCount?: number;
 }
 
 export function boardSummaryOf(state: GameState, now: number): BoardSummary {
   const t = Math.max(now, state.department.clockHighWater);
-  const live = (state.incidents ?? []).filter((c) => c.expiresAt > t);
+  const cards = state.incidents ?? [];
+  const live = cards.filter((c) => !isWorldCard(c) && c.expiresAt > t);
+  const world = cards.filter(isWorldCard);
   const at = nextIncidentAt(state);
   return {
     count: live.length,
-    newCount: live.filter((c) => !c.seen).length,
+    ...(world.length ? { worldCount: world.length } : {}),
+    newCount: live.filter((c) => !c.seen).length + world.filter((c) => !c.seen).length,
     nextArrivalAt: live.length >= INCIDENT_TUNING.boardMax || at === null ? null : Math.max(at, t),
     expiringSoon: live.filter((c) => c.expiresAt - t <= INCIDENT_TUNING.expiringSoonMs).length,
     max: INCIDENT_TUNING.boardMax,

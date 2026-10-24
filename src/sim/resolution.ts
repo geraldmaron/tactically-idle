@@ -85,6 +85,7 @@ import { reputationContributor } from './reputation';
 import { conditionHolds } from './conditions';
 import { departmentUpkeep } from './equipment-manager-policy';
 import { joinSquadNames, squadName } from './squad-names';
+import { bondContributor } from './people/contributor';
 
 /** Tunable (sim/tuning.ts). The guard keeps the forced-band tails, the span and the band thresholds
  * usable: forced bands aim at setback/2 and 1 - luck/2, so neither tail may vanish. */
@@ -493,6 +494,24 @@ interface Plan {
   score: number;
 }
 
+/** What an officer who knows the person a world call is about adds to one check: a flat plus 4 on the whole
+ * check, once, however many tied officers take part (docs/world-redesign.md, "Officers know people"). */
+export const TIE_KNOWS = 4;
+const OBJECT_PRONOUN = { he: 'him', she: 'her', they: 'them' } as const;
+
+/** The officers with an on-record tie to this world call's subject, when the check is one that talks to that
+ * person: a contact check (talk, call, negotiate) with the subject, or with no one in particular. A tie that
+ * has not surfaced adds nothing, and neither does a check of any other kind or a call with no world subject. */
+function knowingOfficers(state: GameState, run: OperationRun, scenario: ScenarioDefinition, action: ActionDefinition): { ids: Set<Id>; object: string; role: 'talk' | 'door' } | null {
+  const ref = run.world;
+  const subject = ref ? state.world?.subjects?.[ref.subjectId] : undefined;
+  if (!ref || !subject || action.check.kind !== 'contact') return null;
+  const subjectPerson = (scenario.incidentPeople ?? []).find((person) => person.kind === 'subject');
+  if (action.talksTo && subjectPerson && action.talksTo !== subjectPerson.id) return null;
+  const ids = new Set<Id>((state.people?.ties ?? []).filter((tie) => tie.subjectId === ref.subjectId && tie.onRecord).map((tie) => tie.officerId));
+  return ids.size ? { ids, object: OBJECT_PRONOUN[subject.pronouns], role: ref.tieRole ?? 'talk' } : null;
+}
+
 export function evaluateAction(input: EvalInput): Evaluation {
   const { state, built } = input;
   const squadLabel = (id: SquadId) => squadName(state.squads, id);
@@ -706,11 +725,26 @@ export function evaluateAction(input: EvalInput): Evaluation {
   }
 
   // ---- seat order: cert holders lead, then by effective aptitude
-  const ordered = orderActionParticipants(pool, action);
+  // The player may have the officer who knows the subject hold the street door instead of talking (recusal):
+  // they sit out the contact checks with that person, unless no one else is left to take part.
+  const knowing = knowingOfficers(state, run, input.scenario, action);
+  const recused = knowing?.role === 'door' ? pool.filter((o) => knowing.ids.has(o.id)) : [];
+  const seated = recused.length && recused.length < pool.length ? pool.filter((o) => !knowing!.ids.has(o.id)) : pool;
+  if (seated !== pool) for (const o of recused) {
+    excluded.push({ officerId: o.id, reason: `${o.surname} holds the street door` });
+    contributors.push({ label: `${o.surname}: holds the street door, off the talk`, value: 0, source: 'familiarity', ref: o.id });
+  }
+  const ordered = orderActionParticipants(seated, action);
   const participants = ordered.slice(0, Math.max(0, cap));
   // The player's pick leads: moved to the first seat from among those already taking part.
   const picked = input.lead ? participants.findIndex((officer) => officer.id === input.lead) : -1;
   if (picked > 0) participants.unshift(...participants.splice(picked, 1));
+  // An officer who knows the person on the call leads the talking when the player has not picked (the tie
+  // choices are written for them).
+  if (knowing?.role === 'talk' && !input.lead) {
+    const known = participants.findIndex((officer) => knowing.ids.has(officer.id));
+    if (known > 0) participants.unshift(...participants.splice(known, 1));
+  }
   if (care.fieldTarget && !participants.some(officer => officer.certs.includes('advanced_first_aid'))) reasons.push('A qualified first aider must participate at the patient’s location');
   const benched = ordered.slice(participants.length);
   if (participants.length === 0 && !(action.commandOnly)) {
@@ -820,6 +854,14 @@ export function evaluateAction(input: EvalInput): Evaluation {
       if (pct >= 1) contributors.push({ label: `${o.surname}: age ${Math.floor(age)}, +${pct}% strain`, value: 0, source: 'condition', ref: o.id });
     }
   });
+  // Someone on the check knows the person it is about: one visible line, however many do (lead first).
+  const acquaintance = knowing?.role === 'talk' ? participants.find((o) => knowing.ids.has(o.id)) : undefined;
+  if (knowing && acquaintance) contributors.push({ label: `${acquaintance.surname}: knows ${knowing.object}`, value: TIE_KNOWS, source: 'familiarity', ref: acquaintance.id });
+  // Officers who work well (or badly) together on a shared action: small, capped, visible.
+  if (participants.length > 1 && state.people) {
+    const bond = bondContributor(state, participants.map((o) => o.id));
+    if (bond) contributors.push(bond);
+  }
   if (action.certBonus) {
     const holder = participants.find((o) => o.certs.includes(action.certBonus!.cert));
     if (holder) contributors.push({ label: `${holder.surname}: ${action.certBonus.label}`, value: action.certBonus.value, source: 'preparation', ref: holder.id });
