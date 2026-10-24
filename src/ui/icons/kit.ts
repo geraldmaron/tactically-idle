@@ -7,6 +7,10 @@ import type { IconName } from '../icons';
 export type TabKey = 'hq' | 'calls' | 'officers' | 'build';
 export const TAB_ICON: Record<TabKey, IconName> = { hq: 'hq', calls: 'calls', officers: 'officers', build: 'build' };
 
+/** The five bottom-navigation destinations, by route id (components/nav.tsx). */
+export type NavKey = 'city' | 'ops' | 'squad' | 'headquarters' | 'store';
+export const NAV_ICON: Record<NavKey, IconName> = { city: 'city', ops: 'operations', squad: 'team', headquarters: 'hq', store: 'bag' };
+
 export type ResourceKey = 'funds' | 'rate' | 'trust' | 'level' | 'menu';
 export const RESOURCE_ICON: Record<ResourceKey, IconName> = { funds: 'funds', rate: 'rate', trust: 'trust', level: 'level', menu: 'menu' };
 

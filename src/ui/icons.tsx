@@ -554,12 +554,41 @@ const PATHS = {
     </>
   ),
   // ---- Desk and Street kit (docs/visual-kit.md) -------------------------
-  // Tabs
+  // Tabs: City, Operations, Team, HQ, Store (the night-city navigation)
+  city: (
+    <>
+      <path d="M2.5 21h19" />
+      <path d="M4.5 21v-9h4.5v9" />
+      <path d="M9 21V4.5h6V21" />
+      <path d="M15 21V9h4.5v12" />
+      <path d="M11.5 8h1M11.5 11.5h1M11.5 15h1M6.5 15h.01M17.25 13h.01M17.25 16.5h.01" />
+    </>
+  ),
+  operations: (
+    <>
+      <path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2.5h8a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 19.5H5a1.5 1.5 0 0 1-1.5-1.5z" />
+      <path d="M3.5 11.5h17" />
+    </>
+  ),
+  team: (
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="16.5" cy="9.5" r="2.5" />
+      <path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" />
+      <path d="M15 14.3c3 0 5.5 2 5.5 5.7" />
+    </>
+  ),
   hq: (
     <>
-      <path d="M4.5 21V11l7.5-4 7.5 4v10" />
-      <path d="M2.5 21h19M10 21v-5h4v5M7.5 13.5h2M14.5 13.5h2" />
-      <path d="M12 7V2.5h3.5l-1 1.25 1 1.25H12" />
+      <path d="M12 2.5l8 3v6c0 4.7-3.4 8.3-8 10-4.6-1.7-8-5.3-8-10v-6z" />
+      <path d="M8.5 12l2.5 2.5 4.5-5" />
+    </>
+  ),
+  bag: (
+    <>
+      <path d="M5 8h14l-1 12.5H6z" />
+      <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+      <path d="M9.5 12a2.5 2.5 0 0 0 5 0" />
     </>
   ),
   calls: (
