@@ -94,20 +94,21 @@ describe('warrants and armed contacts', () => {
   }
   const run1 = (c: { id: string }, leadId: string, subjectId: string) => ({ id: 'r1', scenarioId: 'none', squadIds: [], world: { kind: 'warrant', caseId: c.id, leadId, subjectId, caseTier: 3, districtId: 'pike' } }) as unknown as OperationRun;
 
-  it('puts a warrant card on the board for a ready lead, once', () => {
+  it('puts one warrant card on the board for a lead, however often it is opened, and the lead waits on it', () => {
     const { s, lead } = withLead('proactive');
-    const after = run(s, { type: 'openWarrant', leadId: lead.id }, T0);
-    expect(after.world.leads.find((l) => l.id === lead.id)!.status).toBe('warrant');
-    expect(after.incidents.filter((card) => card.world?.leadId === lead.id)).toHaveLength(1);
-    const again = run(after, { type: 'openWarrant', leadId: lead.id }, T0);
-    expect(again.incidents.filter((card) => card.world?.leadId === lead.id)).toHaveLength(1);
+    const first = dispatch(s, { type: 'openWarrant', leadId: lead.id }, { now: T0 });
+    expect(first.result.ok).toBe(true);
+    const again = dispatch(first.state, { type: 'openWarrant', leadId: lead.id }, { now: T0 });
+    expect(again.result.ok).toBe(true);
+    expect(again.state.incidents.filter((c) => c.world?.leadId === lead.id)).toHaveLength(1);
+    expect(again.state.world.leads.find((l) => l.id === lead.id)!.status).toBe('warrant');
   });
 
   it('answers an armed contact only inside its live window', () => {
     const { s, lead } = withLead('armed_contact');
     expect(lead.liveUntil).toBe(T0 + 10 * 60_000);
-    expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 5 * 60_000)).toBe('');
     expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 11 * 60_000)).toMatch(/passed/);
+    expect(refused(s, { type: 'respondToContact', leadId: lead.id }, T0 + 5 * 60_000)).toBe('');
   });
 
   it('settles a lawful resolution through the review clock and pays once', () => {

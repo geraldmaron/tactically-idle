@@ -7,6 +7,7 @@ import { REVIEW_CLOCK_MS } from '../../content/city/tuning';
 import { SCENARIO_TYPES } from '../../content/scenario-types';
 import { templateAt } from '../../content/incidents';
 import { INCIDENT_CONTENT_VERSION, incidentId } from '../../gen/incident';
+import { addWorldCard } from '../incidents';
 import { hashSeed } from '../rng';
 import { getScenario } from '../scenario-registry';
 import type { IncidentSpec } from '../scenario-types';
@@ -60,9 +61,10 @@ function buildCard(d: GameState, lead: Lead, kind: IncidentWorldRef['kind']): { 
 }
 
 function putOnBoard(d: GameState, lead: Lead, card: IncidentCard): void {
-  if (!d.incidents.some((c) => c.id === card.id)) d.incidents.unshift(card);
+  // One card per lead, however many times the warrant is opened (sim/incidents.ts addWorldCard).
+  const placed = addWorldCard(d, card);
   lead.status = 'warrant';
-  lead.cardId = card.id;
+  lead.cardId = placed.id;
 }
 
 export function openWarrant(d: GameState, leadId: string): HandlerResult {

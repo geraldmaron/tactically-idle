@@ -5,7 +5,7 @@ import { drawCalls, playToEnd, POLICIES, type Policy } from '../gen/incident/tre
 import { serviceEarned } from './department-level';
 import { completionEvidence } from './external-support';
 import { apply, callsOfKind } from './test-fixtures';
-import { computeDebrief, outcomeFactor, traceRun } from './operation';
+import { callFee, computeDebrief, outcomeFactor, traceRun } from './operation';
 import { dispositionOf, endStates, forceLines, OUTCOME_SCORE_V1, scoreCall, scoreFrom, type PersonEnd, type ScoreInputs } from './outcome-score';
 import { deserialize, serialize } from './save';
 import { getScenario } from './scenario-registry';
@@ -293,7 +293,7 @@ describe('the v13 debrief', () => {
       expect(debrief.completionAchieved).toBe(score.disposition === 'resolved');
       expect(debrief.scoreLines).toEqual(score.lines);
       expect(debrief.trustDelta).toBe(Math.max(0, Math.min(100, state.department.trust + score.trust)) - state.department.trust);
-      expect(debrief.fundingReward).toBe(Math.round(scenario.rewards.funding * (0.4 + 0.6 * score.factor)));
+      expect(debrief.fundingReward).toBe(Math.round(callFee(state, run, scenario) * (0.4 + 0.6 * score.factor)));
       for (const officer of debrief.officerCondition)
         expect(officer.stressAfter).toBe(Math.max(0, Math.min(100, Math.round((state.officers[officer.officerId].stress + score.strain) * 10) / 10)));
       if (debrief.serviceEarned !== undefined) expect(debrief.serviceEarned).toBe(serviceEarned({ completed: score.disposition === 'resolved', failed: false }, scenario.incident?.tier ?? 1));

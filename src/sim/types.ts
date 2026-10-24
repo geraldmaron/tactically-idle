@@ -1173,6 +1173,9 @@ export interface IncidentWorldRef {
   subjectId: Id;
   caseTier: Tier;
   districtId: DistrictId;
+  /** Copied from the start command: what the knowing officer does (see startOperation `tieRole`). Absent
+   * reads as 'talk'. */
+  tieRole?: 'talk' | 'door';
 }
 
 /** Best result on a live call of one recipe. Ranked by completion, then objective, then safety. */
@@ -1330,6 +1333,10 @@ export type Command =
       supportUnitIds?: Id[];
       /** Optional staging point per squad (from derived.stagingPoints); must lie in that squad's position zone. */
       staging?: Partial<Record<SquadId, Id>>;
+      /** A world call only: what the officer who knows its subject does. 'talk' (default): leads the contact
+       * checks, and the tie contributor applies. 'door': holds the street door and takes no part in contact
+       * checks with the subject (recusal), so the contributor never applies. */
+      tieRole?: 'talk' | 'door';
     }
   | { type: 'cancelOperation' }
   /** The next decision shows after its result was read (sim/clocks.ts openDither). */

@@ -36,7 +36,7 @@ export function actionWhere(pred: (a: ActionDefinition) => boolean): ActionDefin
   throw new Error('No such action in the fixture scenario');
 }
 
-export const REAR_ACTION = () => actionWhere((a) => /out the back|move your squad up/i.test(a.title));
+export const REAR_ACTION = () => actionWhere((a) => /out the back|move your squad up|back of the house|cover the back/i.test(a.title));
 export const CONTACT_ACTION = () => actionWhere((a) => a.check.kind === 'contact' && !/out the back/i.test(a.title));
 export const ENTRY_ACTION = () => actionWhere((a) => !!a.entry);
 

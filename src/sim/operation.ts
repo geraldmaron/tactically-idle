@@ -1,6 +1,8 @@
 import { playerProfile, recordStall, sourceStarts } from './player-profile';
-import { applyWorldDebrief } from './world';
+import { applyWorldDebrief, fundingScale } from './world';
 import { applyPeopleDebrief } from './people';
+import { findBond } from './people/bonds';
+import { activeImprint } from './people/imprints';
 import { reserveSupportVehicle, supportStartCheck } from './support-vehicles';
 import { isGenericResponseExit, responseFailurePlan } from './response-failure';
 import { currentStoryPrompt } from './story-context';
@@ -385,7 +387,7 @@ function makeRun(state: GameState, built: BuiltLocation, scenario: ScenarioDefin
     ...(state.incidents?.some((c) => c.id === scenario.id)
       ? { sourceIncident: structuredClone(state.incidents.find((c) => c.id === scenario.id)!) }
       : {}),
-    ...(state.incidents?.find((c) => c.id === scenario.id)?.world ? { world: structuredClone(state.incidents.find((c) => c.id === scenario.id)!.world!) } : {}),
+    ...(state.incidents?.find((c) => c.id === scenario.id)?.world ? { world: { ...structuredClone(state.incidents.find((c) => c.id === scenario.id)!.world!), ...(cmd.tieRole ? { tieRole: cmd.tieRole } : {}) } } : {}),
     locationFamilyId: scenario.locationFamilyId,
     locationSeed: scenario.locationSeed,
     contentVersion: state.contentVersion,
@@ -847,7 +849,7 @@ export function computeDebrief(state: GameState, run: OperationRun): DebriefResu
   // Gauges that fill make the result count for more, either way (the scored path carries it as a line).
   const proposedTrust = run.responseFailure ? -2 : score ? score.trust : Math.round((Math.round(scenario.rewards.trust * (2 * factor - 1)) + ending.trustAdjust) * audienceFactor(run.fillPeak));
   const trustDelta = clamp(state.department.trust + proposedTrust, 0, 100) - state.department.trust;
-  const fundingReward = run.responseFailure ? 0 : Math.round(scenario.rewards.funding * (0.4 + 0.6 * factor));
+  const fundingReward = run.responseFailure ? 0 : Math.round(callFee(state, run, scenario) * (0.4 + 0.6 * factor));
   // Department service (save v7), shown on the debrief before it closes and added at close.
   const service = serviceEarned({ completed: completion?.completionAchieved ?? factor >= CAREER_TUNING.favorableAt, failed: !!run.responseFailure }, scenario.incident?.tier ?? 1);
   const levelAfter = service === null ? state.department.level : Math.max(state.department.level, levelForService(departmentService(state.department) + service));
@@ -919,6 +921,47 @@ function debriefCauses(scenario: ScenarioDefinition, run: OperationRun, steps: S
   return [...head, ...sorted].slice(0, 7);
 }
 
+// ---------------------------------------------------------------- call fee and callback
+
+/** The call fee by tier before the funding scale and the outcome factor (docs/world-redesign.md, "Case awards
+ * and call fees"). The case award is the world's and is paid once at review close; closeDebrief posts only
+ * this fee. */
+export const CALL_FEE: Readonly<Record<1 | 2 | 3 | 4, number>> = { 1: 800, 2: 1600, 3: 3200, 4: 6400 };
+
+/** The fee for a call before the outcome factor: the table by the investigation's tier for a world call and
+ * by the call's own tier otherwise (clamped to the table), times the funding scale. */
+export function callFee(state: Pick<GameState, 'department'>, run: Pick<OperationRun, 'world'>, scenario: Pick<ScenarioDefinition, 'incident'>): number {
+  const tier = Math.min(4, Math.max(1, Math.round(run.world?.caseTier ?? scenario.incident?.tier ?? 1))) as 1 | 2 | 3 | 4;
+  return CALL_FEE[tier] * fundingScale(state.department.level);
+}
+
+/** The one character callback this call carries, chosen when it is dispatched and kept on the run so replays
+ * agree: an officer's on-record tie to the call's subject, else two bonded officers, else an officer's
+ * active imprint (docs/world-redesign.md, "How calls plug in"). Officers are read in squad and seat order. */
+export function chooseCallback(d: GameState, run: OperationRun): NonNullable<OperationRun['callback']> | null {
+  const roster = run.squadIds.flatMap((sid) => runRoster(d, run, sid)).filter((id, i, all) => !!d.officers[id] && all.indexOf(id) === i);
+  const people = d.people;
+  if (!people) return null;
+  const ref = run.world;
+  if (ref) {
+    for (const id of roster) {
+      const tie = people.ties.find((t) => t.officerId === id && t.subjectId === ref.subjectId && t.onRecord);
+      if (tie) return { kind: 'tie', officerIds: [id], refId: tie.id };
+    }
+  }
+  for (let i = 0; i < roster.length; i++) {
+    for (let j = i + 1; j < roster.length; j++) {
+      const bond = findBond(people, roster[i], roster[j]);
+      if (bond && (bond.state === 'trusted' || bond.state === 'close' || bond.state === 'mentor')) return { kind: 'pair', officerIds: [bond.a, bond.b], refId: `${bond.a}:${bond.b}` };
+    }
+  }
+  for (const id of roster) {
+    const imprint = activeImprint(d, id);
+    if (imprint) return { kind: 'imprint', officerIds: [id], refId: imprint.id };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- handlers
 
 const fail = (reason: string): HandlerResult => ({ ok: false, reason });
@@ -949,6 +992,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     // Who went: their traits and experience open choices and shape results (sim/crew.ts).
     run.crew = crewFlags(draft, run);
     run.flags.push(...run.crew);
+    const callback = chooseCallback(draft, run);
+    if (callback) run.callback = callback;
     draft.activeRun = run;
     takeIncident(draft, scenario.id);
     return { ok: true };
@@ -1406,7 +1451,16 @@ function clearAssignments(draft: GameState, run: OperationRun): void {
 function abandonRun(draft: GameState, run: OperationRun, now: number): void {
   releaseRun(draft, run.id);
   clearAssignments(draft, run);
-  if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(now, draft.department.clockHighWater)) {
+  if (run.world) {
+    // A world call cancelled before its first decision gives the lead back: it returns to open, and the player
+    // opens the warrant again when ready. The card does not return to the board (leads never expire, cards
+    // would only strand them).
+    const lead = draft.world.leads.find((l) => l.id === run.world!.leadId);
+    if (lead && lead.status === 'warrant') {
+      lead.status = 'open';
+      delete lead.cardId;
+    }
+  } else if (run.sourceIncident && run.sourceIncident.expiresAt > Math.max(now, draft.department.clockHighWater)) {
     // Give the player's cancelled call priority if idle arrivals filled the board.
     draft.incidents = [run.sourceIncident, ...draft.incidents.filter((c) => c.id !== run.scenarioId)].slice(0, INCIDENT_TUNING.boardMax);
   }

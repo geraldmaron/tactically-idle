@@ -4,7 +4,7 @@
 // scenario can never disagree about who is where.
 import type { CastDraw, CastIdentity, PlacedCast } from './trees-v13/compile';
 import type { CallTree, TreeMoveTo, TreeNext } from '../../content/call-trees/types';
-import { clockRoute, doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree } from './trees-v13/compile';
+import { clockRoute, doorInto, memberId, personFactId, placeCast, resolveNext, textBinder, treeFactId, withCallTree, worldSubject } from './trees-v13/compile';
 import { scenarioRecipe, scenarioSituations } from '../../content/scenario-recipes';
 import type { ScenarioCharacteristic } from '../../content/scenario-recipes';
 import type { AgeBand, Clock, Conditions, Dist, GroupRole, IncidentClass, IncidentPerson, IncidentTemplate, PersonSpec, Placement, Pronouns, ScaleClass, Weapon, WeaponKind } from '../../content/incidents/types';
@@ -138,6 +138,9 @@ export function drawInstance(template: IncidentTemplate, built: BuiltLocation, s
     return { pronouns: draw<Pronouns>(p.identity?.pronouns ?? IDENTITY_DEFAULT.pronouns, `${spec.seed}:${id}:pronouns-m1`), ...(years !== undefined ? { age: years } : {}) };
   };
   const draws: CastDraw = Object.fromEntries(template.cast.flatMap(slot => engineIds(slot).map(({ id, group }) => [id, identityOf(specOf(slot, id, group), id)])));
+  // A world subject keeps its own pronouns whatever the template would have drawn (compile.ts worldSubject).
+  const world = worldSubject(tree, spec);
+  if (world && draws[world.roleId]) draws[world.roleId] = { ...draws[world.roleId], pronouns: world.identity.pronouns };
   const placed = placeCast(tree, built, spec, draws, members);
   const rooms = new Map(built.location.rooms.map(room => [room.id, room]));
   const people: IncidentPerson[] = [];
