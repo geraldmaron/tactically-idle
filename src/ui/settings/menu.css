@@ -1,7 +1,7 @@
 /* The menu sheet (settings/SettingsSheet.tsx). Its groups are Sections holding one Card of rows,
    and the Themes page and first run reuse the same list (SwitchRow, settings.css). */
 .menu-sheet .sheet-body { padding-top: 0; }
-.menu-home { display: flex; flex-direction: column; gap: var(--sp5); }
+.menu-home { display: flex; flex-direction: column; gap: var(--sp5); padding-top: var(--sp3); }
 .menu-trail-word { margin-right: var(--sp1); color: var(--t2); }
 .menu-attention { color: var(--warn-text); }
 .menu-link:focus-visible, .menu-back:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
@@ -9,3 +9,13 @@
 .menu-page { display: flex; flex-direction: column; gap: var(--sp3); padding-bottom: var(--sp4); }
 .menu-hint, .menu-note { margin: 0; font-size: var(--s14); line-height: 1.45; color: var(--t2); }
 .menu-note { color: var(--t3); padding-bottom: var(--sp4); }
+
+/* Settings (canvas F2): the call timer sits on the Calls panel above its rows. */
+.menu-timer { display: grid; gap: var(--sp2); margin-bottom: var(--sp3); }
+.menu-label { margin: 0; font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--t3); }
+.menu-danger { margin-top: var(--sp3); }
+.menu-danger .ui-row-lead { color: var(--harm-text); }
+.menu-confirm { gap: var(--sp4); }
+.menu-confirm-body { display: flex; align-items: flex-start; gap: var(--sp3); margin: 0; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); font: 400 var(--s16)/1.5 var(--f-ui); color: var(--t2); }
+.menu-confirm-body .icon { flex: none; margin-top: 3px; color: var(--warn-text); }
+.menu-confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp3); }

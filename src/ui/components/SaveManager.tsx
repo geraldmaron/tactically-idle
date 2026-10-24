@@ -11,7 +11,7 @@ import './save-manager.css';
 type Edit = { type: 'new' | 'copy' | 'rename' | 'delete' | 'import' | 'load'; id: number; name: string; data?: string; permanent?: boolean };
 const timestamp = (at: number) => new Date(at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-function download(text: string, name: string) {
+export function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);

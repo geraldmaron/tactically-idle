@@ -11,6 +11,12 @@ export function useSettings(): PlayerSettings {
   return useSyncExternalStore(subscribeSettings, readSettings, readSettings);
 }
 
+/** Whether officers' lives off the clock show on screen (Settings, Calls). Bonds and romance read this to
+ * hide their surfaces entirely; play is the same either way. */
+export function usePersonalLives(): boolean {
+  return useSettings().personalLives;
+}
+
 /** One theme the player can avoid: its switch, and under a blocked one the reason it can't be turned on. */
 export function ThemeSwitch({ theme, on, blocked, onChange }: { theme: (typeof THEME_ORDER)[number]; on: boolean; blocked: boolean; onChange: (on: boolean) => void }) {
   const reason = `${useId()}-${theme}-reason`;

@@ -1,5 +1,11 @@
-/* The head of a tab that has no screen of its own yet (HQ, Store): a display title and, for HQ, the
-   section rail beneath it. Colours come from theme.css tokens. */
-.shell-head { display: grid; gap: var(--sp2); padding: var(--sp3) var(--gutter) 0; }
-.shell-title { margin: 0; font: 800 var(--s28)/1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); }
-.shell-head > .choice-rail { min-width: 0; }
+/* The head of the HQ tab (shell/HeadquartersTab.tsx): the section's painted plate with a mono kicker, the
+   title in the display face and one line, then the section rail. Colours come from theme.css tokens. */
+.hq-head { display: grid; gap: var(--sp3); padding: var(--sp3) var(--gutter) 0; }
+.hq-plate { display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp1); min-height: 132px; padding: var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); }
+.hq-plate > .plate-art { object-position: center 40%; }
+.hq-kicker { font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--intel-text); text-shadow: 0 1px 6px color-mix(in srgb, var(--black) 90%, transparent); }
+.hq-title { display: inline-flex; align-items: center; gap: var(--sp2); margin: 0; font: 800 var(--s28)/1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 80%, transparent); }
+.hq-title .icon { flex: none; color: var(--t-plate); }
+.hq-line { margin: 0; max-width: 32ch; font: 400 var(--s14)/1.4 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 8px color-mix(in srgb, var(--black) 90%, transparent); }
+.hq-head > .choice-rail { min-width: 0; }
+@media (max-height: 640px) { .hq-plate { min-height: 96px; padding: var(--sp3) var(--sp4); } .hq-line { display: none; } }

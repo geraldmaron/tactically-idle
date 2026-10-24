@@ -2,6 +2,7 @@ import type { ContentDescriptor } from '../../content/content-descriptors';
 import { callTreeAt } from '../../content/call-trees';
 import { parseIncidentId } from '../../gen/incident';
 import { CARD_THEME_WORDS, CARD_WARNING_TEXT, THEME_ORDER, joinThemes } from './labels';
+import { Icon } from '../icons';
 import { useSettings } from './SettingsControls';
 
 /** The themes a call card names: the union over every situation of the call, never the drawn one,
@@ -22,6 +23,7 @@ export function CardWarning({ descriptors }: { descriptors: readonly ContentDesc
   const on = useSettings().cardWarnings === 'all';
   if (!on || descriptors.length === 0) return null;
   return <div className="optile-warning" role="note">
+    <Icon name="warning" size="sm" />
     <p><strong>{CARD_WARNING_TEXT.involves}</strong> {joinThemes(descriptors.map((d) => CARD_THEME_WORDS[d]))}.</p>
     <p className="dim">{CARD_WARNING_TEXT.leaveIt}</p>
   </div>;

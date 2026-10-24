@@ -101,6 +101,51 @@ export const MENU_TEXT = {
   everyCall: (themes: string) => `Every call can involve ${themes}, so these stay on.`,
 } as const;
 
+/** The Settings sheet's sections (settings/SettingsSheet.tsx, canvas F2). */
+export const SHEET_TEXT = {
+  calls: 'Calls',
+  timerHint: 'How fast time moves on a call while a decision waits on you.',
+  themesRow: 'Themes kept off the board',
+  warningsRow: 'Call card warnings',
+  lives: 'Officers\' personal lives',
+  livesOn: 'Bond scenes and romances show. Play is the same either way.',
+  livesOff: 'Bonds off the clock are hidden. Play is the same either way.',
+  notifications: 'Notifications',
+  notifyNote: 'You are asked again when you start your first shift. Never for purchases, and never for an officer in distress. This browser keeps your choice; the iOS and Android builds send the buzz.',
+  notifyShifts: 'Shift ends',
+  notifyShiftsDetail: 'When a proactive shift finishes.',
+  notifyDecisions: 'Decisions waiting',
+  notifyDecisionsDetail: 'When a person or a case needs your call.',
+  notifyDigest: 'Daily digest',
+  notifyDigestDetail: 'One summary a day, never more.',
+  display: 'Display and accessibility',
+  displayDetail: 'Sound, flashing lights, color by role',
+  save: 'Your save',
+  saves: 'Saves',
+  cloud: 'Cloud backup',
+  cloudDetail: 'Not set up. It arrives with the app builds. Your saves stay on this device.',
+  purchases: 'Allow purchases',
+  purchasesOn: 'The Store can sell lifetime items and looks.',
+  purchasesOff: 'The Store stays readable and sells nothing.',
+  restore: 'Restore from a backup',
+  restoreDetail: 'Choose a backup file in Saves',
+  exportRow: 'Export this campaign',
+  exportDetail: 'A backup file you keep',
+  exportTrail: 'Export',
+  reset: 'Reset this campaign',
+  resetDetail: 'Start over with a new roster',
+  wipe: 'Delete saves on this device',
+  wipeDetail: 'Every slot, for good',
+  resetTitle: 'Reset this campaign?',
+  resetBody: 'This slot starts over with a new department and a new roster. Its progress is gone. Your purchases and settings stay. Other save slots are not touched.',
+  resetConfirm: 'Reset campaign',
+  wipeTitle: 'Delete every save on this device?',
+  wipeBody: 'All ten slots are removed for good and a fresh campaign starts in the one you are using. Export first if you want a copy. Your purchases and settings stay.',
+  wipeConfirm: 'Delete all saves',
+  cancel: 'Cancel',
+  footer: 'Settings are kept in this browser, apart from your saves. Purchases are tied to your store account.',
+} as const;
+
 /** Support details, shown in Settings at all times and as the debrief line on any situation with
  * suicide or self-harm. 988 wording checked at 988lifeline.org on 2026-10-20; owner approved the
  * strings and the word "suicide" on these surfaces. */

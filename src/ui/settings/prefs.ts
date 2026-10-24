@@ -31,6 +31,14 @@ export interface PlayerSettings {
   /** Officers' lives off the clock (bond scenes, romance) shown on screen. Off hides them; play is the same
    * (docs/world-redesign.md, "Bonds"). */
   personalLives: boolean;
+  /** The Store's buy buttons. Off keeps the Store readable and buys nothing (docs/world-redesign.md,
+   * "Monetization", rule 6). Platform approval flows still apply when on. */
+  purchases: boolean;
+  /** Notification categories (the browser build only stores the choice; the app builds act on it).
+   * Never purchases, never officer distress. */
+  notifyShifts: boolean;
+  notifyDecisions: boolean;
+  notifyDigest: boolean;
 }
 
 export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
@@ -41,6 +49,10 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   flashing: true,
   firstRunDone: false,
   personalLives: true,
+  purchases: true,
+  notifyShifts: false,
+  notifyDecisions: false,
+  notifyDigest: false,
 });
 
 /** The value chosen on this page when storage refused it; null while storage holds the choice. */
@@ -67,6 +79,10 @@ export function parseSettings(raw: string | null): PlayerSettings {
     flashing: data.flashing !== false,
     firstRunDone: data.firstRunDone === true,
     personalLives: data.personalLives !== false,
+    purchases: data.purchases !== false,
+    notifyShifts: data.notifyShifts === true,
+    notifyDecisions: data.notifyDecisions === true,
+    notifyDigest: data.notifyDigest === true,
   };
 }
 
@@ -114,3 +130,5 @@ export const timerSetting = (): TimerSetting => readSettings().timer;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;
 export const soundOn = (): boolean => readSettings().sound;
 export const flashingOn = (): boolean => readSettings().flashing;
+export const personalLivesOn = (): boolean => readSettings().personalLives;
+export const purchasesOn = (): boolean => readSettings().purchases;

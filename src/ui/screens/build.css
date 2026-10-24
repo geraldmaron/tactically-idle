@@ -99,6 +99,6 @@
 .station-next { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .station-next polygon { fill: color-mix(in srgb, var(--act) 18%, transparent); stroke: var(--act); stroke-width: 12; stroke-linejoin: round; }
 .station-next-tag { position: absolute; z-index: 3; transform: translate(-50%, calc(-100% - var(--sp4))); padding: 2px var(--sp2); border-radius: var(--r1); background: var(--act); color: var(--act-ink); font: 700 var(--s14)/1.2 var(--f-ui); pointer-events: none; white-space: nowrap; }
-.room-card .room-main > .room-line { min-height: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.room-card .room-main > .room-line { min-height: 0; overflow-wrap: anywhere; }
 .room-card .segments { margin-top: 2px; }
 .room-card .room-trail .price-capsule, .next-card .room-trail .price-capsule { min-width: 64px; }

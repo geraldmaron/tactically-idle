@@ -1,12 +1,85 @@
-.store-screen-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp3); padding: var(--sp3) var(--gutter) 0; }
-.store-screen-head > .choice-rail { flex: 1 1 180px; }
-.store-screen-title { margin: 0; font: 700 var(--s28)/1.1 var(--f-title); }
-.store-screen-counter { align-content: flex-end; min-height: 136px; padding-bottom: var(--sp3); }
-.store-screen-counter > .plate-art { object-position: center 58%; }
-.store-screen-counter::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ink-0) 75%, transparent) 55%, var(--ink-0)); }
-.store-screen-counter::after { background: none; }
-.store-screen-counter .store-screen-title { text-shadow: 0 2px 8px var(--ink-0); }
-.gear-page-compact { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp2); }
-.gear-page-compact .store-equipment { display: contents; }
-.gear-page-compact .equipment-controls .disclosure-body { display: grid; gap: var(--sp3); }
-.gear-page-compact .store-search input { min-height: var(--touch); }
+/* The Store (screens/Store.tsx, canvas F1). Colours come from theme.css tokens only. Real-money prices
+   are the white outlined capsule; funding stays a coin glyph and a number. */
+.store-page { gap: var(--sp4); }
+.store-head { display: grid; gap: var(--sp2); }
+.store-title { margin: 0; font: 800 var(--s28)/1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); }
+.store-promise { margin: 0; font: 400 var(--s16)/1.45 var(--f-ui); color: var(--t2); }
+.store-off { display: flex; align-items: flex-start; gap: var(--sp2); margin: 0; padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--ink-1); font: 400 var(--s14)/1.45 var(--f-ui); color: var(--t2); }
+.store-off .icon { flex: none; margin-top: 1px; color: var(--warn-text); }
+.store-kicker { font: 500 var(--s12)/1.2 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--live-text); }
+
+/* Hero: the bundle on its plate. */
+.store-hero { display: grid; gap: var(--sp2); padding: var(--sp5) var(--sp4) var(--sp4); border: 1px solid var(--hair-2); border-radius: var(--r2); min-height: 232px; align-content: end; }
+.store-hero > .plate-art { object-position: center 35%; }
+.store-hero-title { margin: 0; font: 800 var(--s28)/1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); text-shadow: 0 2px 12px color-mix(in srgb, var(--black) 80%, transparent); }
+.store-hero-line { margin: 0; font: 400 var(--s16)/1.4 var(--f-ui); color: var(--t-plate); text-shadow: 0 1px 8px color-mix(in srgb, var(--black) 90%, transparent); max-width: 30ch; }
+.store-parts { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: var(--sp1) 0 0; padding: 0; list-style: none; }
+.store-parts li { display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border: 1px solid var(--hair-2); border-radius: 999px; background: color-mix(in srgb, var(--ink-0) 70%, transparent); font: 500 var(--s14)/1.3 var(--f-ui); color: var(--t-plate); }
+.store-parts li[data-owned] { border-color: var(--good-edge); color: var(--good-text); }
+.store-hero-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp2) var(--sp3); margin-top: var(--sp2); }
+.store-upgrade { font: 500 var(--s12)/1.3 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--t-plate); }
+.store-hero-foot .store-price { margin-left: auto; }
+
+/* The price capsule: real money, white outline, never funding. */
+.store-price { display: inline-flex; align-items: center; justify-content: center; min-width: 88px; min-height: var(--touch); padding: 0 var(--sp4); border: 2px solid var(--t1); border-radius: 999px; background: color-mix(in srgb, var(--ink-0) 55%, transparent); color: var(--t1); font: 700 var(--s16)/1 var(--f-ui); font-variant-numeric: tabular-nums; cursor: pointer; }
+.store-price:hover:not(:disabled) { background: var(--t1); color: var(--ink-0); }
+.store-price:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.store-price:disabled { border-color: var(--hair-2); color: var(--t3); cursor: not-allowed; }
+.store-owned { display: inline-flex; align-items: center; gap: var(--sp1); min-height: var(--touch); padding: 0 var(--sp2); font: 600 var(--s14)/1 var(--f-ui); color: var(--good-text); white-space: nowrap; }
+
+.store-note { display: flex; align-items: flex-start; gap: var(--sp2); grid-column: 1 / -1; margin: 0; padding: var(--sp2) var(--sp3); border-radius: var(--r1); background: var(--intel-soft); font: 400 var(--s14)/1.4 var(--f-ui); color: var(--intel-text); }
+.store-note .icon { flex: none; margin-top: 2px; }
+.store-fine { margin: 0; font: 400 var(--s14)/1.45 var(--f-ui); color: var(--t3); }
+.store-footer { margin: 0; padding-bottom: var(--sp4); font: 400 var(--s14)/1.45 var(--f-ui); color: var(--t3); }
+
+/* Lifetime cards. */
+.store-list { display: grid; gap: var(--sp3); }
+.store-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--sp3); align-items: start; padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); }
+.store-card[data-owned] { border-color: var(--good-edge); }
+.store-card-art { grid-row: 1 / span 2; width: 72px; height: 72px; border-radius: var(--r1); }
+.store-card-art > .plate-art { object-position: center; }
+.store-card-art::after { display: none; }
+.store-card-main { display: grid; gap: var(--sp1); min-width: 0; }
+.store-card-name { font: 700 var(--s22)/1.1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); overflow-wrap: anywhere; }
+.store-card-line { font: 400 var(--s14)/1.4 var(--f-ui); color: var(--t2); }
+.store-card-effect { font: 500 var(--s14)/1.4 var(--f-mono); color: var(--good-text); }
+.store-gain { color: var(--good-text); font-weight: 600; }
+.store-card-trail { grid-column: 2; display: flex; justify-content: flex-end; }
+.store-window { display: grid; gap: var(--sp1); margin-top: var(--sp1); }
+.store-window-row { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) auto; align-items: center; gap: var(--sp2); font: 500 var(--s12)/1.2 var(--f-mono); color: var(--t2); }
+.store-window-row > i { display: block; height: 6px; border-radius: 3px; background: var(--hair-2); }
+.store-window-row[data-kind="watch"] > i { background: var(--intel-edge); }
+.store-window[data-on] .store-window-row[data-kind="watch"] > i { background: var(--intel); }
+.store-window-row b { font-weight: 600; color: var(--t1); font-variant-numeric: tabular-nums; }
+
+/* Looks. */
+.store-looks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); margin: 0 0 var(--sp3); padding: 0; list-style: none; }
+.store-look { display: grid; justify-items: center; align-content: start; gap: var(--sp2); padding: var(--sp3) var(--sp2); border: 1px solid var(--hair); border-radius: var(--r2); background: var(--ink-1); text-align: center; }
+.store-look[data-use] { border-color: var(--good-edge); }
+.store-look .store-note { text-align: left; }
+.store-look-name { font: 600 var(--s14)/1.25 var(--f-ui); color: var(--t1); overflow-wrap: anywhere; }
+.store-look .store-price { min-width: 0; width: 100%; padding: 0 var(--sp2); }
+.store-look .btn { width: 100%; }
+.store-swatch { --accent: var(--act); display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 3px; width: 100%; height: 44px; padding: 5px; border-radius: var(--r1); background: var(--ink-deep); border: 1px solid var(--hair-2); }
+.store-swatch > i { display: block; border-radius: 2px; background: var(--ink-3); }
+.store-swatch > i:first-child { background: var(--accent); }
+.store-swatch > i:nth-child(2) { background: color-mix(in srgb, var(--accent) 45%, var(--ink-2)); }
+.store-swatch[data-look="harbour"] { --accent: var(--intel); }
+.store-swatch[data-look="records"] { --accent: var(--dossier); }
+.store-swatch[data-look="greenline"] { --accent: var(--good); }
+.store-restore { display: grid; gap: var(--sp3); justify-items: start; }
+.store-dev .section-count { color: var(--dev-tag); }
+
+/* Precinct looks: each remaps the accent family through tokens that already exist, so primary buttons,
+   the active tab and ready marks take the look. The signal red stays the colour of live work. */
+:root[data-precinct="harbour"] { --act: var(--intel); --act-hi: var(--intel-text); --act-lo: var(--intel-edge); --act-ink: var(--ink-deep); --act-soft: color-mix(in srgb, var(--intel) 14%, transparent); --act-text: var(--intel-text); --amber: var(--act); --amber-2: var(--act-hi); --amber-ink: var(--act-ink); --button-base: var(--intel-edge); }
+:root[data-precinct="records"] { --act: var(--dossier); --act-hi: var(--t1); --act-lo: var(--dossier-muted); --act-ink: var(--dossier-ink); --act-soft: color-mix(in srgb, var(--dossier) 14%, transparent); --act-text: var(--dossier); --amber: var(--act); --amber-2: var(--act-hi); --amber-ink: var(--act-ink); --button-base: var(--dossier-muted); }
+:root[data-precinct="greenline"] { --act: var(--good); --act-hi: var(--good-text); --act-lo: var(--good-edge); --act-ink: var(--good-ink); --act-soft: color-mix(in srgb, var(--good) 14%, transparent); --act-text: var(--good-text); --amber: var(--act); --amber-2: var(--act-hi); --amber-ink: var(--act-ink); --button-base: var(--good-edge); }
+
+@media (max-width: 359px) {
+  .store-looks { grid-template-columns: 1fr; }
+  .store-look { grid-template-columns: 72px minmax(0, 1fr) auto; justify-items: stretch; text-align: left; align-items: center; }
+  .store-look .store-price, .store-look .btn { width: auto; }
+  .store-card { grid-template-columns: 56px minmax(0, 1fr); }
+  .store-card-art { width: 56px; height: 56px; }
+}
