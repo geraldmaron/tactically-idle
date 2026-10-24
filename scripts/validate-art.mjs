@@ -12,8 +12,8 @@ const emblems = JSON.parse(read('public/art/emblems/manifest.json'));
 const plates = JSON.parse(read('public/art/plates/manifest.json'));
 const medallions = JSON.parse(read('public/art/medallions/manifest.json'));
 const crests = JSON.parse(read('public/art/crests/manifest.json'));
-// Plates are scene_<call type>, banner_<tab>, tex_<texture> (src/ui/art/Plates.tsx) or room_<facility>_<lit|dark> (Build vignettes).
-const PLATE_ID = /^(scene_[a-z_]+|banner_(hq|squad|ops|develop|gear)|hub_hq|tex_[a-z_]+|room_(personnel|training|information|recovery|equipment|garage)_(lit|dark))$/;
+// Plates are scene_<call type>, banner_<tab>, tex_<texture> (src/ui/art/Plates.tsx), room_<facility>_<lit|dark> (Build vignettes) or place_<building family> (a call's exterior).
+const PLATE_ID = /^(scene_[a-z_]+|banner_(hq|squad|ops|develop|gear)|hub_hq|tex_[a-z_]+|place_[a-z_]+|room_(personnel|training|information|recovery|equipment|garage)_(lit|dark))$/;
 const MANAGER_IDS = ['watch_commander', 'training_sergeant', 'quartermaster', 'recruiter', 'peer_support_lead'];
 // Squad crests are the NATO-style squad names on the Team screen.
 const CREST_IDS = ['alpha', 'bravo', 'charlie', 'delta'];
@@ -63,7 +63,7 @@ for(const [kind, manifest] of [['portraits',portrait],['gear',gear],['materials'
     if(kind==='emblems'&&!EMBLEM_IDS.has(id)) errors.push(`emblems/${id}: not a course or development branch`);
     if(kind==='medallions'&&!CALL_TYPE_IDS.has(id)) errors.push(`medallions/${id}: not a call type`);
     if(kind==='crests'&&!CREST_IDS.includes(id)) errors.push(`crests/${id}: not a squad crest`);
-    if(kind==='plates'&&!PLATE_ID.test(id)) errors.push(`plates/${id}: not a scene, banner or texture id`);
+    if(kind==='plates'&&!PLATE_ID.test(id)) errors.push(`plates/${id}: not a scene, banner, texture, room or place id`);
   }
 }
 // A file the manifest does not list never renders, so it is dead weight or a missing manifest entry.

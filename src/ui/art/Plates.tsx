@@ -19,6 +19,12 @@ export function plateUrl(id: string): string | null {
 /** The scene plate for a call type ('hostage_crisis'), when one is painted. */
 export const sceneFor = (type: string | undefined): string | null => type ? plateUrl(`scene_${type}`) : null;
 
+/** A family id as the art names it: the persistence suffixes (`__furnished_v7`, `_g2`, `_v1`) are not places. */
+export const placeKey = (familyId: string): string => familyId.replace(/__furnished_v\d+$/, '').replace(/_(g|v)\d+$/, '');
+
+/** The painted exterior of a building family ('bar_restaurant_g2'), when one is ready. */
+export const placeFor = (familyId: string | null | undefined): string | null => familyId ? plateUrl(`place_${placeKey(familyId)}`) : null;
+
 /** The painting behind a plate. Decorative: empty alt, never focusable, gone on error. */
 export function PlateArt({ src }: { src: string | null }) {
   const [failed, setFailed] = useState(false);

@@ -17,6 +17,9 @@
 /* The scene plate at the shared plate height: the place on the left, the board clock on the right. */
 .pb-scene { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp2); min-height: var(--plate-h); padding: var(--sp3); border: 1px solid var(--hair); border-radius: var(--r2); }
 .pb-scene-place { min-width: 0; max-width: 70%; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t1); font: 600 var(--s14)/1.2 var(--f-ui); overflow-wrap: break-word; }
+.pb-scene-tags { display: grid; gap: 2px; min-width: 0; }
+.pb-scene-tags b { font-weight: 700; }
+.pb-scene-tags small { color: var(--t-plate); font: 500 var(--s12)/1.2 var(--f-ui); }
 .pb-scene-time { flex: none; display: inline-flex; align-items: center; gap: var(--sp1); padding: var(--sp1) var(--sp2); border-radius: var(--r1); background: color-mix(in srgb, var(--ink-deep) 62%, transparent); color: var(--t-plate); font: 600 var(--s14)/1.2 var(--f-ui); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pb-scene-time-soon { color: var(--warn-text); }
 

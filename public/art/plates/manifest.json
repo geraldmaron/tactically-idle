@@ -31,7 +31,22 @@
     "room_garage_lit",
     "room_garage_dark",
     "scene_swat_locker",
-    "scene_facilities_plan_dark"
+    "scene_facilities_plan_dark",
+    "place_apartment_unit",
+    "place_ash_grove",
+    "place_bar_restaurant",
+    "place_bungalow",
+    "place_cedar_close",
+    "place_corner_store_flat",
+    "place_harbour_court",
+    "place_juniper_court",
+    "place_market_row",
+    "place_motel_row",
+    "place_semi_detached",
+    "place_small_office",
+    "place_two_storey_house",
+    "place_warehouse",
+    "place_willow_terrace"
   ],
   "width": 1200,
   "height": 675

@@ -11,6 +11,7 @@ import { Chip } from './ui';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Disclosure } from './Disclosure';
+import { placeKey } from '../art/Plates';
 import './tier.css';
 
 type Tone = 'neutral' | 'amber' | 'mint' | 'danger' | 'warn' | 'blue';
@@ -49,6 +50,29 @@ export function familyBlurb(familyId: string | null | undefined): string | null 
   return titleCase(familyId);
 }
 
+// What a place is, in plain words. A family is a layout, not a kind of business, so these say more than its blurb.
+const PLACE_KIND: Record<string, string> = {
+  bar_restaurant: 'Bar and restaurant', corner_store_flat: 'Corner store, apartment above', market_row: 'Corner store with a delivery lane',
+  motel_row: 'Roadside motel', apartment_unit: 'Apartment', harbour_court: 'Garden apartment', bungalow: 'Single-story house',
+  cedar_close: 'Narrow single-story house', ash_grove: 'L-shaped bungalow', juniper_court: 'Courtyard house',
+  two_storey_house: 'Two-story house', semi_detached: 'Half of a duplex', willow_terrace: 'Terraced house',
+  small_office: 'Small office building', warehouse: 'Warehouse or workshop',
+};
+// Every bar and restaurant shares one family, so its kind comes from its name: the closed pool in
+// gen/building/procedural/families/bar_restaurant.ts.
+const VENUE_KIND: Record<string, string> = {
+  'The Rusty Anchor': 'Bar', "Mulligan's Tavern": 'Tavern', 'Blue Heron Grill': 'Grill', 'The Golden Fleece': 'Pub',
+  'Casa Lupita': 'Mexican restaurant', "Dino's Pizzeria": 'Pizzeria', 'The Wheatsheaf': 'Pub', 'Harbor Lights Bar': 'Bar',
+  "Mama Chen's Kitchen": 'Family restaurant', 'The Fox and Pheasant': 'Pub',
+};
+
+/** The place as two tags: its own name or address, and what kind of place it is. */
+export function placeTags(familyId: string | null | undefined, name: string | null | undefined): { name: string | null; kind: string | null } {
+  if (!familyId) return { name: name ?? null, kind: null };
+  const key = placeKey(familyId);
+  return { name: name ?? null, kind: (key === 'bar_restaurant' && name ? VENUE_KIND[name] : undefined) ?? PLACE_KIND[key] ?? familyBlurb(familyId) };
+}
+
 /** Short name of a building type for pickers, e.g. 'Cedar Close' or 'Two-story house'. */
 export function familyLabel(familyId: string): string {
   const f = ALL_BUILDING_FAMILIES.find((x) => x.id === familyId.replace(/__furnished_v7$/, ''));
@@ -63,6 +87,16 @@ export function scenarioFloorCount(scenario: ScenarioDefinition | null | undefin
     return floorCount(getBuilt(scenario.locationFamilyId, scenario.locationSeed).location);
   } catch {
     return 1;
+  }
+}
+
+/** The name or address of the building a scenario is set in ('Blue Heron Grill', '214 Alder Street'). */
+export function scenarioPlaceName(scenario: ScenarioDefinition | null | undefined): string | null {
+  if (!scenario) return null;
+  try {
+    return getBuilt(scenario.locationFamilyId, scenario.locationSeed).location.name;
+  } catch {
+    return null;
   }
 }
 

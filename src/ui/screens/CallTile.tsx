@@ -7,11 +7,11 @@ import type { BoardShortage } from '../../sim/board-suggestions';
 import { CERT_NAME } from '../../content/certs';
 import { CERT_ICON } from '../components/labels';
 import type { IncidentType, ScenarioDefinition } from '../../sim/scenario-types';
-import { familyBlurb, scenarioFloorCount, settingIcon, TierChevrons } from '../components/incident';
+import { placeTags, scenarioFloorCount, scenarioPlaceName, settingIcon, TierChevrons } from '../components/incident';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
 import { Icon, itemIcon } from '../icons';
 import { PeopleText } from '../people/PeopleText';
-import { PlateArt, sceneFor } from '../art/Plates';
+import { PlateArt, placeFor, sceneFor } from '../art/Plates';
 import { money } from '../format';
 
 /** A call on the board (docs/ui-ux-audit.md, "Calls"): the scene with the call type and the time
@@ -25,16 +25,17 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
   /** Who can go: "Alpha ready · 1 squad", with the letter badge. */
   readiness?: ReactNode;
   onOpen?: () => void }): JSX.Element {
-  const blurb = familyBlurb(familyId);
+  const tags = placeTags(familyId, scenarioPlaceName(scenario));
+  const blurb = tags.kind;
   const tier = scenario ? callTier(scenario.id) : null;
   const floors = scenarioFloorCount(scenario);
-  const place = [blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
+  const place = [tags.name, blurb, floors > 1 ? `${floors} floors` : null, card.variantLabel !== card.title ? card.variantLabel : null].filter(Boolean).join(' · ');
   const pay = scenario?.rewards;
   return (
     <article className={`cl-card${isNew ? ' cl-card-new' : ''}${onOpen ? ' cl-card-open' : ''}`} data-call-id={card.id}
       onClick={onOpen ? (e) => { if (!(e.target as HTMLElement).closest('button, a, input, select, textarea, label')) onOpen(); } : undefined}>
       <div className="cl-card-scene plate">
-        <PlateArt src={sceneFor(type ?? undefined)} />
+        <PlateArt src={placeFor(familyId) ?? sceneFor(type ?? undefined)} />
         <div className="cl-card-scene-top">
           <span className="cl-card-type">
             {type ? <CallTypeBadge type={type} size={24} label /> : <span className="cl-card-setting"><Icon name={settingIcon(card.setting)} size={20} />{card.setting}</span>}

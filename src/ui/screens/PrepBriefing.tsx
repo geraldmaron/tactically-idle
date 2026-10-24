@@ -10,9 +10,9 @@ import { FactStatusChip } from '../components/FactStatusChip';
 import { callTier, type Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
-import { countdown, EnvChips, familyBlurb, TierChevrons, useNow } from '../components/incident';
+import { countdown, EnvChips, placeTags, TierChevrons, useNow } from '../components/incident';
 import { Face, type FaceKind } from '../components/Face';
-import { PlateArt, sceneFor } from '../art/Plates';
+import { PlateArt, placeFor, sceneFor } from '../art/Plates';
 import { Icon } from '../icons';
 import { money } from '../format';
 import { Card, Chip, Row } from '../components/ui';
@@ -26,7 +26,7 @@ import './prep-briefing.css';
 
 /** `built` is the call's building as the player sees it; the briefing reads it through `intel`.
  * `openUntil` is when the call leaves the board (epoch ms); the Lab has no board, so it passes none. */
-export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
+export function PrepBriefing({ scenario, built, brief, intel, aside, openUntil }: { scenario: ScenarioDefinition | null | undefined; built: BuiltLocation; brief: Briefing; intel: Intel;
   /** Beside the orders' heading: the step ("Step 1 of 2"). */
   aside?: ReactNode;
   openUntil?: number }): JSX.Element {
@@ -41,6 +41,7 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
   // text. It does not depend on the color preference, which only decides whether prose is tinted.
   const lexicon = useMemo(() => scenario ? lexiconFor(scenario, null, []) : null, [scenario]);
   const range = scenario?.squadRange;
+  const place = placeTags(scenario?.locationFamilyId, built?.location?.name);
   // The call's tier, never called difficulty or risk: tiers do not compare across call types. Authored calls have none.
   const tier = scenario ? callTier(scenario.id) : null;
   return (
@@ -48,8 +49,8 @@ export function PrepBriefing({ scenario, brief, intel, aside, openUntil }: { sce
       {/* The scene plate: the call's painted place at the shared plate height. The place is a
           caption on it and the board clock sits opposite; nothing else competes for the art. */}
       <div className="plate pb-scene">
-        <PlateArt src={sceneFor(scenario?.incident?.type)} />
-        {familyBlurb(scenario?.locationFamilyId ?? null) && <span className="pb-scene-place"><Icon name="pin" size={16} />{familyBlurb(scenario?.locationFamilyId ?? null)}</span>}
+        <PlateArt src={placeFor(scenario?.locationFamilyId) ?? sceneFor(scenario?.incident?.type)} />
+        {(place.name || place.kind) && <span className="pb-scene-place"><Icon name="pin" size={16} /><span className="pb-scene-tags">{place.name && <b>{place.name}</b>}{place.kind && <small>{place.kind}</small>}</span></span>}
         {openUntil !== undefined && <OpenFor until={openUntil} />}
       </div>
       {/* The stakes under the plate: what it pays, how hard it reads, how many squads it takes. */}
