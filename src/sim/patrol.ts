@@ -6,6 +6,7 @@ import type { GameState, HandlerResult, Id, PatrolEmployee, PatrolGrade, PatrolR
 import { ECONOMY_TUNING, HOUR_MS, ratesAt } from './economy';
 import { postFunding } from './ledger';
 import { funding } from './format';
+import { DISTRICT_IDS } from './world/types';
 
 export interface PatrolGradeDefinition {
   name: string;
@@ -273,6 +274,7 @@ export function validPatrol(value: unknown, level: number, at: number): value is
     if (!person || typeof person !== 'object' || typeof person.id !== 'string' || ids.has(person.id) || !/^patrol_[1-9]\d*$/.test(person.id) || Number(person.id.slice(7)) >= patrol.nextId) return false;
     if (typeof person.profileId !== 'string' || !patrolProfile(person.profileId) || profiles.has(person.profileId)) return false;
     ids.add(person.id); profiles.add(person.profileId);
+    if (person.districtId !== undefined && !DISTRICT_IDS.includes(person.districtId)) return false;
     if (![1, 2, 3].includes(person.grade) || !Number.isFinite(person.serviceHours) || person.serviceHours < 0 || !Number.isFinite(person.hiredAt) || person.hiredAt > at) return false;
     if (person.dismissedAt !== null && (!Number.isFinite(person.dismissedAt) || person.dismissedAt < person.hiredAt || person.dismissedAt > at)) return false;
     const grade = PATROL_GRADES[person.grade];

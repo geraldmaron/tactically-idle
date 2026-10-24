@@ -1,29 +1,51 @@
-// The world's entry points (docs/world-build-plan.md, "The contract"). Wave 0 lands these as stubs so the
-// economy, operations and saves call them from day one; the world-engine lane fills them in behind the same
-// signatures. Settlement calls `settleWorld` once per interval of the existing walk in economy.settle, so
-// there is one clock and one accrual window.
-import type { DebriefResult, GameState, HandlerMap, HandlerResult, Id, OperationRun, ShiftReportWorld, WorldCommandType } from '../types';
+// The world's entry points (docs/world-build-plan.md, "The contract"). Settlement calls `settleWorld` once per
+// interval of the existing walk in economy.settle, so there is one clock and one accrual window.
+//
+// How an interval is settled: everything due inside (from, to] runs in time order at its own time (a shift
+// ends, a case closes and pays), and at each whole hour boundary the hour just ended is rolled once, after
+// that boundary's other due events. `nextWorldEventTime` offers every one of those times to the walk, so a
+// single long settlement, many small ticks and a save in between all produce the same city.
+import { DISTRICTS } from '../../content/city/districts';
+import { HOUR } from '../../content/city/tuning';
+import { ECONOMY_TUNING, ratesAt } from '../economy';
+import { simNow } from '../calendar';
+import type { DebriefResult, GameState, HandlerMap, OperationRun, ShiftReportWorld, WorldCommandType } from '../types';
+import { closeCase } from './cases';
+import { foundDepartment, openDistrict, setDistrictCoverage, syncPatrolUnits } from './commands';
+import { rollHour } from './contacts';
+import { hourOf, type WorldAcc } from './core';
+import { seedDistrictCrews } from './population';
+import { activeShifts, recallShift, startShift, stopShift, strained, strainStopAt } from './shifts';
 import type { DistrictId, DistrictState, WorldState } from './types';
 import { DISTRICT_IDS } from './types';
+import { applyWorldDebrief as settleDebrief, openWarrant, reconcileLeads, respondToContact } from './warrants';
 
-/** What one settlement accumulates for the shift report. */
-export interface WorldAcc {
-  contacts: number;
-  casesOpened: number;
-  casesClosed: number;
-  awardsPaid: number;
-  awardFunding: number;
-  leads: Id[];
-  crimeBefore: Partial<Record<DistrictId, number>>;
-}
+export type { WorldAcc } from './core';
+export { allocationFactor, allocationRate, cityCrime, fundingScale } from './core';
+export { validWorldState } from './validate';
 
-const fail = (reason: string): HandlerResult => ({ ok: false, reason });
-
-/** A new city: Pike Street open, the rest closed. The world-engine lane seeds crews and subjects. */
+/** A new city: Pike Street open with its crew and their people, the rest closed until the department's level
+ * opens them. The first session starts in `cold_open`; nothing rolls until the department is founded. */
 export function createWorld(seed: number, now: number): WorldState {
   const districts = {} as Record<DistrictId, DistrictState>;
-  for (const id of DISTRICT_IDS) districts[id] = { id, open: id === 'pike', crime: id === 'pike' ? 62 : 50, patrolUnits: 0, openedAt: id === 'pike' ? now : null };
-  return { seed: seed >>> 0, districts, crews: [], subjects: {}, cases: [], leads: [], shifts: [], events: [], rolledThroughHour: Math.floor(now / 3_600_000), nextId: 1, onboarding: { stage: 'cold_open' } };
+  for (const id of DISTRICT_IDS) {
+    districts[id] = { id, open: id === 'pike', crime: DISTRICTS[id].startCrime, patrolUnits: 0, openedAt: id === 'pike' ? now : null };
+  }
+  const w: WorldState = {
+    seed: seed >>> 0,
+    districts,
+    crews: [],
+    subjects: {},
+    cases: [],
+    leads: [],
+    shifts: [],
+    events: [],
+    rolledThroughHour: hourOf(now),
+    nextId: 1,
+    onboarding: { stage: 'cold_open' },
+  };
+  seedDistrictCrews(w, 'pike', now);
+  return w;
 }
 
 export function newWorldAcc(d: GameState): WorldAcc {
@@ -32,22 +54,72 @@ export function newWorldAcc(d: GameState): WorldAcc {
   return { contacts: 0, casesOpened: 0, casesClosed: 0, awardsPaid: 0, awardFunding: 0, leads: [], crimeBefore };
 }
 
-/** The next time strictly after t when something in the world is due (a case closes, a shift ends). */
-export function nextWorldEventTime(_d: GameState, _t: number): number | null {
-  return null;
+/** The world rolls hours only once the department is founded. */
+const rolling = (w: WorldState): boolean => w.onboarding.stage !== 'cold_open' && w.onboarding.stage !== 'founding';
+
+/** Where hourly opportunities (contacts, crime drift, recruitment) stop: the player's last command plus the
+ * world window, which no purchase extends. Reviews already open still close and pay beyond it. */
+export const opportunityUntil = (d: Pick<GameState, 'department'>): number => d.department.lastInteractionAt + ECONOMY_TUNING.worldCapMs;
+
+/** The next time strictly after t when something in the world is due: the next hour boundary (while hours can
+ * still be rolled), a case closing, a shift ending, or a shift reaching the strain line. */
+export function nextWorldEventTime(d: GameState, t: number): number | null {
+  const w = d.world;
+  if (!w) return null;
+  let e: number | null = null;
+  const consider = (x: number | null) => {
+    if (x !== null && x > t && (e === null || x < e)) e = x;
+  };
+  if (rolling(w)) {
+    const boundary = (Math.floor(t / HOUR) + 1) * HOUR;
+    if (boundary <= opportunityUntil(d)) consider(boundary);
+  }
+  for (const c of w.cases) if (c.status === 'review') consider(c.closesAt);
+  for (const s of activeShifts(w)) {
+    consider(s.endsAt);
+    consider(strainStopAt(d, s, t));
+  }
+  return e;
+}
+
+/** Everything due at or before `t`, in time order: shift ends, then case closes. */
+function settleDue(d: GameState, t: number, acc: WorldAcc, atEnd: boolean): void {
+  const w = d.world;
+  const due: { at: number; order: number; run: () => void }[] = [];
+  for (const s of activeShifts(w)) if (s.endsAt <= t) due.push({ at: s.endsAt, order: 0, run: () => stopShift(d, s, s.endsAt, 'ended') });
+  for (const c of w.cases) if (c.status === 'review' && c.closesAt !== null && c.closesAt <= t) due.push({ at: c.closesAt, order: 1, run: () => closeCase(d, w, c, acc) });
+  due.sort((a, b) => a.at - b.at || a.order - b.order);
+  for (const item of due) item.run();
+  // The strain line is read from the officers as they stand now, which is the end of the interval.
+  if (atEnd) for (const s of activeShifts(w)) if (strained(d, s)) stopShift(d, s, t, 'strain');
 }
 
 /** Advance the world over [from, to]. economy.settle calls this once per walk interval, after the other
  * due events at `to`. Hourly rolls run for each hour boundary in (from, to] that is at or before
  * `opportunityUntil` (lastInteractionAt + worldCapMs, never extended by a purchase); due case closes and
  * shift ends settle at their own times regardless (see the determinism contract in ./types.ts). */
-export function settleWorld(_d: GameState, _from: number, _to: number, _opportunityUntil: number, _acc: WorldAcc): void {}
+export function settleWorld(d: GameState, from: number, to: number, opportunityLimit: number, acc: WorldAcc): void {
+  const w = d.world;
+  if (!w || to <= from) return;
+  if (rolling(w)) {
+    for (let b = (Math.floor(from / HOUR) + 1) * HOUR; b <= to && b <= opportunityLimit; b += HOUR) {
+      settleDue(d, b, acc, false);
+      const h = b / HOUR - 1;
+      if (h > w.rolledThroughHour) {
+        rollHour(d, b, acc);
+        w.rolledThroughHour = h;
+      }
+    }
+  }
+  settleDue(d, to, acc, true);
+  reconcileLeads(d);
+  syncPatrolUnits(d);
+}
 
 /** Net per hour a permanent commitment is checked against: allocation at its floor, patrol unboosted, no
- * case awards or call fees (docs/world-redesign.md, "Earnings"). The world-engine lane implements it;
- * roster and patrol quotes use it. */
-export function sustainableNetRate(_d: GameState): number {
-  return 0;
+ * case awards or fees (docs/world-redesign.md, "Earnings"). Roster and patrol quotes use it. */
+export function sustainableNetRate(d: GameState): number {
+  return ratesAt(d, simNow(d), false).net;
 }
 
 export function worldReport(d: GameState, acc: WorldAcc): ShiftReportWorld | undefined {
@@ -57,17 +129,28 @@ export function worldReport(d: GameState, acc: WorldAcc): ShiftReportWorld | und
   return any ? { contacts: acc.contacts, casesOpened: acc.casesOpened, casesClosed: acc.casesClosed, awardsPaid: acc.awardsPaid, awardFunding: acc.awardFunding, leads: acc.leads, crime } : undefined;
 }
 
-/** Called by operation.closeDebrief after the career loop: serve the lead, open the call's case. */
-export function applyWorldDebrief(_d: GameState, _run: OperationRun, _result: DebriefResult): void {}
+/** After a settlement that made a shift report: the first return is the report the player comes back to once
+ * the first investigation has paid. Proactive shifts open from here. */
+export function finishFirstReturn(d: GameState, from: number, to: number): void {
+  const w = d.world;
+  if (w?.onboarding.stage === 'first_return' && to - from >= ECONOMY_TUNING.reportMinMs) w.onboarding = { ...w.onboarding, stage: 'done' };
+}
+
+/** Called by operation.closeDebrief after the career loop: serve the lead, settle the investigation. */
+export function applyWorldDebrief(d: GameState, run: OperationRun, result: DebriefResult): void {
+  settleDebrief(d, run, result);
+}
+
+export { foundDepartment, openDistrict, setDistrictCoverage };
 
 export const WORLD_HANDLERS: HandlerMap<WorldCommandType> = {
-  foundDepartment: () => fail('Not built yet'),
-  setDistrictCoverage: () => fail('Not built yet'),
-  openDistrict: () => fail('Not built yet'),
-  startProactiveShift: () => fail('Not built yet'),
-  recallProactiveShift: () => fail('Not built yet'),
-  openWarrant: () => fail('Not built yet'),
-  respondToContact: () => fail('Not built yet'),
+  foundDepartment: (d, c) => foundDepartment(d, c.name, c.districtId),
+  setDistrictCoverage: (d, c) => setDistrictCoverage(d, c.districtId, c.units),
+  openDistrict: (d, c) => openDistrict(d, c.districtId),
+  startProactiveShift: (d, c) => startShift(d, c.squadId, c.districtId, c.hours),
+  recallProactiveShift: (d, c) => recallShift(d, c.squadId),
+  openWarrant: (d, c) => openWarrant(d, c.leadId),
+  respondToContact: (d, c) => respondToContact(d, c.leadId),
   syncEntitlements: (d, c) => {
     d.department.entitlements = { charter: !!c.entitlements.charter, nightWatch: !!c.entitlements.nightWatch };
     return { ok: true };

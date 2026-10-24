@@ -11,6 +11,20 @@ export function squadDeployed(state: GameState, squadId: SquadId): boolean {
   return squad.officerIds.some((id) => state.officers[id]?.assignment?.kind === 'operation');
 }
 
+/** The proactive shift this squad is on, if any (save v19). A squad on shift is busy, not on standby: its
+ * officers carry the 'proactive' assignment, so deployability already refuses them with a reason. */
+export function squadShift(state: Pick<GameState, 'world'>, squadId: SquadId): { id: Id; districtId: string; endsAt: number } | null {
+  const shift = state.world?.shifts.find((s) => s.squadId === squadId && s.stoppedAt === undefined);
+  return shift ? { id: shift.id, districtId: shift.districtId, endsAt: shift.endsAt } : null;
+}
+
+/** Why a squad cannot take a call or another assignment right now, or null. */
+export function squadBusyReason(state: GameState, squadId: SquadId): string | null {
+  if (squadDeployed(state, squadId)) return 'on a call';
+  if (squadShift(state, squadId)) return 'on a proactive shift';
+  return null;
+}
+
 export function recoveryDuty(state: GameState, o: Officer): SquadDuty {
   const squad = o.squadId ? state.squads.find((s) => s.id === o.squadId) : undefined;
   return squad ? squad.duty : 'rest';
