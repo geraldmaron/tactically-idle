@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { send, useGame } from '../store';
 import type { GameState, Id } from '../../sim/types';
 import type { ScenarioCard } from '../../sim/operation-selectors';
@@ -14,7 +14,8 @@ import { Icon } from '../icons';
 import { relativeTime } from '../format';
 import { boardEntries, boardNote, boardPlan, incidentsOf } from './helpers';
 import type { BoardEntry } from './helpers';
-import { Casebook } from './Casebook';
+import { opsView } from './operations/view';
+import { waitsForPlayer } from './operations/model';
 import { CallTile } from './CallTile';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
@@ -31,12 +32,13 @@ import './ops-visual.css';
  * casebook stays below as the record of calls taken. Viewing the board marks incidents seen; the
  * New mark is kept for this visit. Skipping costs nothing, said once here and never on a card.
  */
-export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
+export function OpsBoard({ onOpen, above }: { onOpen: (id: Id) => void; above?: ReactNode }) {
   const g = useGame();
   const now = useNow(1000);
   const entries = boardEntries(g, now).filter((e) => e.incident.expiresAt > now);
   // The call closing first leads; a player with little time looks at the top card only.
-  const live = [...boardPlan(entries)].sort((a, b) => a.incident.expiresAt - b.incident.expiresAt);
+  // A warrant the player planned never lapses and leads the board; the rest follow by what closes first.
+  const live = [...boardPlan(entries)].sort((a, b) => Number(waitsForPlayer(b.incident.expiresAt)) - Number(waitsForPlayer(a.incident.expiresAt)) || a.incident.expiresAt - b.incident.expiresAt);
   const note = boardNote(g, now);
   const fresh = useFreshIncidents(g);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -55,8 +57,9 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
     <div className="page cl-board">
       {/* The board's head as a panel (canvas "Depth and Framed Sections"): when the next call lands in
           the bar, the Casebook as its action, then how many wait and the filters inside. */}
-      <Section className="cl-board-strip" level="h1" title="Calls" icon="calls" tone="act" count={arrival ?? 'Calls arrive while the department works'}
-        action={<a className="section-link" href="#casebook" onClick={(event) => { event.preventDefault(); document.getElementById('casebook')?.scrollIntoView({ block: 'start' }); }}>Casebook</a>}>
+ {above}
+      <Section className="cl-board-strip" level="h2" title="Calls" icon="calls" tone="act" count={arrival ?? 'Calls arrive while the department works'}
+        action={<a className="section-link" href="#casebook" onClick={(event) => { event.preventDefault(); opsView.section('archive'); }}>Casebook</a>}>
         <div className="cl-board-status">
           <span className="cl-board-count" role="status">{live.length === 0 ? 'No calls waiting' : `${live.length} ${live.length === 1 ? 'call' : 'calls'} waiting · skipping costs nothing`}</span>
           <button type="button" className="cl-info" aria-label="About skipping a call" onClick={() => setNoteOpen(true)}><Icon name="info" size={20} /></button>
@@ -83,7 +86,6 @@ export function OpsBoard({ onOpen }: { onOpen: (id: Id) => void }) {
           ))}
         </div>
       </Section>}
-      <div id="casebook" className="cl-board-casebook"><Casebook state={g} /></div>
     </div>
   </>);
 }
@@ -138,9 +140,10 @@ function BoardCard({ g, entry, now, isNew, onOpen, compact = false }: { g: GameS
   const short = boardShortages(g, card.id, now);
   const spec = scenario?.incident;
   const left = incident.expiresAt - now;
-  const soon = left < 15 * 60000;
+  const waits = waitsForPlayer(incident.expiresAt);
+  const soon = !waits && left < 15 * 60000;
   const span = incident.expiresAt - incident.arrivedAt;
-  const timeShare = span > 0 ? left / span : undefined;
+  const timeShare = !waits && span > 0 ? left / span : undefined;
   // Each card names its own call's people; nobody is deployed yet.
   return (
     <GamePeopleProvider lexicon={scenario ? lexiconFor(scenario, null, []) : null}>
@@ -150,7 +153,7 @@ function BoardCard({ g, entry, now, isNew, onOpen, compact = false }: { g: GameS
         compact={compact} timeShare={timeShare} soon={soon}
         contentNote={<ThemeLine cardId={incident.id} />}
         warning={card.issues.length > 0 && <p className="cl-card-issue"><Icon name="warning" size={16} />{card.issues[0]}{card.issues.length > 1 ? ` (+${card.issues.length - 1} more)` : ''}</p>}
-        timeLeft={compact ? countdown(left) : <span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
+        timeLeft={waits ? 'Warrant' : compact ? countdown(left) : <span className={soon ? 'cl-warn' : undefined}>{countdown(left)} left{soon ? ', closing soon' : ''}</span>}
         readiness={<Readiness g={g} card={card} now={now} />}
         onOpen={() => onOpen(card.id)} />
     </GamePeopleProvider>

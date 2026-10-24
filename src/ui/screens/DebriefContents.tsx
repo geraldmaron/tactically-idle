@@ -12,7 +12,7 @@ import { getScenario } from '../../sim/scenario-registry';
 import { getBuilt } from '../../sim/resolution';
 import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
-import { armamentLabel } from '../components/incident';
+import { armamentLabel, scenarioPlaceName } from '../components/incident';
 import { BeforeAfter, Card, Chip, Section, SubHead } from '../components/ui';
 import { DebriefConsequences, DebriefRings, DebriefScore, DebriefSummary, OfficerResults, WhatDecided, type DebriefOfficers } from '../components/DebriefResults';
 import { ITEMS } from '../../content/items';
@@ -28,8 +28,10 @@ import { CallTypeBadge } from '../icons/CallTypeBadge';
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
-export function DebriefContents({ result: d, officers, scenario, reality = true, decisions = d.decisions ?? [], heroAction, department }: { result: DebriefResult; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean;
+export function DebriefContents({ result: d, officers, scenario, reality = true, decisions = d.decisions ?? [], heroAction, department, world }: { result: DebriefResult; officers: DebriefOfficers; scenario?: ScenarioDefinition; reality?: boolean;
   decisions?: DecisionView[]; heroAction?: ReactNode;
+  /** The world and people sections that follow the hero: the case tiles and "What stays with them" (operations/DebriefWorld.tsx). The lab leaves it out. */
+  world?: ReactNode;
   /** What the department holds before this call settles; the settlement counts up from it. */
   department?: SettlementDepartment }): JSX.Element {
   const worst = d.disposition ? d.civilianSafety.score : Math.min(d.objective.score, d.civilianSafety.score);
@@ -61,6 +63,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
         {[1, 2, 3].map((n) => <i key={n} data-on={n <= marks || undefined} />)}
       </span>
       </div>
+      <span className="debrief-kicker">CALL CLOSED{scenarioPlaceName(scenario) ? ` · ${scenarioPlaceName(scenario)}` : ''}</span>
       <h2 className="debrief-title">{d.endingTitle}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}
       {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
@@ -69,6 +72,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
     {/* The canvas order: the result as rings, then any harm and loss before what it paid (sol challenge:
         harm is never under the rewards), what decided it, and the people. The full record (people at the
         call, scoring and the review) follows, never folded away. */}
+    {world}
     <DebriefRings debrief={d} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} decisions={decisions} />

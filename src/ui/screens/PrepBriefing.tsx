@@ -10,6 +10,7 @@ import { FactStatusChip } from '../components/FactStatusChip';
 import { callTier, type Briefing } from '../../sim/operation-selectors';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { BuiltLocation, KnowledgeStatus } from '../../sim/types';
+import { waitsForPlayer } from './operations/model';
 import { countdown, EnvChips, placeTags, TierChevrons, useNow } from '../components/incident';
 import { Face, type FaceKind } from '../components/Face';
 import { PlateArt, placeFor, sceneFor } from '../art/Plates';
@@ -140,6 +141,7 @@ function OrderLead({ n, entry, role }: { n: number; entry: LexiconEntry | null; 
 /** How long the call stays on the board, ticking: the one live thing on the brief. */
 function OpenFor({ until }: { until: number }) {
   const left = until - useNow(1000);
+  if (waitsForPlayer(until)) return <span className="pb-scene-time"><Icon name="clock" size={16} /><span>Waits until you serve it</span></span>;
   if (left <= 0) return <span className="pb-scene-time pb-scene-time-soon"><Icon name="clock" size={16} /><span>Call closed</span></span>;
   const soon = left < 15 * 60000;
   return <span className={`pb-scene-time${soon ? ' pb-scene-time-soon' : ''}`}><Icon name="clock" size={16} /><span>{countdown(left)} left</span></span>;

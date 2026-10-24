@@ -43,7 +43,7 @@
 .result-portrait-stack { display: flex; flex-shrink: 0; padding-left: 4px; }
 .result-portrait-stack > * { margin-left: -4px; outline: 2px solid var(--ink-1); }
 .result-empty { margin: 0; font-size: 14px; }
-.result-consequences { border-left: 3px solid var(--warn); }
+.result-consequences { border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--hair)); background: color-mix(in srgb, var(--warn) 6%, var(--ink-1)); }
 .result-consequences ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
 .result-consequences li + li { margin-top: 7px; }
 .result-evidence { gap: 0; }
@@ -56,8 +56,8 @@
   .result-portrait-stack > :nth-child(3) { display: none; }
 }
 
-.result-completion { min-width: 0; border-left: 3px solid var(--hair-2); padding-left: 12px; display: grid; gap: 7px; }
-.result-completion-achieved { border-left-color: var(--good); }
+.result-completion { min-width: 0; border: 1px solid var(--hair-2); border-radius: var(--r1); padding: var(--sp3); display: grid; gap: 7px; }
+.result-completion-achieved { border-color: var(--good-edge); background: var(--good-soft); }
 .result-completion-label { color: var(--t2); font-size: 23px; line-height: 1.2; }
 .result-completion-achieved .result-completion-label { color: var(--good); }
 .result-completion p { margin: 0; font-size: 14px; line-height: 1.45; }
@@ -98,7 +98,7 @@
 .debrief .result-section-heading { align-items: center; }
 .result-marks { gap: var(--sp3); }
 .result-marks i { width: 34px; height: 34px; }
-.result-marks i[data-on] { background: linear-gradient(180deg, var(--act-hi), var(--act-lo)); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--act) 55%, transparent)); }
+.result-marks i[data-on] { background: var(--good); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--good) 45%, transparent)); }
 .debrief .result-officer, .debrief .realrow { background: var(--surface-2); box-shadow: var(--lift-edge), 0 2px 6px color-mix(in srgb, var(--black) 30%, transparent); }
 .debrief .result-department .result-xp, .debrief .result-rewards { text-shadow: 0 0 18px color-mix(in srgb, var(--good) 30%, transparent); }
 

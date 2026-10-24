@@ -15,7 +15,7 @@
 .support-details-trigger { display: flex; gap: 3px; align-items: center; justify-content: center; min-height: 44px; min-width: 62px; flex-shrink: 0; padding: 8px 0 8px 8px; border: 0; background: transparent; color: var(--t2); font-size: 13px; cursor: pointer; }
 .support-details-trigger:focus-visible { outline: 2px solid var(--hair-2); outline-offset: 2px; border-radius: 3px; }
 .support-status-list { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
-.support-tile { --tone: var(--muted); display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 6px; background: rgba(11, 17, 28, 0.55); font-size: 13px; line-height: 1.4; }
+.support-tile { --tone: var(--muted); display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 10px; border: 1px solid color-mix(in srgb, var(--tone) 55%, var(--line)); border-radius: 6px; background: rgba(11, 17, 28, 0.55); font-size: 13px; line-height: 1.4; }
 .support-tile[data-support-status="requested"] { --tone: var(--warn); }
 .support-tile[data-support-status="available"], .support-tile[data-support-status="accepted"] { --tone: var(--mint); }
 .support-tile[data-support-status="unavailable"] { --tone: var(--danger); }

@@ -76,7 +76,9 @@ function CardMeta({ a, officers, reach = [], face = true }: { a: ActionView; off
 /** `actions` are the stage's choices as the player sees them, with any reviewed choice already
  * forecast for its chosen squads. Tapping a card opens its review sheet (owner, 2026-10-21: one tap
  * to review, no separate expand); the pull and the full reading live in the sheet. */
-export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, guidance, onSelect, onExpand }: { reach?: Record<Id, GaugeReach[]>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
+export function DecisionList({ prompt, exchange, actions, selectedId, expanded, officers, reach, team, guidance, knows, onSelect, onExpand }: { reach?: Record<Id, GaugeReach[]>;
+  /** Officers who know the person the call is about, on the record: a choice one of them leads carries a KNOWS HIM tag. */
+  knows?: ReadonlyMap<Id, string>; prompt: string; exchange?: readonly SpokenLine[]; actions: ActionView[]; selectedId: Id | null; expanded: boolean;
   /** The deployed officers, for each card's lead line; left out, cards show no lead. */
   officers?: Readonly<Record<Id, LeadOfficer>>;
   /** Who's on it, set between the moment and the choices, because every card names one of them to lead. */
@@ -149,7 +151,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                 {a.eligible && a.deceives && <span className="callbtn-command callbtn-deceive"><Icon name="radio" size={12} />Command hasn’t approved this</span>}
                 {/* Who leads and possible harm are never folded away. */}
                 <CardMeta a={a} officers={officers} reach={reach?.[a.id]} face={!lead} />
-                {a.eligible && <Forecast a={a} id={forecast} lead={lead} />}
+                {a.eligible && <Forecast a={a} id={forecast} lead={lead} knows={lead ? knows?.get(lead.officer.id) : undefined} />}
               </span>
             </button>
             </Fragment>
@@ -184,7 +186,7 @@ function CardOdds({ likelihood }: Pick<ActionView, 'likelihood'>) {
 /** The odds, harm and time every available choice shows, once each (docs/ui-ux-audit.md): the bar,
  * then "90% goes well · Harm low · ~4 min". The chance holds a fixed width of tabular digits, so the
  * line never rewraps as the stall moves it. */
-function Forecast({ a, id, lead }: { a: ActionView; id: string; lead?: { officer: LeadOfficer; text: string } | null }) {
+function Forecast({ a, id, lead, knows }: { a: ActionView; id: string; lead?: { officer: LeadOfficer; text: string } | null; knows?: string }) {
   // With the lead's face on the card, their number for this choice rides in the forecast, so the
   // pinned dock (which hides the lead line) still says what the chance turns on.
   const skill = lead && a.keyRating ? `${RATING_SHORT[a.keyRating]} ${Math.round(lead.officer.ratings[a.keyRating])}` : null;
@@ -192,6 +194,7 @@ function Forecast({ a, id, lead }: { a: ActionView; id: string; lead?: { officer
     {!a.eventResult && <CardOdds likelihood={a.likelihood} />}
     <span className="callbtn-forecast-text" id={id}>
       {!a.eventResult && <span>{padDigits(outcomePercentages(a.likelihood).favorable, 2)}%<span className="callbtn-gw"> goes well</span></span>}
+      {knows && <span className="callbtn-knows">Knows {knows}<span className="sr-only">: {lead!.officer.surname} knows the person this call is about</span></span>}
       {skill && <span className="callbtn-skill" aria-label={`${lead!.officer.surname} leads, ${skill}`}>{skill}</span>}
       <span className={`callbtn-harm callbtn-harm-${a.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[a.consequenceLevel].toLowerCase()}</span>
       <ChoiceTime a={a} />

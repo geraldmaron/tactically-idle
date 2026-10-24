@@ -64,7 +64,7 @@
 .decision-pills .chip { font-variant-numeric: tabular-nums; }
 .chip .chip-status { font-weight: 500; opacity: .85; }
 .decision-heard { margin: 0; }
-.decision-next { padding: 10px; margin: 12px 0 0; border-left: 2px solid var(--hair-2); background: var(--ink-2); }
+.decision-next { padding: 10px; margin: 12px 0 0; border: 1px solid var(--hair-2); border-radius: var(--r1); background: var(--ink-2); }
 .decision-next p { margin: 0; }
 .decision-next p + p { margin-top: 6px; }
 .decision-causes { margin-top: 8px; border-top: 1px solid var(--line); }
@@ -135,9 +135,9 @@
 .consequence-high { color: var(--warn); }
 .consequence-severe { color: var(--danger); }
 .outcome-options { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.outcome-option { padding: 10px; border: 1px solid var(--line); border-left: 3px solid var(--hair-2); border-radius: 5px; background: var(--bg); }
-.outcome-favorable { border-left-color: var(--mint); }
-.outcome-adverse { border-left-color: var(--danger); }
+.outcome-option { padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); }
+.outcome-favorable { border-color: var(--good-edge); background: var(--good-soft); }
+.outcome-adverse { border-color: var(--live-edge); background: var(--live-soft); }
 .outcome-option > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; font-size: 14px; }
 .outcome-option > div span { font-variant-numeric: tabular-nums; color: var(--text-dim); }
 .outcome-option p { margin: 6px 0 0; font-size: 14px; line-height: 1.45; }
@@ -162,12 +162,12 @@
 
 /* Force checks and physical harm are independent recorded results. */
 .decision-force { border-top-color: var(--line-strong); }
-.force-risk, .force-result { padding: 10px; margin: 10px 0; border-left: 3px solid var(--warn); background: var(--bg); line-height: 1.45; overflow-wrap: anywhere; }
+.force-risk, .force-result { padding: 10px; margin: 10px 0; border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); border-radius: var(--r1); background: var(--bg); line-height: 1.45; overflow-wrap: anywhere; }
 .force-risk h4, .force-result h4 { margin: 0 0 5px; font-size: 13px; color: var(--text-dim); }
 .force-risk p, .force-result p { margin: 5px 0 0; font-size: 13px; }
-.force-result-fatal, .force-result-serious { border-left-color: var(--danger); }
+.force-result-fatal, .force-result-serious { border-color: var(--danger); }
 .force-result-fatal strong, .force-result-serious strong { color: var(--danger); }
-.force-result-none { border-left-color: var(--line-strong); }
+.force-result-none { border-color: var(--line-strong); }
 
 /* Live stress summary: one row of chips instead of a gauge per officer. */
 

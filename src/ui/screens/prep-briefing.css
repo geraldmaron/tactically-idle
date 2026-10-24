@@ -46,7 +46,7 @@
 .pb-well-n { color: var(--t1); }
 
 /* What the team faces: the weapon report as an alert row (a harm edge), then what is unknown. */
-.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp3); align-items: start; margin: 0 calc(-1 * var(--sp3)); padding: var(--sp3); border-left: 3px solid var(--harm); background: linear-gradient(90deg, color-mix(in srgb, var(--harm) 14%, transparent), transparent 70%); }
+.pb-threat-row { display: grid; grid-template-columns: 24px 1fr; gap: var(--sp3); align-items: start; padding: var(--sp3); border: 1px solid color-mix(in srgb, var(--harm) 45%, var(--hair)); border-radius: var(--r1); background: linear-gradient(90deg, color-mix(in srgb, var(--harm) 14%, transparent), transparent 70%); }
 .pb-threat-icon { margin-top: var(--sp1); color: var(--harm); }
 .pb-threat-claim { margin: 0; font-size: var(--s16); font-weight: 600; line-height: 1.4; color: var(--t1); }
 .pb-threat-where { font-weight: 500; color: var(--t2); }
