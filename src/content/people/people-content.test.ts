@@ -68,8 +68,8 @@ describe('the authored jackets', () => {
   const persona = (id: string) => PERSONA_BY_ID[id];
   const jackets = Object.values(JACKETS);
 
-  it('cover the eight starting officers and nobody else', () => {
-    expect(jackets.map((j) => j.personaId).sort()).toEqual(PERSONAS.filter((p) => p.legacyOfficerId).map((p) => p.id).sort());
+  it('cover every persona, once, so any squad a campaign draws has authored jackets', () => {
+    expect(jackets.map((j) => j.personaId).sort()).toEqual(PERSONAS.map((p) => p.id).sort());
   });
 
   it('keep each pressure line to the skill\'s rules', () => {
@@ -109,10 +109,15 @@ describe('the authored jackets', () => {
   });
 
   it('give each officer different markers, a different contradiction pattern and a different radio voice', () => {
-    const notices = jackets.map((j) => j.page1.markers!.noticesFirst);
-    expect(new Set(notices).size).toBe(jackets.length);
-    expect(new Set(jackets.map((j) => j.page1.pattern)).size).toBe(jackets.length);
-    expect(new Set(jackets.map((j) => j.page1.markers!.habit)).size).toBe(jackets.length);
+    // Nine or ten values each cannot be unique across 100 officers: spread them, no value over a fifth.
+    const capped = (values: readonly unknown[]) => {
+      const counts = new Map<unknown, number>();
+      for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+      return Math.max(...counts.values());
+    };
+    expect(capped(jackets.map((j) => j.page1.markers!.noticesFirst))).toBeLessThanOrEqual(Math.ceil(jackets.length / 5));
+    expect(capped(jackets.map((j) => j.page1.pattern))).toBeLessThanOrEqual(Math.ceil(jackets.length / 5));
+    expect(capped(jackets.map((j) => j.page1.markers!.habit))).toBeLessThanOrEqual(Math.ceil(jackets.length / 5));
     expect(new Set(jackets.map((j) => j.page1.radio!.ready)).size).toBe(jackets.length);
   });
 
@@ -158,12 +163,12 @@ describe('the authored jackets', () => {
     // Every district has a home officer, and the opening district has three.
     const counts = DISTRICT_IDS.map((id) => jackets.filter((j) => j.page2!.district === id).length);
     expect(Math.min(...counts)).toBeGreaterThanOrEqual(1);
-    expect(jackets.filter((j) => j.page2!.district === 'pike')).toHaveLength(3);
+    expect(Math.min(...counts)).toBeGreaterThanOrEqual(10);
   });
 
   it('keep openness a stated choice, off by default, and tie kinds free of faith unless stated', () => {
     expect(jackets.filter((j) => j.openToRelationship).length).toBeGreaterThanOrEqual(2);
-    expect(templateJacket('person_050').openToRelationship).toBe(false);
+    expect(templateJacket('person_999').openToRelationship).toBe(false);
     for (const j of jackets) expect(j.tieKinds).not.toContain('church');
   });
 

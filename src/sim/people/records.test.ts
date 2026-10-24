@@ -158,8 +158,8 @@ describe('jacket pages open as the player serves', () => {
     const o = Object.values(d.officers).find((x) => x.identityId !== undefined && !['person_001', 'person_002', 'person_003', 'person_004', 'person_005', 'person_006', 'person_007', 'person_008'].includes(x.identityId));
     // The starters are the cast's first eight only under the legacy order; shuffle may put anyone in a seat.
     const target = o ?? d.officers.off_chen;
-    target.identityId = 'person_050';
-    d.people.records[target.id].identityId = 'person_050';
+    target.identityId = 'person_999';
+    d.people.records[target.id].identityId = 'person_999';
     const other = Object.values(d.officers).find((x) => x.id !== target.id)!;
     for (let i = 0; i < 6; i++) {
       advance(d, 1);
