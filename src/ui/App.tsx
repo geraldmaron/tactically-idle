@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
 import './player-navigation.css';
@@ -10,14 +10,15 @@ import { ToastProvider } from './components/toast';
 import { BeatProvider } from './components/BeatProvider';
 import { OverlayRootContext } from './components/Sheet';
 import { NavContext, topTab, usePlayerNavigation } from './components/nav';
+import type { TopTab } from './components/nav';
 import { ChromeProvider, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
 import { HQ } from './screens/HQ';
 import { TeamScreen } from './screens/Team';
 import { OpsScreen } from './screens/Ops';
-import { BuildScreen } from './screens/Build';
-import { StoreScreen } from './screens/Store';
+import { HeadquartersTab } from './shell/HeadquartersTab';
+import { StoreTab } from './shell/StoreTab';
 import { OfficerSheet } from './screens/OfficerSheet';
 import { SaveManager, SaveWarning } from './components/SaveManager';
 import { WelcomeBack } from './components/WelcomeBack';
@@ -52,7 +53,11 @@ const TEXTURES = textureVars() as React.CSSProperties;
 
 function GameShell() {
   const nav = usePlayerNavigation();
-  const { tab } = nav;
+  const current = topTab(nav.tab);
+  // Each tab keeps its scroll position while the player is on another one.
+  const scrolls = useRef<Partial<Record<TopTab, number>>>({});
+  const screen = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => { if (screen.current) screen.current.scrollTop = scrolls.current[current] ?? 0; }, [current]);
   const [savesOpen, setSavesOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
@@ -74,13 +79,14 @@ function GameShell() {
                   {mode === 'desk' && <TopBar onOpenMenu={() => setMenuOpen(true)} />}
                 </div>
                 <SaveWarning onOpen={() => setSavesOpen(true)} />
-                <main className={`screen screen-${tab}`} key={topTab(tab)}>
+                <main className={`screen screen-${current}`} key={current} ref={screen} onScroll={(event) => { scrolls.current[current] = event.currentTarget.scrollTop; }}>
                   {nav.returnToItem && <div className="player-return"><Button onClick={nav.returnToEquipment}>Back to item · {ITEMS[nav.returnToItem]?.name ?? 'Equipment'}</Button></div>}
-                  {tab === 'hq' && <HQ />}
-                  {tab === 'squad' && <TeamScreen />}
-                  {tab === 'ops' && <OpsScreen />}
-                  {tab === 'develop' && <BuildScreen />}
-                  {(tab === 'store' || tab === 'gear') && <StoreScreen />}
+                  {/* The City shows the old HQ screen until the city lane replaces it. */}
+                  {current === 'city' && <HQ />}
+                  {current === 'ops' && <OpsScreen />}
+                  {current === 'squad' && <TeamScreen />}
+                  {current === 'headquarters' && <HeadquartersTab />}
+                  {current === 'store' && <StoreTab />}
                 </main>
                 <div className="chrome-foot" ref={chrome.setFoot}>
                   {mode === 'desk' && <BottomNav />}

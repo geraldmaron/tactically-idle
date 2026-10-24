@@ -1,47 +1,71 @@
-/* Design tokens for the Desk and Street system (docs/ui-ux-audit.md, "Skin"; drawn in
-   docs/mockups/ui-direction/index.html). This is the only file under src/ui that spells a colour:
-   every other stylesheet names a token (src/ui/design-floors.test.ts). */
+/* Design tokens for the night-city look (docs/world-redesign.md; the canvas the screens come from).
+   This is the only file under src/ui that spells a colour: every other stylesheet names a token
+   (src/ui/design-floors.test.ts). The older names (--ink-*, --t1..3, --act*, --good*, --harm*, --info,
+   --cash*, --f-ui, --f-title) stay and now carry the new values, so every screen shifts at once. */
 :root {
-  /* Ground and surfaces: low-chroma slate. Elevation only on sheets. */
-  --ink-deep: #050b16; /* the stage around the phone frame */
-  --ink-0: #0b1728;
-  --ink-1: #11243b;
-  --ink-2: #19314d;
-  --ink-3: #223e5b;
-  --hair: #29415b;
-  --hair-2: #47617a;
-  /* Text. --t-plate is secondary text set on painted art, a step brighter than --t2 for the scrim. */
-  --t1: #fff4df;
-  --t2: #b9cad8;
-  --t3: #a3b7c9; /* 5.5:1 on --ink-2 and 4.8:1 on --ink-3, the lightest card, so muted text clears 4.5:1 on every surface */
-  --t-plate: #ccd5e1;
+  /* Ground and surfaces: near-black with a faint cool tint. Hairline borders do the separating. */
+  --ink-deep: #08090b; /* the stage around the phone frame */
+  --ink-0: #0f1013; /* the ground */
+  --ink-1: #181a20; /* panels */
+  --ink-2: #1d2026; /* raised */
+  --ink-3: #252830; /* the lightest card, a pressed or chosen row */
+  --hair: #2b2e37; /* borders */
+  --hair-2: #3b3f4a; /* a border that has to read on --ink-3 */
+  --divider: #23262d;
+  /* Text. --t1 is primary, --t2 body on dark, --t3 muted (5.8:1 on --ink-3, 7:1 on a panel), --t-meta the
+     quietest step (5.4:1 on a panel, 5.0:1 on raised; never set on --ink-3). --t-plate is secondary text
+     set on painted art, a step brighter than --t3 for the scrim. */
+  --t1: #f1ece2;
+  --t2: #e7ded3;
+  --t3: #a9a49a;
+  --t-meta: #8a8f9b;
+  --t-plate: #d4cdc0;
   --white: #fff;
   --black: #000;
 
-  /* Roles. Amber is the player's move and act-now marks, nothing else. */
-  --act: #f2b234;
-  --act-hi: #ffc94d;
-  --act-lo: #c98d17;
-  --act-ink: #1a1203;
-  --act-soft: rgba(242, 178, 52, 0.12);
-  --act-text: #ffe3a6;
-  --good: #68dfac;
-  --cash-hi: #b9f5c6;
-  --cash-low: #237659;
-  --cash-panel: #153b3b;
-  --cash-edge: #376a63;
-  --button-base: #95601c;
-  --good-text: #c2f0d9;
-  --good-ink: #06241a;
-  --harm: #ff8b7b;
-  --harm-text: #ffb4aa;
-  --harm-ink: #2a0703;
-  --harm-deep: #3a1712;
-  --warn: #f59b42;
-  --warn-text: #ffbd7a;
-  /* Information and the trust stat; not a siren. */
-  --info: #9cc4ff;
-  /* An officer out on a call, on the HQ roster. */
+  /* Roles. Signal red-orange is live work and the player's primary action; nothing else wears it. */
+  --live: #ff5b3a;
+  --live-text: #ff9a84;
+  --live-soft: #24130f; /* a tinted panel */
+  --live-edge: #5a2a20; /* and its border */
+  --act: var(--live);
+  --act-hi: #ff7a5e;
+  --act-lo: #d94a2d;
+  --act-ink: #1a0b07;
+  --act-soft: rgba(255, 91, 58, 0.14);
+  --act-text: var(--live-text);
+  /* Cyan is intel, patrol and the city. */
+  --intel: #4cc4e8;
+  --intel-text: #8adbf2;
+  --intel-soft: #11202a;
+  --intel-edge: #1f5566;
+  /* Rose is people: bonds, aftercare, memories. */
+  --people: #f28ca8;
+  --people-text: #f5a3ba;
+  --people-soft: #1c1418;
+  --people-edge: #5a3040;
+  /* Mint is funding and good outcomes. */
+  --good: #8fd6a8;
+  --good-text: #b4e5c5;
+  --good-ink: #08170f;
+  --good-soft: #13241b;
+  --good-edge: #2d5a40;
+  --cash-hi: #b4e5c5;
+  --cash-low: #2d5a40;
+  --cash-panel: #13241b;
+  --cash-edge: #2d5a40;
+  --button-base: #a63a22; /* the underside of a primary button */
+  /* Harm shares the red family with the signal, so it always carries an icon or a word as well. */
+  --harm: #ff7a5e;
+  --harm-text: #ff9a84;
+  --harm-ink: #1a0b07;
+  --harm-deep: #1e1412;
+  /* Amber is the mid-band warning (Strained) and nothing else. */
+  --warn: #e7b04f;
+  --warn-text: #f0c477;
+  /* Information and the trust stat. */
+  --info: var(--intel-text);
+  /* An officer out on a call, on the roster. */
   --deployed: #c9aaff;
   /* Red and blue sweep on a live call only. */
   --siren-r: #ff3b3b;
@@ -58,9 +82,13 @@
   --ct-rescue: #6ea8ff;
   --civilian: #ffa6da;
   --person: #8d9cb4;
-  --officer: #9cc4ff;
+  --officer: var(--intel-text);
   /* Dev-only marks (the candidate switch, test buttons). */
   --dev-tag: #ff5b9f;
+  /* Ivory paper, for dossiers and service jackets. (--paper stays the blueprint's map paper below.) */
+  --dossier: #ede6d8;
+  --dossier-ink: #1b1a17;
+  --dossier-muted: #5e594f;
 
   /* The blueprint keeps its own palette: paper, ink and chalk. */
   --map: #1f55b8;
@@ -91,12 +119,17 @@
   --manila: #b39a6c;
   --manila-ink: #2a2113;
 
-  /* Type: Barlow for the interface, Barlow Condensed for titles in sentence case, Kalam on the
-     blueprint only. Story text stays in Barlow: the reading face was settled as the sans
-     (docs/ops-experience.md, "The reading face"). Six sizes; nothing a player decides from under 14. */
-  --f-ui: 'Barlow', system-ui, -apple-system, sans-serif;
-  --f-title: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  /* Type. Big Shoulders (uppercase) is display and screen titles; IBM Plex Sans is the interface and the
+     story; IBM Plex Mono is labels, radio lines, timestamps and stat kickers (11 to 12px, tracked,
+     uppercase); IBM Plex Serif italic is an officer's pressure line. Kalam stays on the blueprint.
+     Six sizes; nothing a player decides from under 14. */
+  --f-display: 'Big Shoulders', 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --f-ui: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --f-title: var(--f-display);
+  --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --f-serif: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
   --f-marker: 'Kalam', 'Comic Sans MS', cursive;
+  --kicker-track: 0.1em; /* mono labels: 1.2 to 1.5px at 12px */
   --s12: 12px; /* meta only */
   --s14: 14px; /* supporting labels; body uses --s16 */
   --s16: 16px; /* row titles, buttons */
@@ -104,16 +137,17 @@
   --s22: 22px; /* card and sheet titles */
   --s28: 28px; /* screen hero */
 
-  /* Space and shape */
+  /* Space and shape: radius 4 to 8, cards 6, sheets 16 at the top. */
   --sp1: 4px;
   --sp2: 8px;
   --sp3: 12px;
   --sp4: 16px;
   --sp5: 24px;
   --sp6: 32px;
+  --r0: 4px;
   --r1: 6px;
-  --r2: 12px;
-  --r3: 20px; /* sheets */
+  --r2: 8px;
+  --r3: 16px; /* sheets */
   --touch: 44px;
   --gutter: var(--sp4);
   /* The tab-root plate (art/TabPlate.tsx). The owner picks its height: 72, 96 or 128. */
@@ -123,49 +157,39 @@
   --face-md: 48px;
   --face-lg: 72px;
   --design-w: 390px;
-  --edge-hi: rgba(255, 255, 255, 0.06);
-  --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);
+  --edge-hi: transparent;
+  --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.6);
 
-  /* Finish: depth and light (owner, 2026-10-23: "flat and boring, a shell never polished"). This
-     replaces the audit's "elevation only for sheets". A surface you read or open sits above the
-     ground, lit from its top edge; a slot that holds something sits below it. Amber stays the
-     player's move, so the one glow below is for the chosen thing and nothing else. */
-  --lift-edge: inset 0 1px 0 color-mix(in srgb, var(--white) 10%, transparent);
-  --lift-1: var(--lift-edge), 0 1px 2px color-mix(in srgb, var(--black) 45%, transparent), 0 6px 14px color-mix(in srgb, var(--black) 32%, transparent);
-  --lift-2: var(--lift-edge), 0 2px 4px color-mix(in srgb, var(--black) 45%, transparent), 0 14px 30px color-mix(in srgb, var(--black) 44%, transparent);
-  /* A well is pressed in: a darker floor, a shadow from its top lip, a faint rim. Lists inside a panel. */
-  --well: inset 0 2px 6px color-mix(in srgb, var(--black) 60%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--white) 4%, transparent);
-  --glow-act: 0 0 0 1px color-mix(in srgb, var(--act) 80%, transparent), 0 0 26px color-mix(in srgb, var(--act) 24%, transparent);
-  --surface-1: linear-gradient(180deg, color-mix(in srgb, var(--ink-3) 58%, var(--ink-2)) 0%, var(--ink-1) 100%);
-  --surface-2: linear-gradient(180deg, var(--ink-3) 0%, color-mix(in srgb, var(--ink-2) 78%, var(--ink-1)) 100%);
-  --surface-well: #081322;
-  --well-rule: color-mix(in srgb, var(--white) 6%, transparent);
-  --ground-glow: radial-gradient(130% 46% at 50% -4%, color-mix(in srgb, var(--ink-3) 70%, transparent), transparent 72%);
+  /* Flat surfaces. The old gradient surfaces are one colour now, so a rule written as
+     `background: var(--surface-1)` or `background-image: var(--surface-1)` both keep working.
+     Gradients stay only as scrims over art. */
+  --lift-edge: inset 0 0 0 0 transparent;
+  --lift-1: none;
+  --lift-2: 0 8px 24px color-mix(in srgb, var(--black) 50%, transparent);
+  --well: inset 0 0 0 1px var(--divider);
+  --glow-act: 0 0 0 1px var(--act);
+  --surface-1: linear-gradient(var(--ink-1), var(--ink-1));
+  --surface-2: linear-gradient(var(--ink-2), var(--ink-2));
+  --surface-well: var(--ink-0);
+  --well-rule: var(--divider);
+  --ground-glow: none;
 
-  /* Three depths (canvas "Depth and Framed Sections", 2026-10-24). The ground carries the texture,
-     so panels sit on something: a 24px grid at 3%, a cool glow at the top, a dark falloff at the
-     foot. A panel is lit from above (one gradient, one top highlight, one drop shadow) and never
-     carries the grid. Its header bar is a plate a step lighter. A well is pressed into a panel and
-     never casts a shadow. Nothing but the pinned header sits on the bare ground. */
-  --ground-base: #0a1526;
-  --ground-grid: color-mix(in srgb, var(--white) 3%, transparent);
-  --ground-tex:
-    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--siren-b) 10%, transparent), transparent 60%),
-    radial-gradient(140% 90% at 50% 120%, color-mix(in srgb, var(--black) 55%, transparent), transparent 60%),
-    repeating-linear-gradient(0deg, var(--ground-grid) 0 1px, transparent 1px 24px),
-    repeating-linear-gradient(90deg, var(--ground-grid) 0 1px, transparent 1px 24px);
-  --panel-edge: #2c4664;
-  --surface-panel: linear-gradient(180deg, #16304d 0%, var(--ink-1) 38%, #0f2034 100%);
-  --shadow-panel: inset 0 1px 0 color-mix(in srgb, var(--white) 8%, transparent), 0 10px 24px color-mix(in srgb, var(--black) 45%, transparent);
-  --surface-bar: linear-gradient(180deg, #1b3656, #142a44);
-  --bar-edge: inset 0 -1px 0 color-mix(in srgb, var(--black) 35%, transparent);
-  --bar-title: #d6e2ef;
-  --bar-btn: color-mix(in srgb, var(--ink-deep) 45%, transparent);
-  /* The bar's mark: amber for a squad's letter, violet for the people a call is about. */
-  --mark-act: #2a2410;
-  --mark-people: #2a1f45;
-  --mark-people-edge: #7a5fc0;
-  --mark-people-text: #d9c8ff;
+  /* Depth: the ground, a panel on it, a well in the panel. All flat; the border is the edge. */
+  --ground-base: var(--ink-0);
+  --ground-grid: transparent;
+  --ground-tex: linear-gradient(var(--ink-0), var(--ink-0));
+  --panel-edge: var(--hair);
+  --surface-panel: linear-gradient(var(--ink-1), var(--ink-1));
+  --shadow-panel: none;
+  --surface-bar: linear-gradient(var(--ink-2), var(--ink-2));
+  --bar-edge: inset 0 -1px 0 var(--hair);
+  --bar-title: var(--t1);
+  --bar-btn: var(--ink-0);
+  /* The bar's mark: signal for a squad's letter, rose for the people a call is about. */
+  --mark-act: var(--live-soft);
+  --mark-people: var(--people-soft);
+  --mark-people-edge: var(--people-edge);
+  --mark-people-text: var(--people-text);
   --band-h: 104px;
   --mark-size: 28px; /* the bar's badge or icon well */
   --bar-btn-h: 36px; /* the bar's action pill; its button keeps the 44px row */
@@ -200,8 +224,8 @@
   --people-withheld: var(--t1);
   --font-ui: var(--f-ui);
   --font-cond: var(--f-title);
-  --font-display: var(--f-title);
-  --font-mono: var(--f-ui); /* the mono face left the interface; numbers use tabular figures */
+  --font-display: var(--f-display);
+  --font-mono: var(--f-mono);
   --font-marker: var(--f-marker);
   --shadow-card: var(--lift-1);
   --panel-grad: var(--surface-1);

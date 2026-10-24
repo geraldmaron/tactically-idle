@@ -65,7 +65,7 @@
 .hq-away { border-color: color-mix(in srgb, var(--manila) 50%, transparent) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--manila) 10%, transparent), var(--ink-1)) !important; }
 .hq-away .file-tab { flex: 0 0 auto; margin-bottom: 0; }
 .hq-away > div { flex-basis: 100%; }
-.hq-attention > div { border-left: 3px solid var(--act) !important; background: var(--ink-1) !important; }
+.hq-attention > div { border-color: var(--live-edge) !important; background: var(--live-soft) !important; }
 
 /* ------------------------------------------------------------ Prepare, Live and Debrief heads */
 /* The call's scene runs edge to edge behind its title through the whole call journey. */
@@ -91,14 +91,14 @@
    outlines. Every rule reads a token, so the pass can be tuned in one place. */
 .app { background-image: var(--ground-tex); }
 
-.flow-head { background: var(--surface-1); border-bottom-color: color-mix(in srgb, var(--black) 40%, var(--hair)); box-shadow: var(--lift-edge), 0 6px 16px color-mix(in srgb, var(--black) 34%, transparent); position: relative; z-index: 2; }
-.flow-head h1, .flow-head [class*="flow-title"] { font-family: var(--f-title); font-size: var(--s22); letter-spacing: 0.01em; }
+.flow-head { background: var(--ink-1); border-bottom-color: var(--hair); box-shadow: none; position: relative; z-index: 2; }
+.flow-head h1, .flow-head [class*="flow-title"] { font-family: var(--f-display); font-weight: 800; font-size: var(--s22); letter-spacing: 0.03em; text-transform: uppercase; }
 
-.chrome-foot > .action-bar { background: linear-gradient(0deg, var(--ink-1) 0%, color-mix(in srgb, var(--ink-2) 60%, var(--ink-1)) 100%); box-shadow: var(--lift-edge), 0 -10px 24px color-mix(in srgb, var(--black) 40%, transparent); }
+.chrome-foot > .action-bar { background: var(--ink-1); box-shadow: 0 -1px 0 var(--hair); }
 
-.btn-secondary, .btn-quiet { background: var(--surface-1); box-shadow: var(--lift-edge), 0 3px 0 var(--ink-deep); }
-.btn-primary { background-image: linear-gradient(180deg, var(--act-hi) 0%, var(--act) 58%, var(--act-lo) 100%); box-shadow: 0 4px 0 var(--button-base), 0 10px 22px color-mix(in srgb, var(--act) 24%, transparent), inset 0 1px 0 var(--act-text); }
-.btn-primary:active:not(:disabled) { box-shadow: 0 0 0 var(--button-base), inset 0 2px 5px color-mix(in srgb, var(--button-base) 55%, transparent); }
+.btn-secondary, .btn-quiet { background: var(--ink-1); }
+.btn-primary { background-image: none; box-shadow: none; }
+@media (hover: hover) { .btn-primary:hover:not(:disabled) { background: var(--act-hi); } }
 
 /* Every section head: the title face at a size that reads as a head, then a rule out to the count or action. */
 .chip:is(.chip-neutral, .chip-amber, .chip-blue) { background: var(--surface-1); box-shadow: var(--lift-edge); }
@@ -119,16 +119,16 @@
    component's own class so it wins over the screen files without !important. */
 
 /* A sheet sits above the ground on a darker floor, so the cards on it are raised, not navy on navy. */
-.sheet { background: linear-gradient(180deg, color-mix(in srgb, var(--ink-1) 72%, var(--ink-0)) 0%, var(--ink-0) 100%); }
-.sheet .sheet-head { background: var(--surface-1); box-shadow: var(--lift-edge), 0 6px 14px color-mix(in srgb, var(--black) 30%, transparent); position: relative; z-index: 1; }
-.sheet .sheet-title { font-family: var(--f-title); }
-.sheet .sheet-foot { background: linear-gradient(0deg, var(--ink-0), color-mix(in srgb, var(--ink-1) 70%, var(--ink-0))); box-shadow: var(--lift-edge), 0 -10px 22px color-mix(in srgb, var(--black) 40%, transparent); }
+.sheet { background: var(--ink-0); }
+.sheet .sheet-head { background: var(--ink-1); box-shadow: 0 1px 0 var(--hair); position: relative; z-index: 1; }
+.sheet .sheet-title { font-family: var(--f-display); font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+.sheet .sheet-foot { background: var(--ink-1); box-shadow: 0 -1px 0 var(--hair); }
 
 /* Section heads inside sheets, and the course groups: the title face with a rule out to the edge. */
 .sheet :is(.room-label, .contract-label, .profile-head, .picker-label, .units-head, .store-detail-section > h3),
 h3.course-group-label { display: flex; align-items: center; gap: var(--sp2); margin: 0 0 var(--sp1); color: var(--t1); font: 600 var(--s18)/1.15 var(--f-title); letter-spacing: .01em; text-transform: none; }
 .sheet :is(.room-label, .contract-label, .profile-head, .picker-label, .units-head, .store-detail-section > h3)::after,
-h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width: 12px; height: 1px; background: linear-gradient(90deg, var(--hair-2), transparent); }
+h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width: 12px; height: 1px; background: var(--hair); }
 .sheet :is(.room-label, .contract-label, .profile-head, .picker-label) .icon { color: var(--act-text); }
 .sheet .picker-label small { order: 0; font: 400 var(--s14)/1.2 var(--f-ui); color: var(--t2); }
 .course-group-label > span { order: 2; }
@@ -146,10 +146,10 @@ h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width:
 
 /* The review sheet: each outcome is its own card with a stripe in its tone, the lead picker is a well. */
 .sheet.operation-action-sheet .outcome-options { gap: var(--sp2); }
-.sheet.operation-action-sheet .outcome-option { padding: var(--sp3); border: 1px solid var(--hair-2); border-left: 3px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
-.sheet.operation-action-sheet .outcome-favorable { border-left-color: var(--good); }
-.sheet.operation-action-sheet .outcome-mixed { border-left-color: var(--warn); }
-.sheet.operation-action-sheet .outcome-adverse { border-left-color: var(--harm); }
+.sheet.operation-action-sheet .outcome-option { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.sheet.operation-action-sheet .outcome-favorable { border-color: var(--good-edge); background: var(--good-soft); }
+.sheet.operation-action-sheet .outcome-mixed { border-color: var(--hair-2); }
+.sheet.operation-action-sheet .outcome-adverse { border-color: var(--live-edge); background: var(--live-soft); }
 .sheet.operation-action-sheet .outcome-option p { margin-top: var(--sp2); }
 .sheet.operation-action-sheet .operation-time-range, .sheet.operation-action-sheet .operation-note { font-size: var(--s14); color: var(--t2); }
 .sheet.operation-action-sheet .lead-picker { gap: var(--sp2); padding: var(--sp3); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); }
@@ -173,12 +173,12 @@ h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width:
 .card > .empty, .card .empty-compact { border: 0; box-shadow: none; background: none; padding-inline: 0; }
 
 /* Toasts are raised and lit like every other thing you read, with the tone on the left edge. */
-.toast { border-radius: var(--r2); border-color: var(--hair-2); border-left-width: 4px; background: var(--surface-2); box-shadow: var(--lift-2); }
-.toast-body strong { font-family: var(--f-title); font-weight: 600; font-size: var(--s18); letter-spacing: .01em; }
+.toast { border-radius: var(--r2); border-color: var(--hair-2); background: var(--ink-2); box-shadow: var(--lift-2); }
+.toast-body strong { font-family: var(--f-display); font-weight: 700; font-size: var(--s18); letter-spacing: .03em; text-transform: uppercase; }
 .toast-line { color: var(--t2); }
-.toast-ok { border-left-color: var(--good); }
-.toast-error { border-left-color: var(--harm); }
-.toast-amber { border-left-color: var(--warn); }
+.toast-ok { border-color: var(--good-edge); background: var(--good-soft); }
+.toast-error { border-color: var(--live-edge); background: var(--live-soft); }
+.toast-amber { border-color: var(--hair-2); }
 
 /* Meta text that still carries a decision reads at 14px. */
 .chip:is(.chip-mint, .chip-good, .chip-warn), .sheet .chip, .course-tile .chip, .store-tile .chip { font-size: var(--s14); }
@@ -193,8 +193,8 @@ h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width:
 .first-run-kicker { color: var(--act-text); }
 .first-run-themes { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
 .first-run-themes li::before { background: var(--act); }
-.first-run-note { border-left-color: var(--act); background: var(--surface-well); box-shadow: var(--well); }
-.first-run-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: var(--sp3) var(--gutter) calc(var(--sp3) + env(safe-area-inset-bottom)); background: linear-gradient(0deg, var(--ink-0), color-mix(in srgb, var(--ink-1) 60%, var(--ink-0))); box-shadow: var(--lift-edge), 0 -10px 24px color-mix(in srgb, var(--black) 40%, transparent); }
+.first-run-note { border-color: var(--live-edge); background: var(--live-soft); box-shadow: none; }
+.first-run-actions { position: sticky; bottom: calc(-1 * (var(--sp5) + env(safe-area-inset-bottom))); z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: var(--sp3) var(--gutter) calc(var(--sp3) + env(safe-area-inset-bottom)); background: var(--ink-1); box-shadow: 0 -1px 0 var(--hair); }
 
 /* At 320 a two-column skill list has no room for "Communication" beside its number; it reads as one column. */
 @container game (max-width: 359px) { .sheet .rating-bars { grid-template-columns: minmax(0, 1fr); } }

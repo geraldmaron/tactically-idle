@@ -1,0 +1,5 @@
+/* The head of a tab that has no screen of its own yet (HQ, Store): a display title and, for HQ, the
+   section rail beneath it. Colours come from theme.css tokens. */
+.shell-head { display: grid; gap: var(--sp2); padding: var(--sp3) var(--gutter) 0; }
+.shell-title { margin: 0; font: 800 var(--s28)/1 var(--f-display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--t1); }
+.shell-head > .choice-rail { min-width: 0; }
