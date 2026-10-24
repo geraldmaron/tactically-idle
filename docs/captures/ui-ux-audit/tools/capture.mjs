@@ -11,6 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { CAMPAIGN_SEED, FIXED_TIME, HEIGHTS, INSET_FIXTURES, PROBE_CFG, WIDTHS, stateIds, STATES } from '../../../../scripts/ui-gates/manifest.mjs';
+import { emptyBoard, installTickHold, restoreBoard, seedLongNames } from '../../../../scripts/ui-gates/edge-states.mjs';
 import { probe } from '../../../../scripts/ui-gates/probe.mjs';
 import { measurePainted } from '../../../../scripts/ui-gates/png.mjs';
 
@@ -56,6 +57,7 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
       const cdp = await context.newCDPSession(page);
       const setInsets = (i) => cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: i });
       await page.clock.setFixedTime(new Date(FIXED_TIME));
+      await installTickHold(page);
       page.on('dialog', (d) => d.accept());
       const errors = []; page.on('pageerror', (e) => errors.push(String(e)));
       const dir = outDir ? path.join(outDir, String(width)) : null;
@@ -133,7 +135,11 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
       await step('arrange', async () => { const b = page.getByRole('button', { name: /Arrange/ }).first(); await b.click(); await shot('07-arrange-sheet', { segments: 2 }); await closeSheet(); });
       await step('hire', async () => { await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Hire', exact: true }).click(); await shot('08-hire', { segments: 2 }); const b = page.getByRole('button', { name: /Review hire/ }).first(); await b.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
         await shot('08-recruit-card', { segments: 1 }); await b.click(); await shot('08-hire-contract-sheet', { segments: 2 }); await closeSheet(); });
-      await step('training', async () => { await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Training', exact: true }).click(); await shot('09-training', { segments: 3 }); });
+      await step('training', async () => { await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Training', exact: true }).click(); await shot('09-training', { segments: 3 });
+        // The chooser and its review open from a course and are closed unconfirmed, so no fee is spent.
+        await page.getByRole('button', { name: /^Choose officer for/ }).first().click(); await page.locator('.sheet.training-chooser').waitFor(); await shot('09-training-chooser-sheet', { segments: 3 });
+        await page.locator('.sheet.training-chooser').getByRole('button', { name: /^Select / }).first().click(); await page.getByRole('button', { name: /^Enrol / }).waitFor(); await shot('09-training-review-sheet', { segments: 2 });
+        await closeSheet(); if (await page.locator('.sheet').count()) await closeSheet(); });
       await step('develop', async () => { await tab('Build'); await shot('10-develop', { segments: 6 }); });
       await step('develop-sheet', async () => { await page.locator('.room-list [data-room]').first().click(); await shot('11-develop-sheet', { segments: 2 }); await closeSheet(); });
       await step('gear', async () => { await tab('Store'); await page.locator('.store-screen-head').waitFor(); await shot('12-store', { segments: 6 });
@@ -225,6 +231,17 @@ export async function walk({ repo, baseURL, widths = WIDTHS, outDir = null, onFr
           await page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
         }
         await closeSheet(); });
+      // Squad names at the 20-character limit across the three places they appear, then the board with no call on it.
+      await step('long-names', async () => {
+        await seedLongNames(page);
+        await tab('HQ'); await shot('32-long-names-hq', { segments: 5 });
+        await tab('Team'); await teamSection('SWAT'); await page.locator('.team-page [aria-label="SWAT sections"]').getByRole('button', { name: 'Squads', exact: true }).click(); await shot('32-long-names-squads', { segments: 4 });
+        await tab('Calls'); await page.locator('.cl-card').first().waitFor(); await page.locator('.cl-card-button').first().click(); await page.locator('.cl-flow-body[data-step="brief"]').waitFor();
+        await page.getByRole('button', { name: 'Choose team', exact: true }).click(); await page.locator('.cl-flow-body[data-step="deploy"]').waitFor(); await shot('32-long-names-deploy', { segments: 4 }); });
+      await step('empty-board', async () => {
+        // Back out of the deploy flow (Deploy, then Brief) to the board.
+        for (let n = 0; n < 3 && await page.locator('.flow-back').count(); n++) { await page.locator('.flow-back').click(); await page.waitForTimeout(250); }
+        await page.locator('.cl-board-count').waitFor(); await emptyBoard(page); await shot('33-empty-board', { segments: 2 }); await restoreBoard(page); });
       await context.close();
     }
   } finally {

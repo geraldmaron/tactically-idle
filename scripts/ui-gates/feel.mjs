@@ -48,6 +48,19 @@ export const FEEL_SCREENS = {
   deploy: { primary: [{ css: 'button', name: '^Deploy( [A-Z]|$)' }], blockReason: '.prepcheck .note-warn, [data-blocked-reason]', plates: true },
   live: { primary: [{ css: '.call-grid .callbtn:not(.callbtn-off)' }], essential: 'choices', plates: true },
   debrief: { primary: [{ css: 'button', name: '^Next call$' }], plates: true },
+  // Surfaces the slice walk did not reach (gates coverage lane, 2026-10-23): measured, enforced nowhere until
+  // FEEL_ON names a rule for them. `primary: null` says the screen promises no single primary action, so F1
+  // does not look for one; a screen that gains one lists it here in the same change that adds `data-primary`.
+  'team-swat': { primary: null, plates: true },
+  'team-roster': { primary: null, plates: true },
+  'team-hire': { primary: [{ css: 'button', name: '^Review hire' }], plates: true },
+  'team-training': { primary: [{ css: '.btn-primary', name: '^Choose officer for' }], plates: true },
+  'team-patrol': { primary: [{ css: 'button', name: '^Hire patrol$' }], plates: true },
+  'team-command': { primary: null, plates: true },
+  build: { primary: null, plates: true },
+  store: { primary: null, plates: true },
+  'store-boosts': { primary: [{ css: 'button', name: '^Review grant' }], plates: true },
+  'board-empty': { primary: null, plates: true },
 };
 
 /**
@@ -59,6 +72,7 @@ export const FEEL_SCREENS = {
 export const FEEL_ON = {
   hq: ['*', 'F7.list', 'F7.marker', 'F8.pill'], board: ['*'], brief: ['*'], deploy: ['*'], live: ['*'], debrief: ['*'],
   'team-patrol': [], 'team-command': [],
+  'team-swat': [], 'team-roster': [], 'team-hire': [], 'team-training': [], build: [], store: [], 'store-boosts': [], 'board-empty': [],
   path: ['F6.taps'],
 };
 
@@ -107,7 +121,7 @@ export async function feelProbe(cfg) {
       if (!hit || !(el === hit || el.contains(hit))) { coveredBy = hit ? describe(hit) : 'nothing'; break; }
     }
     out.primary = { found: true, via, label: nameOf(el).slice(0, 40), top: Math.round(r.top), bottom: Math.round(r.bottom), inside, coveredBy, disabled: isDisabled(el) || cs(el).pointerEvents === 'none' };
-  } else out.primary = { found: false };
+  } else out.primary = { found: false, none: screen.primary === null };
   out.vh = vh;
   // The live call's shortcut to its choices: on a short screen the 4B order and the full hook leave no
   // room for the first choice, so a visible, unobscured, enabled shortcut is how the choice is reached.
@@ -200,6 +214,7 @@ export async function feelProbe(cfg) {
  * focused. `jumpResult` is what exerciseJump(page) saw when the walk actually tapped it.
  */
 export function judgePrimary(p, { jump, shortcut = false, jumpResult = null } = {}) {
+  if (p?.none) return [];
   if (!p?.found) return [{ rule: 'F1.primary', id: 'primary', detail: 'no primary action found on the screen' }];
   const why = [];
   if (!p.inside) why.push(p.top < 0 ? `starts above the viewport (${p.top}px)` : `ends at ${p.bottom}px, below the first viewport`);

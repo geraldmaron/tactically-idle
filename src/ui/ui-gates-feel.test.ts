@@ -1,8 +1,11 @@
 // Unit tests for the layout gates' logic on fixture boxes (scripts/ui-gates/feel-layout.mjs): each rule
 // passes the good shape and fails the bad one, so a detector cannot go blind without a test failing.
 import { describe, expect, it } from 'vitest';
-import { judgeLists, judgeMarkers, judgePills, rowOverlaps } from '../../scripts/ui-gates/feel-layout.mjs';
-import { enforced } from '../../scripts/ui-gates/feel.mjs';
+import { LAYOUT_REGISTRY, LAYOUT_SCREENS, judgeLists, judgeMarkers, judgePills, rowOverlaps } from '../../scripts/ui-gates/feel-layout.mjs';
+import { FEEL_ON, FEEL_SCREENS, enforced, judgePrimary } from '../../scripts/ui-gates/feel.mjs';
+import { LONG_SQUAD_NAMES } from '../../scripts/ui-gates/edge-states.mjs';
+import { STATES, stateIds } from '../../scripts/ui-gates/manifest.mjs';
+import { ROSTER_TUNING } from '../sim/roster';
 
 const stacked = [{ label: 'Alpha', top: 0, bottom: 72 }, { label: 'Bravo', top: 72, bottom: 144 }, { label: 'Charlie', top: 144, bottom: 216 }];
 const twoUp = [{ label: 'Alpha', top: 0, bottom: 180 }, { label: 'Bravo', top: 0, bottom: 180 }, { label: 'Charlie', top: 188, bottom: 368 }];
@@ -69,5 +72,32 @@ describe('the layout rules are opt-in', () => {
     expect(enforced('F8.pill', 'hq', { hq: ['*'] })).toBe(false);
     expect(enforced('F8.pill', 'hq', { hq: ['F8.pill'] })).toBe(true);
     expect(enforced('F1.primary', 'hq', { hq: ['*'] })).toBe(true);
+  });
+});
+
+describe('the coverage registries agree with each other', () => {
+  const screens = Object.keys(FEEL_SCREENS);
+  it('every screen the layout registry names is a feel screen with a FEEL_ON entry', () => {
+    for (const entry of LAYOUT_REGISTRY) {
+      expect(screens, `${entry.key}: ${entry.screen} is not in FEEL_SCREENS`).toContain(entry.screen);
+      expect(LAYOUT_SCREENS, `${entry.key}: ${entry.screen} is not in LAYOUT_SCREENS`).toContain(entry.screen);
+    }
+    for (const screen of screens) expect(Object.keys(FEEL_ON), `${screen} has no FEEL_ON entry`).toContain(screen);
+  });
+  it('registers each state once, and the edge states the walk seeds', () => {
+    expect(new Set(stateIds()).size).toBe(stateIds().length);
+    for (const id of ['09-training-chooser-sheet', '09-training-review-sheet', '32-long-names-hq', '32-long-names-squads', '32-long-names-deploy', '33-empty-board']) {
+      expect(STATES.map((s) => s.id)).toContain(id);
+    }
+  });
+  it('the long squad names are the longest the roster accepts', () => {
+    for (const name of LONG_SQUAD_NAMES) expect(name).toHaveLength(ROSTER_TUNING.nameMax);
+  });
+});
+
+describe('F1.primary: a screen that promises no primary action', () => {
+  it('passes `primary: null` and still fails a listed primary that is missing', () => {
+    expect(judgePrimary({ found: false, none: true })).toEqual([]);
+    expect(judgePrimary({ found: false, none: false })).toHaveLength(1);
   });
 });

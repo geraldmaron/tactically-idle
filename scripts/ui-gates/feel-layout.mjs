@@ -7,7 +7,8 @@
 // passes them lands. The page-side probe measures; the verdicts below judge boxes, so unit tests can
 // feed them fixtures (src/ui/ui-gates-feel.test.ts).
 
-/** Surfaces that must carry a marked list when they have two or more items. `screen` is the walk's name for it. */
+/** Surfaces that must carry a marked list when they have two or more items. `screen` is the walk's name for it.
+ * `multi: true` lets the items sit in several marked lists (a screen that groups them under headings). */
 export const LAYOUT_REGISTRY = [
   { key: 'hq-squads', screen: 'hq', label: 'HQ squads', items: '.hq-duty' },
   { key: 'hq-patrol', screen: 'hq', label: 'HQ patrol', items: '.hq-patrol-lines > div' },
@@ -15,6 +16,17 @@ export const LAYOUT_REGISTRY = [
   { key: 'team-patrol', screen: 'team-patrol', label: 'the Patrol roster', items: '.patrol-roster > *' },
   { key: 'calls-board', screen: 'board', label: 'the Calls board', items: '.cl-board-list .cl-card' },
   { key: 'deploy-squads', screen: 'deploy', label: 'the deploy squads', items: '.cl-squads > *' },
+  { key: 'team-swat-squads', screen: 'team-swat', label: 'the SWAT squad panels', items: '.squad-list > *' },
+  { key: 'team-roster-rows', screen: 'team-roster', label: 'the SWAT roster rows', items: '.officer-rows > *' },
+  { key: 'team-hire-candidates', screen: 'team-hire', label: 'the hire candidates', items: '.cand-list > *' },
+  { key: 'team-training-courses', screen: 'team-training', label: 'the training courses', items: '.course-grid > *', multi: true },
+  { key: 'build-rooms', screen: 'build', label: 'the Build rooms', items: '.room-list .room-card, .room-list .next-card' },
+  { key: 'store-equipment', screen: 'store', label: 'the Store equipment tiles', items: '.inv-grid > *', multi: true },
+  { key: 'store-boosts', screen: 'store-boosts', label: 'the Store boosts', items: '.patrol-boosts > *' },
+  // The brief's lists exist on the brief lane's branch (claude/ui-brief-b15dcc); until it merges they match nothing, a count of 0, which passes.
+  { key: 'brief-orders', screen: 'brief', label: 'the brief orders', items: '.pb-orders > *' },
+  { key: 'brief-faces', screen: 'brief', label: 'the brief faces', items: '.pb-faces ul > *' },
+  { key: 'brief-people', screen: 'brief', label: 'the brief people', items: '.pb-people > *' },
   { key: 'command-staff', screen: 'team-command', label: 'Command Staff', items: '.team-command .command-room-post, .team-command .staff-row' },
 ];
 
@@ -24,7 +36,7 @@ export const LAYOUT_EXEMPT = [
 ];
 
 /** Screens the layout probe runs on, in walk order: the registry's screens plus the ones that carry the bar. */
-export const LAYOUT_SCREENS = ['hq', 'board', 'team-patrol', 'team-command'];
+export const LAYOUT_SCREENS = ['hq', 'team-swat', 'team-roster', 'team-hire', 'team-training', 'team-patrol', 'team-command', 'build', 'store', 'store-boosts', 'board', 'brief', 'deploy'];
 
 /** The resource bar's numbers (contract item 5). */
 export const PILL_BUDGET = { height: 32, heightTol: 1, equalTol: 0.5, minPills: 3, iconWell: 24 };
@@ -101,8 +113,9 @@ export async function layoutProbe(cfg) {
     const lists = new Set(items.map((x) => x.closest('[data-ui-list]')));
     // Marked means one list holds them all and each of its direct children holds at most one: a wrapper
     // around an unmarked grid does not count, because the wrapper's single child is all the list gate sees.
-    const list = lists.size === 1 && !lists.has(null) ? [...lists][0] : null;
-    const oneEach = !!list && [...list.children].every((child) => items.filter((x) => child === x || child.contains(x)).length <= 1);
+    // `multi` entries (a surface that groups its items under headings) may spread them over several marked lists.
+    const spread = !lists.has(null) && (e.multi || lists.size === 1) ? [...lists] : [];
+    const oneEach = spread.length > 0 && spread.every((list) => [...list.children].every((child) => items.filter((x) => child === x || child.contains(x)).length <= 1));
     out.registry.push({ key: e.key, label: e.label, count: items.length, marked: items.length > 0 && oneEach });
   }
   if (cfg.pills) {

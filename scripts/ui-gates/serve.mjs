@@ -2,15 +2,20 @@
 //
 //   no URL given   start this worktree's own Vite dev server on a free port and stop it afterwards. It never
 //                  reuses a server already running, so a bare run cannot score another checkout's code.
+//                  Its dependency cache is a fresh temp directory (scripts/ui-gates/vite-server.mjs), not
+//                  node_modules/.vite: with that cache unwritable the server answers 504 for every optimized
+//                  dependency, the app never mounts and every walk step times out (backlog gate-server-beside-dev).
 //   a baseURL, or UI_GATES_URL
 //                  reuse that server only after proving it serves THIS worktree: the code files under src/ui
 //                  and src/sim (tracked or untracked, tests excluded) are fetched from it with
 //                  Vite's ?raw and compared byte for byte with the files on disk. Any difference refuses the run
 //                  and names the files, so a server on another checkout or another commit is turned away.
 import { execFileSync, spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 async function reachable(url) { try { return (await fetch(url)).ok; } catch { return false; } }
 
@@ -67,8 +72,23 @@ export async function serve({ root, given }) {
   }
   const port = await freePort();
   const url = `http://localhost:${port}/`;
-  const child = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { cwd: root, stdio: 'ignore', detached: false });
+  const cacheDir = mkdtempSync(path.join(tmpdir(), 'ti-gate-vite-'));
+  const script = fileURLToPath(new URL('./vite-server.mjs', import.meta.url));
+  // stdin is a pipe the parent holds: when the parent goes for any reason (Ctrl-C, a signal, SIGKILL) it closes,
+  // and vite-server.mjs shuts down and removes its cache. No signal handler is installed here, so the caller keeps
+  // its own.
+  const child = spawn(process.execPath, [script, root, String(port), cacheDir], { cwd: root, stdio: ['pipe', 'ignore', 'ignore'], detached: false });
+  let stopped = false;
+  const onExit = () => stop();
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    process.off('exit', onExit);
+    child.kill();
+    rmSync(cacheDir, { recursive: true, force: true });
+  };
+  process.on('exit', onExit);
   for (let i = 0; i < 60 && !(await reachable(url)); i++) await new Promise((r) => setTimeout(r, 500));
-  if (!(await reachable(url))) { child.kill(); throw new Error(`could not start a dev server on port ${port}`); }
-  return { url, stop: () => child.kill() };
+  if (!(await reachable(url))) { stop(); throw new Error(`could not start a dev server on port ${port}`); }
+  return { url, stop };
 }

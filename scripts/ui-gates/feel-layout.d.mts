@@ -1,7 +1,7 @@
 export interface Box { label: string; top: number; bottom: number }
 export interface Finding { rule: string; id: string; detail: string }
 export interface PillBar { pills: { id: string; h: number; fontSize: string; fontWeight: string; images?: { w: number; h: number; wellW?: number | null; wellH?: number | null }[] }[]; menu: { h: number } | null }
-export const LAYOUT_REGISTRY: { key: string; screen: string; label: string; items: string }[];
+export const LAYOUT_REGISTRY: { key: string; screen: string; label: string; items: string; multi?: boolean }[];
 export const LAYOUT_EXEMPT: { key: string; label: string; container: string; reason: string }[];
 export const LAYOUT_SCREENS: string[];
 export const PILL_BUDGET: { height: number; heightTol: number; equalTol: number; minPills: number; iconWell: number };
