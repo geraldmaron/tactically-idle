@@ -123,25 +123,34 @@ describe('campaign identities and succession', () => {
       }
       expect(seen).toEqual(reserveIds);
       expect(s.personnel!.employedIdentityIds).toHaveLength(PERSONAS.length - patrolIds.size);
-      for (let n = 0; n < 5; n++) {
+      // Inside the seven game day cooldown nobody who has served is on offer.
+      for (let n = 0; n < 2; n++) {
         fillCandidates(s, T0 + n * 4 * HOUR, candidatePoolSize(s));
         expect(s.candidates).toHaveLength(0);
         expect(s.candidates.some((candidate) => patrolIds.has(candidate.officer.identityId!))).toBe(false);
       }
       expect(recruitmentStatus(s, T0).exhausted).toBe(true);
+      // After it, the dismissed can be hired back, only as the returning officer and never as a first-seen build.
+      fillCandidates(s, T0 + 8 * HOUR, candidatePoolSize(s));
+      expect(s.candidates.length).toBeGreaterThan(0);
+      expect(s.candidates.every((candidate) => candidate.id.startsWith('cand_rehire_'))).toBe(true);
+      expect(s.candidates.some((candidate) => patrolIds.has(candidate.officer.identityId!))).toBe(false);
     }
   });
-  it('does not return a dismissed identity even after save and reload', () => {
+  it('does not return a dismissed identity inside the cooldown, even after save and reload, and brings them back only as the returning officer', () => {
     let s = createInitialState(T0, 10);
     const c = s.candidates[0];
     let r = dispatch(s, { type: 'hire', candidateId: c.id }, { now: T0 });
     expect(r.result.ok).toBe(true); s = r.state;
     r = dispatch(s, { type: 'dismiss', officerId: c.officer.id }, { now: T0 });
     expect(r.result.ok).toBe(true); s = deserialize(serialize(r.state, T0))!;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 2; i++) {
       fillCandidates(s, T0 + i * 4 * HOUR, candidatePoolSize(s));
       expect(s.candidates.some((x) => x.officer.identityId === c.officer.identityId)).toBe(false);
     }
+    fillCandidates(s, T0 + 8 * HOUR, candidatePoolSize(s));
+    const back = s.candidates.filter((x) => x.officer.identityId === c.officer.identityId);
+    expect(back.map((x) => x.id)).toEqual([`cand_rehire_${c.officer.id}`]);
   });
   it('replenishes an aged recruitment cohort with new people at their authored introduction ages', () => {
     const s = createInitialState(T0, 20);
