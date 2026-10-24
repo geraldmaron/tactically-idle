@@ -20,6 +20,9 @@
 import type { FactKind, TieKind } from '../../sim/people/types';
 import type { DistrictId } from '../../sim/world/types';
 import { PERSONA_BY_ID } from '../personas';
+import { AUTHORED_B } from './jackets-b';
+import { AUTHORED_C } from './jackets-c';
+import { AUTHORED_D } from './jackets-d';
 
 export type VoiceLength = 'short' | 'medium';
 export type NoticesFirst = 'exits' | 'hands' | 'sound' | 'time' | 'gear' | 'words' | 'faces' | 'light' | 'count';
@@ -188,7 +191,7 @@ const AUTHORED: Jacket[] = [
   },
 ];
 
-export const JACKETS: Readonly<Record<string, Jacket>> = Object.fromEntries(AUTHORED.map((j) => [j.personaId, j]));
+export const JACKETS: Readonly<Record<string, Jacket>> = Object.fromEntries([...AUTHORED, ...AUTHORED_B, ...AUTHORED_C, ...AUTHORED_D].map((j) => [j.personaId, j]));
 
 /** The template path for every persona without an authored jacket: page 1 is the persona's own note and
  * nothing is invented. No markers, no radio sample (in-call lines stay neutral), no contradiction, no
