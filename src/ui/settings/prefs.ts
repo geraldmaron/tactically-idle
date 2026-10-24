@@ -28,6 +28,9 @@ export interface PlayerSettings {
   flashing: boolean;
   /** Set once the player has read the launch advisory and continued. */
   firstRunDone: boolean;
+  /** Officers' lives off the clock (bond scenes, romance) shown on screen. Off hides them; play is the same
+   * (docs/world-redesign.md, "Bonds"). */
+  personalLives: boolean;
 }
 
 export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
@@ -37,6 +40,7 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   sound: true,
   flashing: true,
   firstRunDone: false,
+  personalLives: true,
 });
 
 /** The value chosen on this page when storage refused it; null while storage holds the choice. */
@@ -62,6 +66,7 @@ export function parseSettings(raw: string | null): PlayerSettings {
     sound: data.sound !== false,
     flashing: data.flashing !== false,
     firstRunDone: data.firstRunDone === true,
+    personalLives: data.personalLives !== false,
   };
 }
 
