@@ -780,8 +780,28 @@ build after `save-migrations` ships, each prelaunch build upgrades the previous 
 chosen wrapper, and an upgrade and a recovery shown on a real phone are recorded as a launch gate before
 `store-wrap` or `real-purchases` ships. External playtests are told saves may reset.
 
+## World redesign
+
+### world-slice: One district chapter of the world, crime and officers redesign
+Tags: job=return; journeys=offline-settles, answer-a-call, officer-promotes, save-round-trip; probes=none (design gate, lanes name probes when they split it); lane=lead
+Needs: start=none (the owner reads the canvas first); integrate=none; ship=none
+
+The target design is `docs/world-redesign.md` and its canvas. Build one district chapter before widening:
+Pike Street, one street crew with a full ladder, one squad of four with authored jackets and two arc packs,
+one investigation ending in a warrant, and a first return that shows a witnessed memory coming back. Order
+and controls are in the doc's "Delivery" section; the lead splits this into lane items after the owner's read.
+
+Done: on the dev server at 390 x 844, a new campaign plays the cold open, a scripted first contact closes a
+case, a proactive shift produces a lead, the lead becomes a warrant call that casts the known subject and an
+officer's tie, the debrief writes a memory, and the next return shows that memory. A campaign simulation
+confirms net stays positive with no calls at each stage and that net falls as crime rises.
+
 ## Owner decisions
 
+- **World redesign** (`docs/world-redesign.md`): read the canvas; then decide how far tactical unlocks move
+  from funding to service, whether romance ships under its controls and the personal-lives default, the
+  alumni hall across saves, prices and the ad-free launch, the night-city visual direction for management
+  screens, and the tab change to City, Operations, Team, HQ, Store.
 - **Death endings:** a human read of Going Live's `manager_killed` and `manager_killed_rider_hurt`.
 - **Content note and 988 line wording** for the hostage and barricade calls: a session drafts it
   (`crisis-content-note`) and the owner approves it before anything ships.
@@ -795,7 +815,7 @@ chosen wrapper, and an upgrade and a recovery shown on a real phone are recorded
 - **Barricade on apartments:** with the child in a bedroom, `apartment_unit_g2` hosts the barricade
   on 22 of 30 seeds (the rest are rejected because the first room off the bedroom is the living
   room). This bears on the existing barricade building-family decision above.
-- **Later scope:** districts, career stories, simultaneous tactical incidents.
+- **Later scope:** simultaneous tactical incidents. Districts and career stories are now the world redesign (`world-slice`).
 - **The older call-content questions above** (death endings, the 988 note, E12, the barricade family, the
   review line, the hostage review calls) predate the Going Live rebuild: the lead re-triages them after
   Going Live's prose lands, drops what the rebuild made moot, and brings the rest with drafts to read

@@ -1,14 +1,16 @@
 # Tactically Idle game and first playable plan
 
-**Status:** Target design revised 2026-10-22. The NPC patrol economy and the dedicated Store are built (df9a3e9, 2026-10-22); the five tabs are HQ, Calls, Team, Build and Store. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
+**Status:** Target design revised 2026-10-24 by the [world, crime and officers redesign](docs/world-redesign.md) (canvas: https://claude.ai/artifact/6kwXCJp2vknqx7xfrrEKoz), challenged by Codex astra and sol and pending the owner's read. Not built. What is built today: the NPC patrol economy and the Store (df9a3e9, 2026-10-22) behind five tabs, HQ, Calls, Team, Build and Store. Work still to do and owner decisions live only in [docs/backlog.md](docs/backlog.md).
 
-**Created:** October 1, 2026. **Updated:** October 22, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
+**Created:** October 1, 2026. **Updated:** October 24, 2026, America/New_York. **Prepared by:** Codex from the user's game concept, approved image, and public Reddit discussions. **Audience:** The owner and future design, art, and engineering contributors.
 
 ## Game overview
 
 Tactically Idle is a portrait mobile department-management game with an idle economy and short branching tactical operations. The player hires officers, develops capabilities, prepares squads and makes decisions on a generated blueprint. Experience, stress, resource use and public trust return to the department.
 
-The current visual direction is a working department at blue hour: deep blue surfaces, warm interior light, ivory text, amber actions, mint funding, expressive portraits and substantial controls. It supersedes earlier aesthetic restrictions where they conflict. The blueprint remains interactive and driven by operation data. Repeat-play and recovery questions are tracked with playtests in [docs/backlog.md](docs/backlog.md).
+The target design (2026-10-24) makes it a city that keeps living while the player is away, told through the people who police it. Districts carry a crime rate and the crews working them. Patrol coverage pays the bills and meets the city's people, opening cases priced by crew type and tier and paid once per investigation on any lawful resolution. SWAT proactive shifts turn up leads on lieutenants and crew heads, who are only taken on a warrant. Officers keep one canonical record for their whole career, with a service jacket that opens in pages, memories, imprints that can settle into traits after a visible fork, readable bond states (romance at parity with close friendship), and ties to people in the city. Calls cast from the world and write back to it. Details, numbers and the challenge record: [docs/world-redesign.md](docs/world-redesign.md).
+
+The current visual direction is a working department at blue hour: deep blue surfaces, warm interior light, ivory text, amber actions, mint funding, expressive portraits and substantial controls. It supersedes earlier aesthetic restrictions where they conflict. The redesign canvas proposes a night-city direction for management screens (near-black ground, signal red-orange for live work and primary actions, cyan for intel and patrol, rose for people, condensed display type, mono radio text, ivory paper for dossiers and jackets) while keeping the approved blueprint for calls; owner decision. The blueprint remains interactive and driven by operation data. Repeat-play and recovery questions are tracked with playtests in [docs/backlog.md](docs/backlog.md).
 
 The owner removed tapping from the target design on 2026-10-22. A separately staffed NPC Patrol division replaces it and replaces SWAT's routine revenue patrol. SWAT keeps signing costs and wages; “free” meant available between calls. The detailed economy, progression, Store navigation and adversarial controls are in [Patrol workforce and Store redesign](docs/patrol-work.md). Call writing and branching outcomes remain outside this redesign.
 
@@ -83,6 +85,18 @@ Use five labeled destinations on management screens. Live calls retain focused n
 | Build | Choose facilities, capabilities and authorized staffing capacity. | Illustrated objects with prerequisites and progression. |
 | Store | Buy equipment, usable boosts and available real-money offers. | Persistent rightmost tab, clear currencies, ownership and confirmed purchases. |
 
+Target navigation (2026-10-24, pending the owner's read):
+
+| Destination | Primary job |
+| --- | --- |
+| City | Living map with a text list beside it: districts, crime, patrol coverage, the radio, funding. Home. |
+| Operations | Now (live calls, warrants ready), Investigations (crew ladders, dossiers, leads), Archive. |
+| Team | SWAT, Patrol and Command; service jackets, bond states, alumni. |
+| HQ | Facilities, training, gear and loadouts, department policy. |
+| Store | A finite lifetime catalog and cosmetics, ownership and restore. Real prices only here. |
+
+An active call is a focused mode with one Resume entry in management; back from a call returns to management and never abandons it.
+
 The live portrait strip displays the deployed squad, and the blueprint shows its position and physical moves. Decision buttons retain the illustrated icon, short action title, compact eligibility/consequence line, amber selection treatment, and dark secondary alternative. Expanded detail is available on selection before confirmation.
 
 Essential actions must work by touch without hover. The touch-target design minimum is 44 logical pixels. Provide room selection/zoom and a text alternative to spatial information. Use the marker lettering for brief annotations, not all body text.
@@ -98,6 +112,8 @@ Essential actions must work by touch without hover. The touch-target design mini
 7. **Debrief:** See objective results, civilian and officer outcomes, supplies used, stress, and the reasons behind them.
 8. **Develop:** Apply rewards and rotate or train the next squad.
 
+In the target design the loop runs through the city: return to a report that leads with people (at most three items and one suggested move), set patrol coverage and an optional SWAT proactive shift, follow a lead up a crew's ladder, serve a warrant or answer a live call, then look after the officers it changed. The first session opens on a call within 90 seconds, then a scripted first contact that closes a real case; the lifecycle journeys from store listing to leaving are in [docs/world-redesign.md](docs/world-redesign.md#lifecycle-jobs-journeys-and-surfaces).
+
 Session design targets: a quick management visit around one minute, and an operation session around three to five minutes. These are usability hypotheses. Today closing the app between decisions pauses the operation. Under the proposed [call pressure](docs/call-pressure.md) design, real time on an open decision with a threat becomes game minutes, at home or away, unless the player sets the timer to Off. One open decision can land at most its own threat, so an interruption never ends a call.
 
 ## Department economy and offline simulation
@@ -105,6 +121,8 @@ Session design targets: a quick management visit around one minute, and an opera
 Begin with funding and public trust. Funding pays wages, purchases and development; each development can instead be granted free at a milestone (department level, calls resolved or trust). Trust is a standing that affects opportunities, not a spendable currency. There are no development points (removed 2026-10-20).
 
 Funding comes from a base department allocation and a separate NPC patrol workforce. Routine service funding reflects staffed coverage, not arrests, tickets or casualties. NPC hires have onboarding costs, wages and operating costs. Their grades advance through eligible service hours, not money earned; department-level staffing ceilings cannot be purchased past with NPC income. SWAT's routine patrol income and tapping are retired in this target design. SWAT standby, rest, training and deliberate instructor details remain. See [the revised budget and boost contract](docs/patrol-work.md).
+
+Target economy (2026-10-24): patrol pays the bills and calls move the department. City allocation rises as the city calms (`base × clamp(1 + (50 − city crime) / 100, 0.8, 1.25)`). Patrol meets people at a flat 0.15 contacts per unit-hour, so crime never raises income. A case award is paid once per unique investigation on any lawful resolution (charge, diversion, handover into care, justified release or cleared allegation), priced by crew archetype and tier and never by a person's condition: 100, 600, 2,400 and 8,000 for a street crew's four tiers, with call fees of 800 to 6,400. A service-earned funding scale (×1, ×2, ×3) multiplies awards and fees. Tiers 3 and 4 are only taken on a warrant. SWAT proactive shifts pay 200 × scale per squad-hour plus casework and leads, cost 2 stress an hour and stop before Overloaded. Modeled net is 811, 3,285 and 5,963 an hour at day 1, week 2 and month 2, positive with no calls at every stage. The free offline window becomes 72 hours. These are design inputs awaiting a campaign simulation; the model and both Codex challenges are in [docs/world-redesign.md](docs/world-redesign.md#earnings). Funding, purchases and boosts never enter a roll, and the redesign proposes moving tactical unlocks from funding to service milestones (owner decision).
 
 The revised proposed starting budget preserves $620/hour net: $600 allocation plus four patrol staff at $210 gross each, less $180 patrol payroll, $60 patrol operations, $380 SWAT payroll and $200 fixed costs. These are balance inputs awaiting simulation. Funding is credited automatically; opening a report or watching an animation never grants it again.
 
@@ -139,6 +157,8 @@ Certifications open actions or qualify an officer for a role. Traits modify spec
 Recruitment presents a small pool with visible wages, signing cost, traits, skills, and certifications. Shortlisting preserves a candidate while the player compares. Refresh rules and targeting a missing role must be clear; avoid paid random officer pulls in the first release.
 
 Hiring requires capacity and an affordable projected budget. Dismissal previews severance, returns assigned equipment, releases future assignments, and cannot happen during deployment. Dismissing and rehiring an officer must not erase condition or generate free signing rewards.
+
+Target officer model (2026-10-24): one canonical person record through hire, dismissal, rehire after a cooldown, retirement and alumni life in the city. A service jacket written under `swat-officer-stories` opens in three pages as the player serves with the officer. Memory facts back every callback. Imprints carry a named cause and a real duration but no number, so stress stays the only figure on a roll; a visible telegraph and an aftercare fork (rest, peer support or pairing, each with a cost) come before any trait settles. Bonds have readable states (acquainted, trusted, close, mentor, tense, strained), about two active per officer. Romance has the same mechanics as a close bond, is started by the officers, never crosses supervision, and has no player lever; a setting keeps personal lives off screen with no effect on play. Officers may know people in the city; ties are always on the record, the knowing officer can still talk, and someone else makes the arrest. Specification: [docs/world-redesign.md](docs/world-redesign.md#officers).
 
 Training reserves the officer and course slot until completion. Department unlocks make courses available; completion grants the officer's skill or certification. Unlocking a course is not itself instant officer qualification. Team familiarity is tracked as unused call capability in [docs/backlog.md](docs/backlog.md) (`familiarity-priorities`).
 
@@ -264,7 +284,8 @@ These criteria describe the behavior under review, not a second work list or a c
 - Live events, attendance streaks, battle passes, and notifications that pull a player back into a call: can create obligations that interfere with testing voluntary return play.
 - Paid officer gacha, forced ads, or paid success boosts: would distort initial pacing and roster validation.
 - Unconstrained procedural buildings, image-first playable maps, or freeform generated scenario prose: the initial approach is authored layouts plus validated, data-driven variations.
-- Full prestige resets, permanent death and complex interpersonal drama are outside the current scope.
+- Full prestige resets and permanent death are outside the current scope. Interpersonal drama is in scope under the controls in [docs/world-redesign.md](docs/world-redesign.md#bonds) (2026-10-24 target design): bonds, ties and romance never carry a tactical premium over close friendship.
+- Ads at launch: the target design is ad-free with a finite lifetime catalog ([docs/world-redesign.md](docs/world-redesign.md#monetization)).
 - App-store release is outside the browser scope. Release decisions live in [docs/backlog.md](docs/backlog.md#owner-decisions).
 
 ## Risks and the strongest alternative
