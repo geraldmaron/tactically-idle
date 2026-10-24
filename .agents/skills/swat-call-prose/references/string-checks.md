@@ -114,7 +114,8 @@ The vendored script already covers the tells game strings need.
 | sentence-lint, sentence-long | 0, each named | over 34 words blocks, over 22 needs a reason |
 | dash | 0 | even though written-voice lets two through |
 | colon | 0 | clock times are skipped |
-| apostrophe, semicolon, exclamation | 0, almost never, inside a quote only | data uses curly marks |
+| straight apostrophe | 0 | contractions and possessives stay ("won’t", "Nalani’s"); the data spells them with the curly ’, never the typewriter ' |
+| semicolon, exclamation | semicolon 0, exclamation only inside a quote | split the sentence, or move the shout into the speaker’s own line |
 | stock, stock-spoken | 0 | rewrite with the observable thing, or a line only this call has |
 | feeling | 0 | replace with a behavior, "she stops reading the page aloud" |
 | sheet-term | 0 | design vocabulary (her say, consent, rapport) becomes the act |

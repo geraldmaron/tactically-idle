@@ -2,6 +2,32 @@ DRAFT (the separate writing review, the Codex cold read and the owner's read of 
 
 # Going Live: design sheet
 
+> **Rewritten 2026-10-23** (branch `claude/hostage-rewrite`, cut from `claude/feel-lead`) after the
+> teardown rejected the first version (`notes/going-live-teardown.md`). The sections below describe the
+> first version and are stale where this box differs. Strings: `src/content/call-trees/hostage-live.ts`
+> with `-parts`, `-approach`, `-resolve` and `-chat` beside it.
+>
+> - **Three truths, three earlier scenes** (teardown 3 and 10). Facts `rider_clear` and `proof`, no
+>   `raised`. Situation 1: the clerk took the bag and the manager covered. Situation 2: the rider
+>   kept it and marked it delivered, and the red light is true. Situation 3: nobody took it, the bag
+>   went to the wrong porch, and a viewer holds the clip. The stream the player tries to shut is the
+>   only witness that clears the rider.
+> - **One cause for the handgun** (teardown 1). It comes up on an adverse result only when the rider
+>   is past breaking point, the stance the card shows (`turnsOn`). Every other adverse result costs what
+>   the choice put at risk: the audience, the contact, the clerk's name, the manager's pride, cover.
+> - **The turn is a real choice** (teardown 2, 9). `on_air`: the manager answers on camera
+>   (irreversible), read the comments for who knows (the only way to the clip, costs the count and
+>   closes if the picture is walled or cut), wall the camera (calm, loses the comments), cut the stream.
+> - **The lie is charged in every situation** (teardown 6). `lied_clerk` taxes both exits, is found out
+>   at the door whatever the truth, and two endings read it. The honest answer in situation 3 is
+>   `send_clip`, only what command can do.
+> - **Stage 3 asks different questions** (teardown 4, 5). `way_out` is which door and what it pays by the
+>   truth (`out_cleared` against `out_on_camera`). `last_word` is what the rider carries out: a last
+>   word to the stream, the phone left behind, or hands open at the front.
+> - **Lapse nodes cut from ten to two** (teardown 13); other threats only drain or hold the night.
+> - **Not done:** the stream cue "Is that handgun real?" is still order-blind (teardown 16, in
+>   `incidents/hostage.ts`); the writing review, the tally of subject roles (E3) and the owner's read.
+
 The first curated call, written 2026-10-21 after every old call was deleted, and reworked the same
 day on the owner's feedback (names, the address threat, the riders at the tape, fewer choices).
 Strings ship in `src/content/call-trees/hostage-live.ts` and `src/content/incidents/hostage.ts`; the
