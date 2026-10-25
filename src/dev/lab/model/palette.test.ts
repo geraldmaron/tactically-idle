@@ -38,11 +38,11 @@ describe('paletteItems', () => {
     expect(nodes).toHaveLength(s.tree.nodes.length);
     expect(nodes.find(item => item.id === 'on_air')).toMatchObject({ title: 'On air', go: { tab: 'play', node: 'on_air' }, play: { node: 'on_air' } });
     expect(items.filter(item => item.kind === 'choice')).toHaveLength(s.tree.nodes.reduce((n, node) => n + node.choices.length, 0));
-    const choice = items.find(item => item.id === 'on_air/manager_speaks')!;
+    const choice = items.find(item => item.id === 'on_air/let_go_first')!;
     expect(choice.title).not.toMatch(/\{/);
-    expect(choice.title).toBe(sessionBinder(s)('Ask whether {manager.first} wants to answer'));
+    expect(choice.title).toBe(sessionBinder(s)('Get {manager.first} out first'));
     expect(choice.crumb).toBe(`${s.tree.stageLabels[s.tree.nodes.find(node => node.id === 'on_air')!.stage]} › On air`);
-    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_manager_speaks' });
+    expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_let_go_first' });
     const ending = items.find(item => item.kind === 'ending' && item.id === 'manager_killed')!;
     expect(ending.title).not.toMatch(/\{/);
     expect(ending).toMatchObject({ go: { sel: { kind: 'ending', ending: 'manager_killed' } }, play: { ending: 'manager_killed' } });
@@ -61,8 +61,8 @@ describe('searchPalette', () => {
     expect(searchPalette(items, 'manager_killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
     expect(searchPalette(items, 'manager killed')[0]).toMatchObject({ kind: 'ending', id: 'manager_killed' });
     expect(searchPalette(items, 'on_air')[0]).toMatchObject({ kind: 'node', id: 'on_air' });
-    const title = items.find(item => item.id === 'on_air/manager_speaks')!.title;
-    expect(searchPalette(items, title)[0].id).toBe('on_air/manager_speaks');
+    const title = items.find(item => item.id === 'on_air/let_go_first')!.title;
+    expect(searchPalette(items, title)[0].id).toBe('on_air/let_go_first');
     expect(searchPalette(items, 'RESOLUTION_TUNING.favorableAt')[0]).toMatchObject({ kind: 'field' });
     expect(searchPalette(items, 'mark:turned_chat')[0]).toMatchObject({ kind: 'key', id: 'mark:turned_chat' });
   });

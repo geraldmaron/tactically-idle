@@ -64,9 +64,10 @@ describe('explore', () => {
     // door_taken is reached only when a threat runs out with nobody chosen, which the walk never takes.
     expect(missing).toEqual(['door_taken', 'handed_over']);
     expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 2);
-    // Where the rider took the bag (rider_clear false), the ending that walks him out clear is missing, and
-    // every route into it needs rider_clear: on the route, or on the choice that sends the porch clip (which
-    // needs proof nobody here has).
+    // Where the rider took the bag (rider_clear false), the only way into the ending that walks him out clear is
+    // his own account: put_pickup, where the clerk's sighting is put to him and he says where the bag is on the
+    // stream. The proof routes (the porch clip, the manager naming the clerk) need what a courier who took the
+    // bag never gets.
     const calm = open(REFERENCE.replace('variant=0', 'variant=1'));
     expect(calm.tree.situations[calm.situation]!.truth.rider_clear).toBe(false);
     const calmGraph = graphOf(calm);
@@ -76,15 +77,22 @@ describe('explore', () => {
     // door_taken is missing everywhere, not by truth: only a run-out reaches it.
     const needRaised = calmMissing.filter(ending => ending !== 'handed_over' && ending !== 'door_taken');
     expect(calmMissing).toContain('door_taken');
-    expect(needRaised).toEqual(['out_cleared']);
+    expect(needRaised).toEqual([]);
     // Since the sol rework (2026-10-24) a walk-out ends cleared on what the viewers heard, not on the hidden
-    // truth: every route into out_cleared needs the proof seen or an on-camera admission, which a courier
-    // who took the bag never gets.
+    // truth: every route into out_cleared needs the proof seen, an on-camera admission, or (where the rider took
+    // the bag) the clerk's sighting put to him.
     const intoCleared = calmGraph.edges.filter(edge => edge.inCall && edge.to === 'ending:out_cleared');
     expect(intoCleared.length).toBeGreaterThan(0);
-    // send_clip carries the gate on the choice itself (onlyIf proof_seen), so its edge has no condition of its own.
-    for (const edge of intoCleared) if (`${edge.node}/${edge.choice}` !== 'way_out/send_clip') expect(JSON.stringify(edge.conditions), `${edge.node}/${edge.choice}`).toMatch(/proof_seen|admitted_live/);
-    expect(JSON.stringify(calm.tree.nodes.find(node => node.id === 'way_out')!.choices.find(choice => choice.id === 'send_clip')!.onlyIf)).toContain('proof_seen');
+    // send_clip, put_pickup, private_line, tell_took and clerk_on_line carry their gate on the choice itself (onlyIf), so
+    // their edges have no condition of their own. The last two need clerk_admitted, which only the situation where
+    // the clerk took the bag sets, so the static graph draws them here and no play reaches them.
+    const gated = ['send_clip', 'put_pickup', 'private_line', 'tell_took', 'clerk_on_line'];
+    for (const edge of intoCleared) if (!gated.includes(edge.choice)) expect(JSON.stringify(edge.conditions), `${edge.node}/${edge.choice}`).toMatch(/proof_seen|admitted_live/);
+    const gateOf = (choice: string, mark: string) => expect(JSON.stringify(calm.tree.nodes.flatMap(node => node.choices).find(entry => entry.id === choice)!.onlyIf)).toContain(mark);
+    gateOf('send_clip', 'proof_seen');
+    gateOf('put_pickup', 'saw_collect');
+    gateOf('tell_took', 'clerk_admitted');
+    gateOf('clerk_on_line', 'clerk_admitted');
     // handed_over is the failed-response fallback: no state in this call leaves the player without a move.
     expect(explore(start, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     // A goal stops at the shortest path to it.
@@ -157,7 +165,7 @@ describe('explore', () => {
     expect(toNode.path).not.toBeNull();
     expect(nodeAt(replayed(s, toNode.path!), s.tree)).toBe('on_air');
     expect(explore(start, { node: s.tree.root }).path).toBe('');
-    const id = choiceActionId('hostage_crisis', 'on_air', 'manager_speaks');
+    const id = choiceActionId('hostage_crisis', 'on_air', 'let_go_first');
     for (const goal of [{ offered: id }, { eligible: id }]) {
       const found = explore(start, goal);
       expect(found.path).not.toBeNull();
