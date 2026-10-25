@@ -1,5 +1,6 @@
 import { CHAT } from './hostage-live-chat';
 import { BREAKING, CALM_ON_CAMERA, CHECKS, CLEAR, HOLDING, NEGOTIATOR, NO_PROOF, OBSERVANT_ON_CHAT, PROOF, STEADY_ON_CAMERA, SURVEILLANCE, TOOK, check, clerkToo, turnsOn } from './hostage-live-parts';
+import { clerkOnLine, privateLine, putPickup, tellTook } from './hostage-live-admission';
 import type { TreeNode } from './types';
 
 const { TALK, HOLD, ASK, MOVE, PRESS } = CHECKS;
@@ -156,6 +157,8 @@ export const APPROACH_NODES: TreeNode[] = [
     prompt: '{rider.first} holds the streaming phone toward {manager.first}. {manager.first} asks whether the camera has to stay on.',
     exchange: [{ by: 'rider', line: 'Tell them. Tell them what you told {delivery_app}.' }, { by: 'manager', line: 'Not with that in your hand.' }],
     promptIf: [
+      { when: { marks: ['saw_collect'], notMarks: ['rider_told', 'owned_up'] }, prompt: '{clerk.first} says {rider.first} took the bag off the counter that night. In the shop {rider.first} tells the comments {rider.he} never touched it, and {manager.first} watches the phone.' },
+      { when: { marks: ['clerk_admitted'], notMarks: ['rider_told', 'admitted_live', 'admitted_quiet'] }, prompt: '{clerk.first} has told an officer where the bag went. In the shop {rider.first} holds the phone to {manager.first}’s face and asks {manager.him} to say it. {manager.first} looks at the floor.' },
       { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} repeats the claim that {clerk.first} backed the story, then turns the phone on {manager.first} for the rest.' },
       { when: { marks: ['terms'] }, prompt: '{rider.first} has told the stream what ends this. One sentence from {manager.first}, and {rider.he} {rider~walks|walk} out. {manager.first} hasn’t said a word since.' },
       { when: { marks: ['glance'] }, prompt: 'Through the glass, {manager.first} glances at the stockroom door again. The comments keep asking {rider.first} where {rider.he} {rider~was|were} at 11:40 PM.' },
@@ -209,7 +212,7 @@ export const APPROACH_NODES: TreeNode[] = [
             { if: CLEAR_NO_PROOF, text: '{rider.first} nods at the phone. A viewer called {handle} used to work nights at {place}. The viewer writes that the night clerk ate from the cooler on shift. The team writes the claim down and asks for an order number. Nobody posts one.',
               reveal: ['proof'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
             { if: TOOK, text: '{rider.first} says go ahead. Under the picture, {handle} links {rider.first}’s own stream from Sunday night, shot from the scooter’s handlebars. At 12:20 AM the clip shows a bag on the rack behind the seat. {delivery_app} logs the drop-off at 11:58 PM. The team freezes the frame, and the label number matches. {rider.first} says that is a different bag.',
-              reveal: ['proof', 'rider_clear'], mark: ['knows_truth'], moves: { rider: 'provoked' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
+              reveal: ['proof', 'rider_clear'], mark: ['knows_truth', 'saw_collect'], moves: { rider: 'provoked' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
           ],
           mixed: [{ text: '{rider.first} lets the line ask, and the first reply names {clerk.first} as the one on the register that night. {rider.first} reads the name out and asks the line where {clerk.first} is now.',
             mark: ['clerk_named', 'performing'], moves: { rider: 'provoked' }, bump: { stream: 12 }, next: { node: 'way_out' }, objective: 4, pressure: 4 }],
@@ -265,6 +268,10 @@ export const APPROACH_NODES: TreeNode[] = [
             quietNext: { node: 'off_air' },
             extra: { mark: ['cut', 'stream_down'], stabilize: ['stream'], bump: { stream: -100 }, moves: { rider: 'provoked' }, pressure: 10 } }),
         } },
+      tellTook('on_air'),
+      clerkOnLine(),
+      putPickup('on_air'),
+      privateLine(),
     ] },
 
   // Stage 2, run out: the comments went on without an answer.
@@ -416,9 +423,9 @@ export const APPROACH_NODES: TreeNode[] = [
         outcomes: {
           favorable: [
             { if: CLEAR_NO_PROOF, text: '{clerk.first} answers looking at the ground. The bag sat on the counter for twenty minutes. At 11:40 PM {clerk.he} logged it collected and took it, and when {rider.first} came in, {clerk.he} said another courier had it. The next day {manager.first} found the receipt in {clerk.his} apron.',
-              exchange: [{ by: 'clerk', line: 'I took the bag. {manager.first} said to leave the complaint alone.' }, { by: 'clerk', line: '{manager.He} {manager~is|are} my {manager^uncle|aunt|relative}. I couldn’t say no to {manager.him}.' }], reveal: ['rider_clear'], mark: ['knows_truth'], next: { node: 'on_air' }, objective: 15 },
+              exchange: [{ by: 'clerk', line: 'I took the bag. {manager.first} said to leave the complaint alone.' }, { by: 'clerk', line: '{manager.He} {manager~is|are} my {manager^uncle|aunt|relative}. I couldn’t say no to {manager.him}.' }], reveal: ['rider_clear'], mark: ['knows_truth', 'clerk_admitted'], next: { node: 'on_air' }, objective: 15 },
             { if: TOOK, text: '{clerk.first} saw {rider.first} collect the bag a few minutes after 11:40 PM, like any other night. After that {clerk.he} only saw {delivery_app} say delivered. {manager.first} kept the store camera clip and told {clerk.him} not to post it.',
-              exchange: [{ by: 'clerk', line: 'I didn’t say anything. I didn’t want {rider.him} to get in trouble.' }], mark: ['clerk_unsure'], next: { node: 'on_air' }, objective: 12 },
+              exchange: [{ by: 'clerk', line: 'I didn’t say anything. I didn’t want {rider.him} to get in trouble.' }], mark: ['clerk_unsure', 'saw_collect'], next: { node: 'on_air' }, objective: 12 },
             { if: CLEAR_PROOF, text: '{clerk.first} says {rider.first} came in just after 11:40 PM and left with the bag. After that {clerk.he} only {clerk~knows|know} the order sheet, which says delivered.',
               exchange: [{ by: 'clerk', line: '{rider.He} took it. Like always. After that I don’t know. I didn’t want to say I didn’t know.' }], mark: ['clerk_unsure'], next: { node: 'on_air' }, objective: 8 },
           ],

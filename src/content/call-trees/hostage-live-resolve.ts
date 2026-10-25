@@ -1,5 +1,6 @@
 import { CHAT } from './hostage-live-chat';
 import { BREAKING, CALM_ON_CAMERA, CHECKS, HOLDING, LIE_OPEN, MANAGER_IN, NEGOTIATOR, CLEAR, NO_PROOF, ON_STREAM, PROOF, STEADY_ON_CAMERA, STREAM_CUT, STREAM_DOWN, STREAM_ENDED, TOOK, check, clerkToo, foundOut, afterRefusal, forcedEntry, commandTakesDoor, managerToo, turnsOn, walkOutEnding } from './hostage-live-parts';
+import { clerkOnLine, privateLine, putPickup, tellTook } from './hostage-live-admission';
 import type { TreeEnding, TreeNode } from './types';
 
 const { TALK, HOLD, PRESS, ENTER } = CHECKS;
@@ -23,6 +24,9 @@ export const RESOLVE_NODES: TreeNode[] = [
     exchange: [{ by: 'rider', line: 'I come out on camera or I don’t come out.' }, { by: 'negotiator', line: 'Tell me why the camera matters.' }, { by: 'rider', line: 'Because then you can’t say what happened.' }],
     // First match wins. The lie comes first so that nothing else the courier heard hides it.
     promptIf: [
+      { when: { marks: ['asked_for_clerk'], notMarks: ['clerk_voiced'] }, prompt: '{rider.first} has put the phone down and stepped back from {manager.first}. {rider.He} {rider~wants|want} {clerk.first} on the register line, and {rider~keeps|keep} the handgun low and the door in sight.' },
+      { when: { marks: ['saw_collect'], notMarks: ['rider_told', 'owned_up'] }, prompt: '{rider.first} asks how to come out and keeps telling the room {rider.he} never touched the bag. {clerk.first} says otherwise, and your squad knows it.' },
+      { when: { marks: ['clerk_admitted'], notMarks: ['rider_told', 'admitted_live', 'admitted_quiet'] }, prompt: '{rider.first} asks how to come out. Then {rider.he} {rider~looks|look} at {manager.first} on the floor and asks why {manager.he} {manager~won’t|won’t} say where the bag went.' },
       { when: { marks: ['lied_clerk', 'proof_seen'] }, prompt: '{rider.first} has the porch clip on the screen and keeps asking when {clerk.first} will back {rider.him} on camera.' },
       { when: { marks: ['lied_clerk'] }, prompt: '{rider.first} keeps repeating that {clerk.first} backed {rider.him}, and wants {clerk.first} on camera to say so.' },
       { when: { marks: ['proof_seen'] }, prompt: 'The porch clip is up, and your squad has matched it to the order. {rider.first} wants to know who at {delivery_app} will see it, and which door to use.',
@@ -184,6 +188,10 @@ export const RESOLVE_NODES: TreeNode[] = [
             quietNext: { node: 'last_word' },
             extra: { moves: { rider: 'provoked' }, bump: { stream: 10 }, pressure: 8 } }),
         } },
+      tellTook('way_out'),
+      clerkOnLine(),
+      putPickup('way_out'),
+      privateLine(),
     ] },
 
   // ------------------------------------------------------------------ stage 3: accused on camera
@@ -389,6 +397,7 @@ export const RESOLVE_NODES: TreeNode[] = [
     promptIf: [
       { when: { notSafe: ['manager'], marks: ['lie_owned'] }, prompt: 'Nobody asked {clerk.first} anything, and {rider.first} knows it now. {manager.first} sits close by on the floor, watching the door.', exchange: [] },
       { when: { notSafe: ['manager'] }, prompt: '{manager.first} is on the floor beside {rider.first} behind the counter, and neither of them is talking.', exchange: [] },
+      { when: { marks: ['clerk_voiced'] }, prompt: '{rider.first} heard {clerk.first} say sorry and nothing else. {rider.He} {rider~sits|sit} with the handgun at {rider.his} knee and {rider~asks|ask} what sorry is worth at the door.' },
       { when: { marks: ['clip_promised'] }, prompt: '{manager.first} is outside. {rider.first} sits by the register until the negotiator says the clip has gone, the handgun within reach.' },
       { when: { marks: ['lie_owned'] }, prompt: '{rider.first} knows now that nobody asked {clerk.first} anything. {rider.He} {rider~keeps|keep} the handgun close and {rider~asks|ask} what happens at the door.' },
       { when: { marks: ['let_go'] }, prompt: '{manager.first} walked out when {rider.first} stepped aside. {rider.first} has the handgun in reach and wants to know what happens at the door.' },
@@ -453,7 +462,7 @@ export const RESOLVE_NODES: TreeNode[] = [
           ],
         } },
       { id: 'out_front_hands', title: 'Talk {rider.him} out the front, hands open', icon: 'radio', talksTo: 'rider', check: check(TALK, -2), minutes: 6,
-        modifiers: [{ label: 'The handgun is in reach', mark: 'still_armed', value: -8 }, { label: '{friend.first} is waiting outside', mark: 'friend_named', value: 4 }, { label: 'The porch clip is up', mark: 'proof_seen', value: 6 }, { label: 'You took the lie back', mark: 'lie_owned', value: 4 }],
+        modifiers: [{ label: 'The handgun is in reach', mark: 'still_armed', value: -8 }, { label: '{friend.first} is waiting outside', mark: 'friend_named', value: 4 }, { label: 'The porch clip is up', mark: 'proof_seen', value: 6 }, { label: 'You took the lie back', mark: 'lie_owned', value: 4 }, { label: '{clerk.first} said sorry on the line', mark: 'clerk_voiced', value: 4 }],
         summary: '{lead} talks {rider.first} step by step to the front door, phone in a pocket, in view of the {outlet_short} camera. {rider.first} will be able to see {friend.first} at the tape.',
         pull: 'Plain steps, and a friend in sight the whole way.',
         cost: 'The {outlet_short} camera films {rider.first} walking out.',
@@ -487,6 +496,8 @@ export const ENDINGS: Record<string, TreeEnding> = {
     summary: '{rider.first} is with the team outside, and the handgun stayed on the counter. {manager.first} and {clerk.first} have left {place}. The viewers heard where the order went.',
     epilogue: '{friend.first} had kept {friend.his} delivery bag on all night at the patrol line, and took it off when {rider.first} came out.',
     epilogueIf: [
+      { when: { marks: ['owned_up'] }, epilogue: 'The bag came out from under the seat of {rider.first}’s scooter. {rider.first} watched an officer carry it to the patrol car and didn’t look away.' },
+      { when: { marks: ['told_clear'] }, epilogue: '{rider.first} asked to see {clerk.first} before the car door closed. {clerk.first} stood at the tape with {clerk.his} arms folded tight, and {rider.first} nodded once.' },
       { when: { marks: ['lie_found'] }, epilogue: '{rider.first} asked who had told {rider.him} that {clerk.first} backed {rider.him}. Nobody in the car answered.' },
       { when: { marks: ['lie_owned'] }, epilogue: '{rider.first} asked the officer at the car what else the negotiator had made up.' },
       { when: { marks: ['clip_promised'] }, epilogue: '{rider.first} asked for the order number to stay with the clip.' },
@@ -506,6 +517,8 @@ export const ENDINGS: Record<string, TreeEnding> = {
     summary: '{rider.first} is with the team. {manager.first} and {clerk.first} are outside. The phone is still on the register.',
     epilogue: '{friend.first} waved once from the patrol line when {rider.first} came out.',
     epilogueIf: [
+      { when: { marks: ['owned_up'] }, epilogue: '{rider.first} told the first officer where the bag was before anyone asked.' },
+      { when: { marks: ['told_clear'] }, epilogue: '{rider.first} asked an officer whether {clerk.first} was still at the tape. {clerk.He} {clerk~was|were}.' },
       { when: { marks: ['lie_found'] }, epilogue: '{clerk.first} never learned what the police had told {rider.first} {clerk.he} said.' },
       { when: { marks: ['lie_owned'] }, epilogue: '{rider.first} told the officers the negotiator had lied once, and said so first.' },
       { when: { marks: ['admitted_quiet'] }, epilogue: '{manager.first} wrote the complaint number on {manager.his} hand so {manager.he} wouldn’t lose it.' },
