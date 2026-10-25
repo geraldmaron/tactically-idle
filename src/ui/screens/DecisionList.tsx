@@ -106,6 +106,9 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
       <p className="call-empty">No decisions available right now.</p>
     ) : (
       <div className="call-grid">
+        {/* Owner, 2026-10-24: it was not clear these are choices. Say so above the cards, and give each one a
+            way in on its right edge. */}
+        {open > 1 && <p className="call-choose"><Icon name="bullseye" size={16} /><b>Choose one</b><span>Tap a card to review it before it commits.</span></p>}
         {decisions.map((a, index) => {
           const on = selectedId === a.id;
           // Available choices lead as full cards; unavailable ones follow as slim rows that stay reviewable.
@@ -153,6 +156,7 @@ export function DecisionList({ prompt, exchange, actions, selectedId, expanded, 
                 <CardMeta a={a} officers={officers} reach={reach?.[a.id]} face={!lead} />
                 {a.eligible && <Forecast a={a} id={forecast} lead={lead} knows={lead ? knows?.get(lead.officer.id) : undefined} />}
               </span>
+              {a.eligible && <span className="callbtn-go" aria-hidden="true"><Icon name="chevronRight" size={20} /></span>}
             </button>
             </Fragment>
           );

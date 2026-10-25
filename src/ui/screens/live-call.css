@@ -501,3 +501,12 @@
 .live-lightbar-still i:first-child { background: var(--siren-r); }
 .live-lightbar-still i:last-child { background: var(--siren-b); }
 @media (prefers-reduced-motion: reduce) { .live[class*="live-verdict-"]::before, .live-beat-result .operation-feedback .decision-card { animation: none; } }
+
+/* ---- Choices read as choices (owner, 2026-10-24): a "Choose one" line above the cards and a chevron on the
+   right edge of each open card, in the signal color, so each is plainly a thing to tap. */
+.live .call-choose { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp2); margin: 0; color: var(--act-hi); font: 500 var(--s14)/1.3 var(--f-ui); }
+.live .call-choose b { font: 700 var(--s16)/1.2 var(--f-title); letter-spacing: 0.04em; text-transform: uppercase; }
+.live .call-choose span { color: var(--t2); }
+.live .callbtn-text { flex: 1 1 auto; }
+.live .callbtn-go { display: grid; place-items: center; flex: none; align-self: center; width: var(--sp6); height: var(--sp6); border: 1px solid var(--act-lo); border-radius: 50%; background: var(--mark-act); color: var(--act-hi); }
+.live .callbtn-on .callbtn-go { background: var(--live); border-color: var(--live); color: var(--ink-0); }
