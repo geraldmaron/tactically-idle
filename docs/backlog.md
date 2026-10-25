@@ -846,8 +846,9 @@ patrol income rather than multiplying department net. The tap-to-idle metric is 
 Tags: job=keep; journeys=save-round-trip; probes=none (packaging); lane=deferred
 Needs: start=none; integrate=none; ship=none
 
-Owner decision 2026-10-19: wrap the web app for iOS and Android. Done: a wrapper chosen with
-evidence (e.g. Capacitor), the build running on a real iPhone and Android phone with saves surviving
+Owner decision 2026-10-19: wrap the web app for iOS and Android. Capacitor 8 wrapper added 2026-10-25
+(`docs/release-prep.md`: both projects build, owner items, open risks incl. remote Google Fonts and
+orientation lock, both since fixed). Done: the build running on a real iPhone and Android phone with saves surviving
 an app restart, and the safe-area, keyboard and text-zoom checks from `playtests` passing on device.
 Also the release requirements R1 to R6 in `docs/monetization.md`, the App Tracking Transparency and privacy
 label question, the U.S. state privacy path, and Google's rewarded ads policy (not yet read).
