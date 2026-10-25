@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { getScenario } from '../../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../../sim/scenario-registry';
 import { useGame } from '../../store';
 import { Button } from '../../components/ui';
 import { Face } from '../../components/Face';
 import { Sheet } from '../../components/Sheet';
-import { useChromeMode } from '../../components/chrome';
+import { ChromeFoot, useChromeMode, useOpenMenu } from '../../components/chrome';
+import { BottomNav } from '../../components/BottomNav';
+import { MenuButton } from '../../components/SaveManager';
 import { ROLE_META } from '../../components/labels';
 import { placeTags, scenarioPlaceName } from '../../components/incident';
 import { useNav } from '../../components/nav';
@@ -17,13 +19,15 @@ import { callHook, firstCallOfficers, firstScenarioId, radioLineFrom } from './f
 import { openCallBrief } from './callBrief';
 import './city-onboarding.css';
 
-/** A1, the cold open: the first call, as the first thing a new player sees. A painted place, a LIVE kicker, two
- * sentences, the four faces with their roles, one radio line, and the one button. No menus, no store, no
- * account (docs/world-redesign.md, "First open"). */
+/** A1, the cold open: the first call, as the first thing a new player sees. A painted place, a LIVE kicker, the
+ * moment the night turns, the four faces with their roles, one radio line, and the one button. The Menu button and
+ * the tab bar stay available (owner, 2026-10-25): a first screen with one way forward and no way off reads as a trap,
+ * and a call stays on the Operations board for at least six hours (INCIDENT_TUNING.minLifetimeMs). */
 export function ColdOpen() {
   useChromeMode('focus');
   const g = useGame();
   const nav = useNav();
+  const openMenu = useOpenMenu();
   const [themes, setThemes] = useState(false);
   const at = Math.max(Date.now(), g.department.clockHighWater);
   const scenarioId = firstScenarioId(g, at);
@@ -38,6 +42,7 @@ export function ColdOpen() {
   const take = () => { if (running) nav.go('ops'); else if (scenarioId) openCallBrief(nav, scenarioId); else nav.go('ops'); };
   return (
     <main className="cold" aria-labelledby="cold-title">
+      {openMenu && <MenuButton onOpen={openMenu} />}
       <div className="cold-plate plate" aria-hidden="true">
         <PlateArt src={plate} />
         <span className="cold-brand">Tactically Idle</span>
@@ -60,6 +65,8 @@ export function ColdOpen() {
           <span>No account. Saved on this phone.</span>
         </div>
       </div>
+      {/* The tabs stay in reach: the call waits on the board for hours, and nothing here makes the player take it. */}
+      <ChromeFoot><BottomNav /></ChromeFoot>
       <Sheet open={themes} onClose={() => setThemes(false)} title="Themes this game covers" maxHeight="short">
         <p className="cold-themes-lead">{SETTINGS_TEXT.advisoryIntro}</p>
         <ul className="cold-themes">{ADVISORY_THEMES.map((theme) => <li key={theme}>{theme}</li>)}</ul>
