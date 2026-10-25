@@ -426,7 +426,7 @@ const OBLIGATIONS: Obligation[] = [
     const titles = byClass(page, 'flow-title');
     return titles.length === 1 && byClass(titles[0], 'flow-title-icon').length === 1 && byClass(titles[0], 'ct-badge').length === 1 ? [] : ['the brief head does not lead with the call type badge'];
   } },
-  { id: 'head-brief-orders', screen: 'OpsPrepare (brief)', fixture: 'the hostage call on the board', check: () => headedWithIcon(mount(createElement(OpsPrepare, { scenarioId: testCallId('hostage'), step: 'brief' })), 'Your orders') },
+  { id: 'head-brief-people', screen: 'OpsPrepare (brief)', fixture: 'the hostage call on the board', check: () => headedWithIcon(mount(createElement(OpsPrepare, { scenarioId: testCallId('hostage'), step: 'brief' })), 'Who’s inside') },
   { id: 'head-deploy-title', screen: 'OpsPrepare (deploy)', fixture: 'the hostage call, Alpha chosen', check: () => {
     const page = deployPage();
     const titles = byClass(page, 'flow-title');

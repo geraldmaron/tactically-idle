@@ -40,6 +40,7 @@ import type { ActionSelection, Override } from '../../../../ui/screens/live-mode
 import { ActionSheet, LiveView, RoomSheet } from '../../../../ui/screens/LiveView';
 import { focusActingSquad, toggleActingSquad, toggleSupportingSquad } from '../../../../ui/screens/operation-squads';
 import { OperationFeedback } from '../../../../ui/screens/OperationFeedback';
+import { verdictOf } from '../../../../ui/screens/verdict';
 import { placeFor, sceneFor } from '../../../../ui/art/Plates';
 import { PrepBriefing } from '../../../../ui/screens/PrepBriefing';
 import { SituationPanel } from '../../../../ui/screens/SituationPanel';
@@ -448,6 +449,7 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
 
   return (
     <LiveView
+      verdict={beat === 'result' && decisions.length ? verdictOf(decisions[decisions.length - 1]) : null}
       {...model}
       dither={dither}
       sirens={!!scenario && run.status === 'active' && run.stage !== 'debrief' && isHotCall(scenario, run)}

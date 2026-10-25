@@ -1,4 +1,4 @@
-// Review finding duplicate-ending-titles: two hostage endings share the title "Both still inside", so
+// Review finding duplicate-ending-titles: two endings could share a title, so
 // the lab's lists (Flow, Outcomes, the palette) read the same twice. The lab tells them apart by each
 // one's first remaining task; the authored title, which the player reads, is the content's to change.
 import { describe, expect, it } from 'vitest';
@@ -12,8 +12,8 @@ const TEMPLATES = Object.values(INCIDENT_TEMPLATES) as IncidentTemplate[];
 describe('endings with the same title', () => {
   const hostage = INCIDENT_TEMPLATES.hostage_crisis as IncidentTemplate;
   it('get their first remaining task as a crumb; every other ending keeps its title alone', () => {
-    expect(endingTwinCrumb(hostage.tree, 'held_counter')).toBeNull();
-    expect(endingListTitle(hostage.tree, 'held_counter', text => text)).toBe(hostage.tree.endings.held_counter.title);
+    expect(endingTwinCrumb(hostage.tree, 'entry_clean')).toBeNull();
+    expect(endingListTitle(hostage.tree, 'entry_clean', text => text)).toBe(hostage.tree.endings.entry_clean.title);
   });
   for (const template of TEMPLATES) {
     it(`lists every ending of ${template.type} under a title of its own`, () => {

@@ -170,10 +170,11 @@ const GATE_TYPES: readonly IncidentType[] = ['hostage_crisis', 'barricaded', 'ac
  *   1%. It was 3% for the retired hostage call; Going Live sat at 1.7% before the world redesign too.
  * - The Room Next Door is the warrant the city sends most often, built to resolve in most plays and to keep a
  *   death off its routine paths: unresolved, hurt or dead in 11.7% of 60 calls and 19.6% of 240, so its floor
- *   for that metric is 10%. */
+ *   for that metric is 10%. After the held endings went (owner 2026-10-24: no call ends with the subject left
+ *   inside) "unresolved" is empty for it, so the metric is hurt or dead alone: 8.4% of 60 calls, floor 5%. */
 const GATE_BANDS: Record<string, { harm: [number, number]; death: [number, number]; bad?: [number, number] }> = {
   hostage_crisis: { harm: [0.01, 0.3], death: [0, 0.08] },
-  barricaded: { harm: [0.01, 0.3], death: [0, 0.08], bad: [0.1, 0.65] },
+  barricaded: { harm: [0.01, 0.3], death: [0, 0.08], bad: [0.05, 0.65] },
   active_armed_incident: { harm: [0.15, 0.55], death: [0.01, 0.16] },
   protected_rescue: { harm: [0.1, 0.5], death: [0, 0.12] },
 };

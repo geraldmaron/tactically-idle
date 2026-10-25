@@ -1,4 +1,4 @@
-import type { CallTree, ChatLine, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState, TreeTimeout } from '../../../content/call-trees/types';
+import type { CallTree, ChatLine, TreeChoice, TreeIf, TreeLine, TreeMove, TreeMoveTo, TreeNext, TreeNode, TreeOutcome, TreePlace, TreeState, TreeTimeout, TimeoutPeople } from '../../../content/call-trees/types';
 import { TREE_VOICES } from '../../../content/call-trees/types';
 import type { IncidentTemplate } from '../../../content/incidents/types';
 import { CIVILIAN_FIRST_NAMES, CIVILIAN_SURNAMES } from '../../../content/call-trees/civilian-names';
@@ -118,7 +118,11 @@ export interface BoundPart { text: string; role?: string; group?: string }
 const TOKEN_SCAN = new RegExp(TOKEN.source, TOKEN.flags);
 
 /** One token's bound parts; throws on an unknown token, as binding always has. */
-function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, CastIdentity>, place: string, rooms: Record<string, string>, groups: Record<string, readonly string[]>, world: Record<string, string>): BoundPart[] {
+/** What the binder remembers while it reads one string: who was last mentioned (by name or pronoun), and
+ * whether each person's last mention was a name or a pronoun, so a verb after a name stays singular. */
+interface BindState { lastRef?: string; form: Record<string, 'name' | 'pronoun'> }
+
+function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, CastIdentity>, place: string, rooms: Record<string, string>, groups: Record<string, readonly string[]>, world: Record<string, string>, state: BindState): BoundPart[] {
   const [match, role, part, singular, plural, heForm, sheForm, theyForm, oneForm, manyForm] = token as unknown as [string, string, ...(string | undefined)[]];
   const bare = !part && singular === undefined && heForm === undefined && oneForm === undefined;
   if (ENGINE_TOKENS.has(role) && bare) return [{ text: match }];
@@ -156,16 +160,29 @@ function bindToken(token: RegExpMatchArray, text: string, cast: Record<string, C
   if (!who || part === 'room' || part === 'n') throw new Error(`Unknown token ${match} in "${text}"`);
   // One person's name is one name: the singular form.
   if (oneForm !== undefined) return [{ text: oneForm }];
-  if (singular !== undefined) return [{ text: who.pronouns === 'they' ? plural! : singular }];
+  if (singular !== undefined) return [{ text: who.pronouns === 'they' && state.form[role] !== 'name' ? plural! : singular }];
   if (heForm !== undefined) return [{ text: who.pronouns === 'he' ? heForm : who.pronouns === 'she' ? sheForm! : theyForm! }];
   if (part === 'age') { if (who.age === undefined) throw new Error(`No age drawn for ${role} in "${text}"`); return [{ text: String(who.age) }]; }
   if (part && PRONOUN_FORMS[part.toLowerCase()]) {
-    const word = PRONOUN_FORMS[part.toLowerCase()][who.pronouns];
+    const key = part.toLowerCase();
+    // A pronoun that could be read as someone else is the person's name: the last person mentioned is
+    // another role who shares this pronoun. A reflexive always refers back, so it stays a pronoun.
+    const last = state.lastRef !== undefined && state.lastRef !== role ? cast[state.lastRef] : undefined;
+    state.lastRef = role;
+    if (key !== 'himself' && last && last.pronouns === who.pronouns) {
+      state.form[role] = 'name';
+      // The name is its own tagged part, as {role.first} is, and the possessive is plain text after it.
+      return key === 'his' || key === 'hers' ? [{ text: who.firstName, role }, { text: '’s' }] : [{ text: who.firstName, role }];
+    }
+    state.form[role] = 'pronoun';
+    const word = PRONOUN_FORMS[key][who.pronouns];
     return [{ text: part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word }];
   }
   // A member written by id ({others_1.first}, compiler text only) still belongs to their group.
   const group = Object.keys(groups).find(id => groups[id].includes(role));
   const name = part === 'first' ? who.firstName : part === 'last' ? who.surname : `${who.firstName} ${who.surname}`;
+  state.lastRef = role;
+  state.form[role] = 'name';
   return [group ? { text: name, role, group } : { text: name, role }];
 }
 
@@ -181,9 +198,10 @@ export function bindRoleSegments(text: string, cast: Record<string, CastIdentity
     else parts.push({ ...next });
   };
   let at = 0;
+  const state: BindState = { form: {} };
   for (const token of text.matchAll(TOKEN_SCAN)) {
     add({ text: text.slice(at, token.index) });
-    for (const part of bindToken(token, text, cast, place, rooms, groups, world)) add(part);
+    for (const part of bindToken(token, text, cast, place, rooms, groups, world, state)) add(part);
     at = token.index! + token[0].length;
   }
   add({ text: text.slice(at) });
@@ -1263,14 +1281,20 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
    * choice it never goes back to its own node, the root or an earlier stage. */
   const timeoutFor = (node: TreeNode, timeout: TreeTimeout): OutcomeEffect[] => {
     if (!timeout.text.trim()) throw new Error(`${node.id}: a threat's timeout needs the line the player reads`);
-    const routes = [...(timeout.nextIf ?? []).filter(entry => possible(entry.when)), { next: timeout.next }];
+    const routes: ({ next: TreeNext; when?: TreeState } & TimeoutPeople)[] = [...(timeout.nextIf ?? []).filter(entry => possible(entry.when)), { next: timeout.next, safe: timeout.safe, out: timeout.out, harm: timeout.harm }];
     return routes.map(entry => {
       const target = resolveNext(tree, entry.next, spec.seed);
       if ('node' in target && target.node === tree.root) throw new Error(`${node.id}: a threat's timeout goes back to the root`);
       if ('ending' in target && !tree.endings[target.ending] && target.ending !== 'handed_over') throw new Error(`${node.id}: a threat's timeout ends the call at unknown ending ${target.ending}`);
       const go = routing(node, entry.next);
       const when = 'when' in entry ? stateCondition(trim(entry.when), groups) : undefined;
-      return { text: timeout.text, ...go, ...(timeout.breaks?.length ? { breaks: [...timeout.breaks] } : {}), ...(when && (when.flags || when.notFlags) ? { when } : {}) };
+      // Who the run-out settles, with groups resolved as an outcome's are.
+      const people = groupOutcome(node, { text: '', safe: entry.safe, out: entry.out, harm: entry.harm });
+      const brought = [...new Set([...people.safe ?? [], ...people.out ?? []])];
+      const setFlags = [...go.setFlags ?? [], ...(people.safe ?? []).map(safeFlag), ...brought.map(outFlag)];
+      return { text: timeout.text, ...go, ...(setFlags.length ? { setFlags } : {}),
+        ...(people.harm ? { personHarm: Object.entries(people.harm).map(([personId, severity]) => ({ personId, severity })) } : {}),
+        ...(timeout.breaks?.length ? { breaks: [...timeout.breaks] } : {}), ...(when && (when.flags || when.notFlags) ? { when } : {}) };
     });
   };
 

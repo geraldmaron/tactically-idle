@@ -97,7 +97,7 @@
   },
   "R11.empty": {
    "target": 0,
-   "total": 40,
+   "total": 39,
    "counts": {
     "src/ui/components/CommandStaff.tsx": 1,
     "src/ui/components/DebriefResults.tsx": 3,
@@ -116,7 +116,6 @@
     "src/ui/screens/OpsLive.tsx": 2,
     "src/ui/screens/OpsPrepare.tsx": 3,
     "src/ui/screens/Patrol.tsx": 1,
-    "src/ui/screens/PrepBriefing.tsx": 1,
     "src/ui/screens/SquadOptimizer.tsx": 4,
     "src/ui/screens/team/Aftercare.tsx": 1,
     "src/ui/screens/team/Bonds.tsx": 1,

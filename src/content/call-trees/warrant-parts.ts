@@ -57,19 +57,29 @@ export function forTheLadder(opts: { covered: TreeOutcome; roof: TreeOutcome; fa
   ];
 }
 
-/** The call ends with him still in his room: the held ending names whether the family is still
- * next door. `lead` carries the text and effects. */
-export const heldEnd = (lead: TreeOutcome, also: TreeIf[] = [], state: TreeState = {}): TreeOutcome[] => {
-  const iff = also.length ? { if: also } : {};
-  return [
-    lead,
-    { ...iff, when: { ...state, ...FAMILY_OUT }, text: '', next: { ending: 'held_in' } },
-    { ...iff, when: { ...state, ...FAMILY_IN }, text: '', next: { ending: 'held_with_family' } },
-  ];
-};
+/** The one row that ends a standoff (owner, 2026-10-24: no call ends with the subject left inside, and a
+ * refusal is never a result by itself): command orders the stairs, the family next door is brought out,
+ * and a drawn use of the team's hands decides whether he is hurt (`custody_hurt`) or not
+ * (`custody_clean`). The text is written for the choice it follows (an effect text belongs to one
+ * action) and names nobody whose place may differ, so one row serves every state. */
+export const stairsOrdered = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({
+  text, ...familyOut(), out: ['lt'], force: { on: 'lt', next: { hurt: { ending: 'custody_hurt' }, none: { ending: 'custody_clean' } }, noFatal: true }, objective: 20, ...extra,
+});
 
-/** A moment run out with nobody choosing: command holds the house as it stands. */
-export const holdTheHouse = (text: string): TreeTimeout => ({ text, next: { ending: 'held_in' }, nextIf: [{ when: FAMILY_IN, next: { ending: 'held_with_family' } }] });
+/** A refusal command does not let stand: `lead` carries the text and effects, then the stairs are
+ * ordered. `also` and `state` are conditions the row after the lead keeps. */
+export const forcedEntry = (lead: TreeOutcome, entry: string, also: TreeIf[] = [], state: TreeState = {}): TreeOutcome[] => [
+  lead,
+  stairsOrdered(entry, { ...(also.length ? { if: also } : {}), ...(Object.keys(state).length ? { when: state } : {}) }),
+];
+
+/** A moment run out with nobody choosing: command sends the team up at its own hour. Nobody chose, so
+ * nothing is drawn: with the family still next door the parent is hurt shielding the child on the way
+ * out (`family_hurt`), and otherwise the team has him and nobody is hurt (`custody_clean`). */
+export const commandTakesStairs = (text: string): TreeTimeout => ({
+  text, next: { ending: 'custody_clean' }, safe: ['parent', 'kid'], out: ['lt'],
+  nextIf: [{ when: FAMILY_IN, next: { ending: 'family_hurt' }, safe: ['parent', 'kid'], out: ['lt'], harm: { parent: 'wounded' } }],
+});
 
 /** The lie (dilemma pattern 15): the team told him he would sleep at home tonight. At the foot of
  * the stairs the cuffs are waiting in every situation, so any walk down the stairs finds it out. */
@@ -91,4 +101,4 @@ export const WARRANT_TIE_CHOICES: readonly { node: string; choice: string }[] = 
 
 /** Endings and the investigation (TreeEnding.world): every ending where the team has him closes it
  * as charged; every ending where he is still in the house or gone leaves the lead open. */
-export const WARRANT_RESOLUTIONS = { charged: ['walked_out', 'custody_clean', 'custody_hurt', 'family_hurt'], escaped: ['escaped', 'held_in', 'held_with_family', 'in_with_family', 'handed_over'] } as const;
+export const WARRANT_RESOLUTIONS = { charged: ['walked_out', 'custody_clean', 'custody_hurt', 'family_hurt'], escaped: ['escaped', 'handed_over'] } as const;

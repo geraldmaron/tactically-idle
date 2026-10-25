@@ -12,10 +12,18 @@ filtering the main control with fewer barriers: every descriptor can be filtered
 disabled only when turning it on would leave no call drawable, the advisory has no checkbox, and
 push-back lines are not suppressed by situation (2026-10-20).
 
+> **Policy.** The store rules and the owner's standards are written as numbered controls in
+> `src/content/policy` and rendered to [content-policy.md](content-policy.md). Every text check, the rating
+> profile, the review notes and the editorial brief come from that one registry. This document keeps the
+> descriptors, the warnings and the filters.
+
 ## Why there is no tier
 
-The store rating covers the app. The owner targets a Mature rating (ESRB M, PEGI 16; backlog,
-decisions of 2026-10-19). IARC, which most digital storefronts use, rates from a questionnaire the
+The store rating covers the app. The owner's target of 2026-10-19 was a Mature rating (ESRB M, PEGI 16). A
+Codex read of the live rules on 2026-10-24 (docs/content-policy.md) treats that as a target and not an outcome:
+Apple's published tiers put frequent realistic violence at 18+, PEGI 18 is plausible for the manager's death,
+and an IARC result is only known after the questionnaire, so plan for Apple 18+ and record the real answers per
+release (backlog `policy-rating-evidence`). IARC, which most digital storefronts use, rates from a questionnaire the
 developer completes ([IARC, how it works](https://globalratings.com/how-iarc-works/)). Inference,
 not stated on that page: a player's setting does not lower the store rating, because the content
 still ships in the app.

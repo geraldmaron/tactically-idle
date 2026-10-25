@@ -65,6 +65,7 @@ export function CallTile({ card, scenario, familyId, type, isNew = false, facts,
           <span className="cl-card-ready">{readiness}</span>
         </div>
         {warning}
+        {contentNote}
         {bar}
       </div>
     </article>

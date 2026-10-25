@@ -432,21 +432,35 @@ export type ChatLine = string | { text: string; by?: string; after?: string };
  * imminent line is that commenter's own. */
 export interface ThreatChat { early: ChatLine[]; closing: ChatLine[]; imminent: ChatLine[] }
 
-/** A threat's run-out route. Like the threat it never harms anyone or fires, and it sets no mark:
- * the moment it leads to does the pressing, with its own threat or by ending the call. It can break
- * a commitment (`breaks`), since a promise left standing while time runs out is found empty. */
-export interface TreeTimeout {
+/** A threat's run-out route. Like the threat it never fires and sets no mark: the moment it leads to
+ * does the pressing, with its own threat or by ending the call. It can break a commitment
+ * (`breaks`), since a promise left standing while time runs out is found empty. A run-out that ends
+ * the call must also settle who is inside (owner, 2026-10-24: no call ends with the subject left
+ * inside), so a route carries `safe`, `out` and a fixed `harm` the way an outcome does. */
+export interface TreeTimeout extends TimeoutPeople {
   /** What the minutes nobody used look like on scene, read in the result after the threat's line. */
   text: string;
   /** The moment the call moves to: never this node, the root or an earlier stage. */
   next: TreeNext;
-  /** Replaces `next` in that public state, first match wins: a held ending names who is inside. */
-  nextIf?: { when: TreeState; next: TreeNext }[];
+  /** Replaces `next` in that public state, first match wins: a run-out ends the call with who is
+   * inside settled in the same row. */
+  nextIf?: ({ when: TreeState; next: TreeNext } & TimeoutPeople)[];
   /** Commitments the run-out breaks, whichever route it takes (TreeOutcome.breaks): the person
    * learns the promise was empty, so `text` says so. A promise not yet made, or already settled, is
    * left alone. A run-out never stands in for an outcome on a `lie`, which still needs an outcome
    * that breaks it (see TreeOutcome.breaks): the timer can be Off, and then nothing runs out. */
   breaks?: string[];
+}
+
+/** Who a run-out brings out or hurts. Roles as in TreeOutcome; a group is every member. The harm is
+ * fixed, never drawn, and never fatal: nobody is killed by the clock alone. */
+export interface TimeoutPeople {
+  /** Civilian roles who are now outside and safe. */
+  safe?: string[];
+  /** Any role who walks out of the building on this route (a subject taken by the team). */
+  out?: string[];
+  /** People hurt on this route, recorded in the debrief. */
+  harm?: Record<string, 'wounded' | 'serious'>;
 }
 
 /** One beat on a threat: the scene moving while the player weighs it. It fires once, live on

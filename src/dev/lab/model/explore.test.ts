@@ -61,8 +61,8 @@ describe('explore', () => {
     // Situation 1 of 3 (the rider is clear, the clerk took the bag): every ending the call keeps but the
     // failed-response fallback.
     expect(s.tree.situations[s.situation]!.truth.rider_clear).toBe(true);
-    // manager_hurt_inside is unreachable in every situation (backlog going-live-dead-ending).
-    expect(missing).toEqual(['handed_over', 'manager_hurt_inside']);
+    // door_taken is reached only when a threat runs out with nobody chosen, which the walk never takes.
+    expect(missing).toEqual(['door_taken', 'handed_over']);
     expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 2);
     // Where the rider took the bag (rider_clear false), the ending that walks him out clear is missing, and
     // every route into it needs rider_clear: on the route, or on the choice that sends the porch clip (which
@@ -73,9 +73,9 @@ describe('explore', () => {
     const calmAll = explore(calm.frames[0].state, null);
     expect(calmAll.truncated).toBe(false);
     const calmMissing = inCallEndings(calmGraph).filter(ending => !(ending in calmAll.endings!));
-    // manager_hurt_inside is missing everywhere, not by truth (backlog going-live-dead-ending).
-    const needRaised = calmMissing.filter(ending => ending !== 'handed_over' && ending !== 'manager_hurt_inside');
-    expect(calmMissing).toContain('manager_hurt_inside');
+    // door_taken is missing everywhere, not by truth: only a run-out reaches it.
+    const needRaised = calmMissing.filter(ending => ending !== 'handed_over' && ending !== 'door_taken');
+    expect(calmMissing).toContain('door_taken');
     expect(needRaised).toEqual(['out_cleared']);
     // Since the sol rework (2026-10-24) a walk-out ends cleared on what the viewers heard, not on the hidden
     // truth: every route into out_cleared needs the proof seen or an on-camera admission, which a courier
@@ -107,8 +107,8 @@ describe('explore', () => {
     // nothing waits on one: only the fallback is missing, and no state leaves no move.
     const ids = new Set(keeps.instance.clocks.map(clock => clock.id));
     expect(keeps.template.situations.flatMap(entry => entry.clocks ?? []).filter(clock => !clock.story && !ids.has(clock.id))).toEqual([]);
-    // manager_hurt_inside is unreachable in every situation (backlog going-live-dead-ending).
-    expect(missing).toEqual(['handed_over', 'manager_hurt_inside']);
+    // door_taken is reached only when a threat runs out with nobody chosen, which the walk never takes.
+    expect(missing).toEqual(['door_taken', 'handed_over']);
     expect(explore(keeps.frames[0].state, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     for (const [ending, force] of [['manager_killed', 'firearm:none'], ['manager_killed_rider_hurt', null]] as const) {
       const path = all.endings![ending];

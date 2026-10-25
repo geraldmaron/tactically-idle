@@ -232,8 +232,17 @@ rule. The per-speaker checks are in references/table-read-protocol.md, in short 
   (../swat-call-prose/references/live-chat.md). Read it as its own surface in the Lab on Play with
   the Stall scrubber at each phase (table-read-protocol.md section 8, "Viewer chat").
 
+Read the cold open on the Before the Call card at 390px as the player does, then run the five
+things in ../swat-call-prose/references/voice-and-soul.md section 1 on it. A cold open with no
+spoken line, or whose sentences nearly all open on a name or pronoun, is a fix before ship (D11).
+
+Read the first half of the call in player order as the owner does, aloud, and list every spoken line that sounds
+written and every reference no earlier surface set up (../swat-call-prose/references/voice-and-soul.md section 11,
+controls Q5 to Q7). The editorial pass that precedes this read, its limits and its acceptance rule are in
+docs/content-pipeline.md ("Editorial pass").
+
 Read the ending last and on its own. It names a person's state and one lasting detail. A last
-sentence that states a lesson is a sermon.
+sentence that states a lesson is a sermon, and one that states a status is the same fault (D8).
 
 ## 6. Pass four, spoilers and honesty
 
@@ -357,7 +366,7 @@ Rule ids are `fake-choice <1-10>`, `test <name>`, `table <claims | dominance | p
 taps | coverage>`, `static walk`, `cold read`, `restatement`, `cue trace`, `cost lands`,
 `dry-run <rule>`, `H<1-11>`, `E<n>` or `inline <n>`, `C<n>` or `G<n>` from
 references/cliche-and-copaganda.md, `batch <check>`, `budget <surface>`, `officer <check>` and
-`gate <test name>` and `D<1-9>`.
+`gate <test name>` and `D<1-12>`.
 
 - block. Shipping would mislead, harm or break. A fake decision at a stage, an untraced adverse
   result, a leak, a dead end, a missing result cell, a placeholder, a red line, an invented

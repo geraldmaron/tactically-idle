@@ -1,7 +1,7 @@
 import type { TreeChoice, TreeIf, TreeNext, TreeOutcome, TreeState, TreeTimeout } from './types';
 
 // The pieces Going Live's stage files share: checks, the conditions its outcomes read, and the few
-// helpers that carry a rule (who stays inside, what a held ending says, what a lie costs).
+// helpers that carry a rule (who stays inside, what a refusal costs, what a lie costs).
 
 const TALK = { kind: 'contact', ratings: [{ key: 'communication', weight: 0.75 }, { key: 'composure', weight: 0.25 }] } as const;
 const HOLD = { kind: 'contact', ratings: [{ key: 'composure', weight: 0.6 }, { key: 'communication', weight: 0.4 }] } as const;
@@ -56,19 +56,26 @@ export const clerkToo = (text: string, extra: Partial<TreeOutcome> = {}): TreeOu
 /** The manager goes out ahead of the rider when still inside. */
 export const managerToo = (text: string, extra: Partial<TreeOutcome> = {}): TreeOutcome => ({ when: { notSafe: ['manager'] }, text, safe: ['manager'], ...extra });
 
-/** The call ends with the manager still inside: the lead line, a line while the clerk is inside, and
- * the ending by who is left. `also` are conditions every row after the lead keeps. */
-export const heldEnd = (lead: TreeOutcome, clerkLine: string, also: TreeIf[] = [], state: TreeState = {}): TreeOutcome[] => {
+/** What the team does when the rider will not leave (owner, 2026-10-24: no call ends with the subject
+ * left inside, and a refusal is never a result by itself). `lead` says what the rider did, a line says
+ * where the clerk is while the clerk is inside, and `entry` is the one row that orders the door, written
+ * for the choice it follows (an effect text belongs to one action). It brings the manager and the clerk
+ * out and takes the rider, and a drawn use of the team's hands decides whether the rider is hurt
+ * (`rider_hurt`) or not (`entry_clean`). The text names nobody who may already be out, so one row serves
+ * every state. `also` and `state` are conditions the rows after the lead keep. */
+export const forcedEntry = (lead: TreeOutcome, clerkLine: string, entry: string, also: TreeIf[] = [], state: TreeState = {}): TreeOutcome[] => [lead, ...afterRefusal(clerkLine, entry, also, state)];
+
+/** The rows after a refusal's lead, for an outcome that writes its own lead rows (one per stream state). */
+export const afterRefusal = (clerkLine: string, entry: string, also: TreeIf[] = [], state: TreeState = {}): TreeOutcome[] => {
   const iff = also.length ? { if: also } : {};
-  const clerkIn = { ...state, notSafe: [...state.notSafe ?? [], 'clerk'] };
-  const clerkOut = { ...state, safe: [...state.safe ?? [], 'clerk'] };
+  const clerkIn: TreeState = { ...state, notSafe: [...state.notSafe ?? [], 'clerk'] };
   return [
-    lead,
     { ...iff, when: clerkIn, text: clerkLine },
-    { ...iff, when: clerkOut, text: '', next: { ending: 'held_counter' } },
-    { ...iff, when: clerkIn, text: '', next: { ending: 'held_both' } },
+    { ...iff, ...(Object.keys(state).length ? { when: state } : {}), text: entry, safe: ['manager', 'clerk'], out: ['rider'],
+      force: { on: 'rider', next: { hurt: { ending: 'rider_hurt' }, none: { ending: 'entry_clean' } }, noFatal: true }, objective: 20 },
   ];
 };
+
 export const MANAGER_IN: TreeState = { notSafe: ['manager'] };
 /** The stream running, or down: cut by command (`cut`) or ended by the rider (`stream_off`). Both set
  * `stream_down`, so a line that only needs "no live picture" reads one mark. */
@@ -77,10 +84,14 @@ export const STREAM_DOWN: TreeState = { marks: ['stream_down'] };
 export const STREAM_CUT: TreeState = { marks: ['cut'] };
 export const STREAM_ENDED: TreeState = { marks: ['stream_off'], notMarks: ['cut'] };
 
-/** A moment run out with no choice made: command takes the street and holds it, and the held ending
- * names who is still inside. */
-export const holdTheNight = (text: string): TreeTimeout => ({ text, next: { ending: 'rider_held' },
-  nextIf: [{ when: { notSafe: ['manager', 'clerk'] }, next: { ending: 'held_both' } }, { when: MANAGER_IN, next: { ending: 'held_counter' } }] });
+/** A moment run out with no choice made: command takes the front door at its own hour. Nobody chose,
+ * so nothing is drawn: with the manager still inside the manager is hurt on the way out
+ * (`entry_hurt`), and otherwise the team has the rider and nobody is hurt (`door_taken`). The text
+ * names neither, because it reads before either. */
+export const commandTakesDoor = (text: string): TreeTimeout => ({
+  text, next: { ending: 'door_taken' }, safe: ['manager', 'clerk'], out: ['rider'],
+  nextIf: [{ when: MANAGER_IN, next: { ending: 'entry_hurt' }, safe: ['manager', 'clerk'], out: ['rider'], harm: { manager: 'wounded' } }],
+});
 
 /** The lie (dilemma pattern 15): the team told the rider the clerk backs the rider's story. The clerk
  * has said nothing to anyone, and it is true in no situation. `lied_clerk` is the lie told. It

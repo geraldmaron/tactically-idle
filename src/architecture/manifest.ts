@@ -86,6 +86,9 @@ export const OWNERSHIP: readonly { glob: string; layer: Layer; system: System }[
   // catalog
   { glob: '/src/content/call-trees/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/content-descriptors.ts', layer: 'catalog', system: 'scenario' },
+  // The content policy: the controls, their sources, the text checks, the rating profile and the editorial
+  // brief (docs/content-policy.md). Every surface that makes or shows content reads it.
+  { glob: '/src/content/policy/**', layer: 'catalog', system: 'platform' },
   { glob: '/src/content/incidents/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenarios/**', layer: 'catalog', system: 'scenario' },
   { glob: '/src/content/scenario-*.ts', layer: 'catalog', system: 'scenario' },

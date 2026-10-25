@@ -24,12 +24,13 @@ import { callsWith } from '../src/gen/incident/gates/cross-call';
 import { bindRoleTokens } from '../src/gen/incident/trees-v13/compile';
 import type { CastIdentity } from '../src/gen/incident/trees-v13/compile';
 import { callStringRows, longestNamesCast, toTsv } from '../src/gen/incident/trees-v13/strings';
+import { checkText, surfaceOfPath } from '../src/content/policy';
 import type { StringRow } from '../src/gen/incident/trees-v13/strings';
 
 void generateBuilding;
 const ROOT = new URL('../', import.meta.url).pathname;
 const CHECKER = join(ROOT, '.agents/skills/swat-call-prose/scripts/game_string_checks.py');
-const LINT = join(ROOT, 'src/gen/incident/gates/prose-lint.ts');
+const LINT = join(ROOT, 'src/content/policy/lexicon.ts');
 
 const only = process.argv.slice(2);
 const dir = mkdtempSync(join(tmpdir(), 'ti-strings-'));
@@ -83,6 +84,22 @@ for (const template of Object.values(INCIDENT_TEMPLATES) as (IncidentTemplate | 
     console.log(`\n=== ${template.type} (${rows.length} strings, ${label}) exit ${run.status}`);
     process.stdout.write(run.stdout);
     if (run.status !== 0) failed = true;
+    // The content policy's text controls (src/content/policy, docs/content-policy.md) read the same rows once.
+    if (people === cast) {
+      const report = (where: string, text: string, surface: ReturnType<typeof surfaceOfPath>, speech: boolean) => {
+        for (const finding of checkText(text, surface, { speech })) {
+          console.log(`policy ${finding.control} ${finding.severity} ${template.type}/${where} "${finding.match}": ${finding.message}`);
+          if (finding.severity === 'block') failed = true;
+        }
+      };
+      for (const row of rows) report(row.where, row.text, surfaceOfPath(row.where), row.surface.startsWith('exchange'));
+      // Viewer chat is not a row in the checker's file, so the policy reads it here.
+      for (const node of template.tree.nodes) {
+        const chat = node.threat?.chat;
+        if (!chat) continue;
+        for (const line of [...chat.early, ...chat.closing, ...chat.imminent]) report(`${node.id}.chat`, bindRoleTokens(typeof line === 'string' ? line : line.text, people, place, rooms, groups), 'chat', true);
+      }
+    }
     if (people === cast) for (const row of rows) { const keyed = { ...row, where: `${template.type}/${row.where}` }; everyCall.push(keyed); callOf.set(keyed, template.type); }
   }
 }

@@ -5,66 +5,51 @@ import { buildLocation } from '../../sim/location';
 import { getScenario } from '../../sim/scenario-registry';
 import { briefing } from '../../sim/operation-selectors';
 import { testCallId } from '../../sim/test-fixtures';
-import { buildLexicon, lexiconFor } from '../people/lexicon';
+import { lexiconFor } from '../people/lexicon';
 import { PeopleProvider } from '../people/PeopleText';
 import { buildIntel } from './intel';
-import { orderPerson, PrepBriefing } from './PrepBriefing';
+import { PrepBriefing } from './PrepBriefing';
 
-// A face on an order is the data's own link: the objective's id is the id of the person it is about
-// (ObjectiveDefinition has no person field; the content names the objective after the cast member).
-const lexicon = buildLexicon({
-  cast: { clerk: { firstName: 'Reuben', surname: 'Hale' }, rider: { firstName: 'Malik', surname: 'Webb' }, manager: { firstName: 'Beatriz', surname: 'Ortiz' } },
-  publicKind: { clerk: 'civilian', rider: 'subject', manager: 'civilian' },
-  withheld: new Set(), located: new Set(['rider', 'manager']), officers: [], places: [],
-});
+// The orders ride on the people they are about (owner 2026-10-24): an objective's id is the id of the
+// person it is about (ObjectiveDefinition has no person field; the content names the objective after
+// the cast member), so the brief is one list of who is inside and what the team owes each of them.
+function render(kind: 'armed' | 'hostage' | 'rescue', lexicon: ReturnType<typeof lexiconFor> | null) {
+  const scenario = getScenario(testCallId(kind))!;
+  const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
+  const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built), fee: 1600 });
+  const html = renderToStaticMarkup(createElement(PeopleProvider, { lexicon, children: page }));
+  const start = html.indexOf('id="pb-people-h"');
+  return { scenario, html, people: start < 0 ? '' : html.slice(start) };
+}
 
-describe('a face on an order', () => {
-  it('names the person the objective is about when the team has them located', () => {
-    expect(orderPerson({ id: 'rider', label: 'Bring Malik out alive' }, lexicon)?.id).toBe('rider');
-    expect(orderPerson({ id: 'manager', label: 'Get Beatriz out' }, lexicon)?.kind).toBe('civilian');
-  });
-  it('never takes the name found in the text when the objective is about someone else', () => {
-    // Reuben is not located, so his name is not a person segment; Malik is, but the order is not his.
-    expect(orderPerson({ id: 'clerk', label: 'Get Reuben out before Malik moves' }, lexicon)).toBeNull();
-    expect(orderPerson({ id: 'manager', label: 'Get Reuben out before Malik moves' }, lexicon)).toBeNull();
-  });
-  it('gives no face to an order that is not about a person, or to someone not located', () => {
-    expect(orderPerson({ id: 'shooting', label: 'Stop the shooting' }, lexicon)).toBeNull();
-    expect(orderPerson({ id: 'clerk', label: 'Get Reuben out' }, lexicon)).toBeNull();
-    expect(orderPerson({ id: 'rider', label: 'Bring Malik out alive' }, null)).toBeNull();
-  });
-  it('holds for every order of the registered calls: a person objective names its person', () => {
+describe('the orders and the people are one list', () => {
+  it('has no separate orders panel', () => {
     for (const kind of ['armed', 'hostage', 'rescue'] as const) {
-      const scenario = getScenario(testCallId(kind))!;
-      const real = lexiconFor(scenario, null, []);
-      const cast = new Set(Object.keys(scenario.story?.cast ?? {}));
-      for (const objective of scenario.objectives) {
-        const entry = orderPerson(objective, real);
-        // An objective whose id is a cast member and who is located must resolve; a located person never
-        // resolves from an objective that does not name them.
-        if (real.entries.some((e) => e.id === objective.id)) expect(entry?.id, `${kind} ${objective.id}`).toBe(objective.id);
-        else expect(entry, `${kind} ${objective.id}`).toBeNull();
-        if (entry) expect(cast.has(entry.id)).toBe(true);
-      }
+      const { html } = render(kind, lexiconFor(getScenario(testCallId(kind))!, null, []));
+      expect(html, kind).not.toContain('Your orders');
+      expect(html, kind).not.toContain('pb-orders');
     }
   });
-  it('renders a face and the order number on each person order, and a number well on the others', () => {
-    const scenario = getScenario(testCallId('hostage'))!;
-    const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built), fee: 1600 });
-    const html = renderToStaticMarkup(createElement(PeopleProvider, { lexicon: lexiconFor(scenario, null, []), children: page }));
-    const orders = html.slice(html.indexOf('pb-orders'), html.indexOf('What the team faces'));
-    expect((orders.match(/class="pb-lead"/g) ?? []).length).toBe(scenario.objectives.filter((o) => orderPerson(o, lexiconFor(scenario, null, []))).length);
-    expect((orders.match(/class="pb-n"/g) ?? []).length + (orders.match(/pb-well-n/g) ?? []).length).toBe(scenario.objectives.length);
+  it('numbers every order once, on the person it is about or in a well when it names nobody listed', () => {
+    for (const kind of ['armed', 'hostage', 'rescue'] as const) {
+      const scenario = getScenario(testCallId(kind))!;
+      const { people } = render(kind, lexiconFor(scenario, null, []));
+      const numbered = (people.match(/class="pb-n"/g) ?? []).length + (people.match(/pb-well-n/g) ?? []).length;
+      expect(numbered, kind).toBe(scenario.objectives.length);
+    }
   });
-  it('shows the plain person on an order face when the provider has names off, whatever else is saved', () => {
-    const scenario = getScenario(testCallId('hostage'))!;
-    const built = buildLocation(scenario.locationFamilyId, scenario.locationSeed);
-    const page = createElement(PrepBriefing, { scenario, built, brief: briefing(scenario.id), intel: buildIntel(scenario, built), fee: 1600 });
-    const off = renderToStaticMarkup(createElement(PeopleProvider, { lexicon: null, children: page }));
-    const orders = off.slice(off.indexOf('pb-orders'), off.indexOf('What the team faces'));
-    expect(orders).toContain('pb-lead');
-    expect(orders).not.toContain('face-civilian');
-    expect(orders).not.toContain('face-subject');
+  it('puts an order that names a listed person on that person’s row, with the order leading the name', () => {
+    const { scenario, people } = render('hostage', lexiconFor(getScenario(testCallId('hostage'))!, null, []));
+    const first = scenario.objectives[0];
+    const row = people.slice(people.indexOf('pb-person-order'));
+    expect(people).toContain('pb-person-order');
+    expect(row.indexOf('<strong>')).toBeGreaterThan(0);
+    expect(people).toContain(first.label.split(' ')[0]);
+  });
+  it('shows the plain person on a numbered face when the provider has names off', () => {
+    const { people } = render('hostage', null);
+    expect(people).toContain('pb-lead');
+    expect(people).not.toContain('face-civilian');
+    expect(people).not.toContain('face-subject');
   });
 });

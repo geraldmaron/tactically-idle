@@ -19,7 +19,7 @@ function open(query: string): Session {
   return opened;
 }
 // Situation 2 of the warrant call (The kid: leaving false): nobody means to leave by the back, so the ending that
-// shuts the family in with him is a ghost. Going Live has no ending a fact rules out of any situation.
+// has him out the back is a ghost. Going Live has no ending a fact rules out of any situation.
 const s = open('type=barricaded&tier=2&variant=1');
 const clockMarks = clockMarksOf(s.instance.clocks);
 const graph = callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec?.seed, situation: s.situation, clockMarks, clockNexts: sessionClockNexts(s) });
@@ -45,11 +45,11 @@ describe('endingCards', () => {
   it('groups by how the runs that ended there scored, and the shares add up with stuck runs', () => {
     const tally: ReachTally = { ...emptyTally(), runs: 10, endings: {
       walked_out: { n: 6, weights: { death: 0, hurt: 0, unresolved: 0, costly: 1, clean: 5 } },
-      held_with_family: { n: 3, weights: { death: 0, hurt: 1, unresolved: 2, costly: 0, clean: 0 } },
+      custody_hurt: { n: 3, weights: { death: 0, hurt: 1, unresolved: 2, costly: 0, clean: 0 } },
       none: { n: 1, weights: { death: 0, hurt: 0, unresolved: 1, costly: 0, clean: 0 } } } };
     const cards = endingCards({ ...base, tally, scope: 'call' });
     expect(cards[0]).toMatchObject({ id: 'walked_out', group: 'clean', n: 6, p: 0.6 });
-    expect(cards.find(c => c.id === 'held_with_family')).toMatchObject({ group: 'unresolved', n: 3 });
+    expect(cards.find(c => c.id === 'custody_hurt')).toMatchObject({ group: 'unresolved', n: 3 });
     expect(shareTotal(cards, tally)).toBeCloseTo(1, 10);
     const groups = groupCards(cards);
     expect(groups[0].key).toBe('clean');
@@ -59,7 +59,7 @@ describe('endingCards', () => {
   it('the shortest path counts picks', () => {
     const cards = endingCards({ ...base, tally: null, scope: 'call', shortest: { walked_out: 'a~favorable,b~mixed,c~roll' } });
     expect(cards.find(c => c.id === 'walked_out')!.shortest).toBe(3);
-    expect(cards.find(c => c.id === 'held_with_family')!.shortest).toBeNull();
+    expect(cards.find(c => c.id === 'custody_hurt')!.shortest).toBeNull();
   });
 });
 
@@ -85,10 +85,10 @@ describe('baselineDeltas', () => {
 describe('drawFor', () => {
   it('finds the draw that brings a dropped ending back, changing as little as it can', () => {
     const current = { counts: s.counts, turns: s.turnDrawn, situation: s.situation };
-    // The warrant call has no counted group, so the dropped ending here is a situation one: the family is shut in
-    // with him only where he means to leave by the back, and the smallest change is that situation alone.
+    // The warrant call has no counted group, so the dropped ending here is a situation one: he gets out the back
+    // only where he means to leave by the back, and the smallest change is that situation alone.
     expect(s.tree.situations[s.situation]!.truth.leaving).toBe(false);
-    const want = drawFor(s.template, 'in_with_family', current)!;
+    const want = drawFor(s.template, 'escaped', current)!;
     expect(want).toEqual({ variant: s.tree.situations.findIndex(situation => situation.truth.leaving === true) });
     // An ending this call already reaches needs no change.
     expect(drawFor(s.template, 'walked_out', current)).toEqual({});

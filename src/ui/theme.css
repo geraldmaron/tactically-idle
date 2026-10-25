@@ -168,7 +168,7 @@
   --lift-edge: inset 0 0 0 0 transparent;
   --lift-1: none;
   --lift-2: 0 8px 24px color-mix(in srgb, var(--black) 50%, transparent);
-  --well: inset 0 0 0 1px var(--divider);
+  --well: inset 0 2px 4px color-mix(in srgb, var(--black) 35%, transparent), inset 0 0 0 1px var(--divider);
   --glow-act: 0 0 0 1px var(--act);
   --surface-1: linear-gradient(var(--ink-1), var(--ink-1));
   --surface-2: linear-gradient(var(--ink-2), var(--ink-2));
@@ -176,15 +176,18 @@
   --well-rule: var(--divider);
   --ground-glow: none;
 
-  /* Depth: the ground, a panel on it, a well in the panel. All flat; the border is the edge. */
+  /* Depth: the ground, a panel on it, a well in the panel (owner, 2026-10-24: sections felt flat). A panel is
+     lit from above: its top fades from a lighter ink into the panel's own, a 1px light line sits on its top
+     edge and a soft shadow under it lifts it off the ground. The bar is a plate with the same light line, and
+     a well is pressed in. Gradients and shadows only: no texture image, so nothing costs paint or contrast. */
   --ground-base: var(--ink-0);
   --ground-grid: transparent;
   --ground-tex: linear-gradient(var(--ink-0), var(--ink-0));
   --panel-edge: var(--hair);
-  --surface-panel: linear-gradient(var(--ink-1), var(--ink-1));
-  --shadow-panel: none;
-  --surface-bar: linear-gradient(var(--ink-2), var(--ink-2));
-  --bar-edge: inset 0 -1px 0 var(--hair);
+  --surface-panel: linear-gradient(180deg, color-mix(in srgb, var(--ink-1) 90%, var(--white)) 0, var(--ink-1) 96px);
+  --shadow-panel: inset 0 1px 0 color-mix(in srgb, var(--white) 7%, transparent), 0 8px 16px -10px color-mix(in srgb, var(--black) 75%, transparent);
+  --surface-bar: linear-gradient(180deg, color-mix(in srgb, var(--ink-2) 88%, var(--white)) 0, var(--ink-2) 100%);
+  --bar-edge: inset 0 1px 0 color-mix(in srgb, var(--white) 9%, transparent), inset 0 -1px 0 var(--hair);
   --bar-title: var(--t1);
   --bar-btn: var(--ink-0);
   /* The bar's mark: signal for a squad's letter, rose for the people a call is about. */

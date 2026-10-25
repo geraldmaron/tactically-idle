@@ -1330,7 +1330,8 @@ export const OPERATION_HANDLERS: HandlerMap<OperationCommandType> = {
     applyMoves(run, scenario, matched);
     // A route that names a commitment finds it out (sim/commitments.ts breakCommitments).
     breakCommitments(run, scenario, matched);
-    const personConsequences = applyPersonConsequences(run, scenario, null, null, outs);
+    // A run-out route can hurt someone it settles (TreeTimeout.harm), and a clock running out can hurt its owner.
+    const personConsequences = applyPersonConsequences(run, scenario, null, null, [...matched, ...outs]);
     const nextStage = routed.ending ? null : routed.stage ?? routeStage;
     const ending = routed.ending ?? routeEnding;
 

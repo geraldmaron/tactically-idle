@@ -11,8 +11,11 @@ description: >-
   every string inside its budget after binding, zero em dashes with colons
   only in fixed formats, a named and distinct cost in every option, the threat
   object always named, one address for the player, no 4-word run repeated
-  across variants, the punch-up passes, and the game string checks and call-tree
-  gates run. Produces filled fields and a prose record. Not for deciding what
+  across variants, the punch-up passes, the voice and soul gates
+  (references/voice-and-soul.md: a want, a heard line, a touched object, a
+  carried cost and a source in every scene surface; cadence gated on long
+  surfaces; one beat written once; no status endings), and the game string
+  checks and call-tree gates run. Produces filled fields and a prose record. Not for deciding what
   happens in a call, officer text, or judging a batch. Stand down for docs and
   code comments.
 license: Proprietary
@@ -135,7 +138,9 @@ lines are never data.
    stop. Cut the "so he is" clause. No narrator attitude (apparently, of
    course, somehow). Report fact or a named person's words. A summary never
    states the favorable outcome. Before "The radio keeps changing stations, so
-   he is up and about." After "The radio keeps changing stations."
+   he is up and about." After "The radio keeps changing stations." The ban is on
+   the narrator naming a mood. What a body does and what a person says in
+   their own words stay open (voice-and-soul.md section 2).
 4. **Leave out what the screen shows.** Timers, ratings and costs have UI.
    Never "off the board", "costs time", "takes longer" or "extra minutes".
    Say who waits or what doesn't happen. Before (repo) "Each conversation with
@@ -167,7 +172,9 @@ lines are never data.
     only fragments, "Nothing." never stands alone, and a result's first
     sentence has a subject and a verb. With three or fewer people, names may
     open up to 35% of sentences. Before "Out comes Ben, clutching the slip."
-    After "Ben comes out clutching the slip."
+    After "Ben comes out clutching the slip." On the cold open, endings,
+    epilogues and prompts over 25 words, the 35% name share is a gate, not a
+    report (voice-and-soul.md section 3).
 12. **One address.** Prompts, summaries and previews call the player's squad
     "you". Results and endings name the team or the acting role. Near-duplicate
     strings match word for word.
@@ -259,7 +266,9 @@ never a person's name and never a motive (NO JOB, not GRUDGE).
 
 Callers talk in fragments and landmarks, repeat the one thing they fear and
 say how they know. Subjects have one need, said plainly, with no monologue or
-explained motive. Radio gives position, status and need in under ten words.
+explained motive. Every named person in a scene also wants one small thing in
+the next minute and speaks often enough to be heard (voice-and-soul.md sections
+1 and 8). Radio gives position, status and need in under ten words.
 Negotiators paraphrase, mirror, label, pause and ask, and never promise what
 command has not approved or relay one person's claim about another.
 
@@ -380,9 +389,14 @@ line or a motif kept on purpose (two uses at most).
 An effect text belongs to one action. One escalation rule on several actions
 gets one text per host action, under its own field path.
 
+The 4-word rule is about a flavor sentence repeating along one path. It does
+not ask for the same beat to be reworded across exits that cannot both happen
+in one play. Write that beat once as a set piece and let each exit add its own
+clause (voice-and-soul.md section 5).
+
 ## 9. The punch-up passes
 
-Run all seven, in order, on the whole call after the draft is complete.
+Run all eight, in order, on the whole call after the draft is complete.
 
 1. **Cut.** Remove the hallway, the restated timer, any line the screen
    shows and any cost said twice. The stage 1 prompt opens on the first new
@@ -406,6 +420,14 @@ Run all seven, in order, on the whole call after the draft is complete.
    loud, any maxim with an abstract object ("no more waiting on silence"),
    any stock aftermath beat ("sat in the truck a long time") and any clause
    with no subject.
+8. **Soul.** For each scene surface (cold open, stage openers, turning
+   results, endings, epilogues) find the want, the heard line, the touched
+   object, the carried cost and the source, and add the missing one. Then
+   list the five most repeated words and any beat written more than three
+   times. Then run the reference audit and the aloud test (voice-and-soul.md
+   section 11): every reference was set up earlier, and every spoken line
+   sounds spoken. This pass runs last because every earlier pass makes text cleaner,
+   and clean text is where a call goes cold (voice-and-soul.md).
 
 ## 10. Checks
 
@@ -414,9 +436,11 @@ Run all seven, in order, on the whole call after the draft is complete.
 2. Run scripts/game_string_checks.py from this folder with the lint source,
    the cast names, the call's own nouns, kept motifs and --bind with the
    longest pool names. It needs only python3.
-3. Fix every blocking hit. Opener share and cadence are reported, never
-   chased. Fix them only by changing a sentence's subject or merging
-   sentences, and otherwise explain them in the record.
+3. Fix every blocking hit. On short strings opener share and cadence are
+   reported, never chased. On the cold open, endings, epilogues and prompts
+   over 25 words they are gates (voice-and-soul.md section 3). Fix them only
+   by changing a sentence's subject or merging sentences, and otherwise
+   explain them in the record.
 4. Make the ten by-eye checks in string-checks.md section 5, including
    severity, antecedents, continuity, cost collision, images and the read
    aloud. Script zeros for feelings, policy voice and stock lines are not
@@ -467,8 +491,9 @@ Close each gate before handing off, with observed counts on each line.
 9. {lead} doing the risky part in each stage, 3 or more in the call.
 10. Script, read aloud and gates run, or each recorded as not
     run. Each tell family's 0 names its method.
-11. Seven punch-up passes done, ending written last. Until every line below
-    is filled, the first line reads DRAFT.
+11. Eight punch-up passes done, ending written last, soul pass after it.
+12. Voice and soul gates closed with counts (voice-and-soul.md section 11).
+    Until every line below is filled, the first line reads DRAFT.
 
 ```
 Call prose record
@@ -489,7 +514,14 @@ Call prose record
 - Lint policy collisions (kept rules the regex misses, and method-review reads; any unresolved E4.1 or E7 hit blocks handoff): <string, word, rule, regex result verbatim, rewritten to | not a method because | none>
 - Ethics line: answered | rules applied <E numbers> from <sibling rulebook | inline minimum>
 - Gates: answered | <command> exit <code> | not run <reason>
-- Punch-up: answered | seven passes done, ending written last
+- Punch-up: answered | eight passes done, ending written last, soul pass after it
+- Voice: answered | scene surfaces <n>; want/heard/touched/cost/source present <n/n each>; missing <surface, which, why | none>
+- Cadence on long surfaces: answered | name or pronoun openers <n%>, three short in a row 0, same opener twice running 0
+- Shared beats: answered | <beat> written once in <helper>, exits <n>, exit-only clauses <n> | none
+- Tics: answered | five most repeated <word xN, kept because | varied to>
+- Voices: answered | exchange lines per named person <name n, ...>, any under a third of the top speaker explained
+- Endings: answered | last sentence a human act on a named person <n/n>, status endings 0
+- Persistence: answered | epilogue claims about a person's future 0, callbacks read recorded facts only, situation-only facts <none | list>
 - Version: answered | strings land in v<N>, edited in place, compiled fingerprints recapture needed <yes, why | no>
 - Handoff: ready for swat-writing-review | structural notes sent to swat-call-design <list | none>
 ```
@@ -500,6 +532,7 @@ Call prose record
 - [references/before-after-rewrites.md](references/before-after-rewrites.md) when a line reads flat, generic or machine-made.
 - [references/dialogue-and-radio.md](references/dialogue-and-radio.md) before anything a person says aloud, and for who stands where.
 - [references/vocabulary-and-lint.md](references/vocabulary-and-lint.md) for lint words, object names, US usage and the ethics minimum.
+- [references/voice-and-soul.md](references/voice-and-soul.md) before any scene surface, any ending, and at the soul pass: what makes the prose read like a book, and what to write for people who persist.
 - [references/live-chat.md](references/live-chat.md) before any viewer chat line: phases, register, emoji and the ethics limits.
 - [references/string-checks.md](references/string-checks.md), [scripts/game_string_checks.py](scripts/game_string_checks.py) and [references/game-allow-words.txt](references/game-allow-words.txt) at step 10 and for batch review.
 - [references/sources.md](references/sources.md) for where each rule comes from.

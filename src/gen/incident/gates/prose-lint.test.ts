@@ -71,7 +71,7 @@ describe('the string checker reads every pattern', () => {
   });
 
   it('keeps each pattern on one line, the shape the checker parses', () => {
-    const source = readFileSync('src/gen/incident/gates/prose-lint.ts');
+    const source = readFileSync('src/content/policy/lexicon.ts');
     for (const name of Object.keys(LINT)) expect(source, name).toMatch(new RegExp(`const ${name} = /.+/[a-z]*;`));
   });
 });
@@ -84,7 +84,7 @@ describe('the string checker on real rows', () => {
     const tsv = `${dir}/rows.tsv`;
     fs.writeFileSync(tsv, ['situation\twhere\tsurface\ttext', ...rows.map((text, i) => `all\tcase.${i}\tresult\t${text}`)].join('\n') + '\n');
     return node.getBuiltinModule('node:child_process').spawnSync('python3',
-      ['.agents/skills/swat-call-prose/scripts/game_string_checks.py', tsv, '--lint-source', 'src/gen/incident/gates/prose-lint.ts'], { encoding: 'utf8' });
+      ['.agents/skills/swat-call-prose/scripts/game_string_checks.py', tsv, '--lint-source', 'src/content/policy/lexicon.ts'], { encoding: 'utf8' });
   };
   const count = (stdout: string, kind: string) => Number(new RegExp(`[ ,]${kind} (\\d+)`).exec(/^summary .*$/m.exec(stdout)![0])![1]);
 

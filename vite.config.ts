@@ -19,7 +19,7 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url));
  * as checker options are refused (parseStringChecks). */
 function labStringChecks(): Plugin {
   const checker = resolve(ROOT, '.agents/skills/swat-call-prose/scripts/game_string_checks.py');
-  const lint = resolve(ROOT, 'src/gen/incident/gates/prose-lint.ts');
+  const lint = resolve(ROOT, 'src/content/policy/lexicon.ts');
   return {
     name: 'lab-string-checks',
     apply: 'serve',

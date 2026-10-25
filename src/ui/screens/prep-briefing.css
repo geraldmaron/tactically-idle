@@ -43,7 +43,8 @@
 .pb-card .pb-row { min-height: 64px; padding: var(--sp2) 0; border-bottom: 0; }
 .pb-card .pb-row .ui-row-title { overflow-wrap: anywhere; }
 
-/* Orders: a face with the order number on its corner, or the number in a well. */
+/* Orders ride on the person they are about: the order number on the face's corner, or in a well when the
+   order names nobody listed, and the order's line leads the row with the name under it. */
 .pb-lead { position: relative; display: inline-block; }
 .pb-n { position: absolute; top: calc(-1 * var(--sp1)); left: calc(-1 * var(--sp2)); display: grid; place-items: center; min-width: 24px; min-height: 24px; padding: 0 var(--sp1); border-radius: var(--r1); background: var(--ink-0); border: 1px solid var(--hair-2); color: var(--t1); font: 600 var(--s14)/1 var(--f-ui); }
 .pb-well { display: grid; place-items: center; width: var(--face-md); height: var(--face-md); border-radius: var(--r2); background: var(--surface-well); box-shadow: var(--well); border: 1px solid var(--hair); color: var(--t2); font: 600 var(--s16)/1 var(--f-ui); }
@@ -65,6 +66,9 @@
 .pb-person:last-child { border-bottom: 0; }
 .pb-person-text { min-width: 0; display: grid; gap: var(--sp1); }
 .pb-person-text strong { font-size: var(--s16); display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp1) var(--sp2); }
+.pb-person-order { font: 600 var(--s16)/1.35 var(--f-ui); color: var(--t1); overflow-wrap: anywhere; }
+.pb-person-order + strong { font-size: var(--s14); font-weight: 500; color: var(--t2); }
+.pb-person-loose { align-items: center; }
 .pb-role { font-size: var(--s14); font-weight: 500; color: var(--t2); }
 .pb-person-item { border-bottom: 1px solid var(--hair); }
 .pb-person-item:last-child { border-bottom: 0; }
@@ -77,7 +81,7 @@
 
 .pb-more { margin-top: calc(-1 * var(--sp1)); }
 
-/* Small phones: tighter section gaps so the orders and the threat both reach the first screen. */
+/* Small phones: tighter section gaps so the threat and the people both reach the first screen. */
 @media (max-width: 359px) {
   .pb { gap: var(--sp4); }
   .pb-card .pb-row { min-height: 56px; padding: var(--sp1) 0; }

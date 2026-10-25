@@ -72,6 +72,28 @@ export function pressureUrgency(pressure: LeadingPressure): 'calm' | 'warn' | 'c
   return pressure.view.value >= 75 || pressure.left <= 1 ? 'critical' : pressure.view.value >= 40 ? 'warn' : 'calm';
 }
 
+/** How far a threat's window has closed, in the steps the player is warned at (owner, 2026-10-24: the
+ * player must have ample time to see the choice is about to be taken from them). `steady` is more than
+ * half left, then `half`, `quarter`, and `last` for the final tenth or the last minute; `landed` is zero.
+ * It reads the same minutes as the pill's number and bar, so the warning and the clock never disagree. */
+export type ThreatStage = 'steady' | 'half' | 'quarter' | 'last' | 'landed';
+
+export function threatStage(minutes: number, left: number): ThreatStage {
+  if (left <= 0) return 'landed';
+  const share = minutes > 0 ? left / minutes : 0;
+  return share <= 0.1 || left <= 1 ? 'last' : share <= 0.25 ? 'quarter' : share <= 0.5 ? 'half' : 'steady';
+}
+
+/** What the pill says at each step: how much time is gone and what losing it means, in plain words.
+ * `steady` and `landed` have a line too, so the pill never changes height as the steps pass. */
+export const THREAT_STAGE_NOTE: Record<ThreatStage, string> = {
+  steady: 'Choose before the time runs out.',
+  half: 'Half the time is gone.',
+  quarter: 'A quarter left. Choose before it moves on.',
+  last: 'Last moments. Choose now, or it moves on.',
+  landed: 'Time is up. The scene moved on.',
+};
+
 export interface GaugeReach { label: string; effect: 'stops' | 'slows'; bands: OutcomeBand[] }
 
 const BANDS: OutcomeBand[] = ['favorable', 'mixed', 'adverse'];

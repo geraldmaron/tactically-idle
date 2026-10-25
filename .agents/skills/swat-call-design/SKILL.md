@@ -204,9 +204,11 @@ by eye against this file's two prose rules and the stock phrases you can name.
   that branch. The gate fails a node whose choices all lead to the same future.
 - Taking a choice leaves its node (call trees). A choice that should leave its siblings open is
   an ordering, never a choice; route it to a new node that says what changed.
-- A held ending names who is still inside. When a person can be inside or out on the paths that
-  reach it, split the outcome by `when: { safe | notSafe }` into two endings
-  (`hostage-live.ts`, `held_counter` and `held_both`).
+- No call ends with the subject left inside (owner, 2026-10-24). A refusal is never a result by itself:
+  the outcome that shows it also orders the entry (`forcedEntry` in `hostage-live-parts.ts` and
+  `warrant-parts.ts`), with a drawn use of the team's hands deciding whether the subject is hurt, and a
+  run-out takes the door by `commandTakesDoor` or `commandTakesStairs`. An ending names who is out, hurt
+  or dead, never who is still inside. `handed_over` stays as the engine's fallback and is never a design.
 - A subject who shoots at the team moves the call to a decision node (`fired_on`: go in harder,
   or hold and call him), never straight to a held ending.
 - A preview names the worst result its band can produce in any situation, and promises nothing

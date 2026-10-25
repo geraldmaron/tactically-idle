@@ -364,7 +364,8 @@ def main():
             if m:
                 flag("feeling", row, f"'{m.group(0)}' tells a feeling; show the behavior")
         for t in SHEET_TERMS:
-            if t in bare:
+            # Whole phrases only: "her say" is design vocabulary, "Christopher says" is a name and a verb.
+            if re.search(r"(?<![a-z])" + re.escape(t) + r"(?![a-z])", bare):
                 flag("sheet-term", row, f"'{t}' is design vocabulary; show the act")
         m = ENGINE_WORDS.search(bare)
         if m and surface not in ("pressure_label",):

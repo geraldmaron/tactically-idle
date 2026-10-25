@@ -208,7 +208,7 @@ on a call with no entry), because the player sees a manufactured result.
 [block] officer person_016 | arc.strain.fork.options[0] | sees 'Pair with {Mentor} on the next entry' then 'Strain note cleared at Larkin Court' on a call with no entry step | rule officer cause | fix as data clear only on the next call with an entry step, and name the mentor's cost in the option | route swat-officer-stories (observed in a proof draft)
 ```
 
-## 9. Depth (D1 to D10)
+## 9. Depth (D1 to D12)
 
 Question. Would a player remember this call a week later, and want to argue about what they did
 in it? Correct is the floor. These gates fail a call that has zero defects. They come from the
@@ -227,6 +227,8 @@ the escalation palette), and only a separate reader can pass them.
 | D8 The after | Read every ending's epilogue alone | An ending stops at status, or an epilogue moralizes or invents an outcome (E11.2) | fix before ship |
 | D10 Pretext | Read the cold open and Who they are, then stage 1 | A key person has no past the player can see by stage 1, or the cold open is a summary of the hook | fix before ship |
 | D9 Replay | Play the same opening under each situation, back to back | Two situations read as the same person with different dice | fix before ship |
+| D11 Scene | For each scene surface (cold open, stage openers, turning results, endings, epilogues), find the want, the heard line, the touched object, the carried cost and the source (../swat-call-prose/references/voice-and-soul.md) | Any of the five is missing on the cold open or on a turning result, or the cold open has no spoken line | fix before ship |
+| D12 Beat once | Count the separate phrasings of each beat that sits behind several exits | One beat has more than three phrasings, each a thin one-liner, with its best version nowhere | fix before ship |
 
 Reject. A new or rebuilt call that fails two or more of D1, D2, D3 and D5 goes back to
 swat-call-design. Rewording can't fix a call with no psychology.

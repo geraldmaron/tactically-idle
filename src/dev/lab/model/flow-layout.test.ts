@@ -231,7 +231,8 @@ describe('authoredEndingClass', () => {
     expect(hostage.out_on_camera).toBe('clean');
     expect(hostage.manager_killed).toBe('death');
     expect(hostage.handed_over).toBe('unresolved');
-    expect(hostage.held_both).toBe('unresolved');
+    expect(hostage.rider_hurt).toBe('hurt');
+    expect(hostage.door_taken).toBe('clean');
   });
 
   it('puts an ending reached by force on the subject in death when the same outcome kills someone else', () => {

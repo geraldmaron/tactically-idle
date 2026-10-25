@@ -45,6 +45,7 @@ import { PrepBriefing } from './PrepBriefing';
 import { GamePeopleProvider } from '../people/PeopleText';
 import { lexiconFor } from '../people/lexicon';
 import { preparationOptions } from './preparation-options';
+import { deployRoster } from '../../sim/squads';
 import { bestFitSquad, joinNames, squadName as nameOf, toggleDeploymentSquad } from './operation-squads';
 import { callFlow, draftField, type FlowStep } from './call-flow';
 import { FlowScreen } from '../components/chrome';
@@ -370,15 +371,17 @@ export function OpsPrepare({ scenarioId, step = 'brief', onCancel }: { scenarioI
       </div>}
     </Section>
 
-    {chosen.map((sid, index) => {
+    {chosen.map((sid) => {
       const kit = kitOf(sid);
+      // Every officer who would deploy carries the basic kit, so each tile says how many sets this squad takes.
+      const carriers = deployRoster(g, sid, now).goes.length;
       return <div key={sid} className="cl-squad-plan" data-squad={sid}><Section className="cl-section" title={`${squadName(sid)} carries`} badge={sid} tone="act" count={`${kit.length} from the Armory`}
         action={<button type="button" className="cl-link cl-pill" data-squad={sid} onClick={() => setSheet({ kind: 'kit', squad: sid })} aria-label={`Adjust what ${squadName(sid)} carries`}>Adjust</button>}>
         <div className="cl-plan-card cl-loadout">
-          {index === 0 && <>
+          <>
             <p className="cl-slots-label"><Icon name="basicKit" size={16} />Basic kit</p>
-            <ul className="cl-kit cl-slots cl-basic-icons" aria-label={BASIC_KIT_LINE}>{BASIC_KIT_ICONS.map(([id, label]) => <li key={id} className="cl-kit-chip cl-slot"><span className="cl-slot-art"><GearArt itemId={id} size={28} /></span><span className="cl-slot-name">{label}</span></li>)}</ul>
-          </>}
+            <ul className="cl-kit cl-slots cl-basic-icons" aria-label={BASIC_KIT_LINE}>{BASIC_KIT_ICONS.map(([id, label]) => <li key={id} className="cl-kit-chip cl-slot"><span className="cl-slot-art"><GearArt itemId={id} size={28} /></span><span className="cl-slot-name">{label}</span>{carriers > 0 && <span className="cl-slot-count">×{carriers}</span>}</li>)}</ul>
+          </>
           {kit.length > 0 && <>
             <p className="cl-slots-label"><Icon name="box" size={16} />From the Armory</p>
             <ul className="cl-kit cl-slots" aria-label={`${squadName(sid)} kit`}>{kit.map((item) => <li key={item.id} className={`cl-kit-chip cl-slot cl-slot-armory cl-kit-${item.tone}`}><span className="cl-slot-art"><GearArt itemId={item.id} size={44} /></span><span className="cl-slot-name">{item.text}</span></li>)}</ul>

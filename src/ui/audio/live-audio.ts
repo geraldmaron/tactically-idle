@@ -125,6 +125,27 @@ export function playTick(): void {
   }
 }
 
+/** The alert a threat gives as its window closes (owner, 2026-10-24: ample warning before a decision is
+ * taken from the player): two notes at half the time, three at a quarter, four rising in the last
+ * moments, each with a matching buzz. The pill says the same in words; this is for a player looking
+ * at the scene and not the strip. */
+export function playWarning(stage: 'half' | 'quarter' | 'last'): void {
+  const notes = stage === 'half' ? [660, 660] : stage === 'quarter' ? [880, 880, 880] : [988, 988, 988, 1319];
+  buzz(stage === 'half' ? [60] : stage === 'quarter' ? [70, 60, 70] : [90, 50, 90, 50, 140]);
+  const c = audio();
+  if (!c) return;
+  const at = c.currentTime;
+  notes.forEach((freq, index) => {
+    const start = at + index * 0.15;
+    const osc = c.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    osc.connect(envelope(c, start, stage === 'half' ? 0.1 : 0.16, 0.005, 0.11));
+    osc.start(start);
+    osc.stop(start + 0.14);
+  });
+}
+
 /** One heartbeat, two low thumps: played once a second in a threat's critical quarter. */
 export function playHeartbeat(): void {
   const c = audio();

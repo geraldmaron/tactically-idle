@@ -124,17 +124,16 @@ describe('holdsAt', () => {
 });
 
 describe('blockedBecause', () => {
-  it('names the hidden truth that rules an ending out of this situation', () => {
-    // Every route into in_with_family needs the back of the house to be the way out (leaving true); situation 2 of
-    // the warrant call (The kid) has it false. Going Live has no ending every route to which a fact rules out.
+  it('finds no ending a hidden truth rules out of a shipped call', () => {
+    // Until 2026-10-24 every route into the warrant's in_with_family needed the back of the house to be the
+    // way out (leaving true), and this named that truth. The held endings are gone (no call ends with the
+    // subject left inside), and the escape out the back keeps a route that needs no hidden truth (let_go), so
+    // no shipped ending is ruled out by a fact today.
     const WARRANT = 'type=barricaded&tier=2';
-    const s = open(`${WARRANT}&variant=1`);
-    expect(s.tree.situations[s.situation]!.truth.leaving).toBe(false);
-    const deps = dependencyIndex(s.template);
-    const text = blockedBecause(s, { ending: 'in_with_family' }, deps);
-    expect(text).toMatch(/^Every route there needs the hidden truth “.+” to be true, and situation 2 has it false\.$/);
-    // The same ending in situation 1 (Leaving) is reachable: nothing fixed rules it out.
-    expect(blockedBecause(open(`${WARRANT}&variant=0`), { ending: 'in_with_family' }, deps)).toBeNull();
+    for (const variant of [0, 1]) {
+      const s = open(`${WARRANT}&variant=${variant}`);
+      expect(blockedBecause(s, { ending: 'escaped' }, dependencyIndex(s.template))).toBeNull();
+    }
   });
 
   for (const subject of certSubjects()) it(`${subject.source}: names the missing cert for a locked choice, and nothing once it is granted`, () => {

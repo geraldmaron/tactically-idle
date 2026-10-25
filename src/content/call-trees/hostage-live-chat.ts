@@ -16,7 +16,7 @@ export const CHAT: Record<string, ThreatChat | false> = {
     closing: ['got a map open. two stores on that block', 'not the laundromat. green sign maybe', 'is there a bus stop out front?', 'maybe the one next to the bank',
       after('cross_streets', 'bank corner? 📍'), 'dont post it. whoever has it dont', 'i live near there, they are taping the corner off'],
     imminent: ['dont read it out {rider.first}', 'somebody in the group chat has the street', 'pleeease dont post it', by(FRIEND, 'dont post the address. i mean it'),
-      '{handle} you have it??', 'takes two seconds on any map', by('{handle}', 'ok i got it. typing it now')],
+      '{handle} you have it??', 'someone is about to find it', by('{handle}', 'ok i got it. typing it now')],
   },
   on_air: {
     early: ['the handgun is still there', 'is {manager.first} ok down there', by(FRIEND, 'come out. i got you. im at the tape'), 'everybody chill, let {rider.first} talk', 'woah hold on', after('count_two', 'more people coming in 👀')],
@@ -35,7 +35,7 @@ export const CHAT: Record<string, ThreatChat | false> = {
     imminent: ['everybody will see this', 'are they allowed that close', 'somebody tell the van to back up', 'wow no', 'more people tuning in on tv now', 'ugh turn it off'],
   },
   cornered: {
-    early: ['someone is recording that', 'did anyone catch what {manager.first} said', after('thief', 'people are saying {rider.first} took the bag'), 'who says? nobody proved it', 'stop reading it out loud', 'the clip is better than the stream tbh', 'read the room'],
+    early: ['someone is recording that', 'did anyone catch what {manager.first} said', after('thief', 'people are saying {rider.first} took the bag'), 'who says? nobody proved it', 'stop reading it out loud', 'the clip is already going around', 'read the room'],
     closing: ['comments are split now', 'half of you werent here for the start', 'the clip cut off the part before', '{manager.first} didnt say it like that', 'count keeps going', 'everyone is piling on'],
     imminent: ['stop sharing it', 'it makes it worse', 'dont look at it', 'nobody needs that clip', 'just reported it', 'how many shares is that now'],
   },

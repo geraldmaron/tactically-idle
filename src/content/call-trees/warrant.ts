@@ -10,7 +10,7 @@ import type { CallTree } from './types';
 //
 // Before dawn the squad stands in the downstairs hall of a house let by the room. The man on the
 // warrant said "Not tonight" through his door upstairs. A parent and a child are asleep in the
-// rooms beside his, off the same landing, and the parent's alarm goes at 5:15. Three situations,
+// rooms beside his, off the same landing, and the parent's alarm goes at 5:15 AM. Three situations,
 // three earlier scenes:
 // - Leaving. He stood the landlord's ladder under the family's window last night and asked the
 //   parent whether it opens. "Not tonight" bought him time to lace his boots; the way out goes
@@ -37,7 +37,7 @@ export const WARRANT_ROOM: CallTree = {
       profile: '{lt.first} has rented a room upstairs at {place} for a year, paid in cash on the first of the month. {lt.He} trained at the boxing gym two streets over as a kid. The warrant says {lt.he} {lt~runs|run} the corner trade on this block for a crew.',
       carries: { label: 'Handgun', glyph: 'weapon', knownFrom: 'handgun' } },
     { id: 'parent', label: 'neighbor next door', pronouns: 'she', kind: 'civilian', place: { rooms: ['bedroom', 'living'], floor: 'upper' }, surnameGroup: 'family',
-      profile: '{parent.first} rents the rooms beside {lt.first}’s with {kid.first} and works the early shift at a bakery across town, out the door at 5:30 every weekday and home in time for the school bus.' },
+      profile: '{parent.first} rents the rooms beside {lt.first}’s with {kid.first} and works the early shift at a bakery across town, out the door at 5:30 AM every weekday and home in time for the school bus.' },
     { id: 'kid', label: 'child next door', pronouns: 'he', kind: 'civilian', place: { rooms: ['bedroom', 'living', 'office', 'storage'], floor: 'upper' }, surnameGroup: 'family',
       profile: '{kid.first} is {kid.age} and has lived at {place} since the spring. {kid.He} {kid~knocks|knock} on the wall at night to say goodnight to whoever is on the other side.' },
     { id: 'landlord', label: 'landlord', pronouns: 'he', kind: 'bystander', place: 'outside',
@@ -47,14 +47,14 @@ export const WARRANT_ROOM: CallTree = {
   families: ['two_storey_house_g2', 'semi_detached_g2', 'corner_store_flat_g2'],
   scene: { setting: ['residential', 'business'], rooms: ['hall', 'living', 'kitchen', 'retail'], timeOfDay: 'night', crowd: 0 },
   summary: '{lt} won’t open the door. A child sleeps in the next room, and {lt.first} may be armed.',
-  coldOpen: 'The warrant came out of three months of patrol stops and one lead that kept pointing at the same name. The squad was in the downstairs hall at {place} by 4:50, with the street still dark. An officer knocked on the door upstairs and called out the warrant, and for a full minute nobody answered. Then {lt.first} said “Not tonight” from just behind the door, and the strip of light under it went out. Patrol already knew who sleeps where from {landlord.first}, who owns {place}. {lt.first} rents one room up there. {parent.first} and {kid.first}, who is {kid.age}, rent the rooms beside it, and {parent.first} gets up for work at 5:15.',
+  coldOpen: 'The warrant came out of three months of patrol stops and one lead that kept pointing at the same name. The squad was in the downstairs hall at {place} by 4:50 AM, with the street still dark. An officer knocked on the door upstairs and called out the warrant, and for a full minute nobody answered. Then {lt.first} said “Not tonight” from just behind the door, and the strip of light under it went out. Patrol already knew who sleeps where from {landlord.first}, who owns {place}. {lt.first} rents one room up there. {parent.first} and {kid.first}, who is {kid.age}, rent the rooms beside it, and {parent.first} gets up for work at 5:15 AM.',
   pressureLabel: '{kid.first} in the next room',
   pressure: { start: 14, perMinute: 0.18, threshold: 85, civilianPerMinute: 0.4 },
   briefing: {
     dispatchReason: 'Command has a warrant for {lt}, served by the squad before dawn. {lt.He} answered the knock with “Not tonight” and won’t come out, and a parent and child are asleep next to {lt.his} room.',
     known: [
       'The landlord says {parent.first} and {kid.first}, {kid.age}, sleep in the rooms beside {lt.first}’s, off the same landing.',
-      'The landlord says {parent.first}’s alarm goes at 5:15, and {parent.he} {parent~leaves|leave} for work at 5:30.',
+      'The landlord says {parent.first}’s alarm goes at 5:15 AM, and {parent.he} {parent~leaves|leave} for work at 5:30 AM.',
     ],
     unknown: ['Why {lt.first} won’t open the door'],
     responsibilities: ['Keep {parent.first} and {kid.first} safe', 'Serve the warrant on {lt.first}', 'Bring {lt.first} out alive'],
@@ -89,7 +89,7 @@ export const WARRANT_ROOM: CallTree = {
       truth: { handgun: true, leaving: true, for_kid: false, witnesses: false }, descriptors: ['injury', 'police_gunfire', 'child_at_risk'],
       selfHarmScreened: 'No loss event, goodbye or withdrawal: the want is a way out of the house, packed and dressed for tomorrow.' },
     { note: 'The kid. {lt.He} {lt~walks|walk} {kid.first} to the bus some mornings and won’t be taken where {kid.first} can see. The question about whether they are asleep was care. The handgun went back to the crew a week ago.',
-      truth: { handgun: false, leaving: false, for_kid: true, witnesses: false }, descriptors: [],
+      truth: { handgun: false, leaving: false, for_kid: true, witnesses: false }, descriptors: ['injury', 'police_gunfire', 'child_at_risk'],
       selfHarmScreened: 'No loss event, goodbye or withdrawal: the want is to spare the child the sight of the arrest.' },
     { note: 'Witnesses. A cousin was hurt in a raid like this one, in the dark. {lt.He} will walk out only in daylight with the street watching, which is the opposite of the quiet the team chose for the family.',
       truth: { handgun: true, leaving: false, for_kid: false, witnesses: true }, descriptors: ['injury', 'police_gunfire', 'child_at_risk'],

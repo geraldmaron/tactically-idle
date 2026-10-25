@@ -1,4 +1,4 @@
-import { CALM_AT_DOOR, CHECKS, COVERED, FAMILY_IN, FAMILY_OUT, FOR_KID, LEAVING, NEGOTIATOR, SEEN, STAYING, STEADY_ON_STAIRS, SURVEILLANCE, UNCOVERED, check, familyOut, forTheLadder, foundOut, heldEnd, holdTheHouse } from './warrant-parts';
+import { CALM_AT_DOOR, CHECKS, COVERED, FAMILY_IN, FAMILY_OUT, FOR_KID, LEAVING, NEGOTIATOR, SEEN, STAYING, STEADY_ON_STAIRS, SURVEILLANCE, UNCOVERED, check, familyOut, forTheLadder, foundOut, forcedEntry, commandTakesStairs, stairsOrdered } from './warrant-parts';
 import type { TreeEnding, TreeIf, TreeNode } from './types';
 
 const { TALK, HOLD, MOVE, ENTER } = CHECKS;
@@ -17,7 +17,7 @@ export const RESOLVE_NODES: TreeNode[] = [
         { id: 'sidewalk', at: 2.6, by: 'radio', line: 'Neighbors gathering out front. Two, maybe three.' },
         { id: 'who_watching', at: 5.4, by: 'lt', line: 'Who’s out there? Who’s watching this?' },
       ],
-      timeout: holdTheHouse('Nobody gives {lt.first} an answer about the stairs. Command keeps the block closed, and the house stays as it is, with the line open.') },
+      timeout: commandTakesStairs('Nobody gives {lt.first} an answer about the stairs. Command ends the wait and sends the team up.') },
     prompt: 'Gray light is coming up behind the houses opposite. {lt.first} is still behind {lt.his} door, and what is left to settle is how {lt.he} {lt~comes|come} out.',
     exchange: [{ by: 'lt', line: 'If I open this door, what happens on the stairs?' }, { by: 'negotiator', line: 'Tell me what you want to happen.' }],
     promptIf: [
@@ -172,7 +172,7 @@ export const RESOLVE_NODES: TreeNode[] = [
   // ------------------------------------------------------------------ stage 3: the last door
   { id: 'last_door', stage: 'resolve',
     threat: { label: 'The street in daylight', minutes: 12, text: 'It is full daylight now. A dozen neighbors line the sidewalk, and a car slows at the tape so the driver can film the front of the house.', pressure: 5,
-      timeout: holdTheHouse('{lt.first} stays where {lt.he} {lt~is|are}, and nobody goes up. Command keeps the street shut, and the negotiator keeps the line open.') },
+      timeout: commandTakesStairs('{lt.first} stays where {lt.he} {lt~is|are}, and nobody goes up. Command changes that and orders the team in.') },
     prompt: '{lt.first} is still upstairs, and the street is awake around the patrol cars. Whatever happens next happens on those stairs.',
     exchange: [{ by: 'negotiator', line: 'Nobody comes up without telling you first. You have my word on that.' }, { by: 'lt', line: 'Then what are you all waiting for?' }],
     promptIf: [
@@ -188,7 +188,7 @@ export const RESOLVE_NODES: TreeNode[] = [
         summary: 'From the hall, your negotiator talks {lt.first} down one stair at a time, with the street door open behind the officers. Every neighbor on the sidewalk sees how it ends.',
         pull: 'Every step down is {lt.first}’s own.',
         cost: 'The whole street watches {lt.first} come down, whatever {lt.he} {lt~does|do} on the stairs.',
-        preview: { favorable: '{lt.first} comes down to the hall with open hands.', mixed: 'At the bottom {lt.first} balks at the open door and the street.', adverse: '{lt.first} goes back into the room, and the door shuts.' },
+        preview: { favorable: '{lt.first} comes down to the hall with open hands.', mixed: 'At the bottom {lt.first} balks at the open door and the street.', adverse: '{lt.first} goes back into the room, and the door shuts. Command orders you up.' },
         outcomes: {
           favorable: [
             { if: SEEN, text: '{lt.first} comes down slowly with open hands, into the light from the street door, and looks out at the neighbors before the last step. The team has {lt.him}.',
@@ -206,8 +206,10 @@ export const RESOLVE_NODES: TreeNode[] = [
             { if: LEAVING, when: UNCOVERED, text: '{lt.first} goes back up into the room and shuts the door.' },
             { if: LEAVING, when: { ...UNCOVERED, ...FAMILY_OUT }, text: 'A minute later the officers out back find the family’s window open and {lt.first} gone off the bottom of the ladder.', next: { ending: 'escaped' }, pressure: 6 },
             { if: LEAVING, when: { ...UNCOVERED, ...FAMILY_IN }, text: 'Then the door opens again, and an officer sees the handgun as {lt.first} crosses to the family’s room.', reveal: ['handgun'], mark: ['at_family'], next: { node: 'threat' }, pressure: 8 },
-            ...heldEnd({ if: LEAVING, when: COVERED, text: '{lt.first} looks toward the back of the house once more and retreats into the room. The door shuts, and {lt.first} stops picking up.', moves: { lt: 'provoked' } }, [LEAVING], COVERED),
-            ...heldEnd({ if: STAYING, text: '{lt.first} gets two stairs down, then turns around. The lock turns, and the phone rings out.', moves: { lt: 'provoked' } }, [STAYING]),
+            ...forcedEntry({ if: LEAVING, when: COVERED, text: '{lt.first} looks toward the back of the house once more and retreats into the room. The door shuts, and {lt.first} stops picking up.', moves: { lt: 'provoked' } },
+              'The line stays dead. Command sends the team up while {lt.first} watches the window, and officers take {lt.him} at the door.', [LEAVING], COVERED),
+            ...forcedEntry({ if: STAYING, text: '{lt.first} gets two stairs down, then turns around. The lock turns, and the phone rings out.', moves: { lt: 'provoked' } },
+              'Command gives the order. The team has {lt.him} before {lt.he} can brace the door.', [STAYING]),
           ],
         } },
       // The tie choice's quieter form: someone who knows him, sitting on the top stair.
@@ -227,7 +229,8 @@ export const RESOLVE_NODES: TreeNode[] = [
             ...familyOut(), out: ['lt'], next: { ending: 'custody_clean' }, objective: 40 }],
           adverse: [
             { if: ARMED, text: 'The door flies open, and {lt.first} looms over the officer on the step with the handgun out.', reveal: ['handgun'], mark: ['gun_up'], moves: { lt: 'provoked' }, next: { node: 'threat' }, pressure: 8 },
-            ...heldEnd({ if: UNARMED, text: '{lt.first} tells the officer outside to go home, and turns the radio up loud.', moves: { lt: 'provoked' } }, [UNARMED]),
+            ...forcedEntry({ if: UNARMED, text: '{lt.first} tells the officer outside to go home, and turns the radio up loud.', moves: { lt: 'provoked' } },
+              'The radio stays loud. Command lets the officer on the top step stand, and the team is in the room before {lt.first} turns it down.', [UNARMED]),
           ],
         } },
     ] },
@@ -289,7 +292,7 @@ export const RESOLVE_NODES: TreeNode[] = [
   // ------------------------------------------------------------------ stage 3: the handgun is out
   { id: 'threat', stage: 'resolve',
     threat: { label: 'Daylight on the stairs', minutes: 5, text: 'Daylight comes up the stairs from the open street door, and {lt.first} can see every officer below now.', pressure: 6,
-      timeout: holdTheHouse('Nobody moves on the stairs. {lt.first} backs into a room with the handgun, and command holds the house as it is.') },
+      timeout: commandTakesStairs('Nobody moves on the stairs. {lt.first} backs into a room with the handgun. The order to go in comes over the radio.') },
     prompt: '{lt.first} stands on the landing with a handgun, a few steps above the officers.',
     exchange: [{ by: 'radio', line: 'Landing. Subject has a handgun out. Holding.' }, { by: 'lt', line: 'Back down the stairs. All of you.' }],
     promptIf: [
@@ -304,13 +307,14 @@ export const RESOLVE_NODES: TreeNode[] = [
         summary: '{lead} stays on the stairs in plain view, in line with the handgun, and talks to {lt.first} by name. If {lt.first} fires, {lead} is where the shot goes.',
         pull: 'The voice {lt.first} has heard all morning, a few steps away.',
         cost: '{lead} stands a few stairs below the handgun.',
-        preview: { favorable: 'The handgun goes down on the boards, and {lt.first} follows the negotiator’s words to the hall.', mixed: '{lt.first} lowers the handgun and backs into a room with it.', adverse: '{lt.first} fires on the landing. Your officers can be badly hurt, and so can anyone behind a thin wall.' },
+        preview: { favorable: 'The handgun goes down on the boards, and {lt.first} follows the negotiator’s words to the hall.', mixed: '{lt.first} lowers the handgun and backs into a room with it, so command sends you onto the landing.', adverse: '{lt.first} fires on the landing. Your officers can be badly hurt, and so can anyone behind a thin wall.' },
         outcomes: {
           favorable: [{ text: '{lt.first} sets the handgun on the boards and slides it away with a foot, the way the negotiator asks. Then {lt.first} walks down to the hall, and the team has {lt.him}.',
             ...familyOut(), out: ['lt'], moves: { lt: 'released' }, next: { ending: 'walked_out' }, objective: 60 }],
           mixed: [
-            { text: 'The muzzle drops. {lt.first} backs into {lt.his} own room with the handgun, and the door shuts.', moves: { lt: 'released' }, next: { ending: 'held_in' }, objective: 25 },
+            { text: 'The muzzle drops. {lt.first} backs into {lt.his} own room with the handgun, and the door shuts.', moves: { lt: 'released' }, objective: 25 },
             { when: FAMILY_IN, text: 'The officers bring {parent.first} and {kid.first} out past the shut door.', ...familyOut() },
+            stairsOrdered('Command hears the door shut and acts on it. The team takes the landing and the door behind it, and officers have {lt.first} with the handgun on the floor.'),
           ],
           adverse: [{ text: '{lt.first} fires down the stairs and backs toward the nearest doorway.', fire: { from: 'lt', mark: 'officer_down' }, mark: ['shot_inside'], moves: { lt: 'shots' }, next: { node: 'fired_on' }, pressure: 10 }],
         } },
@@ -337,24 +341,26 @@ export const RESOLVE_NODES: TreeNode[] = [
         summary: 'Every officer steps back down and out of {lt.first}’s sight, so {lt.first} has nobody to aim at. Nobody is close enough to stop {lt.first} going wherever {lt.he} {lt~wants|want} upstairs.',
         pull: 'No officer in front of the handgun, and time for {lt.first} to think.',
         cost: 'Nobody stands between {lt.first} and the rest of the upstairs.',
-        preview: { favorable: '{lt.first} goes back into {lt.his} room and calls the negotiator.', mixed: '{lt.first} goes into a room and stops answering.', adverse: 'With the stairs empty, {lt.first} goes wherever {lt.he} {lt~wants|want}, and the family can be in the way.' },
+        preview: { favorable: '{lt.first} goes back into {lt.his} room and calls the negotiator.', mixed: '{lt.first} goes into a room and stops answering, and command orders you back in.', adverse: 'With the stairs empty, {lt.first} goes wherever {lt.he} {lt~wants|want}, and the family can be in the way.' },
         outcomes: {
           favorable: [
             { text: 'The door of {lt.first}’s room shuts behind {lt.him}. A minute later the negotiator’s phone rings, and it is {lt.first}, asking what happens now.', mark: ['went_quiet'], next: { node: 'last_door' }, objective: 15 },
             { when: FAMILY_IN, text: 'While that door is shut, the officers get {parent.first} and {kid.first} down and out.', ...familyOut() },
           ],
-          mixed: heldEnd({ text: '{lt.first} disappears into a room and stops answering. The officers wait in the hall below.', moves: { lt: 'provoked' } }),
+          mixed: forcedEntry({ text: '{lt.first} disappears into a room and stops answering. The officers wait in the hall below.', moves: { lt: 'provoked' } },
+            'Nobody has seen {lt.first} in a quarter hour. Command sends the team back up, and officers find {lt.him} sitting on the bed.'),
           adverse: [
             { if: LEAVING, when: FAMILY_OUT, text: 'With nobody watching the stairs, {lt.first} crosses into the empty family room and out the window. By the time the officers reach the back, the ladder is down and {lt.first} is gone.', next: { ending: 'escaped' }, pressure: 6 },
-            { if: LEAVING, when: FAMILY_IN, text: '{lt.first} goes into the family’s room and shuts the door. {parent.first} and {kid.first} are in there with {lt.first} and the handgun, and the window is open.', next: { ending: 'in_with_family' }, pressure: 10, civilian: -10 },
-            ...heldEnd({ if: STAYING, text: 'Furniture scrapes across the inside of {lt.first}’s door, the handgun with {lt.first} behind it. The phone rings out.', moves: { lt: 'provoked' } }, [STAYING]),
+            { if: LEAVING, when: FAMILY_IN, text: '{lt.first} goes into the family’s room and shuts the door. {parent.first} and {kid.first} are in there with {lt.first} and the handgun, and the window is open.', pressure: 10, civilian: -10 },
+            { if: LEAVING, when: FAMILY_IN, text: 'Command orders the family’s door. Officers go through the room, and {parent.first} is hurt shielding {kid.first} before the team has {lt.first}.', ...familyOut(), harm: { parent: 'wounded' }, out: ['lt'], next: { ending: 'family_hurt' }, objective: 10, civilian: -15 },
+            ...forcedEntry({ if: STAYING, text: 'Furniture scrapes across the inside of {lt.first}’s door, the handgun with {lt.first} behind it. The phone rings out.', moves: { lt: 'provoked' } }, 'The barricade gives on the second shove. Officers pin {lt.him} against the wall before the handgun comes up.', [STAYING]),
           ],
         } },
     ] },
 
   { id: 'fired_on', stage: 'resolve',
     threat: { label: 'Calls from the block', minutes: 6, text: 'Dispatch has calls coming in from every house on the block, and command wants an answer from the team within minutes.', pressure: 8,
-      timeout: holdTheHouse('Nobody answers command. The officers stay below, and {lt.first} stays in the doorway upstairs.') },
+      timeout: commandTakesStairs('Nobody answers command. The next order sends the team through the door.') },
     prompt: 'There is a hole in the landing wall. {lt.first} is in a doorway upstairs with the handgun, and the phone goes unanswered.',
     exchange: [{ by: 'radio', line: 'Shot fired on the landing. Checking officers.' }, { by: 'lt', line: 'I told you to back off. I told you.' }],
     promptIf: [{ when: { marks: ['officer_down'] }, prompt: 'One officer is down in the hall with the medic. {lt.first} holds the doorway upstairs with the handgun.' }],
@@ -381,19 +387,20 @@ export const RESOLVE_NODES: TreeNode[] = [
         summary: '{lead} keeps the line open from the hall and takes {lt.first} at {lt.his} word that the shot was a warning. Your squad holds below, too far back to stop a second one.',
         pull: '{lt.first} is still talking, after the shot.',
         cost: 'A second shot would reach the landing before any officer could.',
-        preview: { favorable: '{lt.first} puts the handgun down and comes out.', mixed: '{lt.first} stays upstairs with the handgun and keeps talking.', adverse: '{lt.first} fires again, and whoever is closest to that wall can be hit.' },
+        preview: { favorable: '{lt.first} puts the handgun down and comes out.', mixed: '{lt.first} stays upstairs with the handgun and keeps talking, until you go up on command’s word.', adverse: '{lt.first} fires again, and whoever is closest to that wall can be hit.' },
         outcomes: {
           favorable: [{ text: 'The negotiator gets {lt.first} to lay the handgun on the landing and step away from it. A few minutes later {lt.first} walks down empty-handed, and the team has {lt.him}.',
             ...familyOut(), out: ['lt'], moves: { lt: 'released' }, next: { ending: 'walked_out' }, objective: 55 }],
           mixed: [
-            { text: '{lt.first} retreats behind {lt.his} door with the handgun and keeps the line open, saying nothing.', next: { ending: 'held_in' }, objective: 20 },
+            { text: '{lt.first} retreats behind {lt.his} door with the handgun and keeps the line open, saying nothing.', objective: 20 },
             { when: FAMILY_IN, text: 'The officers lead {parent.first} and {kid.first} to the street while {lt.first} sits on the phone.', ...familyOut() },
+            stairsOrdered('Command takes the quiet for its answer. The team goes up, and {lt.first} is still holding the phone when officers take the handgun.'),
           ],
           adverse: [
             { when: FAMILY_IN, text: 'The next round goes into the wall of the family’s room. {parent.first} is hurt shielding {kid.first}, and the officers go up on the shot and have {lt.first}.',
               ...familyOut(), harm: { parent: 'wounded' }, out: ['lt'], next: { ending: 'family_hurt' }, objective: 15, civilian: -15 },
-            { when: FAMILY_OUT, text: '{lt.first} fires into the ceiling and shuts {lt.himself} in {lt.his} room. The line goes dead, and command keeps the officers downstairs.',
-              next: { ending: 'held_in' }, pressure: 8 },
+            { when: FAMILY_OUT, text: '{lt.first} fires into the ceiling and shuts {lt.himself} in {lt.his} room. The line goes dead.', pressure: 8 },
+            stairsOrdered('The team goes through the door the shot came from, and takes {lt.him} on the floor beside the handgun.', { when: FAMILY_OUT }),
           ],
         } },
     ] },
@@ -429,17 +436,6 @@ export const ENDINGS: Record<string, TreeEnding> = {
     summary: '{lt.first} got out through the back of the house and away in the dark, and the warrant is still open. {parent.first} and {kid.first} are safe with patrol, and nobody was hurt.',
     epilogue: 'Patrol found the backpack in an alley two streets over before noon. {lt.first} wasn’t with it.',
     epilogueIf: [{ when: { marks: ['kid_watching'] }, epilogue: '{kid.first} told the landlord that {lt.first} waved from the ladder. Nobody else saw it.' }] },
-  held_in: { title: 'Still behind the door', disposition: 'relief_partial', world: { resolution: 'escaped' }, remainingTasks: ['Bring {lt.first} out alive'],
-    summary: '{parent.first} and {kid.first} are out of the house and safe with patrol. {lt.first} is still upstairs behind {lt.his} door, and command holds the street with the line open.',
-    epilogue: '{kid.first} watched the upstairs window from the patrol car until {parent.first} made {kid.him} lie down.' },
-  held_with_family: { title: 'Still a wall apart', disposition: 'relief_partial', world: { resolution: 'escaped' },
-    remainingTasks: ['Get {parent.first} and {kid.first} out', 'Bring {lt.first} out alive'],
-    summary: '{parent.first} and {kid.first} are still upstairs, a wall from {lt.first}. Command holds the block, and the line to {lt.first} stays open.',
-    epilogue: '{parent.first} texted the landlord from the floor of the room, asking if the police were still outside.' },
-  in_with_family: { title: 'Shut in with the family', disposition: 'relief_partial', world: { resolution: 'escaped' },
-    remainingTasks: ['Get {parent.first} and {kid.first} out of that room', 'Bring {lt.first} out alive'],
-    summary: '{lt.first} is in the family’s room with the handgun, and {parent.first} and {kid.first} are in there too. Command holds the house and the street, and nobody has been hurt yet.',
-    epilogue: 'The window stayed open all morning, and nobody went near the ladder.' },
   handed_over: { title: 'No step left to take', disposition: 'unresolved', world: { resolution: 'escaped' }, remainingTasks: ['Bring everyone out of the house safely'],
     summary: 'The warrant is still unserved and the street stays shut. There is nothing left for the team to try from here.',
     epilogue: '{parent.first} called in to work and said {parent.he} didn’t know when {parent.he} could come.' },

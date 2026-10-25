@@ -124,7 +124,7 @@ describe('a threat that runs out with no choice made', () => {
 });
 
 describe('continued inaction', () => {
-  it('moves forward every time a drain empties and ends the call held, never frozen', () => {
+  it('moves forward every time a drain empties and ends the call with the rider out, never held and never frozen', () => {
     for (const seed of [1, 2]) {
       let state = hostageStart(seed);
       const visited: string[] = [];
@@ -138,9 +138,11 @@ describe('continued inaction', () => {
       }
       const run = state.activeRun!;
       expect(run.status, `seed ${seed}: ${visited.join(' > ')}`).toBe('debrief');
-      expect(['held_both', 'held_counter', 'rider_held']).toContain(run.endingId);
+      // Owner 2026-10-24: no call ends with the subject left inside, so inaction ends with command taking the door.
+      expect(['door_taken', 'entry_hurt']).toContain(run.endingId);
       expect(decisionsOf(run.history), 'nobody chose anything').toHaveLength(0);
       const debrief = computeDebrief(state, run)!;
+      expect(debrief.disposition, 'the rider is out, so the call is resolved, not partly resolved').toBe('resolved');
       expect(debrief.decisions?.every(view => view.lapse && view.band === null)).toBe(true);
       expect(debrief.causes.some(cause => cause.startsWith('No call made: ')), 'the debrief names the indecision').toBe(true);
       expect(debrief.officerCondition.every(officer => officer.xpGained === 0), 'a call nobody acted in teaches nothing').toBe(true);

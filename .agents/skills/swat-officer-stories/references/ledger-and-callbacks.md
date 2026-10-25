@@ -221,3 +221,19 @@ or "lost their nerve".
    whose surname matches a deployed officer's.
 3. Ask engineering to exclude deployed surnames from the civilian cast draw. Until then, review
    catches it.
+
+## 9. Civilians who persist
+
+When a call's civilians come back (backlog `going-live-city-cast`), the officer-side rules above
+hold and these are added. The call-side rules are in
+[../../swat-call-prose/references/voice-and-soul.md](../../swat-call-prose/references/voice-and-soul.md)
+section 10.
+
+1. An officer's fact about a call still names no civilian. A later call reads the fact through the
+   role and the place ("the courier on the Market Row call"), never a bound name.
+2. An officer remembers what the officer did or saw. The ledger holds a recorded fact, not the
+   civilian's hidden truth, so no callback says who took the bag unless the call revealed it.
+3. A returning civilian is introduced by what the record holds (the district, the encounter, the
+   ending), once per call, and never as a reunion beat.
+4. An ending or epilogue never fixes a persisting civilian's future. If the night changes it
+   (a job lost, a charge filed), the engine records a world event and the later text reads that.

@@ -10,13 +10,13 @@ import type { CallTree } from './types';
 // The stream is the courier's shield and the courier's trap, and in one call in three it is also the
 // only witness who can end this.
 //
-// The record every situation shares: the store logged the order collected at 11:40, and the courier's
-// map has the courier at a red light on Calloway, two blocks away, at 11:40. Three situations, three
+// The record every situation shares: the store logged the order collected at 11:40 PM, and the courier's
+// map has the courier at a red light on Calloway, two blocks away, at 11:40 PM. Three situations, three
 // different earlier scenes:
 // - The clerk took it before the courier came, logged it collected, and told the courier another
 //   courier had it. The manager, the clerk's aunt or uncle, filed the complaint against the courier to
 //   keep the clerk in the job, so the glances at the stockroom door were never about the handgun.
-// - The courier took it. The courier collected it a few minutes after 11:40, kept it when the drop
+// - The courier took it. The courier collected it a few minutes after 11:40 PM, kept it when the drop
 //   failed and marked it delivered. The red light is real and proves nothing about the bag.
 // - Nobody took it. The courier collected it, left it on the wrong porch, and a neighbor carried it
 //   in. A viewer on that street has the porch clip. The audience the player was trying to shut up is
@@ -54,15 +54,19 @@ export const HOSTAGE_LIVE: CallTree = {
   // A pickup counter: a shop floor, a sales floor or a bar.
   families: ['market_row', 'corner_store_flat_g2', 'bar_restaurant_g2'],
   scene: { setting: 'business', rooms: ['retail'], crowd: 2, timeOfDay: 'night' },
-  summary: '{rider.first} wants the night manager to say on camera that {rider.he} didn’t take an order. More viewers join while {rider.he} {rider~holds|hold} the manager at gunpoint.',
-  coldOpen: '{delivery_app} shut {rider.first}’s account on Tuesday. The complaint names {rider.first}. The order is logged as collected from {place} at 11:40, and the customer says it never came. {manager.first}, who runs the night counter, filed the complaint. The email shut off new orders. {rider.first} kept reopening it. Tonight, close to shutting, {rider.he} walked in, stood {rider.his} phone against the register and went live on {stream_app}. {rider.He} asked {manager.first} to say {rider.he} hadn’t taken the bag. {manager.first} said no. {clerk.first} was coming out of the stockroom with a case of water when the handgun came out of {rider.first}’s jacket. {clerk.He} backed into the stockroom with the water still in {clerk.his} arms.',
+  summary: '{rider.first} wants the night manager to say, on camera, that {rider.he} never took the bag. Viewers keep joining while {rider.he} {rider~holds|hold} {manager.first} at gunpoint.',
+  // Rewritten 2026-10-24 after the prose audit (.agents/skills/swat-call-prose/references/voice-and-soul.md):
+  // one document, a person who has lost something, the request in {rider.his} own voice, the handgun in its
+  // own sentence. Paragraph breaks render (src/ui/components/DepthBrief.tsx). Pronouns bind to the name when
+  // another person with the same pronoun was just mentioned (compile.ts BindState), so no "she" is ambiguous.
+  coldOpen: 'The email from {delivery_app} came Tuesday. It said an order logged as collected from {place} at 11:40 PM Sunday never reached its customer. {delivery_app} had shut off {rider.his} courier account. {rider.first} read it next to {rider.his} scooter. {rider.His} map had {rider.him} at a red light on Calloway, two blocks away, when it was logged. The complaint was {manager.first}’s. For two years {manager.he} had slid bags across that counter to {rider.him}.\n\nTonight, just before closing, {rider.first} came in with nothing to pick up. {rider.His} phone leaned against the register, live on {stream_app}. “Hi, everybody,” {rider.he} said to it. Then {rider.he} looked at {manager.first}, and the smile was gone. “Say I didn’t fucking take it. Say it.” {manager.first} said no.\n\n{clerk.first} was coming out of the stockroom with a case of water when {rider.first} took the handgun out of {rider.his} jacket. The phone kept streaming. {clerk.He} backed into the stockroom with the water still in {clerk.his} arms.',
   pressureLabel: '{rider.first}’s growing audience',
   pressure: { start: 18, perMinute: 0.15, threshold: 85, civilianPerMinute: 0.5 },
   briefing: {
     dispatchReason: '{clerk.first}, the night clerk, called 911 from the stockroom. A courier the store reported to {delivery_app} is back with a handgun and won’t let {manager.first} or {clerk.first} leave. Patrol says {rider.first} refused to come out.',
     known: [
       '{clerk.first} told the dispatcher, “{rider.He} {rider~wants|want} {manager.first} to say on the stream that {rider.he} didn’t take it.”',
-      'The store’s complaint says the order was collected at 11:40 and never reached the customer.',
+      'The store’s complaint says the order was collected at 11:40 PM Sunday and never reached the customer.',
     ],
     unknown: ['Where the missing order went'],
     responsibilities: ['Get {manager.first} and {clerk.first} out', 'Bring {rider.first} out alive'],
@@ -83,12 +87,12 @@ export const HOSTAGE_LIVE: CallTree = {
     rider_clear: { label: 'The missing order', claim: 'Whether {rider.first} kept the missing order.',
       confirmed: '{rider.first} didn’t keep the order.', disproved: '{rider.first} kept the order and marked it delivered.' },
     proof: { label: 'What the viewers have', claim: 'Whether a viewer has a clip that shows the delivery.',
-      confirmed: 'A viewer’s porch camera shows the bag on a step two doors from the customer at 11:52. A neighbor carries the bag inside.', disproved: 'No viewer has supplied a checkable delivery clip.' },
+      confirmed: 'A viewer’s porch camera shows the bag on a step two doors from the customer at 11:52 PM. A neighbor carries the bag inside.', disproved: 'No viewer has supplied a checkable delivery clip.' },
   },
   situations: [
-    { note: '{rider.He} never had the bag. {clerk.first} took it before {rider.first} came, logged it collected at 11:40 and said another courier had it. {manager.first}, who got {clerk.first} the job, filed the complaint against {rider.first} to keep {clerk.him} in it. No viewer has a delivery clip.', truth: { rider_clear: true, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
-    { note: '{rider.He} collected the bag a few minutes after 11:40, kept it when the drop failed, marked it delivered and told the stream otherwise. The red light is real and proves nothing about the bag. {rider.His} followers believe {rider.him}.', truth: { rider_clear: false, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
-    { note: '{rider.He} collected the bag and left it on the wrong porch at 11:52, and a neighbor carried it in. {delivery_app} said delivered while the customer said otherwise. A viewer who lives on that street has the porch clip. Nobody in the store took anything.', truth: { rider_clear: true, proof: true }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
+    { note: '{rider.He} never had the bag. {clerk.first} took it before {rider.first} came, logged it collected at 11:40 PM and said another courier had it. {manager.first}, who got {clerk.first} the job, filed the complaint against {rider.first} to keep {clerk.him} in it. No viewer has a delivery clip.', truth: { rider_clear: true, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
+    { note: '{rider.He} collected the bag a few minutes after 11:40 PM, kept it when the drop failed, marked it delivered and told the stream otherwise. The red light is real and proves nothing about the bag. {rider.His} followers believe {rider.him}.', truth: { rider_clear: false, proof: false }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
+    { note: '{rider.He} collected the bag and left it on the wrong porch at 11:52 PM, and a neighbor carried it in. {delivery_app} said delivered while the customer said otherwise. A viewer who lives on that street has the porch clip. Nobody in the store took anything.', truth: { rider_clear: true, proof: true }, descriptors: ['death', 'suicide_self_harm', 'injury', 'police_gunfire'] },
   ],
   turns: { clerk_out: ['clerk_talks'] },
   difficulty: { base: 36, perTier: 4 },

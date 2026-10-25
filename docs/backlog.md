@@ -358,6 +358,103 @@ Done: a second play of the same save meets the same four people and the same sto
 writes each person's state and the case from the events above, and the call still plays unconnected
 on a save without the world.
 
+Prose contract, from the 2026-10-24 prose audit (sol's read, and
+`.agents/skills/swat-call-prose/references/voice-and-soul.md` section 10): an epilogue is written once
+and never fixes a persisting person's future; a callback reads one recorded fact and the officer who
+was there; the clerk's family tie belongs to situation 1 only, so the record stores the relationship
+as disclosed, not as a trait; `clip_promised` never licenses a later "we sent it" (needs `clip_sent`);
+`recordCaseFact` (`src/sim/people/ties.ts`) writes an `arrest` fact for any worked case and must not
+back a Going Live callback. Not yet true: `MemoryFact` carries no civilian encounter reference, and
+callback selection (`src/sim/operation.ts`) picks a tie, pair or imprint, never an encounter memory.
+
+### shared-beats-checker: The repeat gate counts a shared set piece once per path
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+`.agents/skills/swat-call-prose/scripts/game_string_checks.py` flags any 6-word run that two strings
+share, including strings on exits that cannot both happen in one play. That is why Going Live carries 18
+separately worded versions of one beat (the courier learns the clerk never backed him) and 30 of "the
+clerk is already outside". Let a string row carry a `shared` marker, count a marked run once per path,
+and keep the cross-call report. Done: a call can write one set piece in a helper and reuse it on every
+exit with `npm run check:strings` at exit 0, and `references/voice-and-soul.md` section 5 drops its
+motif workaround.
+
+### policy-handle-blocklist: Commenter handles are checked against an approved blocklist
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+Control H2 (`src/content/policy/controls.ts`): `commenterHandle` builds handles from curated pools and eight
+shapes, and `world.test.ts` checks them against real brands. Nobody has run every pool combination against
+a blocklist of slurs and profanity the owner approves. Done: the owner supplies the list (kept outside the
+repo's prose files), a test draws every name, word and shape combination and finds no hit, and the policy
+registry drops the gap.
+
+### policy-surfaces: Every surface that makes or shows content reads the policy
+Tags: job=command; journeys=none (policy plumbing); probes=none (policy plumbing); lane=lead
+Needs: start=none; integrate=none; ship=none
+
+The registry (`src/content/policy`, `docs/content-policy.md`) owns the lexicon, the text checks, the rating
+profile and the editorial brief. Two boundaries read it today: `npm run check:strings` plus
+`policy-corpus.test.ts` (build time, over authored rows, chat pools and finished scenarios), and
+`getScenario` in `src/sim/scenario-registry.ts` (run time, which refuses a scenario with a blocking finding).
+Codex's two reviews (2026-10-24) found what is still outside them, in this order: (1) the first-run call card
+shows only a general themes link, and compact cards had no warning until the compact tile rendered it (fixed;
+the warning is still not announced with the open button); (2) `sanitizeAvoid` silently drops a saved exclusion
+when no call would be left, and the advisory does not say which themes every call carries (today all of
+`death`, `suicide_self_harm`, `injury` and `police_gunfire` on the one board call); (3) support is reachable
+but sits late in the debrief and is not in the live call or the advisory, and opening it should pause the call;
+(4) the advisory and card warnings do not name strong language (control L1); (5) engine-written lines in
+`src/sim/incident-consequences.ts`, officer jackets (`src/content/people/jackets.ts`, which carry bare clock
+times in radio speech) and the city radio and report lines (`src/ui/screens/city/`) are not read by the guard;
+(6) `drawCard` and `avoidable.ts` still hold their own filter rules, and world cards ignore filters
+(`dropExcludedCards`); (7) notification copy has nothing to hold until delivery exists (control N1).
+Sol's attack on the registry itself (2026-10-24, verdict rejected until the guard existed; the guard, the Lab lint
+path, the compact warning, universal text surfaces and the child label are now fixed) also left these: (8) the
+descriptor gate walks choice outcomes but not `timeoutNexts`, so a timeout-only node with harm escapes it, and
+`child_at_risk` and `domestic_violence` have no content-to-label check; (9) the registry says "held by" when only
+a file exists, so enforcement needs levels (implemented, exercised, reviewed, release-approved) bound to a content
+digest and the policy version; (10) `src/content/policy` imports `world.ts` and sits in the catalog layer, so a
+content-independent core in its own low-layer folder, with injected vocabulary and per-surface adapters is the cleaner shape if
+world or sim code must consume it; (11) bound memory facts (`src/sim/people/memory.ts`) are never read.
+Done: each of those reads `src/content/policy`, and a test fails if one stops.
+
+### policy-rating-evidence: The age rating is a release record, not a computed claim
+Tags: job=command; journeys=none (release process); probes=none (release process); lane=lead
+Needs: start=none; integrate=none; ship=none
+
+`ratingProfile` is a working classification: it counts situations, not how often a player meets them, its
+"frequent" threshold (`FREQUENT_SHARE`) is the developer's reading and not Apple's or an owner decision, weapons,
+horror and mature themes are frequent by premise, and "no graphic violence" is a type, not a measurement.
+Codex read Apple's tiers as 18+ for frequent realistic violence and warned that PEGI 16 and ESRB M are targets,
+not outcomes (PEGI 18 is plausible for the manager's death). Done: each submission has a record (content digest,
+policy version, every questionnaire answer with its evidence, regional results, review notes, and a verified
+route to each hard branch for the reviewer), `docs/content-rating.md` and `docs/monetization.md` M7 stop citing
+"ESRB M, PEGI 16" as a result, and the owner approves the frequency reading or replaces it.
+
+### editorial-source-map: Editorial patches can be written back to the call source
+Tags: job=command; journeys=none (tooling); probes=none (tooling); lane=tooling
+Needs: start=none; integrate=none; ship=none
+
+The editorial pass (`docs/content-pipeline.md`) proposes patches against the tokenized source, but the strings
+file the checker builds names rows by display key (`card.title`, `${node.id}.promptIf[i]`), drops the speaker, most
+branch conditions and the source property, and cannot map helper-built outcomes (`turnsOn`, `foundOut`,
+`clerkToo`) back to a literal. Done: every row carries file, property path and a hash of its literal, a patch with a
+stale hash is refused, and applying an approved patch twice is a no-op.
+
+### going-live-voice-pass: Going Live's remaining prose reads like a book
+Tags: job=command; journeys=none (prose only); probes=none (prose only); lane=calls
+Needs: start=none; integrate=none; ship=going-live-review
+Slice one is done (2026-10-24): the cold open, hook, 18 lie-discovery beats, 20 adverse previews,
+epilogues that fixed a person's future, and the "marked it delivered" reveal. Left, in the order the
+audit ranked them: the clerk, the manager and the friend need their own voices (the clerk speaks 8
+lines against the courier's 39); the 19 `turnsOn` adverse results share one escalation and need
+consequences specific to each action; 22 of 32 summaries open on `{lead}`; stage prompts restate
+where the phone and the cooler are instead of what changed; the viewer chat has generic filler
+("uh oh", "something is happening"). The barricaded call (`warrant*.ts`) has the same repeat-gate failures at HEAD (`npm run check:strings` exits 1
+on it) and got only AM or PM times and a child-at-risk label here. Each is a pass under `voice-and-soul.md`, read
+at 390px in the Lab. Done: the separate `swat-writing-review` read approves the voice dimensions (D4, D8, D11, D12)
+and the owner's read of the Before the Call card and one full play agrees.
+
 ### exit-doors: A walker can leave by a named exterior door
 Tags: job=command; journeys=choices-branch; probes=blueprint-building; lane=engine
 Needs: start=none; integrate=none; ship=none

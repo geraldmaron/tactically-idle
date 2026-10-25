@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getState, send, setLiveCallShown, settleLapse, useGame } from '../store';
 import { liveDither } from '../timer';
-import { playHeartbeat, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
+import { playHeartbeat, playWarning, setMurmur, stopLiveAudio, unlockAudio } from '../audio/live-audio';
 import { reducedMotion } from '../motion';
-import { liveFillViews } from './fill-gauge';
+import { liveFillViews, threatStage } from './fill-gauge';
 import { stalledRun } from '../../sim/clocks';
 import { decisionViews, lastResolution } from '../../sim/operation-selectors';
 import type { Id, SquadId } from '../../sim/types';
@@ -16,6 +16,7 @@ import { OpenInLab } from '../components/OpenInLab';
 import { ActionSheet, LiveView, RoomSheet } from './LiveView';
 import { Blueprint } from '../blueprint/Blueprint';
 import { OperationFeedback } from './OperationFeedback';
+import { verdictOf } from './verdict';
 import { placeFor, sceneFor } from '../art/Plates';
 import { scenarioPlaceName } from '../components/incident';
 import { SituationPanel } from './SituationPanel';
@@ -97,6 +98,11 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
   const threatOpen = screen?.model.progress.threat ?? null;
   const threatShare = threatOpen && beat === 'decide' ? Math.max(0, threatOpen.minutes - dither) / threatOpen.minutes : 1;
   const heartbeat = beat === 'decide' && threatShare > 0 && threatShare <= 0.25;
+  // One alert each time the window passes half, a quarter and its last moments (the pill says the same in words).
+  const warnStage = beat === 'decide' && threatOpen ? threatStage(threatOpen.minutes, Math.max(0, threatOpen.minutes - dither)) : 'steady';
+  useEffect(() => {
+    if (warnStage === 'half' || warnStage === 'quarter' || warnStage === 'last') playWarning(warnStage);
+  }, [warnStage]);
   useEffect(() => {
     if (!heartbeat) return;
     playHeartbeat();
@@ -183,6 +189,7 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
 
   return (
     <LiveView
+      verdict={beat === 'result' && decisions.length ? verdictOf(decisions[decisions.length - 1]) : null}
       {...model}
       dither={dither}
       sirens={hot}

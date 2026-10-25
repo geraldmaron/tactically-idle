@@ -47,6 +47,78 @@ npm run verify
 
 Read every reachable band and situation, test binding and route reachability, and verify real-engine journeys with save and reload. Names or setting changes alone do not make decisions distinct. Preview text must hold for its worst reachable result.
 
+## Editorial pass (control E1)
+
+Every new or newly generated call gets the line edit a published piece gets, by a cheaper model, before the
+separate writing review and the owner's read. The design below is v1, written after a Codex (sol) attack on
+the first draft (2026-10-24: "needs validation", because mechanical acceptance cannot show that a cleaner
+sentence is still true). It is a pilot until the blind comparison under "Proving it" has been run on Going Live.
+
+**What it is.** A reviewer model proposes patches to presentation text. It never applies them. The owning lane
+applies the approved patches, the gates run, and a second reader checks every changed passage before write-back.
+
+**Unit of editing.** A scene or a shared beat, not a string. A repeated discovery across exits that cannot both
+happen is one beat with exit-specific clauses and is edited as one. A choice edit carries its whole menu; a
+preview edit carries every reachable matching result and generated consequence. The string is the patch address.
+
+**Representation.** The editable source is the tokenized text in `src/content/call-trees/*.ts`. The reviewer reads a
+bound render beside the tokenized original and proposes patches against the tokenized literal: file, the
+expected old text, the new text, the control it serves. Names are never reverse-bound into tokens. A patch whose
+old text no longer matches, or whose expansion changes another field, is rejected. (The strings file the checker
+builds is lossy: it drops the speaker, most branch conditions and the source property, so it is for reading, not
+for write-back. A source map is engineering work, backlog `editorial-source-map`.)
+
+**Cold read first.** Reviewer one sees only what the player knows, in path order. A separate continuity reviewer
+gets the hidden situations, the engine contracts (marks, promises, `foundOut`, `clerkToo`, facts) and the
+previews, and checks that no change moves a fact or a promise. "Do not reveal" in a prompt is an instruction,
+not protection against hindsight, so the first reviewer never holds the answers.
+
+**What the reviewer may touch.** An evidenced defect in an existing passage: speech that is written not spoken
+(Q6), a reference no earlier surface set up (Q5), idiom and possessives (Q7), a flat threat or heavy moment (Q4),
+a narrator tell, a voice break. **What it may not touch:** speakers, role ownership, tokens, chronology, object
+properties, threat severity, discoveries, promises, relationships, future facts, or the availability and cost of
+a choice. Those findings are routed to the author. It may return no findings, and must say why for each change.
+
+**Voice and restraint.** Per-person speech signatures approved by the owner, a locked set of exemplar lines and a
+keep list of passages that work. A trial cap of ten edited fields per round, one beat per patch. Exceeding it goes
+to the author, not to more automatic rewriting. No speech-count or cadence quota is a reason to rewrite a line that
+works.
+
+**Deterministic checks (author lane, after the patch).** Only approved presentation literals changed; every engine
+field and id identical; tokens valid and owning the right person; the candidate compiles and re-exports from a
+scratch copy; `npm run check:strings -- <call>` exits 0, **and** no new `stock`, `feeling`, `policy-voice`,
+`tense-mix`, `opener-share` or `cadence-flat` finding (the checker reports these and does not fail on them, so
+the pass adds its own acceptance rule); `npm run policy:brief` controls hold; public text stays equal across
+hidden situations at equal public states; the approved source diff matches the compiled text diff.
+
+**Independent review before write-back.** A second model, not the first model's rationale, reads every changed
+passage in its paths. The owner then reads the affected scenes in the Lab at 390 px and approves the concrete diff.
+The fingerprint file belongs to the lead: settle one approved diff, inspect the compiled differences, recapture
+once. Never recapture after each pass.
+
+**Repeatable.** Pin model, prompt, rules, source hashes and export order; store accepted and rejected findings
+with reasons in `docs/calls/notes/<call>-editorial.md`; re-running on the reviewed artifact returns no changes;
+replaying the approved patch twice is a no-op. Stop after two rounds. Unresolved disagreements stay findings.
+
+**Never automated:** developmental restructuring, new facts, ethics, who owns the final voice, fingerprint approval.
+
+**Cost, for choosing a model.** One round on a call of about 11,000 words is an estimated 25,000 to 35,000 input
+tokens and 3,000 to 8,000 output tokens. Public API prices read from the vendors' pages on 2026-10-24 (per million
+input and output tokens): Claude Haiku 5.5 $0.10 and $0.50, Claude Sonnet 5.5 $2 and $10, GPT-6 Luna $0.10 and
+$0.50, which is an estimated $0.004 to $0.0075 per round on Haiku or Luna and $0.08 to $0.15 on Sonnet. Estimates
+only; excludes retries, reasoning tokens and the second reader, and is not a quote for a Codex sub-session.
+Reviewer cost is small next to the owner's reading time, which is what the checks above protect.
+
+**Proving it.** Freeze the baseline (source, rules, fingerprints, draws). Produce one candidate per reviewer from the
+same source, never one reviewer polishing another's. Run blind A/B reads on identical casts and paths with fresh
+readers per path, score voice distinction, emotional effect, rhythm and unnecessary explanation, and test
+comprehension (who wants what, what is known, what a choice risks, what happened). Audit each changed preview,
+discovery and ending across every reachable situation, and read long passages under she/she and they/they draws.
+Acceptance needs an independently observed improvement, no semantic regression and an owner-approved diff, then
+the accepted workflow re-run unchanged shows zero new changes and no fingerprint churn.
+
+The brief the reviewer reads is generated from the controls: `npm run policy:brief -- <surface>`.
+
 ## Human review: the Scenario Lab
 
 The human read happens in the Scenario Lab, a dev-only page on the real game and engine. The full guide is [scenario-lab.md](scenario-lab.md).

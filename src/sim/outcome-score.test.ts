@@ -36,10 +36,10 @@ const AUTHORED: Partial<Record<IncidentType, Record<string, [trust: number, stra
   // Going Live (2026-10-21) never had hand-set numbers; each row is the closest retired hostage
   // ending's: walking out cleared or on camera is everyone_out's, out with nobody filming is out_the_back's, the
   // manager struck in the dark is owner_beaten's, the rider holding out alone is taker_held's, and the
-  // held endings and the deaths keep their names' rows.
+  // deaths keep their names' rows. The held endings are gone (owner 2026-10-24: no call ends with the subject inside); a refusal ends in a forced entry, so rider_hurt takes entry_hurt's row less a point and door_taken takes entry_clean's.
   hostage_crisis: { out_cleared: [3, -2, 'resolved'], out_on_camera: [3, -2, 'resolved'], out_quiet: [3, -2, 'resolved'], entry_clean: [0, 2, 'resolved'], entry_hurt: [-2, 4, 'resolved'],
-    manager_hurt_inside: [-4, 6, 'relief_partial'], manager_killed: [-6, 9, 'relief_partial'], manager_killed_rider_hurt: [-6, 9, 'relief_partial'], rider_held: [1, 1, 'relief_partial'],
-    held_counter: [-2, 3, 'relief_partial'], held_both: [-3, 4, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
+    manager_killed: [-6, 9, 'relief_partial'], manager_killed_rider_hurt: [-6, 9, 'relief_partial'], rider_hurt: [-2, 3, 'resolved'], door_taken: [-1, 2, 'resolved'],
+    handed_over: [-2, 3, 'unresolved'] },
   // The Room Next Door (the warrant call, docs/calls/warrant-design.md) replaced Everything Goes Back as the
   // barricaded kind; each row is the closest retired barricade ending's: the walk down is everyone_out's, the
   // subject gone out the back or still behind the door with the family clear is mover_out_held's, the family
@@ -47,7 +47,7 @@ const AUTHORED: Partial<Record<IncidentType, Record<string, [trust: number, stra
   // custody endings are the retired entry rows less the entry's own charge, because the warrant's custody comes
   // without a forced entry (the entry line of OUTCOME_SCORE_V1 is what the retired rows carried): taken
   // unhurt is entry_clean's, the subject hurt is entry_subject_hurt's, the family hurt is entry_mover_hurt's.
-  barricaded: { walked_out: [3, -2, 'resolved'], custody_clean: withoutEntry([0, 2, 'resolved']), custody_hurt: withoutEntry([-2, 4, 'resolved']), family_hurt: withoutEntry([-3, 5, 'resolved']), escaped: [1, 1, 'relief_partial'], held_in: [1, 1, 'relief_partial'], held_with_family: [-3, 4, 'relief_partial'], in_with_family: [-3, 4, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
+  barricaded: { walked_out: [3, -2, 'resolved'], custody_clean: withoutEntry([0, 2, 'resolved']), custody_hurt: withoutEntry([-2, 4, 'resolved']), family_hurt: withoutEntry([-3, 5, 'resolved']), escaped: [1, 1, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
   active_armed_incident: { everyone_out: [3, -1, 'resolved'], out_by_morning: [2, 1, 'resolved'], taken: [1, 2, 'resolved'], subject_shot: [-2, 4, 'resolved'], subject_killed: [-4, 7, 'resolved'], worker_hurt: [-2, 4, 'resolved'], worker_killed: [-6, 9, 'relief_partial'], held_inside: [-3, 5, 'relief_partial'], alone_inside: [1, 2, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
   protected_rescue: { out_together: [3, -1, 'resolved'], slow_out: [2, 1, 'resolved'], out_carried: [1, 2, 'resolved'], out_without_chair: [0, 2, 'resolved'], resident_hurt: [-2, 4, 'resolved'], resident_killed: [-6, 9, 'relief_partial'], tank_ran_out: [-6, 9, 'relief_partial'], still_inside: [-1, 3, 'relief_partial'], handed_over: [-2, 3, 'unresolved'] },
 };

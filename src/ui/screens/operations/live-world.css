@@ -1,19 +1,43 @@
 /* The live call in the night-city look (docs/world-redesign.md, D1). Loaded after live-call.css, so it only
    restates what that file sets: the threat clock as a red pill, a choice's capability as a mono tag, and the
    rose tag for an officer who knows the person. The blueprint and the call layout are untouched. */
+/* The threat clock is the pressure bar (owner, 2026-10-24): a card with the label, the minutes, a bar that
+   drains with a tick at half and at a quarter, and a note line. It keeps one height through every step, so
+   nothing under the pinned header moves: the note is always there, and only its words, the bar's colour and
+   the digits change. Steady, then half (amber), a quarter (red, bigger digits), then the last moments
+   (white bar, pulsing with Flashing lights on, still under reduced motion). */
 .live .live-head-threat .threat-pill,
 .live .live-head-threat .threat-pill.pressure-calm,
 .live .live-head-threat .threat-pill.pressure-warn,
 .live .live-head-threat .threat-pill.pressure-critical {
-  display: flex; flex-wrap: nowrap; align-items: center; gap: var(--sp2);
-  min-height: 36px; padding: 0 var(--sp3) 0 var(--sp2); row-gap: 0;
-  border: 1px solid var(--live); border-radius: 999px; background: var(--live-soft);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp2); row-gap: var(--sp2);
+  min-height: 0; padding: var(--sp2) var(--sp3) var(--sp3);
+  border: 2px solid var(--live); border-radius: var(--r2); background: var(--live-soft);
   box-shadow: none; color: var(--live-text); font: 600 var(--s14)/1.2 var(--f-ui);
 }
-.live .live-head-threat .threat-pill.pressure-critical { background: var(--live-edge); color: var(--t1); }
-.live .live-head-threat .threat-pill-bar { display: grid; flex: none; height: auto; border-radius: 50%; background: none; box-shadow: none; overflow: visible; }
-.live .live-head-threat .threat-pill-label { flex: 1 1 auto; min-width: 0; white-space: normal; overflow-wrap: break-word; font: 600 var(--s14)/1.2 var(--f-ui); color: inherit; }
-.live .live-head-threat .threat-pill-min { flex: none; font: 500 var(--s14)/1 var(--f-mono); letter-spacing: 0.04em; color: var(--t1); }
+.live .live-head-threat .threat-pill-icon { color: currentColor; }
+.live .live-head-threat .threat-pill-label { min-width: 0; white-space: normal; overflow-wrap: break-word; font: 600 var(--s14)/1.2 var(--f-ui); color: inherit; }
+.live .live-head-threat .threat-pill-min { display: inline-flex; align-items: center; min-height: 30px; font: 500 var(--s16)/1 var(--f-mono); letter-spacing: 0.04em; color: var(--t1); transition: font-size 0.3s; }
+.live .live-head-threat .threat-pill-bar { grid-column: 1 / -1; position: relative; display: block; height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--black) 40%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--white) 16%, transparent); overflow: visible; }
+.live .live-head-threat .threat-pill-bar i { display: block; height: 100%; border-radius: 7px; background: var(--live); transition: width 1s linear; }
+.live .live-head-threat .threat-pill-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; transform: translateX(-50%); border-radius: 1px; background: color-mix(in srgb, var(--white) 55%, transparent); }
+.live .live-head-threat .threat-pill-note { grid-column: 1 / -1; min-height: 1.3em; margin: 0; font: 500 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
+.live .live-head-threat .threat-pill.threat-stage-half { border-color: var(--warn); background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 30%, transparent), color-mix(in srgb, var(--warn) 10%, transparent)); color: var(--warn-text); }
+.live .live-head-threat .threat-stage-half .threat-pill-bar i { background: var(--warn); box-shadow: 0 0 8px color-mix(in srgb, var(--warn) 65%, transparent); }
+.live .live-head-threat .threat-stage-half .threat-pill-note { color: var(--warn-text); font-weight: 600; }
+.live .live-head-threat .threat-pill.threat-stage-quarter { border-color: var(--siren-r); background: linear-gradient(90deg, color-mix(in srgb, var(--siren-r) 45%, transparent), color-mix(in srgb, var(--siren-r) 20%, transparent)); color: var(--white); box-shadow: 0 0 18px color-mix(in srgb, var(--siren-r) 45%, transparent); }
+.live .live-head-threat .threat-stage-quarter .threat-pill-bar i { background: var(--siren-r); box-shadow: 0 0 10px color-mix(in srgb, var(--siren-r) 90%, transparent); }
+.live .live-head-threat .threat-pill.threat-stage-last { border-color: var(--siren-r); background: linear-gradient(90deg, color-mix(in srgb, var(--siren-r) 65%, transparent), color-mix(in srgb, var(--siren-r) 32%, transparent)); color: var(--white); box-shadow: 0 0 22px color-mix(in srgb, var(--siren-r) 60%, transparent); }
+.live .live-head-threat .threat-stage-last .threat-pill-bar i { background: var(--white); box-shadow: 0 0 12px var(--siren-r); }
+.live .live-head-threat .threat-stage-quarter .threat-pill-min, .live .live-head-threat .threat-stage-last .threat-pill-min { font-size: 28px; }
+.live .live-head-threat .threat-stage-quarter .threat-pill-note, .live .live-head-threat .threat-stage-last .threat-pill-note { color: var(--white); font-weight: 700; }
+.live .live-head-threat .threat-stage-landed .threat-pill-bar i { width: 0 !important; }
+.live .live-head-threat .threat-pill.threat-pulse { animation: threat-throb 1.1s ease-in-out 8; }
+.live .live-head-threat .threat-pulse .threat-pill-bar i { animation: threat-bar-throb 1.1s ease-in-out 8; }
+@keyframes threat-bar-throb { 50% { filter: brightness(0.75); } }
+/* On the narrowest phones a note can wrap, so its row keeps two lines and never moves the page. */
+@media (max-width: 359px) { .live .live-head-threat .threat-pill-note { min-height: 2.6em; } }
+@media (prefers-reduced-motion: reduce) { .live .live-head-threat .threat-pill.threat-pulse, .live .live-head-threat .threat-pulse .threat-pill-bar i { animation: none !important; } }
 
 /* A choice: the number it turns on is a mono tag; a tie is rose. */
 .live .callbtn-skill { padding: 2px 6px; border-radius: 3px; background: var(--ink-3); color: var(--t3); font: 500 12px/1.3 var(--f-mono); letter-spacing: var(--kicker-track); text-transform: uppercase; }

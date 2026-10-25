@@ -1,4 +1,5 @@
 import type { ActionDefinition, OutcomeEffect, ScenarioDefinition } from './scenario-types';
+import { scenarioActions } from './scenario-types';
 import { endOf } from './clocks';
 import type { CivilianOutcomeView, GameState, Id, OfficerCasualtyRecord, OperationRun, OutcomeBand, PersonCasualtyRecord } from './types';
 import { decisionsOf, isLapse } from './types';
@@ -268,7 +269,9 @@ export function validPersonConsequences(run: OperationRun, scenario: ScenarioDef
       for (const record of decision.committed.personCasualties ?? []) {
         const binding = scenario.story?.bindings.people[record.personId];
         const clockHarm = (scenario.clocks ?? []).some(def => def.owner === record.personId && endOf(def)?.harm === record.severity);
-        if (!binding || !clockHarm || !validPersonCasualtyRecord(record) || record.at !== clock || record.causeRevision !== decision.revision) return false;
+        // Or a harm the threat's own run-out route names (TreeTimeout.harm).
+        const routeHarm = scenarioActions(scenario).some(action => action.threat?.id === decision.threatId && action.threat.timeout?.some(effect => effect.personHarm?.some(harm => harm.personId === record.personId && harm.severity === record.severity)));
+        if (!binding || !(clockHarm || routeHarm) || !validPersonCasualtyRecord(record) || record.at !== clock || record.causeRevision !== decision.revision) return false;
         expected[record.personId] = { ...record };
       }
       continue;

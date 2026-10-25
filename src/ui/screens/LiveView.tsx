@@ -43,9 +43,10 @@ import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
 import { joinNames, squadName } from './operation-squads';
 import { officersWhoKnow } from './operations/knows';
 import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
-import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, type LandingSubject } from './fill-gauge';
+import { fillEffectLine, fillMinutesToBite, leadingPressure, liveFillViews, liveStallFeed, pressureUrgency, reachByAction, threatLandingText, landingSubjects, threatStage, THREAT_STAGE_NOTE, type LandingSubject } from './fill-gauge';
 import { CommsLog, SourceTicker } from './LiveFeed';
-import { readSettings } from '../settings/prefs';
+import { flashingOn, readSettings } from '../settings/prefs';
+import type { Verdict } from './verdict';
 import { STANCE_LABEL } from '../components/IncidentPeople';
 import type { FillView } from '../../sim/clocks';
 import type { CheckKind } from '../../sim/scenario-types';
@@ -122,6 +123,8 @@ export interface LiveViewProps {
   children?: ReactNode;
   /** A hot call (sim/authorization.ts isHotCall): the call bar's light bar flashes red and blue. */
   sirens?: boolean;
+  /** The frame's color on the result beat (verdict.ts), from the last decision; none on the decide beat. */
+  verdict?: Verdict | null;
   /** Which beat of the call shows (docs/call-presentation.md): the decision, or the result of the
    * one just confirmed, with a Continue button. Left out, the decision. */
   beat?: 'decide' | 'result';
@@ -228,7 +231,7 @@ export function LiveView(p: LiveViewProps) {
   // A hot call's lights sweep across the strip and the top of the scene, red then blue, as hard as
   // the pressure biting hardest: the threat's drain or a source filling (owner, 2026-10-21: stress in
   // the decision). Off with the Flashing lights setting; still under reduced motion (live-call.css).
-  const washLevel = p.sirens && readSettings().flashing ? strongest([
+  const washLevel = beat === 'decide' && p.sirens && readSettings().flashing ? strongest([
     ...(pressure?.kind === 'threat' ? [pressureUrgency(pressure)] : []),
     ...fills.map((view) => pressureUrgency({ kind: 'fill', view, left: fillMinutesToBite(view) })),
   ]) : null;
@@ -302,14 +305,17 @@ export function LiveView(p: LiveViewProps) {
     </ul>
   </div>;
 
-  // The story: the decision and its choices, or the result of the last one.
+  // The story: the decision and its choices, or the result of the last one. The result leads the
+  // screen on its beat (owner, 2026-10-24: what happened is the first thing after a decision, with the
+  // scene under it); its Continue is pinned at the foot of the whole call, whatever sits between.
+  const continueBar = beat === 'result' && p.onContinue
+    ? (p.footWrap ?? ((node: ReactNode) => <div className="stickyfoot live-continue">{node}</div>))(<>
+        {p.continueNote && <p className="live-continue-note">{p.continueNote}</p>}
+        <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}</Button>
+      </>)
+    : null;
   const story = <div className="live-story">
-        {beat === 'result' ? <>          {p.feedback}
-          {p.onContinue && (p.footWrap ?? ((node: ReactNode) => <div className="stickyfoot live-continue">{node}</div>))(<>
-            {p.continueNote && <p className="live-continue-note">{p.continueNote}</p>}
-            <Button variant="primary" block onClick={p.onContinue}>{p.continueLabel ?? 'Continue'}</Button>
-          </>)}
-        </> : <>
+        {beat === 'result' ? p.feedback : <>
           {p.feedback}
           <div className="call operation-choices">
             {/* 4B (docs/ops-experience.md "The decide beat"): the moment (prompt and transcript), then
@@ -378,12 +384,13 @@ export function LiveView(p: LiveViewProps) {
         </Sheet>
         {squadRow}
       </Section>
-      {p.scenePeople}
+      {/* The roster is the decide beat's: the result names who changed in its own card (owner, 2026-10-24). */}
+      {beat === 'decide' && p.scenePeople}
     </div>
   );
 
   const screen = (
-    <div ref={liveRoot} className={`live live-one live-beat-${beat}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)}` : ''}`}>
+    <div ref={liveRoot} className={`live live-one live-beat-${beat}${beat === 'result' && p.verdict ? ` live-verdict-${p.verdict}` : ''}${mapFull ? ' live-map-full-open' : ''}${pressure?.kind === 'threat' ? ` live-urgency-${pressureUrgency(pressure)} live-stage-${threatStage(pressure.minutes, pressure.left)}${threatStage(pressure.minutes, pressure.left) === 'last' && flashingOn() ? ' live-pulse' : ''}` : ''}`}>
       {/* The call's name scrolls away; the strip under it stays pinned: where the call is and the one
           pressure that bites soonest, the threat or a gauge that fills. */}
       <header className="live-head">
@@ -395,7 +402,7 @@ export function LiveView(p: LiveViewProps) {
             <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
               <span className="live-name">{p.title}</span>
               <Icon name="info" size={16} className="live-title-more" />
-              {p.sirens && <span className="live-lightbar" role="img" aria-label="Lights and sirens"><i /><i /></span>}
+              {p.sirens && <span className={`live-lightbar${flashingOn() ? '' : ' live-lightbar-still'}`} role="img" aria-label="Lights and sirens"><i /><i /></span>}
             </button>
             <p className="live-sub">
               <span className="live-flag"><i className="live-dot-amber" aria-hidden="true" />Live</span>
@@ -410,7 +417,7 @@ export function LiveView(p: LiveViewProps) {
               </span>
             </p>
           </div>
-          {<button type="button" className="hud-btn live-choice-access" data-choices-below aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
+          {<button type="button" className="hud-btn live-choice-access" data-choices-below data-threat-stage={pressure?.kind === 'threat' ? threatStage(pressure.minutes, pressure.left) : undefined} aria-label="Your call" hidden={beat !== 'decide' || !choicesBelow} onClick={(event) => {
             const live = event.currentTarget.closest('.live');
             const firstChoice = live?.querySelector<HTMLElement>('.operation-choices .callbtn') ?? live?.querySelector<HTMLElement>('.call-panel');
             firstChoice?.scrollIntoView({ block: 'center' });
@@ -431,10 +438,9 @@ export function LiveView(p: LiveViewProps) {
         </div>}
       </div>
 
-      {/* Owner, 2026-10-24: who is on scene and who is inside come first on every beat, framed as
-          panels, then the moment and the choices or what happened. */}
-      {sceneSection}
-      {story}
+      {/* Owner, 2026-10-24: on the decide beat who is on scene and who is inside come first, then the
+          moment and the choices. On the result beat what happened comes first, with the scene under it. */}
+      {beat === 'result' ? <>{story}{sceneSection}{continueBar}</> : <>{sceneSection}{story}</>}
 
       <Sheet open={stepsOpen} onClose={() => setStepsOpen(false)} title="The call's steps" maxHeight="short">
         <StageSteps progress={p.progress} />
@@ -461,26 +467,33 @@ export function LiveView(p: LiveViewProps) {
 }
 
 /** The decision point's threat, pinned under the call bar while the player decides: "<label> · <n>
- * min", over a bar. `minutes` is what the threat allows; `dither` is the stall so far
+ * min", over a bar that drains. `minutes` is what the threat allows; `dither` is the stall so far
  * (docs/call-pressure.md), so the minutes left are `minutes - dither` and the bar and the text show
- * the same number. An empty bar means the threat lands on any choice. The bar only changes width
- * when the stall moves, and never animates under reduced motion. At zero the pill keeps its shape
- * and reads "Now"; what happened joins the comms log (ThreatLanded), so the pinned strip
- * never changes height and nothing under it moves (owner, 2026-10-21). */
+ * the same number. An empty bar means the threat lands on any choice. The bar has a tick at half and at
+ * a quarter, and the pill warns in steps (fill-gauge.ts threatStage): at half the time a line says so,
+ * at a quarter the bar thickens and the line asks for a choice, and in the last moments it pulses
+ * (only with the Flashing lights setting on, and never under reduced motion). The bar only changes
+ * width when the stall moves. At zero the pill keeps its shape and reads "Now"; what happened joins
+ * the comms log (ThreatLanded), so the pinned strip never changes height and nothing under it moves
+ * (owner, 2026-10-21). */
 export function ThreatPill({ label, minutes, dither = 0 }: { label: string; minutes: number; dither?: number }) {
   const left = Math.max(0, minutes - Math.max(0, dither));
   const shown = Math.ceil(left);
   const share = minutes > 0 ? Math.max(0, Math.min(1, left / minutes)) : 0;
   const urgency = pressureUrgency({ kind: 'threat', label, minutes, left });
-  // A strip pill (component contract 5 and 10): the drain is the ring on the well, the label and the
-  // minutes left beside it; the meter's numbers stay on the ring for assistive technology.
-  return <p className={`threat-pill pressure-${urgency}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined} data-ui-pill
+  const stage = threatStage(minutes, left);
+  const pulse = stage === 'last' && flashingOn();
+  return <p className={`threat-pill pressure-${urgency} threat-stage-${stage}${pulse ? ' threat-pulse' : ''}${left <= 0 ? ' threat-pill-landed' : ''}`} role={left <= 0 ? 'status' : undefined} data-ui-pill data-threat-stage={stage}
     aria-label={left <= 0 ? `${label}. It happened` : `Threat: ${label} in ${shown} ${shown === 1 ? 'minute' : 'minutes'}`}>
-    <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
-      <Ring value={share * 100} size={22} tone="harm"><Icon name="hourglass" size={16} /></Ring>
-    </span>
+    <Icon name="hourglass" size={20} className="threat-pill-icon" />
     <span className="threat-pill-label"><PeopleText text={label} /></span>
     <b className="threat-pill-min">{left <= 0 ? NOW_LABEL : `${padDigits(shown, 2)} min`}</b>
+    <span className="threat-pill-bar" role="meter" aria-label="Minutes left before the threat lands" aria-valuemin={0} aria-valuemax={minutes} aria-valuenow={shown} aria-valuetext={`${shown} of ${minutes} minutes`}>
+      <i style={{ width: `${share * 100}%` }} />
+      <em className="threat-pill-tick" style={{ left: '50%' }} aria-hidden="true" />
+      <em className="threat-pill-tick" style={{ left: '25%' }} aria-hidden="true" />
+    </span>
+    <span className="threat-pill-note" role={stage === 'steady' ? undefined : 'status'}>{THREAT_STAGE_NOTE[stage]}</span>
   </p>;
 }
 

@@ -469,3 +469,35 @@
 .live .live-head { position: sticky; top: 0; z-index: 6; box-shadow: 0 6px 16px color-mix(in srgb, var(--black) 35%, transparent); border-bottom: 1px solid var(--hair-2); }
 .live .live-head-threat { margin-top: var(--sp1); }
 .live .live-head-threat .threat-pill { margin: 0; }
+
+/* ---- The pressure bar's other signals (owner, 2026-10-24: draw the eye as the threat's window closes, and
+   give the player time to see the choice is about to be taken). The pill itself is styled in
+   operations/live-world.css. The frame's red edge and the shortcut to the choices follow the same steps
+   (fill-gauge.ts threatStage): the edge tightens at a quarter, and in the last moments everything pulses,
+   only with Flashing lights on and never under reduced motion, and it throbs eight times (about nine seconds) and then holds, so the game still loops one signal only. */
+.live.live-stage-quarter::before, .live.live-stage-last::before { box-shadow: inset 0 0 46px 8px color-mix(in srgb, var(--siren-r) 55%, transparent); }
+.live.live-pulse::before { animation: vignette-throb 1.1s ease-in-out 8; }
+@keyframes vignette-throb { 50% { opacity: 0.35; } }
+.live .live-choice-access[data-threat-stage="half"], .live .live-choice-access[data-threat-stage="quarter"], .live .live-choice-access[data-threat-stage="last"] { border-color: var(--harm); color: var(--white); background: color-mix(in srgb, var(--harm) 35%, var(--ink-1)); }
+.live.live-pulse .live-choice-access { animation: threat-throb 1.1s ease-in-out 8; }
+@keyframes threat-throb { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--siren-r) 90%, transparent), 0 0 30px color-mix(in srgb, var(--siren-r) 85%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .live.live-pulse::before, .live.live-pulse .live-choice-access { animation: none !important; } }
+
+/* ---- The result beat's frame (owner, 2026-10-24, docs/result-surface.md): a steady 2px edge around the
+   phone column in the verdict's color, so how the last decision went reads at arm's length. The words
+   (the pill and the title) say the same, so the color never carries it alone. It fades in once, with
+   the result; the decide beat has its own urgency glow and the two never share a beat. Fixed to the
+   column because the app frame contains its fixed children. */
+.live-verdict-good { --verdict: var(--good); }
+.live-verdict-warn { --verdict: var(--warn); }
+.live-verdict-harm { --verdict: var(--harm); }
+.live-verdict-neutral { --verdict: var(--t2); }
+.live[class*="live-verdict-"]::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 30; box-shadow: inset 0 0 0 2px var(--verdict); animation: result-in 0.3s ease-out; }
+/* The result itself arrives with one opacity fade, keyed to its revision (the card remounts per result). */
+.live-beat-result .operation-feedback .decision-card { animation: result-in 0.28s ease-out; }
+@keyframes result-in { from { opacity: 0; } }
+/* Flashing lights off holds the light bar still, as reduced motion does. */
+.live-lightbar-still i { animation: none !important; }
+.live-lightbar-still i:first-child { background: var(--siren-r); }
+.live-lightbar-still i:last-child { background: var(--siren-b); }
+@media (prefers-reduced-motion: reduce) { .live[class*="live-verdict-"]::before, .live-beat-result .operation-feedback .decision-card { animation: none; } }

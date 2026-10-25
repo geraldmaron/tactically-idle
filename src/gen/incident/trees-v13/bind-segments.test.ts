@@ -14,14 +14,18 @@ import { worldFor } from '../../../content/world';
 const WORLD = worldFor(0);
 
 // ---------------------------------------------------------------- frozen reference
-// bindRoleTokens as it was before it became the join of bindRoleSegments (compile.ts, 2026-10-08).
-// Do not edit: it is the byte-for-byte baseline the segments must reproduce.
+// bindRoleTokens as it was before it became the join of bindRoleSegments (compile.ts, 2026-10-08), plus
+// the one rule added since (2026-10-24, content control Q1): a pronoun for a person is that person's name
+// when the last person mentioned in the string is someone else with the same pronoun, and a verb after
+// that name is singular. It is an independent copy, so the segments must reproduce it byte for byte.
 const PRONOUN_FORMS: Record<string, Record<'he' | 'she' | 'they', string>> = {
   he: { he: 'he', she: 'she', they: 'they' }, him: { he: 'him', she: 'her', they: 'them' }, his: { he: 'his', she: 'her', they: 'their' },
   hers: { he: 'his', she: 'hers', they: 'theirs' }, himself: { he: 'himself', she: 'herself', they: 'themselves' },
 };
 const ENGINE_TOKENS = new Set(['lead']);
 function referenceBind(text: string, cast: Record<string, CastIdentity>, place = '', rooms: Record<string, string> = {}, groups: Record<string, readonly string[]> = {}): string {
+  let last: string | undefined;
+  const form: Record<string, 'name' | 'pronoun'> = {};
   return text.replace(TOKEN, (match: string, role: string, part?: string, singular?: string, plural?: string, heForm?: string, sheForm?: string, theyForm?: string, oneForm?: string, manyForm?: string) => {
     const bare = !part && singular === undefined && heForm === undefined && oneForm === undefined;
     if (ENGINE_TOKENS.has(role) && bare) return match;
@@ -51,13 +55,23 @@ function referenceBind(text: string, cast: Record<string, CastIdentity>, place =
     const who = cast[role];
     if (!who || part === 'room' || part === 'n') throw new Error(`Unknown token ${match} in "${text}"`);
     if (oneForm !== undefined) return oneForm;
-    if (singular !== undefined) return who.pronouns === 'they' ? plural! : singular;
+    if (singular !== undefined) return who.pronouns === 'they' && form[role] !== 'name' ? plural! : singular;
     if (heForm !== undefined) return who.pronouns === 'he' ? heForm : who.pronouns === 'she' ? sheForm! : theyForm!;
     if (part === 'age') { if (who.age === undefined) throw new Error(`No age drawn for ${role} in "${text}"`); return String(who.age); }
     if (part && PRONOUN_FORMS[part.toLowerCase()]) {
-      const word = PRONOUN_FORMS[part.toLowerCase()][who.pronouns];
+      const key = part.toLowerCase();
+      const other = last !== undefined && last !== role ? cast[last] : undefined;
+      last = role;
+      if (key !== 'himself' && other && other.pronouns === who.pronouns) {
+        form[role] = 'name';
+        return key === 'his' || key === 'hers' ? `${who.firstName}’s` : who.firstName;
+      }
+      form[role] = 'pronoun';
+      const word = PRONOUN_FORMS[key][who.pronouns];
       return part[0] === part[0].toUpperCase() ? word[0].toUpperCase() + word.slice(1) : word;
     }
+    last = role;
+    form[role] = 'name';
     return part === 'first' ? who.firstName : part === 'last' ? who.surname : `${who.firstName} ${who.surname}`;
   });
 }

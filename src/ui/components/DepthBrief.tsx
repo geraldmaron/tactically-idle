@@ -12,7 +12,7 @@ export function ColdOpen({ text, className, icon }: { text: string | undefined; 
   if (!text) return null;
   // A framed panel like every other block on the brief: the title in the bar, the story in the body.
   return <Section className={`cold-open${className ? ` ${className}` : ''}`} level="h3" title="Before the call" icon={icon ?? 'book'}>
-    <p className="cold-open-text"><PeopleText text={text} /></p>
+    <div className="cold-open-body">{text.split('\n\n').map((paragraph, i) => <p key={i} className="cold-open-text"><PeopleText text={paragraph} /></p>)}</div>
   </Section>;
 }
 

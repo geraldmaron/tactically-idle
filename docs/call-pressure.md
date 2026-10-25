@@ -278,7 +278,12 @@ a `lapse` (`OPERATION_HANDLERS.lapse`, `src/sim/operation.ts`).
    commit's strain reads the higher pressure. A call nobody acted in at all (every decision ran
    out) gives no tactical experience. Nothing here is a balance number to tune.
 8. **It always moves.** A run-out moment has its own threat and timeout; in stage 3 they end the
-   call held (`rider_held`, `held_counter`, `held_both` by who is still inside). The call-tree gates
+   call with command taking the door (owner, 2026-10-24: no call ends with the subject left inside).
+   A run-out route carries `safe`, `out` and a fixed `harm` (`TreeTimeout`), so the ending it names
+   settles who is inside: Going Live ends `door_taken`, or `entry_hurt` when the manager was still
+   inside; The Room Next Door ends `custody_clean`, or `family_hurt` when the family was still next
+   door. Nobody is drawn for and nobody dies by the clock alone. A lapse's harm is recorded and
+   validated like a clock-out's (`validPersonConsequences`). The call-tree gates
    fail a curated call with a threat that has nowhere to go, a route back to its node, the root or
    an earlier stage, or a chain of run-outs that never ends. Going Live's nine moments are designed
    in `docs/calls/going-live-lapses.md`.

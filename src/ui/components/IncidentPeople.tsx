@@ -89,7 +89,6 @@ export function KindTag({ kind }: { kind: SceneKind }) {
   return <span className="kind-tag" data-kind={kind} title={KIND_HELP[kind]}><PeopleGlyph kind={kind} />{KIND_WORD[kind]}</span>;
 }
 const isSceneKind = (kind: string | undefined): kind is SceneKind => kind === 'subject' || kind === 'civilian' || kind === 'person';
-const sentence = (text: string | undefined) => text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : undefined;
 
 /** The silhouette a person tile draws: their public kind while it is known, otherwise a plain person. */
 function tileFace(kind: string | undefined, tone: PersonTone): FaceKind {
@@ -145,19 +144,22 @@ const PERSON_SHORT: Record<PersonStatus, string> = {
   deceased: 'Deceased',
 };
 
-function ScenePerson({ id, name, role, where, word, tone, fallback }: { id: string; name: string; role?: string; where?: string; word: string; tone: PersonTone; fallback: SceneKind }) {
+function ScenePerson({ id, name, where, word, tone, fallback, role }: { id: string; name: string; where?: string; word: string; tone: PersonTone; fallback: SceneKind; role?: string }) {
   const who = usePeopleEntry(id);
   const kind: SceneKind = who?.kind === 'person' ? 'person' : fallback;
-  const job = sentence(role);
+  // Two lines a row (owner, 2026-10-24: the list read too large on every screen): the name with its kind,
+  // then where they are and how they are. Their job is in the briefing and on the face's label.
   return <li className="scene-person" data-tone={tone} data-kind={kind}>
     <Face size="sm" kind={kind} seed={id} role={role} />
     <span className="scene-person-text">
       <span className="scene-person-top"><b>{name.split(/\s+/)[0]}</b><KindTag kind={kind} /></span>
       <span className="scene-person-line">{where && <span className="scene-person-where">{where} · </span>}<span className="scene-person-word">{word}</span></span>
-      {job && <small className="scene-person-role">{job}</small>}
     </span>
   </li>;
 }
+
+/** Out of the building and accounted for: counted in the tally, not listed (the panel is who is inside). */
+const OUT_OF_THE_BUILDING: readonly PersonStatus[] = ['safe', 'care_accepted', 'accounted_elsewhere'];
 
 /** The people the call is about, as the "People inside" panel on the live screen: the subjects the
  * team has heard from and the civilians it tracks, one row each in a well, with where they are when
@@ -175,12 +177,16 @@ export function IncidentPeopleStrip({ scenario, run, whereOf }: { scenario: Scen
   if (!civilians.length && !subjects.length) return null;
   const reported = civilians.filter((person) => person.status === 'reported').length;
   const missing = civilians.filter((person) => person.status === 'unaccounted').length;
-  const inView = subjects.length + civilians.length - reported - missing;
-  const tally = [inView ? `${inView} in view` : '', reported ? `${reported} reported` : '', missing ? `${missing} not located` : ''].filter(Boolean).join(' · ');
+  const inside = civilians.filter((person) => !OUT_OF_THE_BUILDING.includes(person.status));
+  const out = civilians.length - inside.length;
+  const inView = subjects.length + inside.length - reported - missing;
+  const tally = [inView ? `${inView} in view` : '', reported ? `${reported} reported` : '', missing ? `${missing} not located` : '', out ? `${out} out` : ''].filter(Boolean).join(' · ');
+  // Everyone named is out and no subject is left: one line, not a panel.
+  if (!inside.length && !subjects.length) return <p className="scene-people-clear"><Icon name="check" size={16} />{`Everyone named is out${out ? ` (${out})` : ''}.`}</p>;
   return <Section className="scene-people-panel" title="People inside" icon="people" tone="people" count={tally} well>
     <ul className="scene-people" aria-label="People at the scene">
       {subjects.map((subject) => <ScenePerson key={subject.id} id={subject.id} name={subject.label} role={roles.get(subject.id)} where={whereOf?.(subject.id)} word={STANCE_LINE[subject.stance]} tone={STANCE_TONE[subject.stance]} fallback="subject" />)}
-      {civilians.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} where={whereOf?.(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
+      {inside.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} where={whereOf?.(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
     </ul>
   </Section>;
 }
