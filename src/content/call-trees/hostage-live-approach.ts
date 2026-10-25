@@ -2,7 +2,7 @@ import { CHAT } from './hostage-live-chat';
 import { BREAKING, CALM_ON_CAMERA, CHECKS, CLEAR, HOLDING, NEGOTIATOR, NO_PROOF, OBSERVANT_ON_CHAT, PROOF, STEADY_ON_CAMERA, SURVEILLANCE, TOOK, check, clerkToo, turnsOn } from './hostage-live-parts';
 import type { TreeNode } from './types';
 
-const { TALK, HOLD, ASK, MOVE, PRESS, READ } = CHECKS;
+const { TALK, HOLD, ASK, MOVE, PRESS } = CHECKS;
 const CLEAR_NO_PROOF = [CLEAR, NO_PROOF];
 const CLEAR_PROOF = [CLEAR, PROOF];
 
@@ -161,59 +161,60 @@ export const APPROACH_NODES: TreeNode[] = [
       { when: { marks: ['glance'] }, prompt: 'Through the glass, {manager.first} glances at the stockroom door again. The comments keep asking {rider.first} where {rider.he} {rider~was|were} at 11:40 PM.' },
     ],
     choices: [
-      // An answer, out loud, from the one person who filed the complaint. It can't be taken back.
-      { id: 'manager_speaks', title: 'Ask whether {manager.first} wants to answer', icon: 'radio', talksTo: 'manager', check: check(TALK, 4), minutes: 3, consequenceLevel: 'high',
+      // Her life first, and what that gives up: the one person {rider.first} wants an answer from walks out,
+      // and {rider.first} keeps the handgun, the phone and the audience with no one in the room to answer.
+      { id: 'let_go_first', title: 'Get {manager.first} out first', icon: 'door', talksTo: 'rider', check: check(TALK, 10), minutes: 4, consequenceLevel: 'high',
         modifiers: [{ label: 'You saw who {manager.he} {manager~watches|watch}', mark: 'glance', value: 6 }, { label: 'You saw the rubbed-out time', mark: 'board_seen', value: 3 }],
-        summary: 'Ask {rider.first} to let {manager.first} answer on the stream, if {manager.first} chooses to. Nobody knows what {manager.he} will say, and the handgun is still in the room.',
-        pull: '{rider.first} hears {manager.first} speak for {manager.himself}.',
-        cost: 'The viewers will hear the answer before you can check it.',
-        preview: { favorable: '{manager.first} answers into the phone, as much as {manager.he} {manager~decides|decide} to.', mixed: '{manager.first} starts to answer, and what comes out isn’t what {rider.first} wanted.', adverse: '{manager.first} won’t answer, and {rider.first} turns to the viewers. Near breaking point, {rider.first} brings the handgun level with {manager.his} head.' },
+        summary: 'Ask {rider.first} to send {manager.first} out the front while the viewers watch. {rider.first} wants {manager.him} to answer for the bag.',
+        pull: 'Outside, {manager.first} is out of the handgun’s reach.',
+        cost: 'Once {manager.first} is out, {rider.first} has no one in the room to answer for the bag.',
+        preview: { favorable: '{manager.first} walks out the front, and {rider.first} keeps the phone and the handgun.', mixed: '{rider.first} lets {manager.first} stand but not leave, and the viewers hear whatever comes next.', adverse: '{rider.first} says no where the viewers can hear. Near breaking point, {rider.first} turns from the phone to {manager.first} with the handgun.' },
         outcomes: {
           favorable: [
             // The clerk took it, and the manager reported the courier to keep the clerk's job.
-            { if: CLEAR_NO_PROOF, text: '{manager.first} gets up using the cooler handle, faces the phone and names {clerk.first}. Then {manager.he} {manager~looks|look} at the stockroom door, and the stream sees where.',
-              exchange: [{ by: 'manager', line: 'You didn’t take it. {clerk.first} did. {clerk.He} {clerk~is|are} nineteen. {clerk.He} {clerk~is|are} my {clerk^nephew|niece|relative}.' }], reveal: ['rider_clear'], mark: ['admitted_live', 'knows_truth'], moves: { rider: 'honest' }, next: { node: 'way_out' }, objective: 20, pressure: -6 },
-            // The courier kept it. The manager keeps it off the stream if the stream lets the manager.
-            { if: TOOK, text: '{manager.first} gets up holding the cooler door, faces the phone, then turns away from it. {manager.He} {manager~says|say} the rest is for the police and {manager~sits|sit} back down.',
-              exchange: [{ by: 'manager', line: 'Not on camera. I won’t do that to you. Put that down and ask me again.' }], mark: ['held_back'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 8 },
+            { if: CLEAR_NO_PROOF, text: '{rider.first} lowers the phone. {manager.first} gets up using the cooler handle, stops in front of the phone and names {clerk.first}. Then two officers walk {manager.him} out the front.',
+              exchange: [{ by: 'manager', line: 'You didn’t take it. {clerk.first} did. {clerk.He} {clerk~is|are} nineteen. {clerk.He} {clerk~is|are} my {clerk^nephew|niece|relative}.' }], reveal: ['rider_clear'], safe: ['manager'], mark: ['admitted_live', 'knows_truth', 'let_go', 'still_armed'], moves: { rider: 'honest' }, next: { node: 'last_word' }, objective: 24, pressure: -6 },
+            // The courier kept it. The manager keeps it off the stream and tells the police instead.
+            { if: TOOK, text: '{rider.first} waves {manager.first} up off the tile. {manager.first} gets up holding the cooler door, says the rest is for the police, and two officers walk {manager.him} to the door.',
+              exchange: [{ by: 'manager', line: 'Not on camera. I won’t do that to you. I’ll say it to the police.' }], safe: ['manager'], mark: ['held_back', 'let_go', 'still_armed'], moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 20, pressure: -6 },
             // Nobody took it: the manager only knows what the app said.
-            { if: CLEAR_PROOF, text: '{manager.first} stands, faces the phone and reads out what the {delivery_app} order screen by the register says. The whiteboard behind {manager.him} has the same time in marker. “So who’s lying?” {rider.first} asks. Nobody answers, and the register phone starts up again.',
-              exchange: [{ by: 'manager', line: '{delivery_app} said delivered. I wrote down what it said. That’s all I did.' }], mark: ['app_said'], moves: { rider: 'heard' }, next: { node: 'way_out' }, objective: 12 },
+            { if: CLEAR_PROOF, text: '{rider.first} looks at the count, then at the door. {manager.first} stands, reads out what the {delivery_app} order screen by the register says. Officers take {manager.him} out the front. “So who’s lying?” {rider.first} asks the room. Nobody answers.',
+              exchange: [{ by: 'manager', line: '{delivery_app} said delivered. I wrote down what it said. That’s all I did.' }], safe: ['manager'], mark: ['app_said', 'let_go', 'still_armed'], moves: { rider: 'heard' }, next: { node: 'last_word' }, objective: 16, pressure: -6 },
           ],
           mixed: [
-            { if: CLEAR, text: '{manager.first} gets as far as {rider.first}’s name. {rider.first} talks right over {manager.him}, back to the red light and the timestamp. {rider.He} {rider~tells|tell} {manager.him} to stand up if {manager.he} {manager~means|mean} it.',
+            { if: CLEAR, text: '{rider.first} says the answer comes before the door, and lets {manager.first} stand. {manager.first} gets as far as {rider.first}’s name. {rider.first} talks right over {manager.him}, back to the light on Calloway and the timestamp.',
               mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
             // The accusation the courier didn't want goes out anyway. It is the manager's account, not proof.
-            { if: TOOK, text: '{manager.first} stands with a hand on the cooler door and talks to the camera, not to {rider.first}. {manager.He} {manager~says|say} the store camera has {rider.first} collecting the bag, and {delivery_app} has it delivered. The comments come faster than {rider.first} can read.',
+            { if: TOOK, text: '{rider.first} lets {manager.first} onto {manager.his} feet and no farther. {manager.first} stands with a hand on the cooler door and talks to the camera, not to {rider.first}. {manager.He} {manager~says|say} the store camera has {rider.first} collecting the bag, and {delivery_app} has a drop-off time. The comments come faster than {rider.first} can read.',
               exchange: [{ by: 'manager', line: 'You collected it just after eleven-forty and marked it delivered. Ask the customer.' }], mark: ['exposed'], moves: { rider: 'provoked' }, bump: { stream: 15 }, next: { node: 'cornered' }, objective: 10 },
           ],
           adverse: turnsOn({
-            lead: '{manager.first} tells the phone {manager.he} won’t answer anything while the handgun is beside {manager.him}.',
+            lead: '{rider.first} tells the phone the police want {manager.first} gone before {manager.he} {manager~answers|answer}.',
             threat: '{rider.first} brings the handgun up level with {manager.first}, in full view of the stream.',
-            quiet: '{rider.first} turns the camera back on {rider.himself} and tells the viewers {manager.first} won’t say it.',
+            quiet: '{rider.first} turns the camera back on {rider.himself} and tells the viewers the police only want {manager.first} out.',
             quietNext: { node: 'way_out' },
             extra: { mark: ['performing'], moves: { rider: 'provoked' }, bump: { stream: 18 }, pressure: 10 } }),
         } },
       // The crowd as a source: slow, public, and worth something only once the squad has checked it.
-      { id: 'ask_chat', title: 'Look for a delivery witness', icon: 'search', check: check(READ, 4), minutes: 5, certBonus: SURVEILLANCE, favors: [OBSERVANT_ON_CHAT],
+      { id: 'ask_chat', title: 'Ask viewers for a clip', icon: 'search', talksTo: 'rider', check: check(TALK, 8), minutes: 5, consequenceLevel: 'moderate', certBonus: NEGOTIATOR, favors: [OBSERVANT_ON_CHAT],
         modifiers: [{ label: 'The clerk couldn’t say', mark: 'clerk_unsure', value: 4 }],
-        summary: '{lead} reads the comments on a tablet for anyone who saw the order after it left {place}. Your squad checks each claim before it counts.',
-        pull: 'A viewer may have seen what nobody in the store did.',
-        cost: '{manager.first} stays on the floor while you sort through strangers.',
-        preview: { favorable: 'You find a claim your squad can check.', mixed: 'A name turns up in the comments, and {rider.first} reads it out.', adverse: '{rider.first} keeps breaking off the call to read comments. Near breaking point, the handgun turns on {manager.first}.' },
+        summary: '{lead} asks {rider.first} if the register line can call on the viewers for anything from the customer’s street. {rider.first} reads each reply aloud, and your squad checks every claim before any counts.',
+        pull: 'The viewers who back {rider.first} look for {rider.his} bag.',
+        cost: '{manager.first} stays on the floor while the replies come in.',
+        preview: { favorable: 'A viewer posts a claim your squad can check.', mixed: 'A name turns up in the comments, and {rider.first} reads the name out.', adverse: '{rider.first} won’t let the line ask, then keeps breaking off to read comments. Near breaking point, the handgun turns on {manager.first}.' },
         outcomes: {
           favorable: [
-            { if: PROOF, text: 'A comment from {handle} links a porch camera clip from the customer’s street. A bag sits on a step two doors down at 11:52 PM, and at 12:10 AM a neighbor carries it inside. The team checks the address against the order and the label number on the bag. Both match.',
+            { if: PROOF, text: '{rider.first} agrees and reads the replies out. A comment from {handle} links a porch camera clip from the customer’s street. A bag sits on a step two doors down at 11:52 PM, and at 12:10 AM a neighbor brings the bag in. The team checks the address against the order and the label number on the bag. Both match.',
               exchange: [{ by: 'rider', line: 'That’s my bag. That’s my bag on that step. I delivered it.' }], reveal: ['proof', 'rider_clear'], mark: ['proof_seen', 'knows_truth'], moves: { rider: 'honest' }, bump: { stream: 10 }, next: { node: 'way_out' }, objective: 25, pressure: -8 },
-            { if: CLEAR_NO_PROOF, text: 'A viewer called {handle} used to work nights at {place} and writes that the night clerk ate from the cooler on shift. The team writes the claim down and asks for an order number. Nobody posts one.',
+            { if: CLEAR_NO_PROOF, text: '{rider.first} nods at the phone. A viewer called {handle} used to work nights at {place}. The viewer writes that the night clerk ate from the cooler on shift. The team writes the claim down and asks for an order number. Nobody posts one.',
               reveal: ['proof'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
-            { if: TOOK, text: 'Under the picture, {handle} links {rider.first}’s own stream from Sunday night, filmed from the scooter’s handlebars. At 12:20 AM it shows a bag strapped on behind the seat. {delivery_app} had the order delivered at 11:58 PM. The team freezes the frame, and the label number matches. {rider.first} says it was a different bag.',
+            { if: TOOK, text: '{rider.first} says go ahead. Under the picture, {handle} links {rider.first}’s own stream from Sunday night, shot from the scooter’s handlebars. At 12:20 AM the clip shows a bag on the rack behind the seat. {delivery_app} logs the drop-off at 11:58 PM. The team freezes the frame, and the label number matches. {rider.first} says that is a different bag.',
               reveal: ['proof', 'rider_clear'], mark: ['knows_truth'], moves: { rider: 'provoked' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 8 },
           ],
-          mixed: [{ text: 'The squad finds a comment naming {clerk.first} as the one on the register that night. {rider.first} reads it out and asks the line where {clerk.first} is now.',
+          mixed: [{ text: '{rider.first} lets the line ask, and the first reply names {clerk.first} as the one on the register that night. {rider.first} reads the name out and asks the line where {clerk.first} is now.',
             mark: ['clerk_named', 'performing'], moves: { rider: 'provoked' }, bump: { stream: 12 }, next: { node: 'way_out' }, objective: 4, pressure: 4 }],
           adverse: turnsOn({
-            lead: 'A viewer posts a photo of the patrol cars at the corner, and {rider.first} holds it up to the camera.',
+            lead: '{rider.first} says the viewers aren’t the police’s to ask, then holds up a photo of the patrol cars a viewer just posted.',
             threat: '{rider.first} points the handgun toward {manager.first} and asks the viewers who else is out there.',
             quiet: '{rider.first} keeps interrupting the call to read new comments.',
             quietNext: { node: 'way_out' },

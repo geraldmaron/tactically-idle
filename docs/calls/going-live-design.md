@@ -163,7 +163,8 @@ comments are guessing the cross streets and one guess is right (6.8).
 
 | Choice | Kind | Min | Stance | Cost |
 |---|---|---|---|---|
-| `manager_speaks` | contact | 3 | let the sentence be said, live | "Whatever {manager} says goes out live before you can weigh it." |
+| `let_go_first` (was `manager_speaks`, 2026-10-25) | contact | 4 | her life first, the grievance second | "Once {manager} is out, {rider} has no one in the room to answer for the bag." |
+| `ask_chat` (reworked 2026-10-25) | contact | 5 | ask the courier to let the line call on his viewers | "{manager} stays on the floor while the replies come in." |
 | `camera_wall` | contact | 4 | ask for the audience to go | "{rider} gives up the witnesses {rider} came here for, on your word." |
 | `cut_feed` | pressure | 6 | take the audience away | "{rider} watches the screen go black and knows who did it." |
 | `team_glass` (gated: not after `watch_feed`) | coordination, vantage | 3 | get close | "The stream watches your squad move in, and {rider} watches the stream." |
@@ -200,7 +201,7 @@ Costs quoted above; "who pays" is charged by the adverse band named.
   `clerk_out` has the best odds and the biggest objective but the worst adverse (a shot into the
   ceiling, to `threat`); `watch_feed` is the safest adverse and the only source of `glance` (+6 on
   `manager_speaks`) at stage 1. None is beaten on every column.
-- **Stage 2 on_air.** `manager_speaks` is hardest (+4) with the only reveal of who took the bag;
+- **Stage 2 on_air.** `let_go_first` is the hardest check (+10) and the only one that moves the manager out at stage 2, and it keeps the manager's old three answers as what she says on the way out (`admitted_live`, `held_back`, `app_said`) and, on mixed, what she says while standing (`exposed` to `cornered`);
   `camera_wall` slows the count (`phone_wall`, read by the stream rate and `walk_dark` +6);
   `cut_feed` is slowest (6 min) and the only way off the stream (`off_air`); `team_glass` is the
   only `team_close` here (+8 on `go_in`). None dominated.
@@ -284,3 +285,23 @@ source pull 1.0 → 1.0. All above their floors. The sample is three random play
   address threat posts the store's address, a public business; no home address and no family peril.
 - Not done: the `swat-writing-review` verdict, the Codex cold read, the E3 batch tally, and the
   owner's read of both death endings and of this rework.
+
+## Update 2026-10-25: two stage 2 options reworked
+
+The owner called `manager_speaks` and `ask_chat` a waste: no pressure, not believable. Sol agreed on both
+(`on_air`): asking an armed man to stage an on-camera answer from his hostage bought the player nothing
+they could name, and reading comments for a witness was slow, safe and passive. Changes, all in
+`hostage-live-approach.ts`:
+
+- **`manager_speaks` became `let_go_first`** ("Get {manager} out first"). Dilemma: her life now against the
+  grievance, since once she is out the courier has no one to answer for the bag. Favorable walks her out
+  (to `last_word`, `let_go` and `still_armed` set, the clerk still inside) and keeps the three old answers as
+  what she says at the door by truth. Mixed lets her stand, not leave, and keeps the old `exposed` accusation
+  (so `cornered` stays reachable). Adverse is the courier refusing, with the handgun on her only past
+  breaking point. `glance` and `board_seen` still feed its odds.
+- **`ask_chat` now asks the courier first** ("Ask viewers for a clip", a talk check, moderate harm). He can
+  refuse in front of his audience, which is the new adverse. Outcomes keep their evidence and marks; each
+  favorable now opens on his say-so.
+- Difficulties are +10 and +8. Choices gate, coverage, balance and the other trees-v13 tests pass (15 files);
+  fingerprints recaptured on purpose (the 12 hostage entries), nothing else moved.
+
