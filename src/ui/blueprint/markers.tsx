@@ -206,12 +206,3 @@ export function PersonGlyph({ p }: { p: PersonItem }) {
     </g>}
   </g>;
 }
-
-/** One member of the crowd outside: a tiny neutral figure. */
-export function CrowdFigure({ at }: { at: Vec }) {
-  return (
-    <g className="bp-crowd-fig" transform={`translate(${r2(at.x)} ${r2(at.y)}) scale(0.72)`}>
-      <Figure />
-    </g>
-  );
-}

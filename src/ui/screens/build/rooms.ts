@@ -50,9 +50,6 @@ export const ROOMS: readonly RoomDef[] = [
 export const roomOf = (id: RoomId): RoomDef => ROOMS.find((room) => room.id === id)!;
 export const roomOfBranch = (branch: DevBranch): RoomDef => ROOMS.find((room) => room.branch === branch)!;
 
-export const roomLit = (id: RoomId): string => `art/plates/room_${id}_lit.webp`;
-export const roomDark = (id: RoomId): string => `art/plates/room_${id}_dark.webp`;
-
 export const pctX = (x: number): number => (x / PLATE_W) * 100;
 export const pctY = (y: number): number => (y / PLATE_H) * 100;
 

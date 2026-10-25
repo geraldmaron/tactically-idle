@@ -29,15 +29,6 @@ export function signedMoney(n: number): string {
   return `${v > 0 ? '+' : '-'}${money(Math.abs(v))}`;
 }
 
-/** An hourly amount as a signed rate per minute: +25/min, +2.5/min, -0.8/min. */
-export function ratePerMinute(perHourAmount: number): string {
-  const m = perHourAmount / 60;
-  const a = Math.abs(m);
-  if (a < 0.05) return '0/min';
-  const body = a >= 10 ? money(a) : a.toFixed(1);
-  return `${m > 0 ? '+' : '-'}${body}/min`;
-}
-
 /** The live balance: whole units so accrual is visible every few seconds, compact past a million. */
 export function liveMoney(n: number): string {
   return Math.abs(n) >= 1_000_000 ? `${n < 0 ? '-' : ''}${(Math.abs(n) / 1_000_000).toFixed(2)}M` : moneyFull(n);
@@ -108,10 +99,6 @@ export function feetInches(ft: number): string {
 
 export function sqft(n: number): string {
   return `${Math.round(n).toLocaleString('en-US')} sq ft`;
-}
-
-export function pad2(n: number): string {
-  return String(n).padStart(2, '0');
 }
 
 export function plural(n: number, one: string, many = `${one}s`): string {

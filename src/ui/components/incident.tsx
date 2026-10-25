@@ -8,7 +8,6 @@ import { ALL_BUILDING_FAMILIES } from '../../gen/building';
 import { getBuilt } from '../../sim/resolution';
 import { floorCount } from '../blueprint/floors';
 import { Chip } from './ui';
-import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Disclosure } from './Disclosure';
 import { placeKey } from '../art/Plates';
@@ -98,11 +97,6 @@ export function scenarioPlaceName(scenario: ScenarioDefinition | null | undefine
   } catch {
     return null;
   }
-}
-
-/** Only multi-floor buildings get a chip: on a phone the floor tabs are easy to miss. */
-export function FloorsChip({ floors }: { floors: number }) {
-  return floors > 1 ? <Chip icon="layers" title="Use the floor tabs on the map to see each floor">{floors} floors</Chip> : null;
 }
 
 export function settingIcon(setting: 'residential' | 'business' | 'apartment' | string): IconName {
@@ -266,43 +260,4 @@ export function countdown(ms: number): string {
   if (d > 0) return h ? `${d}d ${h}h` : `${d}d`;
   if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
   return `${m}m ${String(sec).padStart(2, '0')}s`;
-}
-
-export function TimeLeft({ expiresAt, now }: { expiresAt: number; now: number }) {
-  const left = expiresAt - now;
-  if (left <= 0) {
-    return (
-      <span className="timeleft timeleft-gone">
-        <Icon name="hourglass" size={14} />
-        Closed: another unit took it
-      </span>
-    );
-  }
-  return (
-    <span className={`timeleft${left < 15 * 60000 ? ' timeleft-soon' : ''}`}>
-      <Icon name="hourglass" size={14} />
-      <span>
-        Open for <b>{countdown(left)}</b>
-        {left < 15 * 60000 ? ' · closing soon' : ''}
-      </span>
-    </span>
-  );
-}
-
-/** Time left as a draining bar plus the countdown. The bar is the share of the call's open window
- * still remaining; the words carry the exact time, so the bar is never the only signal. */
-export function TimeLeftBar({ arrivedAt, expiresAt, now }: { arrivedAt: number; expiresAt: number; now: number }) {
-  const left = expiresAt - now;
-  const span = Math.max(1, expiresAt - arrivedAt);
-  const share = Math.max(0, Math.min(1, left / span));
-  const soon = left > 0 && left < 15 * 60000;
-  return (
-    <span className={`timebar${soon ? ' timebar-soon' : ''}${left <= 0 ? ' timebar-gone' : ''}`}>
-      <span className="timebar-track" aria-hidden="true"><i style={{ width: `${Math.round(share * 100)}%` }} /></span>
-      <span className="timebar-text">
-        <Icon name="hourglass" size={13} />
-        {left <= 0 ? 'Closed: another unit took it' : <><b>{countdown(left)}</b>{soon ? ' left · closing soon' : ' left'}</>}
-      </span>
-    </span>
-  );
 }

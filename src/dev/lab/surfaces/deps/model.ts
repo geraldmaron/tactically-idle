@@ -226,9 +226,6 @@ export function sortFindings(findings: readonly LintFinding[], muted: ReadonlySe
   return { open: order.filter(f => !muted.has(f.id)), muted: order.filter(f => muted.has(f.id)) };
 }
 
-/** The keys a finding is about, so a lint row can select its key. */
-export const findingKey = (f: LintFinding): StateKey | null => f.key ?? null;
-
 /** A lint message with its raw ids read as names: choices by their bound title, clocks and endings
  * by their labels, marks by their key labels. The code and the ids stay one hover away. */
 export function humanizeFinding(f: LintFinding, names: { node(id: string): string; choice(node: string, choice: string): string; ending(id: string): string; clock(id: string): string },

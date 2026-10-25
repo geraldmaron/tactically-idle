@@ -96,12 +96,6 @@ function CommandPost({ view, onOpen, g, now = 0, primary = false, compact = fals
   </button>;
 }
 
-/** Every command post as one row of seats, for HQ: the holder's face, or the post's own icon on an
- * empty seat, and its state. Each opens Team's command room. */
-export function CommandSeats({ views, onOpen }: { views: ManagerView[]; onOpen: () => void }) {
-  return <div className="command-seats">{views.map((view) => <CommandPost key={view.profile.id} view={view} onOpen={onOpen} compact />)}</div>;
-}
-
 function StaffRow({ view, now, open, onOpen }: { view: ManagerView; now: number; open: boolean; onOpen: () => void }) {
   const { profile, status } = view;
   const latest = view.log[0];

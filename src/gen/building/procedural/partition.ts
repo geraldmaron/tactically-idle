@@ -1,7 +1,7 @@
 import { assignRooms, sliceRow } from './fill';
-import { type Rect, rarea, rh, rw } from './geom';
+import { type Rect, rh, rw } from './geom';
 import type { Rand } from './rand';
-import { type Piece, type StripPlan, planStrip } from './strips';
+import { type StripPlan, planStrip } from './strips';
 import type { PRoom, RoomSeed } from './types';
 
 /** Hands out temporary room ids that finalizeRooms replaces. */
@@ -167,5 +167,3 @@ export function layoutPieces(rng: Rand, maker: RoomMaker, plan: StripPlan, seeds
   }
   return rooms;
 }
-
-export const pieceArea = (p: Piece) => rarea(p.rect);

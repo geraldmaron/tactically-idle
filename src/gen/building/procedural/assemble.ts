@@ -1,4 +1,4 @@
-import { chamferPolygon, norm, outwardNormal, polyArea, rarea, rectPoly, sharedSegments, type Seg, type Vec } from './geom';
+import { chamferPolygon, norm, outwardNormal, rarea, rectPoly, sharedSegments, type Seg, type Vec } from './geom';
 import type { PRoom, Plan } from './types';
 
 /** Keys that are numbered even when a building has only one of them. */
@@ -82,8 +82,6 @@ export function finalizeRooms(plan: Plan): boolean {
   }
   return true;
 }
-
-export const roomArea = (r: PRoom) => polyArea(r.poly);
 
 /** Wall stretches that face the outdoors, per room. */
 export function exteriorRuns(plan: Plan): Run[] {

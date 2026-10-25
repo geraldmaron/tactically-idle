@@ -24,9 +24,6 @@ export function activeShifts(w: WorldState): ProactiveShift[] {
 
 export const shiftOfSquad = (w: WorldState, squadId: SquadId): ProactiveShift | undefined => w.shifts.find((s) => s.squadId === squadId && isActiveShift(s));
 
-/** A shift is on the clock at time t: started, not stopped, not past its end. */
-export const shiftRunningAt = (s: ProactiveShift, t: number): boolean => s.stoppedAt === undefined && s.startedAt <= t && t < s.endsAt;
-
 /** Shifts that count at an hour boundary: started before it and still on, or stopped exactly at it. */
 export function shiftCoversBoundary(s: ProactiveShift, b: number): boolean {
   if (s.startedAt >= b) return false;

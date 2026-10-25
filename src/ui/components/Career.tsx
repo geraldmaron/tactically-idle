@@ -2,10 +2,8 @@ import type { Officer } from '../../sim/types';
 import { ageYears, formatGameDate, gameDay, serviceYears } from '../../sim/calendar';
 import { experienceBand, rankOf, type ExperienceBand, type RankId } from '../../sim/ranks';
 import { useGame } from '../store';
-import { Icon } from '../icons';
-import { gameDays, yearsText } from '../format';
+import { gameDays } from '../format';
 import { Chip } from './ui';
-import { RankChip } from './RankInsignia';
 
 export interface CareerSnapshot {
   age: number;
@@ -37,29 +35,5 @@ export function RetirementChip({ date, inDays, compact }: { date: string; inDays
     <Chip tone="warn" icon="retire" title={`Retires ${date}`}>
       {compact ? `Retiring · ${gameDays(inDays)}` : `Retires ${date} · ${gameDays(inDays)} left`}
     </Chip>
-  );
-}
-
-/** Compact age / service / experience block for roster cards and candidate cards. */
-export function CareerMini({ officer, prior }: { officer: Officer; prior?: boolean }) {
-  const c = useCareerSnapshot(officer);
-  return (
-    <span className="career-mini">
-      <span className="career-line">
-        <span className="career-fact" title="Age">
-          <Icon name="cake" size={13} />
-          Age {c.age}
-        </span>
-        <span className="career-fact" title={prior ? 'Prior service' : 'Years of service'}>
-          <Icon name="medal" size={13} />
-          {yearsText(c.service)}
-          {prior ? ' prior service' : ' service'}
-        </span>
-      </span>
-      <span className="career-chips">
-        <RankChip rank={c.rank} />
-        {c.retirement && <RetirementChip date={c.retirement.date} inDays={c.retirement.inDays} compact />}
-      </span>
-    </span>
   );
 }

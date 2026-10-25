@@ -2,9 +2,8 @@ import { useId } from 'react';
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode, Ref } from 'react';
 import { Icon } from '../icons';
 import type { IconName } from '../icons';
-import { RATING_META, STATUS_META, ratingTone } from './labels';
+import { RATING_META, ratingTone } from './labels';
 import type { RatingKey } from '../../sim/types';
-import type { StatusKey } from './labels';
 import { ChoiceRail } from './ChoiceRail';
 import { StressDisplay } from './StressDisplay';
 import '../settings/inset-list.css';
@@ -276,18 +275,6 @@ export function ActionBar({ summary, primary, quiet, className }: {
   );
 }
 
-export function KV({ k, v, tone, strong, icon }: { k: ReactNode; v: ReactNode; tone?: 'mint' | 'danger' | 'amber'; strong?: boolean; icon?: IconName }) {
-  return (
-    <div className={`kv${strong ? ' kv-strong' : ''}`}>
-      <span className="kv-k">
-        {icon && <Icon name={icon} size="sm" />}
-        {k}
-      </span>
-      <span className={`kv-v${tone ? ` tone-${tone}` : ''}`}>{v}</span>
-    </div>
-  );
-}
-
 /** The one ring: a value from 0 to 100 drawn as a filled arc around its content (an icon, a number or a
  * face). `tone` colors the arc; `score` picks good, amber or harm by the value (80 and 50, as results
  * read). Decorative: the value's words belong to the element that holds it. */
@@ -414,16 +401,6 @@ export function SubHead({ icon, children, tone }: { icon: IconName; children: Re
       <Icon name={icon} size="sm" />
       {children}
     </h3>
-  );
-}
-
-/** Officer status chip (ready, strained, overloaded, recovery, injured, training, deployed, retiring). */
-export function OfficerStatusChip({ status, children }: { status: StatusKey; children?: ReactNode }) {
-  const m = STATUS_META[status];
-  return (
-    <Chip tone={m.tone} icon={m.icon}>
-      {children ?? m.label}
-    </Chip>
   );
 }
 

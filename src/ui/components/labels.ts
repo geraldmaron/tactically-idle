@@ -128,11 +128,6 @@ export function bandOf(o: Pick<Officer, 'stress'>): StressBand {
   return stressBand(o.stress);
 }
 
-export function stressText(o: Pick<Officer, 'stress' | 'injury'>, now: number): string {
-  if (o.injury && o.injury.until > now) return `Injured: ${o.injury.label}`;
-  return BAND_SHORT[stressBand(o.stress)];
-}
-
 export function ratingTone(v: number): 'hi' | 'mid' | 'lo' {
   if (v >= 70) return 'hi';
   if (v >= 45) return 'mid';

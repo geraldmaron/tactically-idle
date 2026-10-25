@@ -44,9 +44,6 @@ export const ChromeProvider = ChromeContext.Provider;
 export const MenuOpenContext = createContext<(() => void) | null>(null);
 export const useOpenMenu = () => useContext(MenuOpenContext);
 
-/** The mode the shell is drawing now. */
-export const useChrome = () => useContext(ChromeContext).mode;
-
 /** Ask the shell for a chrome mode while this component is mounted. Desk is the default, so a desk
  * screen needs no call. A focus screen calls `useChromeMode('focus')` and draws its own strip. */
 export function useChromeMode(mode: ChromeMode) {

@@ -8,7 +8,7 @@ import type { RankId } from '../../content/ranks';
 import { COMMAND_STAFF, type ManagerId } from '../../sim/command-staff';
 import { stressBand } from '../../sim/officer';
 import type { Candidate, CertId, DebriefResult, GameState, Id, Officer, RatingKey, SquadId } from '../../sim/types';
-import { CERT_ICON, RATING_META, ROLE_META, STATUS_META, type StatusKey } from '../components/labels';
+import { CERT_ICON, RATING_META, type StatusKey } from '../components/labels';
 import type { IconName } from '../icons';
 import { funding, fundingPerHour } from '../format';
 import { scenarioTitle } from './helpers';
@@ -64,8 +64,6 @@ export function tileStatus(officer: Officer, now: number): StatusKey | null {
   const status = officerStatus(officer, now);
   return status === 'ready' ? null : status;
 }
-
-export const tileStatusLabel = (status: StatusKey): string => STATUS_META[status].label;
 
 /** The squad's state in one detail line: who is ready, who leads, how many places are open. */
 export function squadDetail(opts: { deployed: boolean; ready: number; total: number; members: number; leader: string | null; size?: number }): string {
@@ -218,5 +216,3 @@ export function lastActionLine(log: readonly { at: number; text: string }[], act
 }
 
 // ---------------------------------------------------------------- role words
-
-export const roleLabel = (officer: Pick<Officer, 'role'>): string => ROLE_META[officer.role].label;

@@ -7,7 +7,6 @@
 import { DEV_NODES } from '../content/dev-tree';
 import { missingFor, type UnlockRule } from '../content/unlocks';
 import { developmentTier, developmentTierDefinition, maxDevelopmentTier } from './development-tiers';
-import { departmentService, serviceForLevel } from './department-level';
 import { openReport } from './shift-report';
 import { fillOpenPosts } from './command-staff';
 import type { GameState, GrantRecord, Id, NodeEffect } from './types';
@@ -32,13 +31,6 @@ export function milestoneView(state: Pick<GameState, 'department'>, rule: Unlock
     return { kind: 'trust', label: `Trust ${rule.trust}`, have: Math.min(have, rule.trust), need: rule.trust, met: dep.trust >= rule.trust };
   }
   return { kind: 'level', label: `Level ${rule.level}`, have: Math.min(dep.level, rule.level), need: rule.level, met: dep.level >= rule.level };
-}
-
-/** Share of the way to a level milestone, counting service within levels, for a progress bar. */
-export function milestoneShare(state: Pick<GameState, 'department'>, view: MilestoneView): number {
-  if (view.met) return 1;
-  if (view.kind !== 'level') return view.need > 0 ? view.have / view.need : 1;
-  return Math.min(1, departmentService(state.department) / serviceForLevel(view.need));
 }
 
 /** The milestone of the tier a node would gain next, or null when it is complete. */

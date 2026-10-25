@@ -7,8 +7,7 @@
 // single long settlement, many small ticks and a save in between all produce the same city.
 import { DISTRICTS } from '../../content/city/districts';
 import { HOUR } from '../../content/city/tuning';
-import { ECONOMY_TUNING, ratesAt } from '../economy';
-import { simNow } from '../calendar';
+import { ECONOMY_TUNING } from '../economy';
 import type { DebriefResult, GameState, HandlerMap, OperationRun, ShiftReportWorld, WorldCommandType } from '../types';
 import { closeCase } from './cases';
 import { foundDepartment, openDistrict, setDistrictCoverage, syncPatrolUnits } from './commands';
@@ -116,12 +115,6 @@ export function settleWorld(d: GameState, from: number, to: number, opportunityL
   settleDue(d, to, acc);
   reconcileLeads(d);
   syncPatrolUnits(d);
-}
-
-/** Net per hour a permanent commitment is checked against: allocation at its floor, patrol unboosted, no
- * case awards or fees (docs/world-redesign.md, "Earnings"). Roster and patrol quotes use it. */
-export function sustainableNetRate(d: GameState): number {
-  return ratesAt(d, simNow(d), false).net;
 }
 
 export function worldReport(d: GameState, acc: WorldAcc): ShiftReportWorld | undefined {

@@ -9,7 +9,7 @@ import { clockMarksOf, clockNextsOf } from '../../../../gen/incident/instance';
 import { countCombos } from '../../../../gen/incident/trees-v13/dependencies';
 import type { DrawWant } from '../../model/seek';
 import { WEIGHTS } from '../../../../gen/incident/trees-v13/balance';
-import type { Distribution, Weight } from '../../../../gen/incident/trees-v13/balance';
+import type { Weight } from '../../../../gen/incident/trees-v13/balance';
 import { callGraph, truthReach } from '../../../../gen/incident/trees-v13/graph';
 import type { CallGraph } from '../../../../gen/incident/trees-v13/graph';
 import type { ReachTally } from '../../jobs/tally';
@@ -95,11 +95,6 @@ export function groupCards(cards: readonly EndingCard[]): { key: Weight | 'ghost
 export function shareTotal(cards: readonly EndingCard[], tally: ReachTally | null): number {
   if (!tally || !tally.runs) return 0;
   return (cards.reduce((sum, c) => sum + c.n, 0) + (tally.endings.none?.n ?? 0)) / tally.runs;
-}
-
-/** A this-type tally's distribution, as `measure` reports it. */
-export function weightsOf(d: Distribution | null): Record<Weight, number> | null {
-  return d ? { ...zero(), ...d.weights } : null;
 }
 
 /** Paired change of each run class between a baseline tally and now (same runs, so same k): the

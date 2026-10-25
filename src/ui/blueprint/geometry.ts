@@ -64,11 +64,6 @@ export function rectsOverlapArea(a: Rect, b: Rect): number {
 
 export const inflate = (r: Rect, m: number): Rect => ({ x: r.x - m, y: r.y - m, w: r.w + 2 * m, h: r.h + 2 * m });
 
-/** Axis-aligned bounds of a point set. */
-export function pointsRect(pts: Vec[]): Rect {
-  return bboxOf(pts);
-}
-
 export function polyPath(poly: Polygon): string {
   return poly.map((p, i) => `${i ? 'L' : 'M'}${r2(p.x)} ${r2(p.y)}`).join(' ') + ' Z';
 }
@@ -254,20 +249,4 @@ export function edgeOutwardNormal(poly: Polygon, i: number): Vec {
   const n = perp(d); // (-dy, dx)
   // In a y-down frame, positive shoelace area = clockwise, whose outward normal is (dy, -dx) = -perp.
   return signedArea(poly) > 0 ? scale(n, -1) : n;
-}
-
-/** Polygon centroid by area weighting; falls back to the vertex mean for degenerate shapes. */
-export function polyCentroid(poly: Polygon): Vec {
-  const A = signedArea(poly);
-  if (Math.abs(A) < 1e-9) return { x: poly.reduce((s, p) => s + p.x, 0) / poly.length, y: poly.reduce((s, p) => s + p.y, 0) / poly.length };
-  let cx = 0;
-  let cy = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i];
-    const q = poly[(i + 1) % poly.length];
-    const f = p.x * q.y - q.x * p.y;
-    cx += (p.x + q.x) * f;
-    cy += (p.y + q.y) * f;
-  }
-  return { x: cx / (6 * A), y: cy / (6 * A) };
 }

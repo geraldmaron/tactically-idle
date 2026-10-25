@@ -9,7 +9,6 @@ import { deployability, fullName } from './officer';
 import { postFunding } from './ledger';
 import { simNow } from './calendar';
 import { tunable } from './tuning';
-import { fundingPerHour } from './format';
 
 const HOUR_MS = 3_600_000;
 
@@ -57,10 +56,4 @@ export function completeDetails(d: GameState, t: number, ev?: ShiftReport['perso
     awardXp(d, o, learnedXp(o, DETAIL_TUNING.xpPerHour * (a.endsAt - a.startedAt) / HOUR_MS), 'after an instructor detail', a.endsAt, ev);
     o.assignment = null;
   }
-}
-
-/** One line for the player: what a detail would pay this officer. */
-export function detailLine(o: Pick<Officer, 'wage' | 'certs'>): string {
-  const rate = detailRate(o);
-  return rate === null ? 'Needs a certification to teach' : `Instructor detail pays ${fundingPerHour(rate)}`;
 }

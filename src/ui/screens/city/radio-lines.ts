@@ -63,6 +63,3 @@ export function radioItems(g: GameState, n: number): RadioItem[] {
   }
   return out;
 }
-
-/** The whole line as plain text, for tests and screen readers. */
-export const radioSpoken = (item: RadioItem): string => `${item.time}. ${item.who}, ${item.place}, ${item.text}`;

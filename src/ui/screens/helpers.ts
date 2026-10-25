@@ -1,4 +1,4 @@
-import type { GameState, Id, IncidentCard, Officer, RatingKey, SquadId } from '../../sim/types';
+import type { GameState, Id, IncidentCard, Officer, SquadId } from '../../sim/types';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import * as DeptSelectors from '../../sim/department-selectors';
 import { nodeOptions, squadReadiness } from '../../sim/department-selectors';
@@ -6,7 +6,6 @@ import { scenarioCards } from '../../sim/operation-selectors';
 import type { ScenarioCard } from '../../sim/operation-selectors';
 import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { ageYears, gameDay } from '../../sim/calendar';
-import { RATING_META } from '../components/labels';
 
 // ---------------------------------------------------------------- cards
 
@@ -142,12 +141,6 @@ export function hasNodeEffect(g: GameState, kind: 'loadoutPresets' | 'restockRul
   const n = nodes[0];
   if (!n) return { unlocked: false, reason: 'Unlock the matching Logistics upgrade in Build.', nodeId: null, nodeName: null };
   return { unlocked: false, reason: `Locked: unlock "${n.node.name}" in Build${n.reason ? ` (${n.reason})` : ''}.`, nodeId: n.node.id, nodeName: n.node.name };
-}
-
-export function topRatings(o: Officer, n = 3): { key: RatingKey; label: string; value: number }[] {
-  return RATING_META.map((r) => ({ key: r.key, label: r.short, value: o.ratings[r.key] }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, n);
 }
 
 export function officerList(g: GameState): Officer[] {

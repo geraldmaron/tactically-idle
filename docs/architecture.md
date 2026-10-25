@@ -11,26 +11,26 @@ syntax tree (`src/dev/import-graph.ts`, with the parser Vite ships), and a dynam
 | Layer | Modules | Lines | May import | Owns |
 | --- | --- | --- | --- | --- |
 | kernel | 12 | 3096 | nothing | Shared records, ids, seeded randomness, geometry and the tuning registry. No game rules. |
-| world | 50 | 8307 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
-| catalog | 58 | 8856 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
+| world | 50 | 8303 | kernel | Blueprints: authored and procedural buildings, rooms, openings, furniture, routes and sightlines. |
+| catalog | 57 | 8851 | kernel, world | Authored data: officers, personas, items, courses, unlocks, call templates and call trees. |
 | scenario | 10 | 3234 | kernel, world, catalog | Turns a drawn call into a playable definition: cast, placement on the blueprint, compiled tree. |
-| engine | 94 | 19335 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
+| engine | 94 | 19305 | kernel, world, catalog, scenario | Game rules and state: department, economy, operations, resolution, outcomes, saves. |
 | qa | 40 | 6313 | kernel, world, catalog, scenario, engine | Content gates, balance measurement, fixtures and test support. Never loaded by the game. |
-| ui | 222 | 26735 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
-| lab | 106 | 18364 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
+| ui | 221 | 26536 | kernel, world, catalog, scenario, engine | Player screens, the blueprint renderer, portraits and the store that dispatches commands. |
+| lab | 106 | 18356 | kernel, world, catalog, scenario, engine, qa, ui | The dev-only Scenario Lab and dev sheets. Reads everything, never ships. |
 | shell | 3 | 395 | kernel, world, catalog, engine, ui, lab | Entry points that choose which app to mount. |
 
 ## Systems
 
 | System | Modules | Lines | Job |
 | --- | --- | --- | --- |
-| blueprint | 81 | 13949 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
+| blueprint | 81 | 13915 | Where things are: buildings, rooms, doors and windows, furniture, routes, cover and sightlines. |
 | subject | 7 | 1361 | Who is on scene: subjects, hostages, victims, bystanders and animals, their holds, weapons, temper (agitation and rapport) and positions. |
-| officer | 44 | 6421 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
+| officer | 44 | 6414 | Who the player sends: ratings, traits, stress, injuries, certifications, careers and squads. |
 | item | 7 | 1394 | What they carry: the item catalog, ratings and capabilities, force risk, inventory and wear. |
 | scenario | 78 | 17158 | What happens: call trees, placement on the blueprint, choices, chance per choice, branches and clocks, and the call-time logistics (loadouts, resupply, outside support) that read the items. |
-| metric | 48 | 7714 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
-| platform | 330 | 46638 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
+| metric | 46 | 7651 | What it meant: outcome scoring, harm, debriefs, department reputation, money and progression, and the Command Staff who run the department. |
+| platform | 330 | 46496 | Everything that serves the systems above: records, randomness, saves, the store, screens and tooling. |
 
 ## System dependency chain
 
@@ -112,4 +112,4 @@ Each input a system feeds into a choice's chance, and whether the engine actuall
 None.
 
 
-Cross-layer runtime imports in total: 1023.
+Cross-layer runtime imports in total: 1019.

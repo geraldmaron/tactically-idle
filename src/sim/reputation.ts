@@ -63,11 +63,6 @@ export function effectiveLean(dep: Pick<Department, 'reputation'>): number {
 }
 
 export type ReputationBand = 'hard' | 'patient' | null;
-export function reputationBand(dep: Pick<Department, 'reputation'>): ReputationBand {
-  const lean = effectiveLean(dep);
-  return lean > 0 ? 'hard' : lean < 0 ? 'patient' : null;
-}
-
 /** The named contributor for a check, or null when the department has no name or the check
  * doesn't meet the people on scene. */
 export function reputationContributor(dep: Pick<Department, 'reputation'>, kind: CheckKind): Contributor | null {
