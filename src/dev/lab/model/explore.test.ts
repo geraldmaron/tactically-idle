@@ -37,13 +37,6 @@ const replayed = (s: Session, path: string) => {
 
 const graphOf = (s: Session): CallGraph => callGraph(s.tree, { counts: s.counts, seed: s.resolved.spec!.seed, situation: s.situation, clockMarks: clockMarksOf(s.instance.clocks), clockNexts: sessionClockNexts(s) });
 const inCallEndings = (graph: CallGraph) => graph.vertices.filter(v => v.kind === 'ending' && v.inCall).map(v => v.treeId).sort();
-/** Every route into the ending this call keeps needs a fact this situation's truth says is false: on the
- * route itself, or (a route with no condition of its own) on the choice that takes it, whose mark only that
- * fact's proof can set. `gatedChoices` names those choices. */
-const blockedByTruth = (graph: CallGraph, ending: string, fact: string, gatedChoices: readonly string[] = []) => {
-  const into = graph.edges.filter(edge => edge.inCall && edge.to === `ending:${ending}`);
-  return into.length > 0 && into.every(edge => edge.conditions.some(c => c.kind === 'fact' && c.fact === fact && c.holds === false) || (!edge.conditions.length && gatedChoices.includes(`${edge.node}/${edge.choice}`)));
-};
 /** A live state where the engine offers no move at all (no band of any choice, no continuation, no
  * report): the only way to the failed-response fallback (handed_over), whose report the walk takes
  * whenever the engine offers it. The walk's moves are these, split by drawn result. */
@@ -68,8 +61,9 @@ describe('explore', () => {
     // Situation 1 of 3 (the rider is clear, the clerk took the bag): every ending the call keeps but the
     // failed-response fallback.
     expect(s.tree.situations[s.situation]!.truth.rider_clear).toBe(true);
-    expect(missing).toEqual(['handed_over']);
-    expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 1);
+    // manager_hurt_inside is unreachable in every situation (backlog going-live-dead-ending).
+    expect(missing).toEqual(['handed_over', 'manager_hurt_inside']);
+    expect(Object.keys(all.endings!)).toHaveLength(inCallEndings(graph).length - 2);
     // Where the rider took the bag (rider_clear false), the ending that walks him out clear is missing, and
     // every route into it needs rider_clear: on the route, or on the choice that sends the porch clip (which
     // needs proof nobody here has).
@@ -79,9 +73,18 @@ describe('explore', () => {
     const calmAll = explore(calm.frames[0].state, null);
     expect(calmAll.truncated).toBe(false);
     const calmMissing = inCallEndings(calmGraph).filter(ending => !(ending in calmAll.endings!));
-    const needRaised = calmMissing.filter(ending => ending !== 'handed_over');
+    // manager_hurt_inside is missing everywhere, not by truth (backlog going-live-dead-ending).
+    const needRaised = calmMissing.filter(ending => ending !== 'handed_over' && ending !== 'manager_hurt_inside');
+    expect(calmMissing).toContain('manager_hurt_inside');
     expect(needRaised).toEqual(['out_cleared']);
-    for (const ending of needRaised) expect(blockedByTruth(calmGraph, ending, 'rider_clear', ['way_out/send_clip'])).toBe(true);
+    // Since the sol rework (2026-10-24) a walk-out ends cleared on what the viewers heard, not on the hidden
+    // truth: every route into out_cleared needs the proof seen or an on-camera admission, which a courier
+    // who took the bag never gets.
+    const intoCleared = calmGraph.edges.filter(edge => edge.inCall && edge.to === 'ending:out_cleared');
+    expect(intoCleared.length).toBeGreaterThan(0);
+    // send_clip carries the gate on the choice itself (onlyIf proof_seen), so its edge has no condition of its own.
+    for (const edge of intoCleared) if (`${edge.node}/${edge.choice}` !== 'way_out/send_clip') expect(JSON.stringify(edge.conditions), `${edge.node}/${edge.choice}`).toMatch(/proof_seen|admitted_live/);
+    expect(JSON.stringify(calm.tree.nodes.find(node => node.id === 'way_out')!.choices.find(choice => choice.id === 'send_clip')!.onlyIf)).toContain('proof_seen');
     // handed_over is the failed-response fallback: no state in this call leaves the player without a move.
     expect(explore(start, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     // A goal stops at the shortest path to it.
@@ -104,7 +107,8 @@ describe('explore', () => {
     // nothing waits on one: only the fallback is missing, and no state leaves no move.
     const ids = new Set(keeps.instance.clocks.map(clock => clock.id));
     expect(keeps.template.situations.flatMap(entry => entry.clocks ?? []).filter(clock => !clock.story && !ids.has(clock.id))).toEqual([]);
-    expect(missing).toEqual(['handed_over']);
+    // manager_hurt_inside is unreachable in every situation (backlog going-live-dead-ending).
+    expect(missing).toEqual(['handed_over', 'manager_hurt_inside']);
     expect(explore(keeps.frames[0].state, null, { holds: noMoveLeft })).toMatchObject({ path: null, truncated: false });
     for (const [ending, force] of [['manager_killed', 'firearm:none'], ['manager_killed_rider_hurt', null]] as const) {
       const path = all.endings![ending];

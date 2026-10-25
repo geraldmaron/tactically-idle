@@ -2,3 +2,6 @@
 .open-in-lab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp1) var(--sp3); margin: 0 var(--gutter) var(--sp3); }
 .debrief-hero .open-in-lab { margin: var(--sp1) 0 0; }
 .open-in-lab-note { font-size: var(--s14); line-height: 1.4; color: var(--text-dim); }
+/* Quiet on the live screen and the debrief (kept here so no shipped stylesheet names the control). */
+.live [data-open-in-lab] { margin: var(--sp2) var(--gutter) var(--sp3); opacity: .55; font-size: var(--s14); }
+.debrief [data-open-in-lab] { margin: var(--sp2) 0 0; opacity: .55; font-size: var(--s14); }

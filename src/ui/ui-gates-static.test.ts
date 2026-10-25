@@ -44,7 +44,7 @@ describe('ui gates (static): the debt only falls', () => {
 const SAFE_AREA_OWNERS = [
   // app.css was split on 2026-10-24: the shell, the map's bottom controls and the small-screen sheet cap moved to the tail and ops-live parts.
   'src/ui/app.css', 'src/ui/styles/app-tail.css', 'src/ui/styles/ops-live.css',
-  'src/ui/player-navigation.css', 'src/ui/components/sheet-viewport.css', 'src/ui/settings/settings.css', 'src/ui/storefront/storefront.css',
+  'src/ui/player-navigation.css', 'src/ui/components/sheet-viewport.css', 'src/ui/storefront/storefront.css',
   // First run draws without the bottom nav, so its sticky action bar is the only inset on that screen.
   'src/ui/skin.css',
 ];

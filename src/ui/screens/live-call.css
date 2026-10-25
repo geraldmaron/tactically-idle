@@ -381,7 +381,6 @@
 @media (prefers-reduced-motion: reduce) { .live-beat-result .operation-feedback .decision-card { animation: none; } }
 
 /* Open in lab is a development aid: quiet, at the foot of the call, never competing with the story. */
-.live [data-open-in-lab] { margin: var(--sp2) var(--gutter) var(--sp3); opacity: .55; font-size: var(--s14); }
 
 /* ------------------------------------------------------------ finish (2026-10-23): depth for the live call */
 /* The strip, the squad and the choices are raised objects; the transcript is the recessed well the

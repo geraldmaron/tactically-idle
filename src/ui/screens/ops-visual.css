@@ -279,4 +279,3 @@
    the people and the rewards come sooner (section order unchanged, docs/ops-experience.md). */
 .debrief-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp2); }
 .app .debrief-hero.plate.debrief-hero { padding-top: var(--sp4); padding-bottom: var(--sp4); }
-.debrief [data-open-in-lab] { margin: var(--sp2) 0 0; opacity: .55; font-size: var(--s14); }

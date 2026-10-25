@@ -40,7 +40,7 @@ describe('paletteItems', () => {
     expect(items.filter(item => item.kind === 'choice')).toHaveLength(s.tree.nodes.reduce((n, node) => n + node.choices.length, 0));
     const choice = items.find(item => item.id === 'on_air/manager_speaks')!;
     expect(choice.title).not.toMatch(/\{/);
-    expect(choice.title).toBe(sessionBinder(s)('Let {manager.first} answer on camera'));
+    expect(choice.title).toBe(sessionBinder(s)('Ask whether {manager.first} wants to answer'));
     expect(choice.crumb).toBe(`${s.tree.stageLabels[s.tree.nodes.find(node => node.id === 'on_air')!.stage]} › On air`);
     expect(choice.play).toEqual({ offered: 't13_hostage_crisis_on_air_manager_speaks' });
     const ending = items.find(item => item.kind === 'ending' && item.id === 'manager_killed')!;

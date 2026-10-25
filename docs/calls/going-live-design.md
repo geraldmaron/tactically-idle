@@ -1,6 +1,74 @@
-DRAFT (the separate writing review, the Codex cold read and the owner's read of the 2026-10-21 rework are not done: `going-live-review`)
+DRAFT (the separate writing review at 390px, the Codex cold read and the owner's read of the 2026-10-24 rework are not done: `going-live-review`)
 
 # Going Live: design sheet
+
+> **Reworked 2026-10-24** after sol's review (`notes/going-live-sol-review-2026-10-24.md`, verdict
+> reject). Sections below this box and the 2026-10-23 box describe earlier versions where they differ.
+>
+> **The ranked top ten, and what changed.**
+>
+> 1. `threat.talk_down` adverse: the fixed `officer: 'wounded'` is gone. One `fire` draw decides who
+>    is hit, and the `fired_on` prompt says an officer is down and waiting for an ambulance, never
+>    "with a medic". The option is now talking from cover on the register line, not standing at the glass.
+> 2. The lie: `lied_clerk` settles once, as `lie_found` (discovered) or `lie_owned` (`own_lie`), both
+>    setting `lie_settled`. Every outcome that brings the courier out while it is open carries
+>    `foundOut`, which breaks `clerk_backs` with its own line, so a walk-out never leaves it held. The
+>    lie also hides `walk_live` (the courier waits for the clerk on camera first) and costs -6 on
+>    `walk_dark`, `send_clip`, `honest_next` and `manager_first`. **Owner decision O1** below covers
+>    the two death endings.
+> 3. `camera_wall` is offered only without `counter_seen` (set by `watch_feed` and `move_up_dark`),
+>    so its cost, "Your squad loses its only picture of {rider}'s hands", is true wherever it shows.
+>    It sets `no_picture`, read by both `go_in` options (-6) and the `threat` prompt (sound, no picture).
+> 4. and 6. Evidence and endings: a walk-out ends `out_cleared` only after `proof_seen` (the porch
+>    clip, its address and label checked) or `admitted_live` (the manager naming the clerk on the
+>    stream), through `walkOutEnding`; hidden truth no longer picks the ending. Reveals of
+>    `rider_clear` in situation 2 come only from evidence of retention: the courier's own Tuesday
+>    stream with the bag after the delivery time (label matched), or the courier's own words.
+>    Pickup footage and the app's entry reveal nothing. The cooler comment is recorded as an
+>    account, never proof. `rider_clear` is now "kept the order", not "took the bag".
+> 5. The cold open says the order is logged as collected at 11:40. In situation 1 the clerk logged it
+>    and took it before the courier came; in 2 and 3 the courier collected it just after 11:40. The
+>    courier's red light at 11:40 is true in all three and proves only that the log time is off.
+> 7. Every preview whose band can reach `turnsOn`'s threat names the handgun.
+> 8. Stream state: `cut` and `stream_off` both set `stream_down`; `ON_STREAM` and `STREAM_DOWN` gate
+>    filming and comment lines (`manager_first` mixed, `phone_down` mixed, `last_word_stream`).
+>    `off_camera` now drops the count to zero, so a stopped stream stops weighing on the odds.
+> 9. Doors: the clerk starts in the stockroom (`place: { rooms: ['storage'] }`). The shortest way out
+>    of it crosses the shop floor on 52 of 60 sampled buildings and back-door routes are not built
+>    (R-R5, backlog `exit-doors`), so no line promises a back door, an alley or an unseen exit.
+>    `phone_down` is now "Leave the phone and come out", with no team move.
+> 10. Costs name a loss the player can weigh: who stays beside the handgun, who can refuse, what the
+>     viewers hear before anyone checks it. "The person who owes the sentence" and "a police voice
+>     on the channel" are gone.
+>
+> **Cross-option findings.** `admitted` split into `admitted_live` and `admitted_quiet`. `news_on`
+> reads as the repost ("{outlet} reposted the stream"), never a van light. `still_armed` is charged on
+> `last_word_stream` too. `send_clip` records `clip_promised`, never a sent clip. Medical lines say
+> who needs an ambulance, never who is being cared for. `on_air` shows three options when the squad
+> has its own view, four (one gated) without. `way_out` shows at most four, one gated.
+> `go_dark` is cut (sol: no rationale for pulling officers back with the handgun on the manager); its
+> slot is `ask_down`, asking for the handgun down now, a pressure act against `talk_down`'s slower talk.
+> `manager_hurt_inside` now closes `hold_talk`'s adverse band, where the courier fires into the counter
+> and stays inside. Marks added: `counter_seen`, `no_picture`, `board_seen`, `address_posted`,
+> `crowd_close`, `let_go`, `clip_promised`, `friend_named` (was `friend_promise`), `stream_down`.
+>
+> **Owner decisions.**
+>
+> - **O1, the lie on the death endings.** On `manager_killed` and `manager_killed_rider_hurt` the
+>   force path brings the courier out with the lie still open, so the engine records it as held
+>   (`sim/outcome-score.ts`: 0 trust, +0.5 strain, "The lie told to {rider} held"). The call adds no
+>   discovery line beside a death. Choose: accept, or have the engine never hold a lie
+>   (`sim/commitments.ts`, one condition; `commitments.test.ts` and `outcome-score.test.ts` pin the
+>   current rule).
+> - **O2, Part 2.** The persistent city cast is backlog `going-live-city-cast`, with the review's
+>   verdicts.
+>
+> **Gates, 2026-10-24.** `npm run check:strings` exits 0 on all three binding runs (it exited 1 on
+> HEAD: ngram 48, path-echo 18, address-mix 8, fronted 2, role-position 1, ai-tell 1); repeated
+> sentences 18 to 7, sentences over 22 words 32 to 2. A full engine walk (scratch, Lab explorer,
+> both pacings, about 56,000 states, no cap hit) found no `out_cleared` without public evidence, no
+> held lie on any walk-out, and no ending whose staff state contradicts its text. Not done: the
+> separate `swat-writing-review` read at 390px (`going-live-review`), and the owner's read.
 
 > **Rewritten 2026-10-23** (branch `claude/hostage-rewrite`, cut from `claude/feel-lead`) after the
 > teardown rejected the first version (`notes/going-live-teardown.md`). The sections below describe the

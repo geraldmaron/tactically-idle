@@ -190,11 +190,7 @@ h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width:
 .build-page > .disclosure > .disclosure-body { padding-inline: var(--sp3); }
 
 /* First run: the advisory is read, then one clear Continue stays in reach. */
-.first-run-kicker { color: var(--act-text); }
-.first-run-themes { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
-.first-run-themes li::before { background: var(--act); }
-.first-run-note { border-color: var(--live-edge); background: var(--live-soft); box-shadow: none; }
-.first-run-actions { position: sticky; bottom: calc(-1 * (var(--sp5) + env(safe-area-inset-bottom))); z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: var(--sp3) var(--gutter) calc(var(--sp3) + env(safe-area-inset-bottom)); background: var(--ink-1); box-shadow: 0 -1px 0 var(--hair); }
+.first-run-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: var(--sp3) var(--gutter) calc(var(--sp3) + env(safe-area-inset-bottom)); background: linear-gradient(0deg, var(--ink-0), color-mix(in srgb, var(--ink-1) 60%, var(--ink-0))); box-shadow: var(--lift-edge), 0 -10px 24px color-mix(in srgb, var(--black) 40%, transparent); }
 
 /* At 320 a two-column skill list has no room for "Communication" beside its number; it reads as one column. */
 @container game (max-width: 359px) { .sheet .rating-bars { grid-template-columns: minmax(0, 1fr); } }

@@ -56,7 +56,7 @@ describe('evaluateReq', () => {
     const req = labRequirementTree(s.tree, target);
     const at = evaluateReq(req, s, currentFrame(s), deps, target);
     const marks = leafOf(at.root, 'mark');
-    expect(marks.map(entry => entry.node)).toEqual(['lie_found', 'cut', 'stream_off'].map(mark => ({ leaf: { kind: 'mark', mark, want: false } })));
+    expect(marks.map(entry => entry.node)).toEqual(['lied_clerk', 'lie_found', 'stream_down'].map(mark => ({ leaf: { kind: 'mark', mark, want: false } })));
     for (const account of marks) {
       expect(account.label).toMatch(/^Mark not set: /);
       expect(account.writers.length).toBeGreaterThan(0);
@@ -67,7 +67,7 @@ describe('evaluateReq', () => {
     expect(leafOf(at.root, 'at')[0].now).toBe('fail');
     expect(at.fixes).toContainEqual({ kind: 'find-path', goal: { eligible: 't13_hostage_crisis_way_out_walk_live' } });
     // Where one of the marks is already set at the node, that clause fails and the choice is gone.
-    const closing = ['lie_found', 'cut', 'stream_off'].map(mark => ({ mark, taken: explore(s.frames[0].state, { flags: [`mark:${mark}`, 'at:way_out'] }) })).find(entry => entry.taken.path !== null)!;
+    const closing = ['lied_clerk', 'lie_found', 'stream_down'].map(mark => ({ mark, taken: explore(s.frames[0].state, { flags: [`mark:${mark}`, 'at:way_out'] }) })).find(entry => entry.taken.path !== null)!;
     expect(closing, 'a mark that can be set where the walk out is on offer').toBeDefined();
     const there = currentFrame(replayTokens(s, closing.taken.path!));
     const after = evaluateReq(req, s, there, deps, target);
