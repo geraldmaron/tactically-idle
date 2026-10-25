@@ -27,7 +27,7 @@ const GROUP_KIND_WORD = { subject: 'Subjects', civilian: 'Civilians' } as const;
 /** The chip that says how the team knows someone, or how they are: the subject's temper, a person's
  * injury, or the rung of the ladder (reported, heard, seen) with the room the map shows them in. */
 function Standing({ member, where }: { member: CastMember; where?: string }) {
-  const chip = (tone: Tone, icon: IconName, word: ReactNode, shape?: Evidence) => <span className="cast-chip" data-tone={tone} data-evidence={shape}><Icon name={icon} size={14} />{word}</span>;
+  const chip = (tone: Tone, icon: IconName, word: ReactNode, shape?: Evidence) => <span className="cast-chip" data-tone={tone} data-evidence={shape}><Icon name={icon} size={16} />{word}</span>;
   if (member.status === 'deceased') return chip('danger', 'x', 'Deceased');
   if (member.status === 'injured_needs_care') return chip('warn', 'bandage', 'Hurt · needs care');
   if (member.stance) return chip(STANCE_TONE[member.stance], 'warning', STANCE_LABEL[member.stance]);
@@ -53,7 +53,7 @@ function CastRow({ member, run, scenario, where, open, onToggle, pinned, onUnpin
     {open && <div className="cast-more">
       {member.background && <div><h4>Background</h4><p><PeopleText text={member.background} /></p></div>}
       {facts.length > 0 && <div><h4>The team knows</h4><ul className="cast-facts">{facts.map((fact) => <li key={fact.id}><FactStatusChip status={fact.status} label={fact.label} /></li>)}</ul></div>}
-      {pinned && <button type="button" className="cast-pin-btn" onClick={onUnpin}><Icon name="x" size={14} />Take off the cast</button>}
+      {pinned && <button type="button" className="cast-pin-btn" onClick={onUnpin}><Icon name="x" size={16} />Take off the cast</button>}
     </div>}
   </li>;
 }
@@ -87,10 +87,10 @@ function Roster({ group, pins, pinCount, onToggle, onClose }: { group: CastGroup
   const section = (evidence: Evidence, line: string) => {
     const people = named(evidence);
     return people.length > 0 && <div className="roster-section" key={evidence}>
-      <div className="roster-head"><span className="cast-chip" data-tone={EVIDENCE_TONE[evidence]} data-evidence={evidence}><Icon name={EVIDENCE_ICON[evidence]} size={14} />{EVIDENCE_WORD[evidence]}</span><span>{people.length} {line}</span></div>
+      <div className="roster-head"><span className="cast-chip" data-tone={EVIDENCE_TONE[evidence]} data-evidence={evidence}><Icon name={EVIDENCE_ICON[evidence]} size={16} />{EVIDENCE_WORD[evidence]}</span><span>{people.length} {line}</span></div>
       <div className="roster-chips">{people.map((member) => {
         const on = pins.has(member.id);
-        return <button key={member.id} type="button" className="roster-chip" aria-pressed={on} disabled={!on && full} onClick={() => onToggle(member.id)}>{on && <Icon name="check" size={14} />}{member.label.split(/\s+/)[0]}</button>;
+        return <button key={member.id} type="button" className="roster-chip" aria-pressed={on} disabled={!on && full} onClick={() => onToggle(member.id)}>{on && <Icon name="check" size={16} />}{member.label.split(/\s+/)[0]}</button>;
       })}</div>
     </div>;
   };
@@ -100,7 +100,7 @@ function Roster({ group, pins, pinCount, onToggle, onClose }: { group: CastGroup
       <p className="roster-note">Pin a name to give them a row on the cast. {pinCount} of {MAX_ROWS} rows are pinned or earned.{full ? ' Take one off to pin another.' : ''}</p>
       {section('seen', 'in view')}
       {section('heard', 'heard')}
-      {unnamed > 0 && <p className="roster-unnamed"><span className="cast-chip" data-tone="warn" data-evidence="reported"><Icon name="pin" size={14} />{unnamed} not yet seen or heard</span>No names until the team has one.</p>}
+      {unnamed > 0 && <p className="roster-unnamed"><span className="cast-chip" data-tone="warn" data-evidence="reported"><Icon name="pin" size={16} />{unnamed} not yet seen or heard</span>No names until the team has one.</p>}
       {group.counts.out > 0 && <p className="roster-out"><b>{group.counts.out} out</b> of the building</p>}
     </div>}
   </Sheet>;

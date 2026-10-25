@@ -397,7 +397,7 @@ export function LiveView(p: LiveViewProps) {
         <div className="live-strip-head">
           {/* Step out leaves the call without cancelling it; the call waits, paused, until the player
               comes back (ui/decision-pause.ts). The Lab has no way out, so it shows none. */}
-          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><span className="nav-pill"><Icon name="chevronLeft" size={18} /><span className="live-stepout-text">Step out</span></span></button>}
+          {p.onStepOut && <button type="button" className="live-stepout" onClick={p.onStepOut}><span className="nav-pill"><Icon name="chevronLeft" size={20} /><span className="live-stepout-text">Step out</span></span></button>}
           <div className="live-title-block">
             <button type="button" className="live-title" onClick={() => setBriefingOpen(true)} aria-haspopup="dialog" aria-expanded={briefingOpen} aria-label={`${p.title}. Open the briefing`}>
               <span className="live-name">{p.title}</span>
@@ -782,8 +782,8 @@ export function ActionSheet(p: ActionSheetProps) {
               leads, then the map and the rest. Every control stays. */}
           {v.eligible && !v.eventResult && <div className="sheet-odds-hero"><OddsBar likelihood={v.likelihood} /></div>}
           {v.weighing ? <dl className="action-sheet-weigh">
-            <div className="action-sheet-weigh-gain"><dt><Icon name="plus" size={18} />Gains</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
-            <div className="action-sheet-weigh-cost"><dt><Icon name="minus" size={18} />Costs</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
+            <div className="action-sheet-weigh-gain"><dt><Icon name="plus" size={16} />Gains</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+            <div className="action-sheet-weigh-cost"><dt><Icon name="minus" size={16} />Costs</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
           </dl> :v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           <OutcomeForecast action={v} />
           {v.timeRange && !v.timeLabel && v.timeRange.min !== v.timeRange.max && <p className="operation-note operation-time-range">Takes {v.timeRange.min}–{opMinutes(v.timeRange.max)} depending on the result.</p>}

@@ -9,18 +9,18 @@
 
 .cast-row-btn, .cast-group-btn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp3); align-items: start; width: 100%; min-height: 44px; padding: var(--sp3); box-sizing: border-box; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .cast-row[data-open] .cast-row-btn { background: var(--ink-2); }
-.cast-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cast-text { display: flex; flex-direction: column; gap: var(--sp1); min-width: 0; }
 .cast-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); min-width: 0; }
 .cast-top b { font: 700 var(--s16)/1.2 var(--f-ui); color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cast-kind { font: 500 var(--s14)/1.3 var(--f-ui); color: var(--t3); }
-.cast-kind-word { font: 700 12px/1.3 var(--f-ui); letter-spacing: 0.07em; text-transform: uppercase; color: var(--kind); }
+.cast-kind-word { font: 700 var(--s14)/1.3 var(--f-ui); letter-spacing: 0.07em; text-transform: uppercase; color: var(--kind); }
 .cast-stake { font: 400 var(--s14)/1.35 var(--f-ui); color: var(--t2); }
 .cast-go { flex: none; color: var(--t3); }
 
 .cast-face, .cast-stack > .face { border: 2px solid var(--kind); border-radius: 50%; box-sizing: border-box; }
 .cast-row[data-evidence="reported"] .cast-face, .cast-row[data-evidence="unlocated"] .cast-face { border-style: dashed; }
 
-.cast-chip { --tone: var(--t3); --tone-text: var(--t2); display: inline-flex; align-items: center; gap: 5px; flex: none; padding: 2px 9px 2px 7px; border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--tone) 14%, transparent); color: var(--tone-text); font: 600 13px/1.4 var(--f-ui); white-space: nowrap; }
+.cast-chip { --tone: var(--t3); --tone-text: var(--t2); display: inline-flex; align-items: center; gap: var(--sp1); flex: none; padding: var(--sp1) var(--sp2); border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--tone) 14%, transparent); color: var(--tone-text); font: 600 var(--s14)/1.4 var(--f-ui); white-space: nowrap; }
 .cast-chip[data-tone="ok"] { --tone: var(--good); --tone-text: var(--good-text); }
 .cast-chip[data-tone="warn"] { --tone: var(--warn); --tone-text: var(--warn); }
 .cast-chip[data-tone="danger"] { --tone: var(--harm); --tone-text: var(--harm); background: color-mix(in srgb, var(--harm) 22%, transparent); }
@@ -28,21 +28,21 @@
 
 /* A group: faces stacked, one bar that splits who is out, seen, heard and reported, and the counts in words. */
 .cast-stack { display: flex; align-items: center; flex: none; }
-.cast-stack > .face { width: 30px; height: 30px; margin-left: -12px; background: var(--ink-2); }
+.cast-stack > .face { width: 30px; height: 30px; margin-left: calc(-1 * var(--sp3)); background: var(--ink-2); }
 .cast-stack > .face:first-child { margin-left: 0; }
 .cast-stack-dim { opacity: 0.7; }
-.cast-bar { display: flex; gap: 2px; height: 10px; margin: 0 var(--sp3); border-radius: 5px; overflow: hidden; }
+.cast-bar { display: flex; gap: var(--sp1); height: 10px; margin: 0 var(--sp3); border-radius: 5px; overflow: hidden; }
 .cast-bar > i { flex: 1 1 0; min-width: 4px; }
 .cast-bar [data-segment="out"] { background: color-mix(in srgb, var(--t3) 55%, transparent); }
 .cast-bar [data-segment="seen"] { background: var(--good); }
 .cast-bar [data-segment="heard"] { background: var(--warn); }
 .cast-bar [data-segment="reported"] { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, var(--ink-1) 3px 6px); }
 .cast-bar [data-segment="unlocated"] { background: repeating-linear-gradient(45deg, var(--t3) 0 3px, var(--ink-1) 3px 6px); }
-.cast-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: var(--sp2) var(--sp3) var(--sp3); font: 400 13px/1.3 var(--f-ui); color: var(--t2); }
+.cast-legend { display: flex; flex-wrap: wrap; gap: var(--sp1) var(--sp3); padding: var(--sp2) var(--sp3) var(--sp3); font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t2); }
 
 /* A row opened in place: who they are and what the team knows. */
-.cast-more { display: grid; gap: var(--sp3); padding: 0 var(--sp3) var(--sp3) calc(var(--sp3) + 48px + var(--sp3)); background: var(--ink-2); }
-.cast-more h4 { margin: 0 0 3px; font: 700 12px/1.3 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--t3); }
+.cast-more { --cast-face: 48px; display: grid; gap: var(--sp3); padding: 0 var(--sp3) var(--sp3) calc(var(--sp3) + var(--cast-face) + var(--sp3)); background: var(--ink-2); }
+.cast-more h4 { margin: 0 0 var(--sp1); font: 700 var(--s14)/1.3 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--t3); }
 .cast-more p { margin: 0; font: 400 var(--s14)/1.45 var(--f-ui); color: var(--t1); }
 .cast-facts { display: flex; flex-wrap: wrap; gap: var(--sp2); margin: 0; padding: 0; list-style: none; }
 .cast-pin-btn { justify-self: start; display: inline-flex; align-items: center; gap: var(--sp1); min-height: 44px; padding: 0 var(--sp3); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-3); color: var(--t1); font: 500 var(--s14)/1 var(--f-ui); cursor: pointer; }
@@ -53,7 +53,7 @@
 .roster-section { display: grid; gap: var(--sp2); }
 .roster-head { display: flex; align-items: center; gap: var(--sp2); font: 400 var(--s14)/1.3 var(--f-ui); color: var(--t3); }
 .roster-chips { display: flex; flex-wrap: wrap; gap: var(--sp2); }
-.roster-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-3); color: var(--t1); font: 500 15px/1 var(--f-ui); cursor: pointer; }
+.roster-chip { display: inline-flex; align-items: center; gap: var(--sp1); min-height: 44px; padding: 0 var(--sp4); border: 1px solid var(--hair-2); border-radius: 999px; background: var(--ink-3); color: var(--t1); font: 500 15px/1 var(--f-ui); cursor: pointer; }
 .roster-chip[aria-pressed="true"] { border-color: var(--good); background: color-mix(in srgb, var(--good) 16%, var(--ink-3)); color: var(--good-text); }
 .roster-chip:disabled { opacity: 0.45; cursor: not-allowed; }
 .roster-unnamed, .roster-out { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp2); margin: 0; font: 400 var(--s14)/1.4 var(--f-ui); color: var(--t2); }

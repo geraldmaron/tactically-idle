@@ -1,8 +1,7 @@
 import { shown } from '../language';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Icon } from '../icons';
-import { OUTCOME_ICON } from '../icons/kit';
+import { OutcomeMark } from '../icons/marks';
 import type { ActionView, DecisionView, OutcomeBand, RiskBand } from '../../sim/types';
 import { Button, Chip, Section } from '../components/ui';
 import { FactStatusChip } from '../components/FactStatusChip';
@@ -53,7 +52,7 @@ export function OutcomeForecast({ action }: { action: ActionView }) {
       <ul className="outcome-options">
         {(['favorable', 'mixed', 'adverse'] as const).map((band) => (
           <li key={band} className={`outcome-option outcome-${band}`} style={{ '--chance': `${percentages[band]}%` } as CSSProperties}>
-            <div><strong><Icon name={OUTCOME_ICON[band]} size={20} />{action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]}</strong>{action.eligible && !action.eventResult && <span className="outcome-chance">{percentages[band]}%</span>}</div>
+            <div><strong><OutcomeMark band={band} label={action.eventResult ? ({ favorable: 'Smoothly', mixed: 'With delays', adverse: 'With difficulty' } as const)[band] : FORECAST_LABEL[band]} size={20} /></strong>{action.eligible && !action.eventResult && <span className="outcome-chance">{percentages[band]}%</span>}</div>
             <p><PeopleText text={action.outcomePreview[band]} /></p>
             {action.eligible && !action.eventResult && <i className="outcome-meter" aria-hidden="true" />}
           </li>
