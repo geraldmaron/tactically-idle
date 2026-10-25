@@ -39,7 +39,7 @@ import { Face } from '../components/Face';
 import { Icon, actionIcon, materialIcon, roomIcon } from '../icons';
 import type { IconName } from '../icons';
 import { feetInches, opMinutes, signed, sqft } from '../format';
-import { CONSEQUENCE_LABEL, OutcomeForecast } from './OperationFeedback';
+import { CONSEQUENCE_LABEL, OddsBar, OutcomeForecast } from './OperationFeedback';
 import { joinNames, squadName } from './operation-squads';
 import { officersWhoKnow } from './operations/knows';
 import { DecisionList, LeadFace, RATING_SHORT, NOW_LABEL, padDigits } from './DecisionList';
@@ -765,7 +765,7 @@ export function ActionSheet(p: ActionSheetProps) {
         v && (
           <div className="operation-commit">
             <p className="operation-commit-meta">
-              <span>{squadText}{supportingText} · about {v.timeLabel ?? opMinutes(v.timeCost)} · {v.suppliesRequired.length ? `${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : 'no supplies'}</span>
+              <span><Icon name="clock" size={16} />{squadText}{supportingText} · about {v.timeLabel ?? opMinutes(v.timeCost)} · {v.suppliesRequired.length ? `${v.suppliesRequired.reduce((total, item) => total + item.qty, 0)} supplies` : 'no supplies'}</span>
               <span className={`consequence-level consequence-${v.consequenceLevel}`}>Harm {CONSEQUENCE_LABEL[v.consequenceLevel].toLowerCase()}</span>
             </p>
             <Button variant="primary" block disabled={!v.eligible || p.acting.length === 0} onClick={p.onConfirm} aria-label={`Confirm ${v.title}`}>
@@ -780,10 +780,11 @@ export function ActionSheet(p: ActionSheetProps) {
           {p.onBackToSupport && <Button variant="ghost" onClick={p.onBackToSupport}>Back to care &amp; support</Button>}
           {/* Cost and the three outcomes first (docs/ops-experience.md, Review), then who acts and
               leads, then the map and the rest. Every control stays. */}
+          {v.eligible && !v.eventResult && <div className="sheet-odds-hero"><OddsBar likelihood={v.likelihood} /></div>}
           {v.weighing ? <dl className="action-sheet-weigh">
-            <div className="action-sheet-weigh-gain"><dt>Gains.</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
-            <div className="action-sheet-weigh-cost"><dt>Costs.</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
-          </dl> : v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
+            <div className="action-sheet-weigh-gain"><dt><Icon name="plus" size={18} />Gains</dt><dd><PeopleText text={v.weighing.pull} /></dd></div>
+            <div className="action-sheet-weigh-cost"><dt><Icon name="minus" size={18} />Costs</dt><dd><PeopleText text={v.weighing.cost} /></dd></div>
+          </dl> :v.summary !== v.outcomePreview.favorable && <p className="operation-action-summary"><PeopleText text={v.summary} /></p>}
           <OutcomeForecast action={v} />
           {v.timeRange && !v.timeLabel && v.timeRange.min !== v.timeRange.max && <p className="operation-note operation-time-range">Takes {v.timeRange.min}–{opMinutes(v.timeRange.max)} depending on the result.</p>}
           {p.squads.length > 1 && <ActionSquadAssignment {...p} view={v} />}
@@ -923,7 +924,7 @@ export function LeadPicker({ view, officers, lead, bestFit, order, marks, blend 
         const rating = key ? Math.round(officer.ratings[key]) : null;
         return <button key={id} type="button" role="radio" aria-checked={on} className={`lead-choice${on ? ' lead-choice-on' : ''}`} onClick={() => onPick(id)}
           aria-label={`${officer.firstName} ${officer.surname}${rating !== null ? `, ${keyLabel} ${rating}` : ''}, ${STRESS_LABEL[band].toLowerCase()}${id === bestFit ? ', best fit' : ''}`}>
-          <LeadFace officer={officer} size={40} />
+          <LeadFace officer={officer} size={56} />
           <span className="lead-choice-name">{officer.surname}</span>
           {rating !== null && key && <span className="lead-choice-rating">{RATING_SHORT[key]} <b>{rating}</b></span>}
           {certs.filter((cert) => officer.certs.includes(cert)).slice(0, 1).map((cert) => <span key={cert} className="lead-choice-cert">{CERT_NAME[cert]}</span>)}

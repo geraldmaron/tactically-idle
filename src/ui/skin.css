@@ -157,7 +157,38 @@ h3.course-group-label::after { content: ''; order: 1; flex: 1 1 12px; min-width:
 .sheet.operation-action-sheet .lead-choice-on { border-color: var(--act); background: var(--surface-2); box-shadow: var(--glow-act); }
 .sheet.operation-action-sheet .operation-commit-meta { font-size: var(--s14); flex-wrap: wrap; gap: var(--sp1) var(--sp3); }
 .sheet.operation-action-sheet .consequence-level { font-size: var(--s14); }
-.sheet.operation-action-sheet .action-sheet-weigh { padding: var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); box-shadow: var(--lift-1); }
+.sheet.operation-action-sheet .action-sheet-weigh { padding: 0; border: 0; background: none; box-shadow: none; gap: var(--sp2); }
+
+/* The review sheet, made to be looked at: the odds as a hero, gains and costs as two tiles, the
+   outcomes as cards with a mark and a meter, the lead as large faces. */
+.sheet.operation-action-sheet .sheet-odds-hero, .sheet.operation-action-sheet .action-sheet-weigh { margin-bottom: var(--sp3); }
+.sheet.operation-action-sheet .sheet-odds-hero .odds-bar { height: 26px; border-radius: 8px; }
+.sheet.operation-action-sheet .sheet-odds-hero .odds-bar i { font-size: var(--s14); }
+
+.sheet.operation-action-sheet .action-sheet-weigh { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: stretch; }
+.sheet.operation-action-sheet .action-sheet-weigh > div { padding: var(--sp2) var(--sp3) var(--sp3); border: 1px solid var(--hair-2); border-radius: var(--r2); background: var(--surface-1); }
+.sheet.operation-action-sheet .action-sheet-weigh-gain { border-color: var(--good-edge) !important; background: var(--good-soft) !important; }
+.sheet.operation-action-sheet .action-sheet-weigh-cost { border-color: var(--warn) !important; background: var(--ink-1) !important; }
+.sheet.operation-action-sheet .action-sheet-weigh dt { display: flex; align-items: center; gap: var(--sp1); margin: 0 0 var(--sp1); font: 800 var(--s18)/1 var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; }
+.sheet.operation-action-sheet .action-sheet-weigh-gain dt { color: var(--good-text); }
+.sheet.operation-action-sheet .action-sheet-weigh-cost dt { color: var(--warn-text); }
+.sheet.operation-action-sheet .action-sheet-weigh dd { display: block; color: var(--t1); }
+
+.sheet.operation-action-sheet .outcome-option { position: relative; overflow: hidden; padding: var(--sp2) var(--sp3) calc(var(--sp2) + 4px); }
+.sheet.operation-action-sheet .outcome-option > div { align-items: center; flex-wrap: nowrap; }
+.sheet.operation-action-sheet .outcome-option strong { display: inline-flex; align-items: center; gap: var(--sp2); font: 800 var(--s18)/1 var(--f-display); letter-spacing: 0.04em; text-transform: uppercase; }
+.sheet.operation-action-sheet .outcome-chance { font: 800 30px/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.sheet.operation-action-sheet .outcome-meter { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--chance); border-radius: 0 2px 2px 0; background: currentColor; }
+.sheet.operation-action-sheet .outcome-favorable { color: var(--good); }
+.sheet.operation-action-sheet .outcome-mixed { color: var(--warn); }
+.sheet.operation-action-sheet .outcome-adverse { color: var(--harm); }
+.sheet.operation-action-sheet .outcome-option p { color: var(--t1); }
+
+.sheet.operation-action-sheet .lead-choice { min-width: 104px; padding: var(--sp2) var(--sp2) var(--sp2); gap: var(--sp1); border-radius: var(--r2); }
+.sheet.operation-action-sheet .lead-choice-name { font-size: var(--s16); max-width: 100px; }
+.sheet.operation-action-sheet .lead-choice-on .lead-face { box-shadow: 0 0 0 3px var(--act); }
+.sheet.operation-action-sheet .operation-commit-meta > span:first-child { display: inline-flex; align-items: center; gap: var(--sp1); }
+.sheet.operation-action-sheet .operation-commit-meta .icon { color: var(--act-text); flex: none; }
 
 /* Build: the room's ladder rows and the item sheet's stock bar read as parts of a card. */
 .sheet .room-step-fx, .sheet .room-who-note { font-size: var(--s14); }
