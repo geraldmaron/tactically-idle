@@ -4,7 +4,7 @@ import { actionViews, currentBuilt, previewAction, spaceViews, stageProgress } f
 import { planActionResupply } from '../../sim/equipment-resupply';
 import type { ActionResupplyPlan } from '../../sim/equipment-resupply';
 import { incidentOfficerUnavailable } from '../../sim/incident-consequences';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { stalledRun } from '../../sim/clocks';
 import { runRoster } from '../../sim/squads';
 import { leadFlags } from '../../sim/crew';

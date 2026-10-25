@@ -12,6 +12,7 @@ import { clockStamp } from './clock';
 import { crimeBand } from './district';
 import { firstCallOfficers, firstSentences } from './first-call';
 import './city-onboarding.css';
+import { shown } from '../../language';
 
 const DEFAULT_NAME = 'Night Unit';
 /** The starting choices the canvas shows: the first three districts. */
@@ -35,7 +36,7 @@ export function Founding() {
     ? debrief.officerCondition.map((row) => g.officers[row.officerId]).filter((o) => !!o).slice(0, 4)
     : firstCallOfficers(g, at);
   const remembered = officers.filter((o) => g.people.facts.some((f) => f.officerId === o.id && f.kind === 'first_call')).length;
-  const result = firstSentences(debrief?.endingSummary ?? debrief?.endingTitle, 2, 200);
+  const result = shown(firstSentences(debrief?.endingSummary ?? debrief?.endingTitle, 2, 200));
   const valid = name.trim().length >= 2 && name.trim().length <= 40;
   const start = () => { act({ type: 'foundDepartment', name, districtId: district }); };
   return (

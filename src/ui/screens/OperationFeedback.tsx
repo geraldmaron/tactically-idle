@@ -1,3 +1,4 @@
+import { shown } from '../language';
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon } from '../icons';
@@ -94,7 +95,7 @@ export function DecisionCard({ decision: d, full = false, officers = {}, explici
       <DecisionPills decision={d} officers={officers} complete={full} explicitCompletion={explicitCompletion} />
       {full && <DecisionStress decision={d} officers={officers} complete />}
       {next.length > 0 && <div className="decision-next">{next.map((line, index) => <p key={index}><PeopleText text={line} /></p>)}</div>}
-      {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {d.endingTitle}</p>}
+      {d.endingTitle && <p className="decision-next"><strong>Operation ended:</strong> {shown(d.endingTitle)}</p>}
       {(d.contributors.length > 0 || reasons.length > 0) && <Disclosure name="decision-record" className="decision-causes decision-record" open={full} summary="Why it went this way">
         {d.resultLabel && d.band && <p>Task check: {RESULT_LABEL[d.band].toLowerCase()}.</p>}
         {reasons.length > 0 && <ul>{reasons.map((line, index) => <li key={index}>{line}</li>)}</ul>}
@@ -166,7 +167,7 @@ export function OperationFeedback({ decisions, ended = false, onOpenLog, officer
   const last = decisions.at(-1);
   // A polite live region that is always rendered, so each new result is announced even when it is
   // the first: the scene scrolls to the result, and this says what it was.
-  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : resultWord(last)}. ${last.consequences.find((line) => !line.startsWith('Next: ')) ?? ''}` : '';
+  const announcement = last ? `${last.title}: ${last.forceOutcome ? 'task and harm recorded' : resultWord(last)}. ${shown(last.consequences.find((line) => !line.startsWith('Next: ')) ?? '')}` : '';
   const live = <p className="sr-only" role="status" aria-live="polite">{announcement}</p>;
   if (!last) return live;
   const card = <DecisionCard key={last.revision} decision={last} officers={officers} explicitCompletion={explicitCompletion} currentPrompt={currentPrompt} />;

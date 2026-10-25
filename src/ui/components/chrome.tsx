@@ -39,6 +39,11 @@ export function useChromeShell() {
 
 export const ChromeProvider = ChromeContext.Provider;
 
+/** Opens the Menu sheet (settings, saves, support). The desk's resource bar owns the button; a focus screen
+ * that hides the bar, like the cold open, draws its own and calls this. */
+export const MenuOpenContext = createContext<(() => void) | null>(null);
+export const useOpenMenu = () => useContext(MenuOpenContext);
+
 /** The mode the shell is drawing now. */
 export const useChrome = () => useContext(ChromeContext).mode;
 

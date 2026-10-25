@@ -3,7 +3,7 @@ import { TIMER_SETTINGS } from '../../sim/timer-setting';
 import { Card, Section, Segmented, SwitchRow } from '../components/ui';
 import { CARD_WARNING_SETTINGS, readSettings, subscribeSettings, type PlayerSettings } from './prefs';
 import { ALWAYS_THEMES, AVOIDABLE_THEMES, canAvoid } from './avoidable';
-import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
+import { BLOCKED_BY_CHOICES_REASON, CARD_THEME_WORDS, MENU_TEXT, SETTINGS_TEXT, SHEET_TEXT, SUPPORT_TEXT, THEME_LABELS, THEME_ORDER, TIMER_LABELS, WARNING_LABELS, joinThemes } from './labels';
 import './settings.css';
 
 /** The saved settings, re-rendering on every change made on this page. */
@@ -54,6 +54,7 @@ export function SettingsControls({ value, onChange }: { value: PlayerSettings; o
     <Section id="first-run-comfort" icon="soundwave" title={t.comfortHeading}>
       <Card className="inset-list">
         <SwitchRow icon="soundwave" title={t.soundHeading} detail={t.soundHint} checked={value.sound} onChange={(sound) => onChange({ sound })} />
+        <SwitchRow icon="radio" title={SHEET_TEXT.language} detail={value.softenLanguage ? SHEET_TEXT.languageOn : SHEET_TEXT.languageOff} checked={value.softenLanguage} onChange={(softenLanguage) => onChange({ softenLanguage })} />
         <SwitchRow icon="bolt" title={t.flashingHeading} detail={t.flashingHint} checked={value.flashing} onChange={(flashing) => onChange({ flashing })} />
       </Card>
     </Section>

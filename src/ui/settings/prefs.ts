@@ -31,6 +31,9 @@ export interface PlayerSettings {
   /** Officers' lives off the clock (bond scenes, romance) shown on screen. Off hides them; play is the same
    * (docs/world-redesign.md, "Bonds"). */
   personalLives: boolean;
+  /** Strong language in what people say is swapped for the milder text the call carries (content/language). Off by
+   * default: the game is 18+ and the written lines are the intended ones. Screens only; the save keeps the raw text. */
+  softenLanguage: boolean;
   /** The Store's buy buttons. Off keeps the Store readable and buys nothing (docs/world-redesign.md,
    * "Monetization", rule 6). Platform approval flows still apply when on. */
   purchases: boolean;
@@ -51,6 +54,7 @@ export const DEFAULT_SETTINGS: Readonly<PlayerSettings> = Object.freeze({
   flashing: true,
   firstRunDone: false,
   personalLives: true,
+  softenLanguage: false,
   purchases: true,
   notifyShifts: false,
   notifyCalls: false,
@@ -82,6 +86,7 @@ export function parseSettings(raw: string | null): PlayerSettings {
     flashing: data.flashing !== false,
     firstRunDone: data.firstRunDone === true,
     personalLives: data.personalLives !== false,
+    softenLanguage: data.softenLanguage === true,
     purchases: data.purchases !== false,
     notifyShifts: data.notifyShifts === true,
     notifyCalls: data.notifyCalls === true,
@@ -134,5 +139,6 @@ export const timerSetting = (): TimerSetting => readSettings().timer;
 export const firstRunDone = (): boolean => readSettings().firstRunDone;
 export const soundOn = (): boolean => readSettings().sound;
 export const flashingOn = (): boolean => readSettings().flashing;
+export const softenLanguageOn = (): boolean => readSettings().softenLanguage;
 export const personalLivesOn = (): boolean => readSettings().personalLives;
 export const purchasesOn = (): boolean => readSettings().purchases;

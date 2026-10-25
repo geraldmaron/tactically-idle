@@ -4,7 +4,7 @@ import * as DeptSelectors from '../../sim/department-selectors';
 import { nodeOptions, squadReadiness } from '../../sim/department-selectors';
 import { scenarioCards } from '../../sim/operation-selectors';
 import type { ScenarioCard } from '../../sim/operation-selectors';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { ageYears, gameDay } from '../../sim/calendar';
 import { RATING_META } from '../components/labels';
 

@@ -47,7 +47,7 @@ export function joinThemes(words: readonly string[]): string {
 }
 
 /** What the game contains, named plainly on the launch advisory. */
-export const ADVISORY_THEMES = ['Suicide risk', 'Children in danger', 'Domestic violence', 'Death', 'Police use of force, including gunfire', 'Injury'] as const;
+export const ADVISORY_THEMES = ['Suicide risk', 'Children in danger', 'Domestic violence', 'Death', 'Police use of force, including gunfire', 'Injury', 'Strong language'] as const;
 
 export const WARNING_LABELS: Readonly<Record<CardWarningSetting, { name: string; detail: string }>> = {
   all: { name: 'Warn me', detail: 'Each call card names the themes it involves before you accept it. It never says what happens.' },
@@ -113,6 +113,9 @@ export const SHEET_TEXT = {
   lives: 'Officers\' personal lives',
   livesOn: 'Bond scenes and romances show. Play is the same either way.',
   livesOff: 'Bonds off the clock are hidden. Play is the same either way.',
+  language: 'Soften strong language',
+  languageOn: 'Swearing is replaced with milder words. Play is the same either way.',
+  languageOff: 'People swear when the moment calls for it. Turn this on to hear it milder.',
   notifications: 'Notifications',
   notifyNote: 'You are asked again when you start your first shift. Never for purchases, and never for an officer in distress. This browser keeps your choice; the iOS and Android builds send the buzz.',
   notifyShifts: 'Shifts and training finish',

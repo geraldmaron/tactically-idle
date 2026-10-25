@@ -1,3 +1,4 @@
+import { shown } from '../language';
 // The service jacket (canvas E2, officer-profile): who this officer is, in the order a player earns it. It opens on
 // the jacket (portrait, pressure line, radio sample, traits, the ivory card, memory, bonds); what they cost and
 // bring sits under Skills, their record under Career and their stress under Care. One full-height sheet opened from
@@ -104,7 +105,7 @@ function Skills({ o, pace, detail, squadName, age, service, retirement }: { o: O
       // A trait a promotion granted names its cause (swat-officer-stories: earned traits cite the call).
       const earned = o.promotions?.find((p) => RANKS[p.rank].trait === t);
       return <li key={t}><strong><Icon name={TRAIT_INFO[t].icon} size={16} />{TRAIT_INFO[t].label}</strong><span>{TRAIT_INFO[t].condition}</span>
-        {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {earned.cause}, {formatGameDate(earned.day)}.</span>}</li>;
+        {earned && <span className="profile-trait-origin">Earned on promotion to {RANKS[earned.rank].title}, {shown(earned.cause)}, {formatGameDate(earned.day)}.</span>}</li>;
     })}</ul></section>}
     <OfficerProgress officer={o} />
     <section aria-label="Skills"><h3 className="profile-head">Skills</h3><RatingBars ratings={o.ratings} label="Skills out of 100" /></section>

@@ -68,6 +68,7 @@ function MenuHome({ settings, onPage, onOpenSaves }: { settings: PlayerSettings;
       <Card className="inset-list">
         <Row lead={<Icon name="eye" size="md" />} title={SHEET_TEXT.themesRow} detail={avoidSummary(settings.avoidThemes)} trail={chevron} onClick={() => onPage('themes')} />
         <Row lead={<Icon name="warning" size="md" />} title={SHEET_TEXT.warningsRow} detail={WARNING_LABELS[settings.cardWarnings].name} trail={chevron} onClick={() => onPage('warnings')} />
+        <SwitchRow icon="radio" title={SHEET_TEXT.language} detail={settings.softenLanguage ? SHEET_TEXT.languageOn : SHEET_TEXT.languageOff} checked={settings.softenLanguage} onChange={(softenLanguage) => updateSettings({ softenLanguage })} />
         <SwitchRow icon="people" title={SHEET_TEXT.lives} detail={settings.personalLives ? SHEET_TEXT.livesOn : SHEET_TEXT.livesOff} checked={settings.personalLives} onChange={(personalLives) => updateSettings({ personalLives })} />
       </Card>
     </Section>

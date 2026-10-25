@@ -1,6 +1,7 @@
+import { shown } from '../../language';
 import { useState } from 'react';
 import type { GameState } from '../../../sim/types';
-import { getScenario } from '../../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../../sim/scenario-registry';
 import { Button, EmptyState, Ring, Section } from '../../components/ui';
 import { Icon } from '../../icons';
 import { CallTypeBadge } from '../../icons/CallTypeBadge';
@@ -43,14 +44,14 @@ function DebriefTile({ g, d, now, open, onOpen }: { g: GameState; d: GameState['
   const type = getScenario(d.scenarioId)?.incident?.type;
   const team = d.officerCondition.map((row) => g.officers[row.officerId]).filter(present).slice(0, 4);
   return (
-    <button type="button" className={`debrief-tile debrief-tile-${tone}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open} aria-label={`Review result: ${d.endingTitle}`}>
+    <button type="button" className={`debrief-tile debrief-tile-${tone}`} onClick={onOpen} aria-haspopup="dialog" aria-expanded={open} aria-label={`Review result: ${shown(d.endingTitle)}`}>
       <span className="debrief-rings" aria-hidden="true">
         <Ring value={d.objective.score}><Icon name="flag" size={16} /></Ring>
         <Ring value={d.civilianSafety.score}><Icon name="civilian" size={16} /></Ring>
       </span>
       <span className="debrief-tile-main">
         <span className="debrief-tile-kicker">{type && <CallTypeBadge type={type} size={18} />}{scenarioTitle(g, d.scenarioId, now)}</span>
-        <strong className="debrief-tile-title">{d.endingTitle}</strong>
+        <strong className="debrief-tile-title">{shown(d.endingTitle)}</strong>
         <span className="debrief-tile-sub"><OutcomeMark band={band} label={`${d.objective.label}`} showLabel={false} size={14} />Objective {d.objective.label.toLowerCase()} · Civilians {d.civilianSafety.label.toLowerCase()}</span>
         <span className="debrief-tile-foot">
           {team.length > 0 && <span className="debrief-team" aria-hidden="true">{team.map((officer) => <span key={officer.id} className="debrief-team-face"><Portrait officer={officer} size={24} /></span>)}</span>}

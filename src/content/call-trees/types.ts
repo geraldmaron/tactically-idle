@@ -528,6 +528,13 @@ export interface CallTree {
   /** The scene before the call, read once before the briefing: the place, the people and what
    * happened before the team was called (the depth register, owner 2026-10-19). */
   coldOpen?: string;
+  /** The two or three lines the cold-open screen shows above Take the call: the call's strongest moment, in the
+   * people's own words. Falls back to the first sentences of `coldOpen`, which is backstory and reads as a record. */
+  hook?: string;
+  /** Alternates for the call's strong language, shown when the player softens it (content/language). One pair per
+   * line that carries a word from the lexicon, `from` exactly as bound (no role tokens, so name the line by its
+   * words), `to` at the same weight with no strong word. A line with no pair is softened word by word. */
+  soft?: { from: string; to: string }[];
   pressureLabel: string;
   pressure: PressureModel;
   briefing: { dispatchReason: string; known: string[]; unknown: string[]; responsibilities: string[] };

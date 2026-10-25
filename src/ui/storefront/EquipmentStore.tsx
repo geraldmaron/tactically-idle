@@ -35,7 +35,7 @@ import { PriceCapsule, type PriceTone } from '../components/PriceCapsule';
 import { boardItemUses, isShort, type BoardCallUse } from './board-items';
 import { scenarioTitle } from '../screens/helpers';
 import { placeTags, scenarioPlaceName } from '../components/incident';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import './storefront.css';
 
 interface EquipmentReceipt { itemId: Id; quantity: number }

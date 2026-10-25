@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import './app.css';
 import './styles/team-officer-card.css';
@@ -20,7 +20,8 @@ import { BeatProvider } from './components/BeatProvider';
 import { OverlayRootContext } from './components/Sheet';
 import { NavContext, topTab, useNav, usePlayerNavigation } from './components/nav';
 import type { TopTab } from './components/nav';
-import { ChromeProvider, useChromeShell } from './components/chrome';
+import { useSoftenLanguage } from './language';
+import { ChromeProvider, MenuOpenContext, useChromeShell } from './components/chrome';
 import { Button } from './components/ui';
 import { ITEMS } from '../content/items';
 import { CityScreen } from './screens/city/CityScreen';
@@ -69,6 +70,8 @@ function GameShell() {
   useLayoutEffect(() => { if (screen.current) screen.current.scrollTop = scrolls.current[current] ?? 0; }, [current]);
   const [savesOpen, setSavesOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  useSoftenLanguage(); // a changed choice repaints the screens: they read it as they render
+  const openMenu = useCallback(() => setMenuOpen(true), []);
   const [overlay, setOverlay] = useState<HTMLElement | null>(null);
   const chrome = useChromeShell();
   const { mode } = chrome.api;
@@ -80,6 +83,7 @@ function GameShell() {
       <div className="app" style={TEXTURES} ref={setApp} data-chrome={mode}>
         <NavContext.Provider value={nav}>
           <ChromeProvider value={chrome.api}>
+          <MenuOpenContext.Provider value={openMenu}>
           <DepartmentScope>
             <OverlayRootContext.Provider value={overlay}>
               <ToastProvider>
@@ -109,6 +113,7 @@ function GameShell() {
               </ToastProvider>
             </OverlayRootContext.Provider>
           </DepartmentScope>
+          </MenuOpenContext.Provider>
           </ChromeProvider>
         </NavContext.Provider>
         <div className="overlay-root" ref={setOverlay} />

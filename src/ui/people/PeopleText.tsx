@@ -7,6 +7,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { peopleLabel, segmentPeople, type Lexicon, type LexiconEntry, type PeopleKind } from './lexicon';
 import { peopleColorOn, subscribePeopleColor } from './prefs';
+import { shown } from '../language';
 import './people.css';
 
 const PeopleContext = createContext<Lexicon | null>(null);
@@ -52,8 +53,9 @@ export function PeopleGlyph({ kind, tone = false }: { kind: PeopleKind; tone?: b
   </svg>;
 }
 
-export function PeopleText({ text }: { text: string }): JSX.Element {
+export function PeopleText({ text: raw }: { text: string }): JSX.Element {
   const lexicon = useContext(PeopleContext);
+  const text = shown(raw);
   if (!lexicon || !text) return <>{text}</>;
   const parts = segmentPeople(text, lexicon);
   if (!parts.some((part) => part.person)) return <>{text}</>;

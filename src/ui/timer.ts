@@ -2,7 +2,7 @@
 // open decision's stall at that setting. Pure, so the live screen and the store's commit path read
 // the same minutes.
 import { lapsedThreat, openDither } from '../sim/clocks';
-import { getScenario } from '../sim/scenario-registry';
+import { readScenario as getScenario } from '../sim/scenario-registry';
 import type { TimerSetting } from '../sim/timer-setting';
 import { readSettings } from './settings/prefs';
 import type { Command, GameState } from '../sim/types';

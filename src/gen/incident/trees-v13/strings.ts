@@ -52,6 +52,7 @@ export function callStringRows(authored: CallTree, bind: (text: string) => strin
   add('card.title', 'title', tree.title);
   add('card.summary', 'hook', tree.summary);
   add('card.coldOpen', 'cold_open', tree.coldOpen);
+  add('card.hook', 'cold_hook', tree.hook);
   for (const role of tree.roles) add(`briefing.who.${role.id}`, 'profile', role.profile);
   add('card.pressure', 'pressure_label', tree.pressureLabel);
   add('briefing.dispatch', 'dispatch', tree.briefing.dispatchReason);

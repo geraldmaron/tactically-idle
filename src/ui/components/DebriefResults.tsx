@@ -1,3 +1,4 @@
+import { shown } from '../language';
 import type { DebriefResult, DecisionView, Officer } from '../../sim/types';
 import { Portrait } from '../portraits/Portrait';
 import { Silhouette } from '../portraits/Silhouette';
@@ -206,7 +207,7 @@ export function visibleDebriefConsequences(d: DebriefResult, decisions: Decision
 export function DebriefConsequences({ debrief, decisions }: { debrief: DebriefResult; decisions?: DecisionView[] }) {
   const lines = visibleDebriefConsequences(debrief, decisions);
   if (!lines.length) return null;
-  return <Section className="result-consequences" title="Recorded consequences" icon="warning" count={`${lines.length} recorded`} well><ul>{lines.map((line, index) => <li key={index}>{line}</li>)}</ul></Section>;
+  return <Section className="result-consequences" title="Recorded consequences" icon="warning" count={`${lines.length} recorded`} well><ul>{lines.map((line, index) => <li key={index}>{shown(line)}</li>)}</ul></Section>;
 }
 
 const SAFE_OUT: ReadonlySet<string> = new Set(['safe', 'care_accepted', 'accounted_elsewhere']);

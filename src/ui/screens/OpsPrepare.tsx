@@ -21,7 +21,7 @@ import { defaultStagingFor, spaceLabel } from '../../sim/spatial-factors';
 import { ITEMS } from '../../content/items';
 import { autoEquipReadyUnits, autoLoadout } from '../../sim/auto-equip';
 import type { AutoLoadout } from '../../sim/auto-equip';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import type { Id, ItemUnit, SquadId, StagingPoint } from '../../sim/types';
 import { Blueprint } from '../blueprint/Blueprint';
 import { floorCount } from '../blueprint/floors';

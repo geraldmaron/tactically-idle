@@ -269,7 +269,7 @@ export const APPROACH_NODES: TreeNode[] = [
 
   // Stage 2, run out: the comments went on without an answer.
   { id: 'chat_turned', stage: 'adapt',
-    threat: { chat: CHAT.chat_turned, label: 'Viewers guess about the handgun', minutes: 11, text: 'Comments scroll faster than the screen can show them. Most guess where {rider.first} got the handgun and what the police will do. {rider.first} answers every guess to the camera, louder each time, while {manager.first} shifts on the tile.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
+    threat: { chat: CHAT.chat_turned, label: 'Viewers guess about the handgun', minutes: 11, text: 'The comments come faster than anyone can read them. how does he even have a gun. is that a real swat van. why isnt anyone doing anything. {rider.first} answers every one with {rider.his} face an inch from the lens, louder each time. {manager.first} shifts on the tile, one palm against the cooler door.', pressure: 6, moves: { rider: 'provoked' }, bump: { stream: 12 },
       beats: [
         { id: 'three_k', at: 3.0, by: 'radio', line: 'More people at the corner. Patrol is holding the line.', bump: { stream: 4 } },
         { id: 'knees', at: 6.2, by: 'manager', line: 'Let me sit up at least. Please, {rider.first}.', moves: { rider: 'contact' } },
@@ -284,9 +284,9 @@ export const APPROACH_NODES: TreeNode[] = [
         cost: '{rider.first} can cut off the negotiator in front of everyone watching.',
         preview: { favorable: '{rider.first} answers the negotiator while the viewers argue about the call.', mixed: 'Comments argue with you, and {rider.first} reads the angriest ones out.', adverse: '{rider.first} cuts off the speaker and reads on. Near breaking point, the handgun lifts toward {manager.first}.' },
         outcomes: {
-          favorable: [{ text: 'The negotiator tells the viewers that officers are outside and listening, and asks them to stop guessing. For a few seconds the comments argue with the police, and {rider.first} gets up from the cooler to answer the line.',
+          favorable: [{ text: 'The negotiator’s voice fills the shop, level and in no hurry. Officers are outside and listening, the negotiator says, and the guessing has to stop. For a few seconds the whole screen shouts at the police and at no one in this room. {rider.first} pushes up off the cooler and picks up the receiver.',
             moves: { rider: 'heard' }, bump: { stream: -6 }, next: { node: 'way_out' }, objective: 12, pressure: -4 }],
-          mixed: [{ text: 'The chat fills with people arguing about the negotiator’s voice. {rider.first} reads the meanest ones out, standing between the phone and {manager.first} again.',
+          mixed: [{ text: 'The speaker crackles, and the chat has an opinion about the voice before the second sentence is out. too smooth. sounds like a script. who even is this. {rider.first} reads the cruel ones aloud, pausing after each. Then {rider.he} {rider~steps|step} back in between the phone and {manager.first}.',
             mark: ['performing'], moves: { rider: 'heard' }, bump: { stream: 8 }, next: { node: 'way_out' }, objective: 5 }],
           adverse: turnsOn({
             lead: '{rider.first} grabs the phone off the register before the negotiator finishes and tells the stream the police are reading from a script.',

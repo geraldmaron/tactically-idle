@@ -6,6 +6,7 @@ import type { ScenarioDefinition } from './scenario-types';
 import { SCENARIOS } from '../content/scenarios';
 import { generateIncident, parseIncidentId } from '../gen/incident';
 import { admitScenario } from '../content/policy';
+import { mapScenarioText } from '../gen/incident/scenario-text';
 
 const cache = new Map<Id, ScenarioDefinition>();
 /** Authored scenarios the content policy has already read (it reads each once, as it reads a generated one). */
@@ -33,4 +34,39 @@ export function getScenario(id: Id): ScenarioDefinition | null {
   } catch {
     return null;
   }
+}
+
+// What a screen reads. The simulation keeps the raw text (`getScenario`, which every rule and every write uses);
+// the player's text choices, strong language today, are applied on the way to the screen. The UI installs the
+// presenter once (ui/language.ts). `key` names the choice in force, so a changed setting is a new reading and
+// the same choice reuses its reading.
+export interface TextPresenter {
+  key: () => string;
+  text: (text: string) => string;
+}
+let presenter: TextPresenter | null = null;
+const read = new Map<string, WeakMap<ScenarioDefinition, ScenarioDefinition>>();
+
+export function setTextPresenter(next: TextPresenter | null): void {
+  presenter = next;
+  read.clear();
+}
+
+/** A line of recorded text as the player should read it. Text a run saved at the time is raw, so screens pass it here. */
+export const presentText = (text: string): string => (presenter ? presenter.text(text) : text);
+
+/** `getScenario` for a screen or a selector that feeds one: the same scenario with every display field presented. */
+export const readScenario = (id: Id): ScenarioDefinition | null => presentScenario(getScenario(id));
+
+/** A scenario with every display field presented (the same object while nothing needs changing). */
+export function presentScenario(raw: ScenarioDefinition | null): ScenarioDefinition | null {
+  if (!raw || !presenter) return raw;
+  const key = presenter.key();
+  if (key === '') return raw;
+  const bucket = read.get(key) ?? read.set(key, new WeakMap()).get(key)!;
+  const hit = bucket.get(raw);
+  if (hit) return hit;
+  const shown = mapScenarioText(raw, presenter.text);
+  bucket.set(raw, shown);
+  return shown;
 }

@@ -1,5 +1,5 @@
 // What the cold open and the founding screen say about the first call, read from the game state. Pure.
-import { getScenario } from '../../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../../sim/scenario-registry';
 import { squadReadiness } from '../../../sim/department-selectors';
 import { jacketView } from '../../../sim/people/selectors';
 import { deployRoster, runRoster } from '../../../sim/squads';
@@ -47,7 +47,7 @@ export function firstSentences(text: string | null | undefined, count = 2, max =
 /** The hook for the cold open: the scene before the call, else its summary, in two sentences. */
 export function callHook(scenarioId: Id | null): string {
   const def = scenarioId ? getScenario(scenarioId) : undefined;
-  return firstSentences(def?.coldOpen ?? def?.summary);
+  return firstSentences(def?.hook ?? def?.coldOpen ?? def?.summary, 4, 280);
 }
 
 /** One radio line from an officer on the call, from their jacket's sample at the radio's ready band. */

@@ -600,6 +600,8 @@ export interface ScenarioDefinition {
       stake?: string }[] };
   /** V13: the scene before the call, read once before the briefing. */
   coldOpen?: string;
+  /** V13: the lines the cold-open screen shows (call-trees/types.ts). */
+  hook?: string;
   /** V5 archetype bindings share the generated world with narrative, actions and map views. */
   story?: StoryInstance;
   /** v13: the incident instance's people as the engine reads them (sim/incident-factors.ts). */

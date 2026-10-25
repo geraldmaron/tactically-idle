@@ -867,6 +867,7 @@ export function withCallTree(input: ScenarioDefinition, built: BuiltLocation, au
   s.briefing = { dispatchReason: tree.briefing.dispatchReason, known: [...tree.briefing.known], unknown: [...tree.briefing.unknown], teamResponsibilities: [...tree.briefing.responsibilities],
     ...(profiles.length ? { people: profiles } : {}) };
   if (tree.coldOpen) s.coldOpen = tree.coldOpen;
+  if (tree.hook) s.hook = tree.hook;
   s.objectives = tree.objectives.map(objective => ({ ...objective }));
   s.externalServices = [];
   const multiplier = tierRewardMultiplier(spec.tier);

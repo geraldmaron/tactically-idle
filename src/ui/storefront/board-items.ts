@@ -5,7 +5,7 @@
 import type { GameState, Id } from '../../sim/types';
 import { boardShortages } from '../../sim/board-suggestions';
 import { briefing } from '../../sim/operation-selectors';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { isBasicKit } from '../../sim/basic-kit';
 
 export interface BoardCallUse {

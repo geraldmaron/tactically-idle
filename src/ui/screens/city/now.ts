@@ -4,7 +4,7 @@
 import { ARCHETYPES } from '../../../content/city/archetypes';
 import { DISTRICTS } from '../../../content/city/districts';
 import { subjectName } from '../../../sim/world/population';
-import { getScenario } from '../../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../../sim/scenario-registry';
 import type { GameState, IncidentCard, Officer } from '../../../sim/types';
 import type { Lead } from '../../../sim/world/types';
 import { scenarioTitle } from '../helpers';

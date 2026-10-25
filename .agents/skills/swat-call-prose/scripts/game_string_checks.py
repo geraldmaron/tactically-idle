@@ -42,7 +42,7 @@ BUDGETS = {
     "exchange": (90, 15, True), "exchange_result": (90, 15, False), "epilogue": (300, 50, False),
     # The depth register (owner 2026-10-19): the scene before the call, who the people are, and what
     # draws a player to a choice and what it costs.
-    "cold_open": (900, 150, True), "profile": (300, 50, True), "pull": (140, 22, True), "cost": (140, 22, True),
+    "cold_open": (900, 150, True), "cold_hook": (280, 45, True), "profile": (300, 50, True), "pull": (140, 22, True), "cost": (140, 22, True),
 }
 # Spoken lines. The speaker is the source, so an accusation is the speaker's framing, and speech
 # may shout, front a clause and say what it feels (E17).

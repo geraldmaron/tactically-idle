@@ -8,7 +8,7 @@ import { assetUrl } from '../art/assetUrl';
 import { funding as fundingText, signed, signedMoney } from '../format';
 import { Funds } from './Funds';
 import { easeToward } from './Finance';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { reducedMotion } from '../motion';
 import './settlement.css';
 

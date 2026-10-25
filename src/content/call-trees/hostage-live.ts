@@ -63,6 +63,15 @@ export const HOSTAGE_LIVE: CallTree = {
   // own sentence. Paragraph breaks render (src/ui/components/DepthBrief.tsx). Pronouns bind to the name when
   // another person with the same pronoun was just mentioned (compile.ts BindState), so no "she" is ambiguous.
   coldOpen: 'The email from {delivery_app} came Tuesday. It said an order logged as collected from {place} at 11:40 PM Sunday never reached its customer. {delivery_app} had shut off {rider.his} courier account. {rider.first} read it next to {rider.his} scooter. {rider.His} map had {rider.him} at a red light on Calloway, two blocks away, when it was logged. The complaint was {manager.first}’s. For two years {manager.he} had slid bags across that counter to {rider.him}.\n\nTonight, just before closing, {rider.first} came in with nothing to pick up. {rider.His} phone leaned against the register, live on {stream_app}. “Hi, everybody,” {rider.he} said to it. Then {rider.he} looked at {manager.first}, and the smile was gone. “Say I didn’t fucking take it. Say it.” {manager.first} said no.\n\n{clerk.first} was coming out of the stockroom with a case of water when {rider.first} took the handgun out of {rider.his} jacket. The phone kept streaming. {clerk.He} backed into the stockroom with the water still in {clerk.his} arms.',
+  // The cold-open screen's lines (first-call.ts callHook): the moment the night turns, in the people's words. The
+  // backstory above is read in the briefing; this is what makes a stranger tap Take the call.
+  hook: '“Hi, everybody,” {rider.first} tells the phone propped against {manager.first}’s register. Then {rider.he} {rider~looks|look} at {manager.first}, and the smile is gone. “Say I didn’t fucking take it.” {manager.first} says no.',
+  // The demand at the center of the night, for a player who softens strong language (content/language). The hook ends
+  // on the demand, so its alternate asks twice; the cold open already has the second ask.
+  soft: [
+    { from: '“Say I didn’t fucking take it. Say it.”', to: '“Say I didn’t take it. Look at me and say it.”' },
+    { from: '“Say I didn’t fucking take it.”', to: '“Say I didn’t take it. Say it to my face.”' },
+  ],
   pressureLabel: '{rider.first}’s growing audience',
   pressure: { start: 18, perMinute: 0.15, threshold: 85, civilianPerMinute: 0.5 },
   briefing: {

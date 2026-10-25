@@ -29,7 +29,7 @@ import type { ActionDefinition, FactDefinition, NodeThreat, ScenarioDefinition }
 import { scenarioActions } from './scenario-types';
 import { SCENARIO_ORDER } from '../content/scenarios';
 import { deployRoster, runRoster, squadShift } from './squads';
-import { getScenario } from './scenario-registry';
+import { getScenario as rawScenario, presentScenario, presentText } from './scenario-registry';
 import { parseIncidentId } from '../gen/incident';
 import { ITEMS } from '../content/items';
 import { availableUnits, builtFor, evaluateAction, getBuilt, RESOLUTION_TUNING, tagNames, type Evaluation } from './resolution';
@@ -43,6 +43,9 @@ import { CERT_HOLDER } from '../content/certs';
 import { LEAD_PREFIX } from './crew-flags';
 import type { TimerSetting } from './timer-setting';
 import { joinSquadNames, squadNamesOf } from './squad-names';
+
+/** What a selector reads: the scenario with the player's text choices applied. The raw lookup is the test seam. */
+const getScenario = (id: Id): ScenarioDefinition | null => presentScenario(rawScenario(id));
 
 export interface ScenarioCard {
   id: Id;
@@ -625,12 +628,23 @@ export function drawnDistributionAt(state: GameState, actionId: string, band: Ou
     .map((entry) => ({ ...entry, effect: indices[entry.effect] }));
 }
 
+/** A decision as the player should read it: the text the run saved at the time goes through the player's text
+ * choices (sim/scenario-registry.ts presentText), so a line recorded raw still reads as chosen. */
+export function presentDecision(view: DecisionView): DecisionView {
+  return {
+    ...view,
+    consequences: view.consequences.map(presentText),
+    ...(view.exchange ? { exchange: view.exchange.map((line) => ({ ...line, line: presentText(line.line) })) } : {}),
+    ...(view.heard ? { heard: view.heard.map((line) => ({ ...line, line: presentText(line.line) })) } : {}),
+  };
+}
+
 /** Complete durable decision log using committed deltas. */
 export function decisionViews(state: GameState): DecisionView[] {
   const run = state.activeRun;
   const scenario = run ? getScenario(run.scenarioId) : null;
   if (!run || !scenario) return [];
-  return decisionViewsFor(state, run, scenario);
+  return decisionViewsFor(state, run, scenario).map(presentDecision);
 }
 
 export function lastDecisionView(state: GameState): DecisionView | null {

@@ -8,7 +8,7 @@ import { builtForScenario } from '../../sim/operation-selectors';
 import type { DebriefResult, DecisionView, KnowledgeStatus } from '../../sim/types';
 import { PlateArt, sceneFor } from '../art/Plates';
 import type { PersonDefinition, ScenarioDefinition } from '../../sim/scenario-types';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { getBuilt } from '../../sim/resolution';
 import { spaceLabel } from '../../sim/spatial-factors';
 import { floorSuffix } from '../blueprint/floors';
@@ -25,6 +25,7 @@ import { PersonCasualtyList } from '../components/IncidentPeople';
 import { PeopleText } from '../people/PeopleText';
 import { Disclosure } from '../components/Disclosure';
 import { CallTypeBadge } from '../icons/CallTypeBadge';
+import { shown } from '../language';
 
 /** What OpsDebrief shows inside its scrolling page. `decisions` defaults to the saved log;
  * `reality` (default on) keeps "What was really there"; `heroAction` sits under the hero summary. */
@@ -64,7 +65,7 @@ export function DebriefContents({ result: d, officers, scenario, reality = true,
       </span>
       </div>
       <span className="debrief-kicker">CALL CLOSED{scenarioPlaceName(scenario) ? ` · ${scenarioPlaceName(scenario)}` : ''}</span>
-      <h2 className="debrief-title">{d.endingTitle}</h2>
+      <h2 className="debrief-title">{shown(d.endingTitle)}</h2>
       {d.endingSummary && <p className="debrief-narrative"><PeopleText text={d.endingSummary} /></p>}
       {epilogue && <p className="debrief-epilogue"><PeopleText text={epilogue} /></p>}
       {heroAction}

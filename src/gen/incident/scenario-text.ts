@@ -7,7 +7,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
     for (const key of names) if (typeof value[key] === 'string') value[key] = text(value[key] as string) as T[keyof T];
   };
   const lines = (list: { speaker: string; line: string }[] | undefined) => { for (const line of list ?? []) fields(line, ['speaker', 'line']); };
-  fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel', 'coldOpen']);
+  fields(s, ['title', 'summary', 'variantLabel', 'pressureLabel', 'coldOpen', 'hook']);
   for (const person of s.briefing.people ?? []) fields(person, ['name', 'role', 'text', 'stake']);
   s.briefing.known = s.briefing.known.map(text); s.briefing.unknown = s.briefing.unknown.map(text);
   fields(s.briefing, ['dispatchReason']);
@@ -36,6 +36,7 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       for (const opening of a.requires.openings ?? []) fields(opening, ['blockedReason', 'lockedNote']);
       for (const list of [a.equipment, a.modifiers]) for (const item of list ?? []) fields(item, ['label']);
       if (a.certBonus) fields(a.certBonus, ['label']);
+      for (const favor of a.favors ?? []) fields(favor, ['label']);
       if (a.threat) {
         fields(a.threat, ['label']);
         for (const effect of a.threat.effects) fields(effect, ['text']);
@@ -49,6 +50,16 @@ export function mapScenarioText(input: ScenarioDefinition, text: (value: string)
       for (const effect of Object.values(a.outcomes).flat().flatMap(entry => [entry, ...Object.values(entry.variants ?? {}).flat()])) {
         fields(effect, ['text']); lines(effect.exchange); if (effect.officerHarm) fields(effect.officerHarm, ['label']);
       }
+    }
+  }
+  // Clocks: the label, each cue the team hears, and what the people watching say while a gauge fills.
+  for (const clock of s.clocks ?? []) {
+    fields(clock, ['label']);
+    for (const cue of clock.cues ?? []) fields(cue, ["text"]);
+    const reactions = clock.source?.reactions;
+    if (reactions) {
+      reactions.byCue = reactions.byCue.map(pool => pool.map(text));
+      for (const key of ['spike', 'stopped', 'slowed', 'surged', 'dropped'] as const) if (reactions[key]) reactions[key] = reactions[key]!.map(text);
     }
   }
   for (const ending of Object.values(s.endings)) {

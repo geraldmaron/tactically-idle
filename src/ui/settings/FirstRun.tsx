@@ -15,6 +15,7 @@ const THEME_ICONS: Readonly<Record<(typeof ADVISORY_THEMES)[number], IconName>> 
   'Death': 'pulse',
   'Police use of force, including gunfire': 'shield',
   'Injury': 'bandage',
+  'Strong language': 'radio',
 };
 
 /** The launch advisory, shown once before the department (owner redesign 2026-10-20, after Xbox

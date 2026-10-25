@@ -4,7 +4,7 @@
 // choices stop or slow a gauge. No effect is hidden: the line names every effect the engine applies.
 import { effectiveRate, fillViews, openThreat, stalledRun, stallFeed, type FillView, type StallLine } from '../../sim/clocks';
 import { stableFlag } from '../../sim/conditions';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { stanceOf, type Stance } from '../../sim/meters';
 import type { ScenarioDefinition } from '../../sim/scenario-types';
 import type { GameState, Id, OutcomeBand } from '../../sim/types';

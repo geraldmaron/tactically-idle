@@ -57,9 +57,9 @@ describe('settings screens', () => {
 
   it('offers a switch for every theme a player can avoid, plus the warning and timer choices', () => {
     const html = renderToStaticMarkup(createElement(SettingsControls, { value: { ...DEFAULT_SETTINGS, avoidThemes: ['domestic_violence'] }, onChange: () => {} }));
-    // One switch per avoidable theme, plus sound and flashing lights, all the same SwitchRow.
-    expect(html.match(/type="checkbox"/g)).toHaveLength(AVOIDABLE_THEMES.length + 2);
-    expect(html.match(/class="ui-row switch-row"/g)).toHaveLength(AVOIDABLE_THEMES.length + 2);
+    // One switch per avoidable theme, plus soften language, sound and flashing lights, all the same SwitchRow.
+    expect(html.match(/type="checkbox"/g)).toHaveLength(AVOIDABLE_THEMES.length + 3);
+    expect(html.match(/class="ui-row switch-row"/g)).toHaveLength(AVOIDABLE_THEMES.length + 3);
     for (const theme of AVOIDABLE_THEMES) expect(text(html)).toContain(THEME_LABELS[theme].name);
     for (const l of [...Object.values(WARNING_LABELS), ...Object.values(TIMER_LABELS)]) expect(text(html)).toContain(l.name);
     expect(html).not.toContain(SETTINGS_TEXT.avoidHeading.replace('themes', 'mechanics'));
@@ -130,9 +130,9 @@ describe('settings screens', () => {
   it('first run and the menu build every switch from the one switch row', () => {
     const page = (initialPage?: 'themes' | 'display') => renderToStaticMarkup(createElement(MenuSheet, { open: true, onClose: () => {}, onOpenSaves: () => {}, ...(initialPage ? { initialPage } : {}) }));
     const [menu, themes, display] = [page(), page('themes'), page('display')];
-    // Personal lives, three notifications and purchases on the home page; sound, flashing and color on Display.
-    expect(menu.match(/role="switch"/g)).toHaveLength(5);
-    expect(menu.match(/class="ui-row switch-row"/g)).toHaveLength(5);
+    // Soften language, personal lives, three notifications and purchases on the home page; sound, flashing and color on Display.
+    expect(menu.match(/role="switch"/g)).toHaveLength(6);
+    expect(menu.match(/class="ui-row switch-row"/g)).toHaveLength(6);
     expect(display.match(/role="switch"/g)).toHaveLength(3);
     expect(display.match(/class="ui-row switch-row"/g)).toHaveLength(3);
     expect(themes.match(/role="switch"/g)).toHaveLength(AVOIDABLE_THEMES.length);

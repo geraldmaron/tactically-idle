@@ -31,7 +31,7 @@ describe('player settings', () => {
   it('starts at the signed-off defaults: nothing avoided, card warnings on, Relaxed timer, personal lives and purchases on, notifications off', () => {
     install(fakeStorage());
     expect(readSettings()).toEqual({ avoidThemes: [], cardWarnings: 'all', timer: 'relaxed', sound: true, flashing: true, firstRunDone: false,
-      personalLives: true, purchases: true, notifyShifts: false, notifyCalls: false, notifyDigest: false, notifyAsked: false });
+      personalLives: true, softenLanguage: false, purchases: true, notifyShifts: false, notifyCalls: false, notifyDigest: false, notifyAsked: false });
     expect([avoidedThemes(), cardWarningsOn(), timerSetting(), firstRunDone()]).toEqual([[], true, 'relaxed', false]);
   });
 

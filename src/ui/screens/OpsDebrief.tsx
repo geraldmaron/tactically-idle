@@ -1,8 +1,8 @@
 import { useGame } from '../store';
 import { Icon } from '../icons';
-import { decisionViews, pendingDebrief } from '../../sim/operation-selectors';
+import { decisionViews, pendingDebrief, presentDecision } from '../../sim/operation-selectors';
 import type { DebriefResult } from '../../sim/types';
-import { getScenario } from '../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../sim/scenario-registry';
 import { ActionBar, Button, Card } from '../components/ui';
 import { FlowScreen } from '../components/chrome';
 import { callFlow } from './call-flow';
@@ -18,11 +18,12 @@ import { lexiconFor } from '../people/lexicon';
 import { DebriefContents, DebriefEvidence } from './DebriefContents';
 import './ops-visual.css';
 import { runRoster } from '../../sim/squads';
+import { shown } from '../language';
 
 /** A saved debrief is self-contained; it never borrows history from a newer active run. */
 export function SavedDebriefContents({ debrief: d, officers }: { debrief: DebriefResult; officers: DebriefOfficers }) {
   return <div className="saved-debrief-content">
-    {d.endingSummary && <p className="debrief-narrative">{d.endingSummary}</p>}
+    {d.endingSummary && <p className="debrief-narrative">{shown(d.endingSummary)}</p>}
     <DebriefSummary debrief={d} includeRewards={false} />
     <PersonCasualtyList casualties={(d.personCasualties ?? []).filter((person) => !(d.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId))} />
     <DebriefConsequences debrief={d} />
@@ -34,7 +35,7 @@ export function SavedDebriefContents({ debrief: d, officers }: { debrief: Debrie
 }
 
 export function SavedDebriefReview({ debrief, officers, onClose }: { debrief: DebriefResult | null; officers: DebriefOfficers; onClose: () => void }) {
-  return <Sheet open={!!debrief} onClose={onClose} title={debrief?.endingTitle ?? 'Saved result'} className="operation-log-sheet" footer={<Button block onClick={onClose}>Done</Button>}>
+  return <Sheet open={!!debrief} onClose={onClose} title={debrief?.endingTitle ? shown(debrief.endingTitle) : 'Saved result'} className="operation-log-sheet" footer={<Button block onClick={onClose}>Done</Button>}>
     {debrief && <SavedDebriefContents debrief={debrief} officers={officers} />}
   </Sheet>;
 }
@@ -54,7 +55,7 @@ export function OpsDebrief() {
   if (!d) return <FlowScreen title="Debrief" icon={<Icon name="flag" size={20} />} footer={footer}>
     <div className="page cl-flow-body"><p className="dim">The call is over. The debrief is not available yet.</p></div>
   </FlowScreen>;
-  const decisions = d.decisions ?? decisionViews(g);
+  const decisions = d.decisions?.map(presentDecision) ?? decisionViews(g);
   const run = g.activeRun;
   const scenario = getScenario(d.scenarioId);
   // The call's people and the squads that went in, for the names in the debrief.

@@ -6,6 +6,7 @@ import { formatGameDate } from '../../sim/calendar';
 import { RATING_META } from './labels';
 import { RankInsignia } from './RankInsignia';
 import './officer-progress.css';
+import { shown } from '../language';
 
 /** Where an officer stands on the rank ladder: the same thresholds creditXp promotes by. */
 export function officerGrowth(o: Officer) {
@@ -65,7 +66,7 @@ export function RankLadder({ officer }: { officer: Officer }) {
         const state = i < current ? 'reached' : i === current ? 'current' : i === current + 1 ? 'next' : 'later';
         const reached = officer.promotions?.find((p) => p.rank === rank);
         const note = state === 'reached' || state === 'current'
-          ? reached ? `Made ${formatGameDate(reached.day)}, ${reached.cause}` : 'Held on joining the department'
+          ? reached ? `Made ${formatGameDate(reached.day)}, ${shown(reached.cause)}` : 'Held on joining the department'
           : state === 'next' ? promotionText(promotionEffects(officer, rank)) : nominalGives(officer, rank);
         return <li key={rank} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
           <span className="rank-ladder-mark"><RankInsignia rank={rank} size={20} /></span>

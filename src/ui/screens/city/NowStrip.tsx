@@ -1,7 +1,7 @@
 import { callFee } from '../../../sim/operation';
 import { useState } from 'react';
 import { getState } from '../../store';
-import { getScenario } from '../../../sim/scenario-registry';
+import { readScenario as getScenario } from '../../../sim/scenario-registry';
 import type { GameState } from '../../../sim/types';
 import { DISTRICTS } from '../../../content/city/districts';
 import { Button } from '../../components/ui';
