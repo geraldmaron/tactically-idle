@@ -23,7 +23,8 @@ import { getScenario } from '../../../../sim/scenario-registry';
 import type { GameState, Id, OutcomeBand, SquadId } from '../../../../sim/types';
 import { decisionsOf, isLapse } from '../../../../sim/types';
 import { DepartmentContext } from '../../../../ui/components/department-context';
-import { IncidentPeopleStatus, IncidentPeopleStrip } from '../../../../ui/components/IncidentPeople';
+import { IncidentPeopleStatus } from '../../../../ui/components/IncidentPeople';
+import { IncidentPeopleStrip } from '../../../../ui/components/CastStrip';
 import { scenarioPlaceName } from '../../../../ui/components/incident';
 import { OverlayRootContext, Sheet } from '../../../../ui/components/Sheet';
 import { ToastView } from '../../../../ui/components/ToastView';
@@ -468,9 +469,9 @@ function LiveScreen({ state, onReview, onConfirm, onFail, dither }: { state: Gam
       feedback={<OperationFeedback officers={state.officers} decisions={decisions} folded={beat === 'decide'} explicitCompletion={(scenario?.version ?? 0) >= 4} currentPrompt={model.progress.prompt} onOpenLog={() => setPanel('none')} />}
       scene={placeFor(scenario?.locationFamilyId) ?? sceneFor(scenario?.incident?.type)}
       placeName={scenarioPlaceName(scenario) ?? undefined}
-      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} />}
-      situation={scenario && <SituationPanel scenario={scenario} run={run} />}
-      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={state} />
+      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} prose={model.progress} />}
+      situation={scenario && <SituationPanel scenario={scenario} run={run} castShown />}
+      supportContext={scenario && <><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={state} castShown />
         <SupportContext scenario={scenario} run={run} actions={model.actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')}
           onPickAction={id => { pickAction(id); setPanel('action'); }} /></>}
       failedResponse={failurePlan && <section className="call operation-failed-response" aria-label="Failed response">

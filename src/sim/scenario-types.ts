@@ -595,7 +595,9 @@ export interface ScenarioDefinition {
   briefing: { known: string[]; unknown: string[]; dispatchReason?: string; teamResponsibilities?: string[];
     /** V13: who the key people are before today (the briefing's "Who they are"). `name` is bound;
      * `role` is the person's job or place in the story, said plainly ("night manager"). */
-    people?: { personId: Id; name: string; role?: string; text: string }[] };
+    people?: { personId: Id; name: string; role?: string; text: string;
+      /** The one line the live cast strip shows on this person's row (TreeRole.stake). */
+      stake?: string }[] };
   /** V13: the scene before the call, read once before the briefing. */
   coldOpen?: string;
   /** V5 archetype bindings share the generated world with narrative, actions and map views. */

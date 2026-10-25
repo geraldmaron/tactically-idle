@@ -109,6 +109,9 @@ export interface TreeRole {
   /** Who they are before today (the briefing's "Who they are", depth gate D10): one to three
    * sentences of past the player can see, never the private logic and never a hidden truth. */
   profile?: string;
+  /** The one fact about this person the player needs while deciding, on their live row: a visible
+   * past or an open want, one sentence, never a hidden truth (the cast strip, docs/cast-strip.md). */
+  stake?: string;
   /** 'chair': this person leaves only along a step-free route wide enough for a wheelchair. */
   mobility?: 'walking' | 'chair';
   /** A carried prop shown on the map once the named public fact is reported. */

@@ -14,7 +14,9 @@ const STATUS_LABEL: Partial<Record<KnowledgeStatus, string>> = { reported: 'Repo
  * Only public information is listed: the authored briefing and facts this run has already
  * reported, confirmed or ruled out. Unknown facts are never enumerated, because whether one is
  * drawn can depend on its hidden truth. */
-export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition; run: Pick<OperationRun, 'knowledge'> & Partial<Pick<OperationRun, 'history'>> }) {
+export function SituationPanel({ scenario, run, castShown }: { scenario: ScenarioDefinition; run: Pick<OperationRun, 'knowledge'> & Partial<Pick<OperationRun, 'history'>>;
+  /** The live cast strip opens each person's background in place, so the sheet leaves "Who they are" out. */
+  castShown?: boolean }) {
   const { dispatchReason, teamResponsibilities, unknown, people } = scenario.briefing;
   const established = scenario.facts.filter((fact) => STATUS_LABEL[run.knowledge[fact.id] ?? fact.initial]);
   return (
@@ -35,7 +37,7 @@ export function SituationPanel({ scenario, run }: { scenario: ScenarioDefinition
         )}
         {!!teamResponsibilities?.length && <div><h3>Your team’s job</h3><ul>{teamResponsibilities.map((task) => <li key={task}><PeopleText text={task} /></li>)}</ul></div>}
         {unknown.length > 0 && <div><h3>Open at dispatch</h3><ul>{unknown.map((question) => <li key={question}><PeopleText text={question} /></li>)}</ul></div>}
-        <WhoTheyAre people={people} />
+        {!castShown && <WhoTheyAre people={people} />}
         {dispatchReason && <div><h3>Why your team was sent</h3><p><PeopleText text={dispatchReason} /></p></div>}
         {scenario.coldOpen && <Disclosure name="situation-cold-open" summary="Before the call"><p><PeopleText text={scenario.coldOpen} /></p></Disclosure>}
       </div>

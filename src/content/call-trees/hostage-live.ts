@@ -41,13 +41,16 @@ export const HOSTAGE_LIVE: CallTree = {
   roles: [
     { id: 'rider', label: 'delivery courier', pronouns: 'he', kind: 'subject',
       profile: '{rider.first} has carried takeout for {delivery_app} two years, five nights a week out of {place}. The missing order’s number is written on a card behind {rider.his} license. {rider.His} {stream_app} channel has about four hundred followers, mostly couriers, posted from a handlebar mount.',
+      stake: 'Cut off by {delivery_app} over an order {rider.he} {rider~says|say} {rider.he} never picked up.',
       carries: { label: 'Handgun', glyph: 'weapon', knownFrom: 'handgun' } },
     { id: 'manager', label: 'night manager', pronouns: 'she', kind: 'civilian',
-      profile: '{manager.first} is the night manager at {place} and has run the shift for six years. {manager.He} filed the complaint that got {rider.first} cut off. Every pickup time on the whiteboard by the register is in {manager.his} handwriting.' },
+      profile: '{manager.first} is the night manager at {place} and has run the shift for six years. {manager.He} filed the complaint that got {rider.first} cut off. Every pickup time on the whiteboard by the register is in {manager.his} handwriting.',
+      stake: '{rider.first} holds {manager.him} to answer for the complaint {manager.he} filed.' },
     // In the stockroom, where the 911 call came from. The way out from it is the building's shortest
     // (it can cross the shop floor), so no line promises a back door until R-R5 builds one.
     { id: 'clerk', label: 'night clerk', pronouns: 'he', kind: 'civilian', place: { rooms: ['storage'] },
-      profile: '{clerk.first} is nineteen and works the night shift as a clerk, stocking the coolers. {manager.first} got {clerk.him} the job. {clerk.He} worked the register the night the order went missing.' },
+      profile: '{clerk.first} is nineteen and works the night shift as a clerk, stocking the coolers. {manager.first} got {clerk.him} the job. {clerk.He} worked the register the night the order went missing.',
+      stake: '{clerk.He} called 911 from the stockroom, one door from the handgun.' },
     { id: 'friend', label: 'fellow courier', pronouns: 'he', kind: 'bystander', place: 'outside',
       profile: '{friend.first} is another {delivery_app} courier and rides the same zone as {rider.first}. {friend.He} came straight from a drop when the stream started. {friend.He} {friend~stands|stand} at the patrol line with {friend.his} delivery bag on, typing into the comments.' },
   ],

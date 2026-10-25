@@ -9,7 +9,6 @@ import { Icon } from '../icons';
 import type { IconName } from '../icons';
 import { Portrait } from '../portraits/Portrait';
 import { Face, type FaceKind } from './Face';
-import { Section } from './ui';
 
 import { opMinutes, signed } from '../format';
 import { PeopleGlyph, usePeopleEntry } from '../people/PeopleText';
@@ -132,73 +131,16 @@ export function PersonCasualtyList({ casualties }: { casualties: PersonCasualtyR
   })}</ul>;
 }
 
-/** The one word a person's chip says about them, from the same public outcome the status panel shows. */
-const PERSON_SHORT: Record<PersonStatus, string> = {
-  unaccounted: 'Not located yet',
-  reported: 'Reported inside, unconfirmed',
-  needs_help: 'Located, needs help',
-  safe: 'Out and safe',
-  injured_needs_care: 'Hurt, needs care',
-  care_accepted: 'In care',
-  accounted_elsewhere: 'Accounted for elsewhere',
-  deceased: 'Deceased',
-};
-
-function ScenePerson({ id, name, where, word, tone, fallback, role }: { id: string; name: string; where?: string; word: string; tone: PersonTone; fallback: SceneKind; role?: string }) {
-  const who = usePeopleEntry(id);
-  const kind: SceneKind = who?.kind === 'person' ? 'person' : fallback;
-  // Two lines a row (owner, 2026-10-24: the list read too large on every screen): the name with its kind,
-  // then where they are and how they are. Their job is in the briefing and on the face's label.
-  return <li className="scene-person" data-tone={tone} data-kind={kind}>
-    <Face size="sm" kind={kind} seed={id} role={role} />
-    <span className="scene-person-text">
-      <span className="scene-person-top"><b>{name.split(/\s+/)[0]}</b><KindTag kind={kind} /></span>
-      <span className="scene-person-line">{where && <span className="scene-person-where">{where} · </span>}<span className="scene-person-word">{word}</span></span>
-    </span>
-  </li>;
-}
-
-/** Out of the building and accounted for: counted in the tally, not listed (the panel is who is inside). */
-const OUT_OF_THE_BUILDING: readonly PersonStatus[] = ['safe', 'care_accepted', 'accounted_elsewhere'];
-
-/** The people the call is about, as the "People inside" panel on the live screen: the subjects the
- * team has heard from and the civilians it tracks, one row each in a well, with where they are when
- * the map has placed them and one line of how they are. Someone reported but not seen has a dashed
- * ring and says so (never a "?"). Only what the status panel already shows, so it never says more
- * than the team knows. `whereOf` names the room the map shows a person in. */
-export function IncidentPeopleStrip({ scenario, run, whereOf }: { scenario: ScenarioDefinition; run: OperationRun; whereOf?: (personId: string) => string | undefined }) {
-  const civilians = civilianOutcomeViews(scenario, run);
-  const roles = new Map((scenario.briefing.people ?? []).map((person) => [person.personId, person.role]));
-  const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
-    const stance = stanceOf(meters);
-    const person = scenario.incidentPeople?.find((entry) => entry.id === id);
-    return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
-  });
-  if (!civilians.length && !subjects.length) return null;
-  const reported = civilians.filter((person) => person.status === 'reported').length;
-  const missing = civilians.filter((person) => person.status === 'unaccounted').length;
-  const inside = civilians.filter((person) => !OUT_OF_THE_BUILDING.includes(person.status));
-  const out = civilians.length - inside.length;
-  const inView = subjects.length + inside.length - reported - missing;
-  const tally = [inView ? `${inView} in view` : '', reported ? `${reported} reported` : '', missing ? `${missing} not located` : '', out ? `${out} out` : ''].filter(Boolean).join(' · ');
-  // Everyone named is out and no subject is left: one line, not a panel.
-  if (!inside.length && !subjects.length) return <p className="scene-people-clear"><Icon name="check" size={16} />{`Everyone named is out${out ? ` (${out})` : ''}.`}</p>;
-  return <Section className="scene-people-panel" title="People inside" icon="people" tone="people" count={tally} well>
-    <ul className="scene-people" aria-label="People at the scene">
-      {subjects.map((subject) => <ScenePerson key={subject.id} id={subject.id} name={subject.label} role={roles.get(subject.id)} where={whereOf?.(subject.id)} word={STANCE_LINE[subject.stance]} tone={STANCE_TONE[subject.stance]} fallback="subject" />)}
-      {inside.map((person) => <ScenePerson key={person.id} id={person.id} name={person.label} role={roles.get(person.id)} where={whereOf?.(person.id)} word={PERSON_SHORT[person.status]} tone={PERSON_TONE[person.status]} fallback="civilian" />)}
-    </ul>
-  </Section>;
-}
-
 /** Only tracked public outcomes are shown; a global safety score is never a head count. */
-export function IncidentPeopleStatus({ scenario, run, state }: { scenario: ScenarioDefinition; run: OperationRun; state: GameState }) {
-  const civilians = civilianOutcomeViews(scenario, run);
+/** `castShown`: the cast strip lists the civilians and subjects, so this panel keeps what the strip
+ * does not: other casualties, clocks running down and officers out of action. */
+export function IncidentPeopleStatus({ scenario, run, state, castShown }: { scenario: ScenarioDefinition; run: OperationRun; state: GameState; castShown?: boolean }) {
+  const civilians = castShown ? [] : civilianOutcomeViews(scenario, run);
   const officers = Object.values(run.officerCasualties ?? {});
-  const additionalCasualties = Object.values(run.personCasualties ?? {}).filter((person) => !civilians.some((civilian) => civilian.id === person.personId));
+  const additionalCasualties = Object.values(run.personCasualties ?? {}).filter((person) => !(scenario.civilianOutcomes ?? []).some((civilian) => civilian.id === person.personId));
   // Subjects the team has heard from, and clocks the team has heard a cue from: nothing earlier,
   // so the panel never shows what the team can't know yet.
-  const subjects = Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
+  const subjects = castShown ? [] : Object.entries(run.meters ?? {}).flatMap(([id, meters]) => {
     const stance = stanceOf(meters);
     const person = scenario.incidentPeople?.find((entry) => entry.id === id);
     return stance === 'unheard' || !person || run.flags.includes(`out:${id}`) ? [] : [{ id, label: person.label, stance }];
@@ -209,7 +151,7 @@ export function IncidentPeopleStatus({ scenario, run, state }: { scenario: Scena
   const needCare = civilians.filter((person) => PERSON_TONE[person.status] === 'warn').length;
   return <section className="incident-people-status" aria-label="People at this call">
     <div className="incident-people-head">
-      <h2><Icon name="people" size={16} />People at this call</h2>
+      <h2><Icon name="people" size={16} />{castShown ? 'On this call' : 'People at this call'}</h2>
       {civilians.length > 0 && <span className="incident-people-tally"><strong>{located}</strong> of {civilians.length} located{needCare > 0 && <span className="incident-people-care"> · {needCare} need{needCare === 1 ? 's' : ''} help</span>}</span>}
     </div>
     {civilians.length > 0 && <div className="incident-people-meter" role="img" aria-label={`${located} of ${civilians.length} people located`}>

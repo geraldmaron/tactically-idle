@@ -21,7 +21,8 @@ import { placeFor, sceneFor } from '../art/Plates';
 import { scenarioPlaceName } from '../components/incident';
 import { SituationPanel } from './SituationPanel';
 import { SupportContext } from './SupportContext';
-import { IncidentPeopleStatus, IncidentPeopleStrip } from '../components/IncidentPeople';
+import { IncidentPeopleStatus } from '../components/IncidentPeople';
+import { IncidentPeopleStrip } from '../components/CastStrip';
 import { focusActingSquad, pickLead, toggleActingSquad, toggleSupportingSquad } from './operation-squads';
 import { responseFailurePlan } from '../../sim/response-failure';
 import { liveScreen, type ActionSelection, type Override } from './live-model';
@@ -229,8 +230,8 @@ export function OpsLive({ onStepOut }: { onStepOut?: () => void } = {}) {
       // The briefing sheet holds the reference: the call's briefing and who has been located. The map
       // shows where they are; the story column keeps only what helps the next decision.
       // The people panel reads the subjects as the stall has left them, so it agrees with the strip.
-      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} />}
-      situation={scenario && <><SituationPanel scenario={scenario} run={run} /><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={g} /></>}
+      scenePeople={scenario && <IncidentPeopleStrip scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} whereOf={(id) => model.spaces.find((space) => space.people.some((person) => person.id === id))?.label} prose={model.progress} />}
+      situation={scenario && <><SituationPanel scenario={scenario} run={run} castShown /><IncidentPeopleStatus scenario={scenario} run={{ ...run, meters: stalledRun(scenario, run, dither).meters }} state={g} castShown /></>}
       supportContext={scenario && <><SupportContext scenario={scenario} run={run} actions={actions} open={panel === 'support'} onOpen={() => setPanel('support')} onClose={() => setPanel('none')} onPickAction={(id) => {
         setActionFromSupport(true);
         pickAction(id);
